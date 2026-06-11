@@ -26,6 +26,7 @@ from app.models.request_models import (
     UpdateWorkspaceMemoryRequest,
     UpdateWorkspaceRequest,
     LinearCommentRequest,
+    LinearCursorVerifyRequest,
 )
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
@@ -859,6 +860,27 @@ def run_linear_issue(
 def comment_linear_issue(issue_id: str, request: LinearCommentRequest) -> dict:
     try:
         return linear_orchestration.add_comment(issue_id, request.body)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/linear/issues/{issue_id}/cursor-handoff")
+def get_linear_cursor_handoff(issue_id: str) -> dict:
+    try:
+        return linear_orchestration.get_cursor_handoff(issue_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/cursor-verify")
+def verify_linear_cursor_work(issue_id: str, request: LinearCursorVerifyRequest | None = None) -> dict:
+    payload = request or LinearCursorVerifyRequest()
+    try:
+        return linear_orchestration.verify_cursor_work(
+            issue_id,
+            completion_note=payload.completion_note,
+            auto_commit=payload.auto_commit,
+        )
     except LinearServiceError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

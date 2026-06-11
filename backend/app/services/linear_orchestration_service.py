@@ -10,6 +10,7 @@ from app.models.response_models import GovernanceEvent
 from app.services.git_service import GitService
 from app.services.goal_service import GoalService
 from app.services.governance_service import GovernanceService
+from app.services.linear_cursor_handoff_service import LinearCursorHandoffService
 from app.services.linear_link_service import LinearLinkService
 from app.services.linear_service import LinearService, LinearServiceError
 from app.services.safe_command_runner import SafeCommandRunner
@@ -39,6 +40,7 @@ class LinearOrchestrationService:
         self.workspace_service = workspace_service
         self.git = git_service or GitService()
         self.command_runner = command_runner or SafeCommandRunner()
+        self.cursor_handoff = LinearCursorHandoffService(self.git.project_root)
 
     def _log(self, action_type: str, reason: str, **kwargs: Any) -> None:
         self.governance.log_event(
@@ -132,13 +134,14 @@ class LinearOrchestrationService:
             f"Prepared branch for {issue.get('identifier')}",
             workspace_id=link.get("workspace_id"),
         )
-        comment_body = (
-            f"**EvolveAgent detected In Progress**\n\n"
-            f"- Mission Control goal synced\n"
-            f"- Local branch: `{branch_result.get('branch', branch_name)}`\n"
-            f"- Ready for Cursor/Codex work on this issue\n\n"
-            f"Run `/api/linear/issues/{issue_id}/run` when a subtask is ready for agent verification, tests, commit, and push."
-        )
+
+        handoff: dict[str, Any] | None = None
+        if settings.linear_cursor_worker:
+            handoff = self.build_cursor_handoff(issue_id, issue=issue, link=link, select_result=select_result)
+            if handoff:
+                link = handoff.get("link") or link
+
+        comment_body = self._in_progress_comment(issue_id, issue, branch_result, branch_name, handoff)
         try:
             comment = self.linear.add_linear_comment(issue_id, comment_body)
         except LinearServiceError:
@@ -149,7 +152,204 @@ class LinearOrchestrationService:
             "branch": branch_result,
             "linear_comment": comment,
             "prepared_for_cursor": True,
+            "cursor_handoff": handoff,
         }
+
+    def build_cursor_handoff(
+        self,
+        issue_id: str,
+        *,
+        issue: dict[str, Any] | None = None,
+        link: dict[str, Any] | None = None,
+        select_result: dict[str, Any] | None = None,
+        write_brief: bool = True,
+    ) -> dict[str, Any] | None:
+        link = link or self.links.get_link_by_issue(issue_id)
+        if link is None:
+            return None
+        issue = issue or self.linear.get_linear_issue(issue_id)
+        goal = None
+        tasks: list[dict[str, Any]] = []
+        if select_result:
+            goal = select_result.get("goal")
+            task_graph = select_result.get("task_graph") or {}
+            tasks = task_graph.get("tasks") or []
+        elif link.get("goal_id"):
+            goal_record = self.goals.get_goal(link["goal_id"])
+            if goal_record:
+                goal, task_graph = goal_record
+                tasks = task_graph.get("tasks") or []
+
+        handoff = self.cursor_handoff.build_handoff(
+            issue,
+            link,
+            goal=goal if isinstance(goal, dict) else (goal.model_dump() if goal else None),
+            tasks=tasks,
+            write_brief=write_brief,
+        )
+        updated_link = self.links.create_or_update_link(
+            {
+                **link,
+                "cursor_handoff_at": handoff["generated_at"],
+                "cursor_brief_path": handoff.get("brief_path"),
+                "worker_mode": "cursor_codex",
+            }
+        )
+        self._log(
+            "linear_cursor_handoff_created",
+            f"Created Cursor/Codex handoff for {issue.get('identifier')}",
+            workspace_id=updated_link.get("workspace_id"),
+        )
+        return {**handoff, "link": updated_link}
+
+    def get_cursor_handoff(self, issue_id: str) -> dict[str, Any]:
+        link = self.links.get_link_by_issue(issue_id)
+        if link is None:
+            raise LinearServiceError("Linear issue is not linked yet. Sync or move to In Progress first.")
+        return self.build_cursor_handoff(issue_id, link=link, write_brief=False) or {}
+
+    def verify_cursor_work(
+        self,
+        issue_id: str,
+        *,
+        completion_note: str | None = None,
+        auto_commit: bool = False,
+    ) -> dict[str, Any]:
+        """After Cursor/Codex work: verify tests/build, optional commit, mark Mission Control + Linear done."""
+        link = self.links.get_link_by_issue(issue_id)
+        if link is None:
+            raise LinearServiceError("Linear issue link not found")
+
+        issue = self.linear.get_linear_issue(issue_id)
+        identifier = link.get("linear_identifier") or issue_id
+        expected_branch = link.get("branch_name")
+        current_branch = self.git.current_branch()
+        branch_match = not expected_branch or current_branch == expected_branch
+
+        test_results = self._run_verification_commands()
+        all_passed = all(item.get("success") for item in test_results)
+
+        git_status = self.git.git_status()
+        commit_result: dict[str, Any] = {"success": False, "commit_hash": "", "message": "No commit attempted"}
+        if auto_commit and not git_status.get("clean"):
+            git_stage = self.git.add_safe_files()
+            if git_stage.get("staged_files"):
+                commit_result = self.git.commit(f"Linear {identifier}: Cursor/Codex implementation")
+
+        push_result = self.git.push()
+        if push_result.get("success"):
+            self.links.append_push(
+                issue_id,
+                {"at": datetime.now(UTC).isoformat(), "branch": push_result.get("branch"), "remote": push_result.get("remote")},
+            )
+        if commit_result.get("success"):
+            self.links.append_commit(
+                issue_id,
+                {
+                    "hash": commit_result.get("commit_hash"),
+                    "message": f"Linear {identifier}: Cursor/Codex implementation",
+                    "at": datetime.now(UTC).isoformat(),
+                    "subtask": "cursor_worker",
+                },
+            )
+
+        summary_lines = [
+            f"Completed via Cursor/Codex on branch `{current_branch}`.",
+            f"Verification: {'passed' if all_passed else 'failed'}.",
+        ]
+        if completion_note:
+            summary_lines.append(completion_note)
+        if expected_branch and not branch_match:
+            summary_lines.append(f"Warning: expected branch `{expected_branch}` but current branch is `{current_branch}`.")
+        if commit_result.get("commit_hash"):
+            summary_lines.append(f"Commit: `{commit_result['commit_hash']}`")
+
+        summary = "\n".join(summary_lines)
+        goal_id = link.get("goal_id")
+        task_id = link.get("task_id")
+        if goal_id and task_id:
+            self.goals.update_task(
+                goal_id,
+                task_id,
+                {"status": "done", "last_result_summary": summary[:2000]},
+            )
+
+        linear_completion = None
+        if all_passed:
+            linear_completion = self.complete_linear_issue(
+                issue_id,
+                goal_id=goal_id,
+                skip_task_check=True,
+                completion_note=summary,
+            )
+        else:
+            comment_body = (
+                f"**Cursor/Codex verification failed for `{identifier}`**\n\n"
+                f"{summary}\n\n"
+                "**Tests/build**"
+            )
+            for item in test_results:
+                status = "passed" if item["success"] else "failed"
+                comment_body += f"\n- `{item['command']}`: {status}"
+            try:
+                self.linear.add_linear_comment(issue_id, comment_body)
+            except LinearServiceError:
+                pass
+            self._log("linear_cursor_verify_failed", f"Verification failed for {identifier}")
+
+        self._log(
+            "linear_cursor_verify_completed" if all_passed else "linear_cursor_verify_failed",
+            f"Cursor/Codex verify for {identifier}: {'passed' if all_passed else 'failed'}",
+        )
+
+        return {
+            "verified": all_passed,
+            "branch_match": branch_match,
+            "current_branch": current_branch,
+            "expected_branch": expected_branch,
+            "verification": test_results,
+            "git_status": git_status,
+            "commit": commit_result,
+            "push": push_result,
+            "summary": summary,
+            "linear_completion": linear_completion,
+        }
+
+    @staticmethod
+    def _in_progress_comment(
+        issue_id: str,
+        issue: dict[str, Any],
+        branch_result: dict[str, Any],
+        branch_name: str,
+        handoff: dict[str, Any] | None,
+    ) -> str:
+        branch = branch_result.get("branch", branch_name)
+        identifier = issue.get("identifier") or issue_id
+        lines = [
+            f"**EvolveAgent — Cursor/Codex worker ready**",
+            "",
+            f"- Issue: `{identifier}`",
+            f"- Branch: `{branch}`",
+            f"- Mission Control goal synced",
+            "",
+            "### Start in Cursor or Codex",
+            f"1. `git checkout {branch}`",
+            "2. Open Cursor Agent (or Codex) with the handoff prompt",
+            "3. Implement, test, and commit",
+            "4. EvolveAgent UI → **Verify Cursor work** (or Mission Control → Mark done)",
+            "",
+        ]
+        if handoff and handoff.get("brief_path"):
+            lines.append(f"- Task brief: `{handoff['brief_path']}`")
+        if handoff:
+            lines.extend(
+                [
+                    "",
+                    "### Cursor prompt (copy from UI or handoff file)",
+                    handoff.get("cursor_prompt", "")[:1200],
+                ]
+            )
+        return "\n".join(lines)
 
     def run_issue(self, issue_id: str, workspace_id: str | None = None) -> dict[str, Any]:
         resolved_workspace = self.workspace_service.resolve_workspace_id(workspace_id)

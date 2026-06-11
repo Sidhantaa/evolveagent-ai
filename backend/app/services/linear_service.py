@@ -28,6 +28,7 @@ class LinearService:
             "workspace_name": settings.linear_workspace_name,
             "auto_git_push": settings.auto_git_push,
             "poll_interval_seconds": settings.linear_poll_interval_seconds,
+            "linear_cursor_worker": settings.linear_cursor_worker,
         }
 
     def linear_graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:

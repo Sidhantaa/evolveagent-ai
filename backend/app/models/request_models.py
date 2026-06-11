@@ -153,3 +153,8 @@ class UpdateWorkspaceMemoryRequest(BaseModel):
 
 class LinearCommentRequest(BaseModel):
     body: str = Field(..., min_length=1, max_length=8000)
+
+
+class LinearCursorVerifyRequest(BaseModel):
+    completion_note: str | None = Field(default=None, max_length=2000)
+    auto_commit: bool = Field(default=False, description="Stage and commit safe files after verification passes.")

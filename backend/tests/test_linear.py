@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+from pathlib import Path
 
 import pytest
 
@@ -319,3 +320,81 @@ def test_on_goal_task_updated_completes_linear_with_summary(tmp_path, monkeypatc
     comment_body = linear.add_linear_comment.call_args[0][1]
     assert "Shipped Linear auto-complete" in comment_body
     assert "EVO-169" in comment_body
+
+
+def test_cursor_handoff_builds_prompts_and_brief(tmp_path):
+    from app.services.linear_cursor_handoff_service import LinearCursorHandoffService
+
+    service = LinearCursorHandoffService(project_root=tmp_path)
+    handoff = service.build_handoff(
+        {
+            "id": "issue-170",
+            "identifier": "EVO-170",
+            "title": "Linear integration bridge",
+            "description": "Sync issues and branches",
+            "url": "https://linear.app/EVO-170",
+        },
+        {"branch_name": "linear/evo-170", "task_id": "t1"},
+        tasks=[{"task_id": "t1", "title": "Build bridge", "description": "Wire sync", "status": "pending"}],
+    )
+
+    assert "EVO-170" in handoff["cursor_prompt"]
+    assert "linear/evo-170" in handoff["codex_prompt"]
+    assert handoff["brief_path"]
+    assert Path(handoff["brief_path"]).exists()
+
+
+def test_verify_cursor_work_marks_done_when_tests_pass(tmp_path, monkeypatch):
+    from app.services.linear_orchestration_service import LinearOrchestrationService
+
+    storage = StorageService(data_dir=str(tmp_path))
+    linear = MagicMock()
+    linear.get_linear_issue.return_value = {
+        "id": "issue-170",
+        "identifier": "EVO-170",
+        "title": "Bridge",
+        "status": "In Progress",
+    }
+    linear.update_linear_issue_status.return_value = {"status": "Done"}
+    linear.add_linear_comment.return_value = {"id": "c1"}
+
+    links = LinearLinkService(storage)
+    goals = GoalService(storage)
+    goal, task_graph = goals.create_from_plan(
+        {"goal_title": "G", "goal_summary": "S", "tasks": [{"title": "Task", "description": "D", "phase": "Execution"}]}
+    )
+    task_id = task_graph.tasks[0].task_id
+    links.create_or_update_link(
+        {
+            "linear_issue_id": "issue-170",
+            "linear_identifier": "EVO-170",
+            "goal_id": goal.goal_id,
+            "task_id": task_id,
+            "branch_name": "linear/evo-170",
+            "status": "selected",
+        }
+    )
+
+    orchestration = LinearOrchestrationService(
+        storage=storage,
+        linear_service=linear,
+        link_service=links,
+        goal_service=goals,
+        governance_service=MagicMock(),
+        master_agent=MagicMock(),
+        workspace_service=MagicMock(),
+        git_service=MagicMock(),
+        command_runner=MagicMock(),
+    )
+    orchestration.git.current_branch.return_value = "linear/evo-170"
+    orchestration.git.git_status.return_value = {"clean": True, "output": "", "success": True}
+    orchestration.git.push.return_value = {"skipped": True, "success": False}
+    orchestration._run_verification_commands = MagicMock(
+        return_value=[{"command": "pytest", "success": True}, {"command": "npm run build", "success": True}]
+    )
+
+    result = orchestration.verify_cursor_work("issue-170", completion_note="Implemented in Cursor.")
+
+    assert result["verified"] is True
+    assert result["linear_completion"]["completed"] is True
+    linear.update_linear_issue_status.assert_called_once()

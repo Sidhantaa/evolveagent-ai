@@ -496,3 +496,19 @@ export async function completeLinearIssue(issueId) {
   if (!response.ok) throw new Error(`Linear complete failed with status ${response.status}`)
   return response.json()
 }
+
+export async function getLinearCursorHandoff(issueId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/cursor-handoff`)
+  if (!response.ok) throw new Error(`Cursor handoff failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function verifyLinearCursorWork(issueId, payload = {}) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/cursor-verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Cursor verify failed with status ${response.status}`)
+  return response.json()
+}

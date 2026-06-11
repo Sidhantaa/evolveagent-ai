@@ -693,13 +693,15 @@ npm run build
 - `GET /api/linear/links`
 - `GET /api/linear/poll/status`
 - `POST /api/linear/poll/run-once`
+- `GET /api/linear/issues/{issue_id}/cursor-handoff`
+- `POST /api/linear/issues/{issue_id}/cursor-verify`
 
 ## EvolveAgent + Linear Workflow
 
 EvolveAgent can sync Linear issues into Mission Control and assist with selected tasks using the existing governed automation workflow.
 
 1. Add `LINEAR_API_KEY`, `LINEAR_TEAM_ID`, and optional `LINEAR_PROJECT_ID` to `backend/.env`.
-2. Set `LINEAR_SYNC_ENABLED=true` and keep `AUTO_GIT_PUSH=false` until testing is stable.
+2. Set `LINEAR_SYNC_ENABLED=true`, `LINEAR_CURSOR_WORKER=true`, and keep `AUTO_GIT_PUSH=false` until testing is stable.
 3. Start backend and frontend.
 4. Open the **Linear** sidebar panel.
 5. **Sync** an issue into Mission Control, or move an issue to **In Progress** in Linear — the backend poll worker detects it automatically, syncs the goal, creates a local branch, and posts a Linear comment.
@@ -707,7 +709,8 @@ EvolveAgent can sync Linear issues into Mission Control and assist with selected
 7. **Select** or **Run task** to execute one subtask through the existing agent workflow when ready for verification, tests, and commit.
 8. Review any approval plan before apply.
 9. The backend commits safe source changes after each completed subtask.
-10. Enable `AUTO_GIT_PUSH=true` only after commits and tests are stable.
+10. When all Mission Control subtasks are **done**, EvolveAgent marks the Linear issue **Done** and posts a completion comment.
+11. Enable `AUTO_GIT_PUSH=true` only after commits and tests are stable.
 
 When `LINEAR_SYNC_ENABLED=true`, the backend polls Linear every `LINEAR_POLL_INTERVAL_SECONDS` (default 60) for issues in **In Progress**. Poll status is visible in the Linear panel; Developer Mode shows raw poll metadata and a manual **Run poll once** action.
 

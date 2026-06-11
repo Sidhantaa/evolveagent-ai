@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     linear_workspace_name: str | None = Field(default=None, alias="LINEAR_WORKSPACE_NAME")
     linear_sync_enabled: bool = Field(default=False, alias="LINEAR_SYNC_ENABLED")
     linear_poll_interval_seconds: int = Field(default=60, alias="LINEAR_POLL_INTERVAL_SECONDS")
+    linear_cursor_worker: bool = Field(default=True, alias="LINEAR_CURSOR_WORKER")
     auto_git_push: bool = Field(default=False, alias="AUTO_GIT_PUSH")
     git_default_branch: str = Field(default="main", alias="GIT_DEFAULT_BRANCH")
     git_remote_name: str = Field(default="origin", alias="GIT_REMOTE_NAME")

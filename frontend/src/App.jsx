@@ -44,6 +44,8 @@ import {
   applyAutomation,
   approvePromptVersion,
   completeLinearIssue,
+  getLinearCursorHandoff,
+  verifyLinearCursorWork,
   createChat,
   deleteChat,
   deleteMessage,
@@ -341,6 +343,8 @@ function App() {
       if (action === 'select') await selectLinearIssue(issueId, workspaceId)
       if (action === 'run') await runLinearIssue(issueId, workspaceId)
       if (action === 'complete') await completeLinearIssue(issueId)
+      if (action === 'cursor-handoff') await handleCopyCursorHandoff(issueId)
+      if (action === 'cursor-verify') await handleVerifyCursorWork(issueId)
       await refreshLinearData(workspaceId)
       await refreshMissionControl(workspaceId)
       await refreshAnalytics(workspaceId)
@@ -350,6 +354,35 @@ function App() {
     } finally {
       setLinearBusyId('')
     }
+  }
+
+  async function handleCopyCursorHandoff(issueId, variant = 'cursor') {
+    const handoff = await getLinearCursorHandoff(issueId)
+    const text = variant === 'codex' ? handoff.codex_prompt : handoff.cursor_prompt
+    if (!text) throw new Error('Cursor handoff not available yet. Move issue to In Progress or Select first.')
+    await navigator.clipboard.writeText(text)
+    setCopied(`${variant === 'codex' ? 'Codex' : 'Cursor'} prompt copied`)
+    window.setTimeout(() => setCopied(''), 2000)
+    return handoff
+  }
+
+  async function handleVerifyCursorWork(issueId) {
+    const note = window.prompt(
+      'Optional: what did Cursor/Codex change and how was it tested?',
+      '',
+    )
+    const autoCommit = window.confirm('Auto-commit safe staged files if verification passes?')
+    const result = await verifyLinearCursorWork(issueId, {
+      completion_note: note?.trim() || undefined,
+      auto_commit: autoCommit,
+    })
+    if (result.verified) {
+      setCopied(`Verified — Linear ${result.linear_completion?.identifier || 'issue'} marked Done`)
+    } else {
+      setError('Verification failed. Fix tests/build, then try again.')
+    }
+    window.setTimeout(() => setCopied(''), 2500)
+    return result
   }
 
   function linearLinkForIssue(issueId) {
@@ -1220,6 +1253,10 @@ function App() {
                   <span>Poll worker</span>
                   <strong>{linearPollStatus?.running ? 'running' : 'idle'}</strong>
                 </div>
+                <div>
+                  <span>Cursor worker</span>
+                  <strong>{linearStatus?.linear_cursor_worker ? 'enabled' : 'off'}</strong>
+                </div>
                 {linearPollStatus?.last_poll_at && (
                   <div>
                     <span>Last poll</span>
@@ -1270,8 +1307,34 @@ function App() {
                       <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('select', issue.id)}>
                         Select
                       </button>
+                      {link?.branch_name && (
+                        <>
+                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-handoff', issue.id)}>
+                            Copy Cursor prompt
+                          </button>
+                          <button
+                            type="button"
+                            disabled={linearBusyId === issue.id}
+                            onClick={async () => {
+                              setLinearBusyId(issue.id)
+                              try {
+                                await handleCopyCursorHandoff(issue.id, 'codex')
+                              } catch (err) {
+                                setError(err.message)
+                              } finally {
+                                setLinearBusyId('')
+                              }
+                            }}
+                          >
+                            Copy Codex prompt
+                          </button>
+                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-verify', issue.id)}>
+                            Verify Cursor work
+                          </button>
+                        </>
+                      )}
                       <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
-                        Run task
+                        Run task (EvolveAgent AI)
                       </button>
                       {developerMode && link?.status !== 'completed' && (
                         <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
