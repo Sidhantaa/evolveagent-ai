@@ -556,12 +556,16 @@ def update_goal_task(goal_id: str, task_id: str, request: UpdateGoalTaskRequest)
     task = goal_service.update_task(goal_id, task_id, updates)
     if task is None:
         raise HTTPException(status_code=404, detail="Goal task not found")
+    linear_sync = None
     if updates.get("status") in {"done", "completed"}:
         try:
-            linear_orchestration.on_goal_task_updated(goal_id, task_id, updates)
-        except LinearServiceError:
-            pass
-    return task.model_dump()
+            linear_sync = linear_orchestration.on_goal_task_updated(goal_id, task_id, updates)
+        except LinearServiceError as error:
+            linear_sync = {"completed": False, "error": str(error)}
+    payload = task.model_dump()
+    if linear_sync is not None:
+        payload["linear_sync"] = linear_sync
+    return payload
 
 
 @router.post("/goals/{goal_id}/tasks/{task_id}/run", response_model=RunResponse)

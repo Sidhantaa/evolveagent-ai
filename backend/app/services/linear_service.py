@@ -212,26 +212,20 @@ class LinearService:
         }
 
     def map_issue_to_tasks(self, issue: dict[str, Any]) -> list[dict[str, Any]]:
-        from app.agents.goal_planner_agent import GoalPlannerAgent
-
-        prompt = f"{issue.get('title', '')}\n\n{issue.get('description') or ''}".strip()
-        _, planner_result = GoalPlannerAgent().run(prompt or issue.get("identifier", "Linear task"))
-        tasks = planner_result.get("tasks") or []
-        if not tasks:
-            tasks = [
-                {
-                    "title": issue.get("title") or "Complete Linear issue",
-                    "description": issue.get("description") or "",
-                    "phase": "Execution",
-                    "priority": "high" if issue.get("priority", 0) >= 2 else "medium",
-                    "depends_on": [],
-                    "recommended_agent": "Strategy Agent",
-                    "estimated_effort": "medium",
-                    "requires_approval": False,
-                    "automation_supported": True,
-                }
-            ]
-        return tasks
+        """One Mission Control task per Linear issue so Mark done auto-closes Linear."""
+        return [
+            {
+                "title": issue.get("title") or "Complete Linear issue",
+                "description": issue.get("description") or "",
+                "phase": "Execution",
+                "priority": "high" if issue.get("priority", 0) >= 2 else "medium",
+                "depends_on": [],
+                "recommended_agent": "Strategy Agent",
+                "estimated_effort": "medium",
+                "requires_approval": False,
+                "automation_supported": True,
+            }
+        ]
 
     def map_issue_to_task(self, issue: dict[str, Any]) -> dict[str, Any]:
         tasks = self.map_issue_to_tasks(issue)

@@ -290,7 +290,13 @@ class LinearOrchestrationService:
             "linear_completion": linear_completion,
         }
 
-    def complete_linear_issue(self, issue_id: str, goal_id: str | None = None) -> dict[str, Any]:
+    def complete_linear_issue(
+        self,
+        issue_id: str,
+        goal_id: str | None = None,
+        *,
+        skip_task_check: bool = False,
+    ) -> dict[str, Any]:
         link = self.links.get_link_by_issue(issue_id)
         if link is None and goal_id:
             link = self.links.get_link_by_goal_task(goal_id)
@@ -298,7 +304,7 @@ class LinearOrchestrationService:
             raise LinearServiceError("Linear issue link not found")
 
         resolved_goal_id = goal_id or link.get("goal_id")
-        if resolved_goal_id:
+        if resolved_goal_id and not skip_task_check:
             _, graph = self.goals.get_goal(resolved_goal_id) or ({}, {"tasks": []})
             if graph.get("tasks") and not self._all_tasks_complete(graph.get("tasks", [])):
                 return {"completed": False, "reason": "Goal tasks are not all done yet"}
@@ -361,7 +367,64 @@ class LinearOrchestrationService:
             link = self.links.get_link_by_goal_task(goal_id)
         if link is None:
             return None
-        return self.complete_linear_issue(link["linear_issue_id"], goal_id=goal_id)
+
+        issue_id = link["linear_issue_id"]
+        _, graph = self.goals.get_goal(goal_id) or ({}, {"tasks": []})
+        tasks = graph.get("tasks", [])
+        marked_task = next((task for task in tasks if task.get("task_id") == task_id), None)
+
+        if self._all_tasks_complete(tasks):
+            return self.complete_linear_issue(issue_id, goal_id=goal_id)
+
+        if link.get("task_id") == task_id:
+            return self.complete_linear_issue(issue_id, goal_id=goal_id, skip_task_check=True)
+
+        if marked_task:
+            remaining = [task.get("title") for task in tasks if task.get("status") not in {"done", "completed"}]
+            comment_body = (
+                f"**EvolveAgent subtask completed:** {marked_task.get('title')}\n\n"
+                f"Remaining Mission Control subtasks: {len(remaining)}\n"
+            )
+            if remaining:
+                comment_body += "\n".join(f"- {title}" for title in remaining[:5])
+            try:
+                comment = self.linear.add_linear_comment(issue_id, comment_body)
+                self._log("linear_comment_created", f"Posted subtask progress for {link.get('linear_identifier')}")
+                return {"completed": False, "progress_comment": comment}
+            except LinearServiceError as error:
+                self._log("linear_comment_failed", str(error))
+        return None
+
+    def sync_pending_completions(self) -> list[dict[str, Any]]:
+        """Auto-close Linear issues when linked goals are fully done."""
+        synced: list[dict[str, Any]] = []
+        for link in self.links.list_links():
+            if link.get("status") == "completed":
+                continue
+            goal_id = link.get("goal_id")
+            issue_id = link.get("linear_issue_id")
+            if not goal_id or not issue_id:
+                continue
+            _, graph = self.goals.get_goal(goal_id) or ({}, {"tasks": []})
+            tasks = graph.get("tasks", [])
+            if not tasks:
+                continue
+            if not self._all_tasks_complete(tasks):
+                linked_task = next((task for task in tasks if task.get("task_id") == link.get("task_id")), None)
+                if not linked_task or linked_task.get("status") not in {"done", "completed"}:
+                    continue
+                result = self.complete_linear_issue(issue_id, goal_id=goal_id, skip_task_check=True)
+            else:
+                result = self.complete_linear_issue(issue_id, goal_id=goal_id)
+            if result.get("completed"):
+                synced.append(
+                    {
+                        "issue_id": issue_id,
+                        "identifier": link.get("linear_identifier"),
+                        "action": "completed",
+                    }
+                )
+        return synced
 
     def add_comment(self, issue_id: str, body: str) -> dict[str, Any]:
         comment = self.linear.add_linear_comment(issue_id, body)

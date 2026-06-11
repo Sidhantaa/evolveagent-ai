@@ -81,7 +81,8 @@ def test_map_issue_to_goal(linear_service):
     }
     goal = linear_service.map_issue_to_goal(issue)
     assert goal["goal_title"] == "Build Linear integration"
-    assert goal["tasks"]
+    assert len(goal["tasks"]) == 1
+    assert goal["tasks"][0]["title"] == "Build Linear integration"
 
 
 def test_linear_link_service_create_and_update(storage):

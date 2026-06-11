@@ -496,9 +496,14 @@ function App() {
 
   async function handleMarkGoalTaskDone(goalId, taskId) {
     try {
-      await updateGoalTask(goalId, taskId, { status: 'done' })
+      const result = await updateGoalTask(goalId, taskId, { status: 'done' })
       await handleSelectGoal(goalId)
       await refreshMissionControl()
+      await refreshLinearData(workspaceId)
+      if (result?.linear_sync?.completed) {
+        setCopied(`Linear ${result.linear_sync.identifier || 'issue'} marked Done`)
+        window.setTimeout(() => setCopied(''), 2000)
+      }
     } catch (err) {
       setError(err.message)
     }
@@ -1254,9 +1259,9 @@ function App() {
                       <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
                         Run task
                       </button>
-                      {link?.status !== 'completed' && (
+                      {developerMode && link?.status !== 'completed' && (
                         <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
-                          Mark Done in Linear
+                          Force Done in Linear
                         </button>
                       )}
                       {issue.url && (
