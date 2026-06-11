@@ -141,9 +141,8 @@ def test_poll_worker_detects_in_progress_issues(monkeypatch):
     monkeypatch.setattr(settings, "linear_team_id", "team-1")
 
     linear = MagicMock()
-    linear.list_linear_issues.return_value = [
+    linear.list_in_progress_issues.return_value = [
         {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
-        {"id": "issue-2", "identifier": "EVO-2", "status": "Backlog", "status_type": "backlog"},
     ]
     orchestration = MagicMock()
     orchestration.links.get_link_by_issue.return_value = None
@@ -167,7 +166,7 @@ def test_poll_worker_skips_already_prepared(monkeypatch):
     monkeypatch.setattr(settings, "linear_team_id", "team-1")
 
     linear = MagicMock()
-    linear.list_linear_issues.return_value = [
+    linear.list_in_progress_issues.return_value = [
         {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
     ]
     orchestration = MagicMock()

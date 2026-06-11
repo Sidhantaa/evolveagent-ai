@@ -96,6 +96,56 @@ class LinearService:
             issues = [item for item in issues if (item.get("status") or "").lower() == status_filter.lower()]
         return issues
 
+    def list_in_progress_issues(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Fetch issues in started workflow states (In Progress) for the poll worker."""
+        if not settings.linear_team_id:
+            raise LinearServiceError(NOT_CONFIGURED)
+
+        if settings.linear_project_id:
+            query = """
+            query TeamIssues($teamId: String!, $first: Int!, $projectId: ID!) {
+              team(id: $teamId) {
+                issues(
+                  first: $first,
+                  filter: {
+                    project: { id: { eq: $projectId } },
+                    state: { type: { eq: "started" } }
+                  }
+                ) {
+                  nodes {
+                    id identifier title description priority url updatedAt
+                    state { name type }
+                    assignee { name }
+                  }
+                }
+              }
+            }
+            """
+            variables = {
+                "teamId": settings.linear_team_id,
+                "first": limit,
+                "projectId": settings.linear_project_id,
+            }
+        else:
+            query = """
+            query TeamIssues($teamId: String!, $first: Int!) {
+              team(id: $teamId) {
+                issues(first: $first, filter: { state: { type: { eq: "started" } } }) {
+                  nodes {
+                    id identifier title description priority url updatedAt
+                    state { name type }
+                    assignee { name }
+                  }
+                }
+              }
+            }
+            """
+            variables = {"teamId": settings.linear_team_id, "first": limit}
+
+        data = self.linear_graphql(query, variables)
+        team = data.get("team") or {}
+        return [self._normalize_issue(item) for item in team.get("issues", {}).get("nodes", [])]
+
     def get_linear_issue(self, issue_id: str) -> dict[str, Any]:
         query = """
         query Issue($id: String!) {

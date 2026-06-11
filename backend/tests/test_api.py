@@ -790,8 +790,8 @@ def test_linear_poll_run_once_with_mock(monkeypatch):
     monkeypatch.setattr(settings, "linear_api_key", "test-key")
     monkeypatch.setattr(settings, "linear_team_id", "team-1")
     monkeypatch.setattr(
-        "app.api.routes.linear_service.list_linear_issues",
-        lambda status_filter=None: [
+        "app.api.routes.linear_service.list_in_progress_issues",
+        lambda limit=50: [
             {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
         ],
     )

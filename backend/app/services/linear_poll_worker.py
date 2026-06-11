@@ -51,7 +51,7 @@ class LinearPollWorker:
             return processed
 
         try:
-            issues = self.linear.list_linear_issues()
+            issues = self.linear.list_in_progress_issues()
             for issue in issues:
                 if not self._is_in_progress(issue):
                     continue
