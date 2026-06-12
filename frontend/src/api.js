@@ -609,3 +609,50 @@ export async function getCodexJob(jobId) {
   if (!response.ok) throw new Error(`Codex job failed with status ${response.status}`)
   return response.json()
 }
+
+export async function getApprovals(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/approvals${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.approvals || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getApproval(approvalId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/approvals/${approvalId}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function submitApprovalDecision(approvalId, payload) {
+  const response = await fetch(`${API_BASE}/api/approvals/${approvalId}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Approval decision failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getApprovalAudit(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/approvals/audit${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.audit || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}

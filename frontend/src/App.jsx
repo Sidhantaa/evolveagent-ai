@@ -66,6 +66,9 @@ import {
   getLinearStatus,
   getCodexJobs,
   runCodexForLinearIssue,
+  getApprovals,
+  submitApprovalDecision,
+  getApprovalAudit,
   getProviderStatus,
   getWorkspaceMemory,
   getWorkspaceKnowledge,
@@ -231,6 +234,12 @@ function App() {
   const [customAgents, setCustomAgents] = useState([])
   const [agentTemplates, setAgentTemplates] = useState([])
   const [showMissionControl, setShowMissionControl] = useState(false)
+  const [showApprovals, setShowApprovals] = useState(false)
+  const [approvals, setApprovals] = useState([])
+  const [approvalsAvailable, setApprovalsAvailable] = useState(false)
+  const [approvalAudit, setApprovalAudit] = useState([])
+  const [approvalAuditAvailable, setApprovalAuditAvailable] = useState(false)
+  const [approvalBusyId, setApprovalBusyId] = useState('')
   const [showAgentBuilder, setShowAgentBuilder] = useState(false)
   const [workspaces, setWorkspaces] = useState([])
   const [workspaceId, setWorkspaceId] = useState(null)
@@ -280,6 +289,11 @@ function App() {
     refreshKnowledge(workspaceId)
     refreshLinearData(workspaceId)
   }, [workspaceId])
+
+  useEffect(() => {
+    if (!workspaceId || !developerMode) return
+    refreshApprovals(workspaceId)
+  }, [workspaceId, developerMode])
 
   useEffect(() => {
     if (!loading) return undefined
@@ -347,6 +361,36 @@ function App() {
   async function refreshMissionControl(nextWorkspaceId = workspaceId) {
     setGoals(await getGoals(nextWorkspaceId))
   }
+
+  async function refreshApprovals(nextWorkspaceId = workspaceId) {
+    const [queue, audit] = await Promise.all([
+      getApprovals(nextWorkspaceId),
+      getApprovalAudit(nextWorkspaceId),
+    ])
+    setApprovalsAvailable(queue.available)
+    setApprovals(queue.items || [])
+    setApprovalAuditAvailable(audit.available)
+    setApprovalAudit(audit.items || [])
+  }
+
+  async function handleApprovalDecision(approvalId, decision) {
+    setApprovalBusyId(approvalId)
+    setError('')
+    try {
+      const comment = window.prompt(`Optional comment for ${decision}:`, '') || undefined
+      await submitApprovalDecision(approvalId, { decision, comment: comment?.trim() || undefined })
+      await refreshApprovals(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setApprovalBusyId('')
+    }
+  }
+
+  const pendingApprovals = useMemo(
+    () => approvals.filter((item) => item.status === 'pending'),
+    [approvals],
+  )
 
   async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
     setCustomAgents(await getCustomAgents(nextWorkspaceId))
@@ -1423,6 +1467,60 @@ function App() {
             </div>
           )}
         </section>
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowApprovals((current) => !current)}>
+              <span>
+                <ShieldAlert size={15} />
+                Approval Queue
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showApprovals && (
+              <div className="mission-panel">
+                {!approvalsAvailable && (
+                  <p className="muted">Approval queue is not available yet.</p>
+                )}
+                {approvalsAvailable && pendingApprovals.length === 0 && (
+                  <p className="muted">No pending approvals.</p>
+                )}
+                {approvalsAvailable && pendingApprovals.map((approval) => (
+                  <div className="agent-template-card" key={approval.approval_id}>
+                    <strong>{approval.summary || approval.action_type || 'Approval request'}</strong>
+                    <span>
+                      {formatType(approval.action_type || 'action')} · {approval.risk_level || 'unknown'} risk · {approval.status}
+                    </span>
+                    {approval.created_at && (
+                      <p className="muted">{new Date(approval.created_at).toLocaleString()}</p>
+                    )}
+                    {(approval.steps || []).length > 0 && (
+                      <p className="muted">
+                        Steps: {(approval.steps || []).map((step) => step.title || step.step_id).join(', ')}
+                      </p>
+                    )}
+                    <div className="inline-actions">
+                      <button
+                        type="button"
+                        disabled={approvalBusyId === approval.approval_id}
+                        onClick={() => handleApprovalDecision(approval.approval_id, 'approve')}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={approvalBusyId === approval.approval_id}
+                        onClick={() => handleApprovalDecision(approval.approval_id, 'reject')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAgentBuilder((current) => !current)}>
@@ -2510,6 +2608,40 @@ function App() {
                 <ul>{(selectedRun.automation_plan.commands_to_run || []).map((command) => <li key={command}>{command}</li>)}</ul>
                 <h3>Consensus planning</h3>
                 <p>{selectedRun.automation_plan.judge_reason}</p>
+              </details>
+            )}
+
+            {developerMode && (
+              <details className="inspector-section">
+                <summary>
+                  <ShieldAlert size={15} />
+                  Approval Audit
+                  <ChevronDown size={15} />
+                </summary>
+                {!approvalAuditAvailable && (
+                  <p className="muted">Approval queue is not available yet.</p>
+                )}
+                {approvalAuditAvailable && approvalAudit.length === 0 && (
+                  <p className="muted">No approval audit entries yet.</p>
+                )}
+                {approvalAuditAvailable && approvalAudit.length > 0 && (
+                  <div className="agent-list">
+                    {approvalAudit.map((entry, index) => (
+                      <div className="provider-row" key={entry.approval_id || entry.audit_id || index}>
+                        <strong>{entry.decision || entry.status || 'decision'}</strong>
+                        <div className="model-meta">
+                          <span>{formatType(entry.action_type || 'action')}</span>
+                          <span>{entry.risk_level || 'unknown'} risk</span>
+                          {entry.run_id && <span>{entry.run_id.slice(0, 8)}</span>}
+                        </div>
+                        {entry.comment && <p>{entry.comment}</p>}
+                        {entry.created_at && (
+                          <p className="muted">{new Date(entry.created_at).toLocaleString()}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </details>
             )}
 
