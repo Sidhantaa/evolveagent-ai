@@ -512,3 +512,24 @@ export async function verifyLinearCursorWork(issueId, payload = {}) {
   if (!response.ok) throw new Error(`Cursor verify failed with status ${response.status}`)
   return response.json()
 }
+
+export async function runCodexForLinearIssue(issueId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/codex-run`, { method: 'POST' })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Codex run failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getCodexJobs() {
+  const response = await fetch(`${API_BASE}/api/codex/jobs`)
+  if (!response.ok) throw new Error(`Codex jobs failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getCodexJob(jobId) {
+  const response = await fetch(`${API_BASE}/api/codex/jobs/${jobId}`)
+  if (!response.ok) throw new Error(`Codex job failed with status ${response.status}`)
+  return response.json()
+}

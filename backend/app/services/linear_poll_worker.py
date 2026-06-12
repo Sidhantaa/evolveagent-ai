@@ -12,9 +12,15 @@ IN_PROGRESS_NAMES = {"in progress", "started", "doing"}
 
 
 class LinearPollWorker:
-    def __init__(self, linear_service: LinearService, orchestration: LinearOrchestrationService):
+    def __init__(
+        self,
+        linear_service: LinearService,
+        orchestration: LinearOrchestrationService,
+        codex_worker: Any | None = None,
+    ):
         self.linear = linear_service
         self.orchestration = orchestration
+        self.codex_worker = codex_worker
         self.running = False
         self._task: asyncio.Task | None = None
         self.last_poll_at: str | None = None
@@ -60,14 +66,26 @@ class LinearPollWorker:
                 if link and link.get("linear_status") == issue.get("status") and link.get("branch_name"):
                     continue
                 result = self.orchestration.prepare_in_progress_issue(issue_id)
-                processed.append(
-                    {
-                        "issue_id": issue_id,
-                        "identifier": issue.get("identifier"),
-                        "action": "prepared",
-                        "branch": result.get("branch", {}).get("branch"),
-                    }
-                )
+                entry = {
+                    "issue_id": issue_id,
+                    "identifier": issue.get("identifier"),
+                    "action": "prepared",
+                    "branch": result.get("branch", {}).get("branch"),
+                }
+                if (
+                    settings.linear_autonomous_codex_worker
+                    and settings.codex_worker_enabled
+                    and self.codex_worker is not None
+                ):
+                    try:
+                        codex_result = self.codex_worker.run_for_issue(issue_id)
+                        entry["action"] = "prepared_and_codex"
+                        entry["codex_job"] = codex_result.get("job")
+                        if codex_result.get("error"):
+                            entry["codex_error"] = codex_result["error"]
+                    except Exception as error:  # noqa: BLE001
+                        entry["codex_error"] = str(error)
+                processed.append(entry)
             for item in self.orchestration.sync_pending_completions():
                 processed.append(item)
         except LinearServiceError as error:
@@ -93,4 +111,6 @@ class LinearPollWorker:
             "last_poll_at": self.last_poll_at,
             "last_error": self.last_error,
             "last_processed": self.last_processed,
+            "autonomous_codex_worker": settings.linear_autonomous_codex_worker,
+            "codex_worker_enabled": settings.codex_worker_enabled,
         }

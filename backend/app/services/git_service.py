@@ -56,6 +56,24 @@ class GitService:
             "message": checkout.stderr.strip() or checkout.stdout.strip(),
         }
 
+    def checkout_branch(self, branch_name: str) -> dict[str, str | bool]:
+        safe_name = branch_name.replace(" ", "-").lower()
+        checkout = self._run("checkout", safe_name)
+        return {
+            "branch": safe_name,
+            "success": checkout.returncode == 0,
+            "message": checkout.stderr.strip() or checkout.stdout.strip(),
+        }
+
+    def list_changed_files(self) -> list[str]:
+        status = self.git_status()
+        changed: list[str] = []
+        for line in str(status.get("output") or "").splitlines():
+            if len(line) < 4:
+                continue
+            changed.append(line[3:].strip())
+        return changed
+
     def is_safe_path(self, path: str) -> bool:
         normalized = path.replace("\\", "/").strip()
         if not normalized or normalized.startswith("../"):

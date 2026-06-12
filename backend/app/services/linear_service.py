@@ -29,6 +29,10 @@ class LinearService:
             "auto_git_push": settings.auto_git_push,
             "poll_interval_seconds": settings.linear_poll_interval_seconds,
             "linear_cursor_worker": settings.linear_cursor_worker,
+            "codex_worker_enabled": settings.codex_worker_enabled,
+            "linear_autonomous_codex_worker": settings.linear_autonomous_codex_worker,
+            "codex_worker_mode": settings.codex_worker_mode,
+            "codex_max_files_changed": settings.codex_max_files_changed,
         }
 
     def linear_graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -48,6 +48,8 @@ from app.services.linear_link_service import LinearLinkService
 from app.services.linear_orchestration_service import LinearOrchestrationService
 from app.services.linear_poll_worker import LinearPollWorker
 from app.services.git_service import GitService
+from app.services.codex_job_service import CodexJobService
+from app.services.codex_worker_service import CodexWorkerService, CodexWorkerError
 from app.services.secret_scanner import SecretScanner
 
 router = APIRouter()
@@ -81,7 +83,14 @@ linear_orchestration = LinearOrchestrationService(
     git_service=git_service,
     command_runner=safe_command_runner,
 )
-linear_poll_worker = LinearPollWorker(linear_service, linear_orchestration)
+codex_job_service = CodexJobService(storage)
+codex_worker_service = CodexWorkerService(
+    job_service=codex_job_service,
+    git_service=git_service,
+    command_runner=safe_command_runner,
+    linear_orchestration=linear_orchestration,
+)
+linear_poll_worker = LinearPollWorker(linear_service, linear_orchestration, codex_worker=codex_worker_service)
 
 
 def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> list[dict]:
@@ -908,3 +917,26 @@ def get_linear_poll_status() -> dict:
 def run_linear_poll_once() -> dict:
     processed = linear_poll_worker.poll_once()
     return {"processed": processed, **linear_poll_worker.status()}
+
+
+@router.post("/linear/issues/{issue_id}/codex-run")
+def run_codex_for_linear_issue(issue_id: str) -> dict:
+    try:
+        return codex_worker_service.run_for_issue(issue_id)
+    except CodexWorkerError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/codex/jobs")
+def list_codex_jobs() -> list[dict]:
+    return codex_job_service.list_jobs()
+
+
+@router.get("/codex/jobs/{job_id}")
+def get_codex_job(job_id: str) -> dict:
+    job = codex_job_service.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Codex job not found")
+    return job

@@ -64,6 +64,8 @@ import {
   getLinearLinks,
   getLinearPollStatus,
   getLinearStatus,
+  getCodexJobs,
+  runCodexForLinearIssue,
   getProviderStatus,
   getWorkspaceMemory,
   getWorkspaces,
@@ -234,6 +236,7 @@ function App() {
   const [linearIssues, setLinearIssues] = useState([])
   const [linearLinks, setLinearLinks] = useState([])
   const [linearPollStatus, setLinearPollStatus] = useState(null)
+  const [codexJobs, setCodexJobs] = useState([])
   const [showLinearPanel, setShowLinearPanel] = useState(false)
   const [linearBusyId, setLinearBusyId] = useState('')
 
@@ -324,6 +327,11 @@ function App() {
     setLinearStatus(status)
     setLinearLinks(await getLinearLinks(nextWorkspaceId))
     setLinearPollStatus(await getLinearPollStatus())
+    try {
+      setCodexJobs(await getCodexJobs())
+    } catch {
+      setCodexJobs([])
+    }
     if (status?.configured) {
       try {
         setLinearIssues(await getLinearIssues())
@@ -387,6 +395,32 @@ function App() {
 
   function linearLinkForIssue(issueId) {
     return linearLinks.find((item) => item.linear_issue_id === issueId)
+  }
+
+  function latestCodexJobForIssue(issueId) {
+    return codexJobs.find((item) => item.issue_id === issueId)
+  }
+
+  async function handleRunAutonomousCodex(issueId) {
+    setLinearBusyId(issueId)
+    setError('')
+    try {
+      const result = await runCodexForLinearIssue(issueId)
+      const job = result.job
+      if (job?.status === 'passed') {
+        setCopied(`Codex worker passed — ${job.issue_identifier} marked Done in Linear`)
+      } else if (job?.error) {
+        setError(job.error)
+      } else if (result.error) {
+        setError(result.error)
+      }
+      await refreshLinearData(workspaceId)
+      window.setTimeout(() => setCopied(''), 3000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLinearBusyId('')
+    }
   }
 
   function linearLinkForGoal(goalId) {
@@ -1257,6 +1291,18 @@ function App() {
                   <span>Cursor worker</span>
                   <strong>{linearStatus?.linear_cursor_worker ? 'enabled' : 'off'}</strong>
                 </div>
+                <div>
+                  <span>Codex worker</span>
+                  <strong>{linearStatus?.codex_worker_enabled ? 'enabled' : 'off'}</strong>
+                </div>
+                <div>
+                  <span>Codex mode</span>
+                  <strong>{linearStatus?.codex_worker_mode || 'manual_trigger'}</strong>
+                </div>
+                <div>
+                  <span>Auto Codex</span>
+                  <strong>{linearStatus?.linear_autonomous_codex_worker ? 'on' : 'off'}</strong>
+                </div>
                 {linearPollStatus?.last_poll_at && (
                   <div>
                     <span>Last poll</span>
@@ -1279,8 +1325,22 @@ function App() {
               {linearIssues.length === 0 && linearStatus?.configured && (
                 <p className="muted">No Linear issues found for the configured team/project.</p>
               )}
+              {codexJobs.length > 0 && (
+                <details className="developer-prompt-block">
+                  <summary>Codex jobs ({codexJobs.length})</summary>
+                  {codexJobs.slice(0, 6).map((job) => (
+                    <div className="agent-template-card" key={job.job_id}>
+                      <strong>{job.issue_identifier || job.issue_id}</strong>
+                      <span>{job.status} · {job.branch_name}</span>
+                      {job.commit_hash && <p className="muted">Commit: {job.commit_hash}</p>}
+                      {job.error && <p className="muted">{job.error}</p>}
+                    </div>
+                  ))}
+                </details>
+              )}
               {linearIssues.slice(0, 8).map((issue) => {
                 const link = linearLinkForIssue(issue.id)
+                const codexJob = latestCodexJobForIssue(issue.id)
                 return (
                   <div className="agent-template-card" key={issue.id}>
                     <strong>{issue.identifier}</strong>
@@ -1292,6 +1352,24 @@ function App() {
                         {link.branch_name ? ` · ${link.branch_name}` : ''}
                         {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash}` : ''}
                       </p>
+                    )}
+                    {codexJob && (
+                      <details className="developer-prompt-block">
+                        <summary>Codex job: {codexJob.status}</summary>
+                        <p className="muted">Branch: {codexJob.branch_name}</p>
+                        <p className="muted">Handoff: {codexJob.handoff_path}</p>
+                        {codexJob.changed_files?.length > 0 && (
+                          <p className="muted">Changed: {codexJob.changed_files.join(', ')}</p>
+                        )}
+                        {codexJob.test_results?.map((item) => (
+                          <p className="muted" key={item.command}>
+                            {item.command}: {item.success ? 'pass' : 'fail'}
+                          </p>
+                        ))}
+                        {codexJob.commit_hash && <p className="muted">Commit: {codexJob.commit_hash}</p>}
+                        <p className="muted">Linear Done: {codexJob.linear_done ? 'yes' : 'no'}</p>
+                        {codexJob.error && <p className="muted">{codexJob.error}</p>}
+                      </details>
                     )}
                     {developerMode && (
                       <details className="developer-prompt-block">
@@ -1330,6 +1408,14 @@ function App() {
                           </button>
                           <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-verify', issue.id)}>
                             Verify Cursor work
+                          </button>
+                          <button
+                            type="button"
+                            disabled={linearBusyId === issue.id || !linearStatus?.codex_worker_enabled}
+                            onClick={() => handleRunAutonomousCodex(issue.id)}
+                            title={linearStatus?.codex_worker_enabled ? 'Run autonomous Codex worker' : 'Enable CODEX_WORKER_ENABLED in backend/.env'}
+                          >
+                            Run Autonomous Codex
                           </button>
                         </>
                       )}

@@ -35,6 +35,7 @@ class StorageService:
             "workspaces.json",
             "workspace_memory.json",
             "linear_links.json",
+            "codex_jobs.json",
         ):
             self._ensure_file(filename)
 
