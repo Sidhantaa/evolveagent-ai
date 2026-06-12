@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
   Activity,
@@ -16,6 +16,7 @@ import {
   Flag,
   Gauge,
   GitBranch,
+  Keyboard,
   Layers3,
   Library,
   MoreHorizontal,
@@ -256,6 +257,7 @@ function App() {
   const [selectedCommand, setSelectedCommand] = useState('help')
   const [commandInput, setCommandInput] = useState('')
   const [commandResult, setCommandResult] = useState(null)
+  const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
   const [linearStatus, setLinearStatus] = useState(null)
@@ -954,6 +956,15 @@ function App() {
     recognition.start()
   }
 
+  function focusComposer() {
+    composerRef.current?.focus()
+  }
+
+  function handleJarvisSpeak() {
+    focusComposer()
+    startVoiceInput()
+  }
+
   async function copyText(text) {
     await navigator.clipboard.writeText(text)
     setCopied('Copied')
@@ -1079,6 +1090,7 @@ function App() {
           New Chat
         </button>
 
+        <div className="sidebar-dev-only">
         <section className="sidebar-section">
           <div className="side-heading">
             <Library size={15} />
@@ -1580,49 +1592,118 @@ function App() {
             ))}
           </div>
         </section>
+        </div>
       </aside>
 
       <section className="chat-workspace">
-        <header className="chat-topbar">
-          <div>
-            <div className="section-kicker">
-              <Terminal size={16} />
-              AI Workbench
-            </div>
-            <h2>Ask EvolveAgent AI</h2>
-            <p>Your request is routed through specialist agents and returned as one final answer.</p>
-          </div>
-          <div className="topbar-actions">
-            <div className="mode-toggle" role="group" aria-label="Mode toggle">
-              <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
-                Simple
-              </button>
-              <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
-                Developer
-              </button>
-            </div>
-            <div className="status-pill">
-              <Sparkles size={16} />
-              {modeLabel}
-            </div>
-            <div className="export-actions">
-              <button type="button" onClick={copyConversation} disabled={messages.length === 0}>
-                <Copy size={14} />
-                Copy chat
-              </button>
-              <button type="button" onClick={exportMarkdown} disabled={messages.length === 0}>
-                <Download size={14} />
-                Markdown
-              </button>
-              <button type="button" onClick={exportJson} disabled={messages.length === 0}>
-                JSON
-              </button>
-            </div>
-          </div>
+        <header className={`chat-topbar ${developerMode ? '' : 'jarvis-topbar'}`}>
+          {developerMode ? (
+            <>
+              <div>
+                <div className="section-kicker">
+                  <Terminal size={16} />
+                  AI Workbench
+                </div>
+                <h2>Ask EvolveAgent AI</h2>
+                <p>Your request is routed through specialist agents and returned as one final answer.</p>
+              </div>
+              <div className="topbar-actions">
+                <div className="mode-toggle" role="group" aria-label="Mode toggle">
+                  <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
+                    Simple
+                  </button>
+                  <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
+                    Developer
+                  </button>
+                </div>
+                <div className="status-pill">
+                  <Sparkles size={16} />
+                  {modeLabel}
+                </div>
+                <div className="export-actions">
+                  <button type="button" onClick={copyConversation} disabled={messages.length === 0}>
+                    <Copy size={14} />
+                    Copy chat
+                  </button>
+                  <button type="button" onClick={exportMarkdown} disabled={messages.length === 0}>
+                    <Download size={14} />
+                    Markdown
+                  </button>
+                  <button type="button" onClick={exportJson} disabled={messages.length === 0}>
+                    JSON
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="jarvis-topbar-brand">
+                <h2>EvolveAgent AI</h2>
+                <p>Voice-controlled multi-agent operating system</p>
+              </div>
+              <div className="topbar-actions jarvis-topbar-actions">
+                <select
+                  className="jarvis-workspace-select"
+                  value={workspaceId || ''}
+                  onChange={(event) => setWorkspaceId(event.target.value)}
+                  aria-label="Select workspace"
+                >
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.workspace_id} value={workspace.workspace_id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+                <button className="jarvis-icon-button" type="button" onClick={newChat} aria-label="New chat">
+                  <MessageSquarePlus size={16} />
+                </button>
+                <div className="mode-toggle mode-toggle-compact" role="group" aria-label="Mode toggle">
+                  <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
+                    Simple
+                  </button>
+                  <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
+                    Dev
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </header>
 
-        <section className="chat-scroll">
-          {messages.length === 0 && !loading && (
+        <section className={`chat-scroll ${!developerMode ? 'jarvis-scroll' : ''}`}>
+          {messages.length === 0 && !loading && !developerMode && (
+            <div className="jarvis-command-center">
+              <div className="jarvis-glow" aria-hidden="true" />
+              <div className="jarvis-ring" aria-hidden="true" />
+              <div className="jarvis-command-header">
+                <h2>EvolveAgent AI</h2>
+                <p>Voice-controlled multi-agent operating system</p>
+              </div>
+              <div className="jarvis-command-options">
+                <button
+                  type="button"
+                  className={`jarvis-command-option speak ${listening ? 'active' : ''}`}
+                  onClick={handleJarvisSpeak}
+                >
+                  <span className="jarvis-option-icon">
+                    <Mic size={28} />
+                  </span>
+                  <strong>Speak</strong>
+                  <span className="jarvis-option-subtitle">Give EvolveAgent a voice command.</span>
+                </button>
+                <button type="button" className="jarvis-command-option type" onClick={focusComposer}>
+                  <span className="jarvis-option-icon">
+                    <Keyboard size={28} />
+                  </span>
+                  <strong>Type</strong>
+                  <span className="jarvis-option-subtitle">Send a text command.</span>
+                </button>
+              </div>
+              {listening && <p className="jarvis-listening">Listening for your command...</p>}
+            </div>
+          )}
+
+          {messages.length === 0 && !loading && developerMode && (
               <div className="chat-empty">
               <div className="empty-orb">
                 <Brain size={30} />
@@ -1905,7 +1986,8 @@ function App() {
           )}
         </section>
 
-        <section className="chat-composer">
+        <section className={`chat-composer ${developerMode ? '' : 'jarvis-composer'}`}>
+          {developerMode && (
           <div className="composer-controls">
             <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
               {taskTypes.map((type) => (
@@ -1924,6 +2006,7 @@ function App() {
               Deep Mode
             </label>
           </div>
+          )}
           {attachedFiles.length > 0 && (
             <div className="file-chip-row">
               {attachedFiles.map((file) => (
@@ -1979,10 +2062,11 @@ function App() {
               <Mic size={18} />
             </button>
             <textarea
+              ref={composerRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask EvolveAgent AI anything..."
+              placeholder={developerMode ? 'Ask EvolveAgent AI anything...' : 'Send a command...'}
               rows={1}
             />
             <button className="send-button" onClick={() => submitMessage()} disabled={loading || uploadingFiles || uploadingRecordings || input.trim().length < 1} aria-label="Send message">
