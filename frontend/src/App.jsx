@@ -2114,6 +2114,47 @@ function App() {
               </details>
             )}
 
+            {developerMode && (
+              <details className="inspector-section">
+                <summary>
+                  <Route size={15} />
+                  Tool Trace
+                  <ChevronDown size={15} />
+                </summary>
+                {(selectedRun.tool_trace || []).length === 0 ? (
+                  <p className="muted">No tools were selected for this run.</p>
+                ) : (
+                  <div className="agent-list">
+                    {(selectedRun.tool_trace || []).map((tool, index) => (
+                      <div className="provider-row" key={`${tool.tool_name || 'tool'}-${index}`}>
+                        <strong>{tool.tool_name || 'unknown'}</strong>
+                        <div className="model-meta">
+                          <span>{tool.source || 'n/a'}</span>
+                          <span>{tool.permission_level || 'n/a'}</span>
+                          {tool.selected && <span>selected</span>}
+                          {tool.executed && <span>executed</span>}
+                          {tool.blocked && <span>blocked</span>}
+                          {tool.approval_required && <span>approval required</span>}
+                        </div>
+                        {tool.sanitized_input && (
+                          <p>
+                            <span>Input: </span>
+                            {tool.sanitized_input}
+                          </p>
+                        )}
+                        {tool.result_summary && (
+                          <p>
+                            <span>Result: </span>
+                            {tool.result_summary}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </details>
+            )}
+
             <article className="metric-card score-card">
               <div className="section-title">
                 <Gauge size={17} />
