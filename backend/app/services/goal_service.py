@@ -23,6 +23,7 @@ class GoalService:
             GoalTask(
                 **{
                     **task,
+                    "task_id": task.get("task_id") or str(uuid4()),
                     "created_at": now,
                     "updated_at": now,
                 }

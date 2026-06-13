@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     anthropic_strong_model: str = Field(default="claude-opus-4.5", alias="ANTHROPIC_STRONG_MODEL")
     anthropic_balanced_model: str = Field(default="claude-sonnet-4.5", alias="ANTHROPIC_BALANCED_MODEL")
     anthropic_fast_model: str = Field(default="claude-haiku-4.5", alias="ANTHROPIC_FAST_MODEL")
-    anthropic_model: str = Field(default="claude-3-5-sonnet-latest", alias="ANTHROPIC_MODEL")
+    anthropic_model: str = Field(default="claude-sonnet-4-20250514", alias="ANTHROPIC_MODEL")
     gemini_pro_model: str = Field(default="gemini-pro", alias="GEMINI_PRO_MODEL")
     gemini_fast_model: str = Field(default="gemini-flash", alias="GEMINI_FAST_MODEL")
     gemini_model: str = Field(default="gemini-1.5-pro", alias="GEMINI_MODEL")
@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     openai_image_model: str = Field(default="gpt-image-1.5", alias="OPENAI_IMAGE_MODEL")
     transcription_mode: str = Field(default="mock", alias="TRANSCRIPTION_MODE")
     openai_transcription_model: str = Field(default="whisper-1", alias="OPENAI_TRANSCRIPTION_MODEL")
+    linear_api_key: str | None = Field(default=None, alias="LINEAR_API_KEY")
+    linear_team_id: str | None = Field(default=None, alias="LINEAR_TEAM_ID")
+    linear_project_id: str | None = Field(default=None, alias="LINEAR_PROJECT_ID")
+    linear_workspace_name: str | None = Field(default=None, alias="LINEAR_WORKSPACE_NAME")
+    linear_sync_enabled: bool = Field(default=False, alias="LINEAR_SYNC_ENABLED")
+    linear_poll_interval_seconds: int = Field(default=60, alias="LINEAR_POLL_INTERVAL_SECONDS")
+    linear_cursor_worker: bool = Field(default=True, alias="LINEAR_CURSOR_WORKER")
+    codex_worker_enabled: bool = Field(default=False, alias="CODEX_WORKER_ENABLED")
+    linear_autonomous_codex_worker: bool = Field(default=False, alias="LINEAR_AUTONOMOUS_CODEX_WORKER")
+    codex_cli_command: str = Field(default="codex", alias="CODEX_CLI_COMMAND")
+    codex_worker_mode: str = Field(default="manual_trigger", alias="CODEX_WORKER_MODE")
+    codex_max_files_changed: int = Field(default=8, alias="CODEX_MAX_FILES_CHANGED")
+    auto_git_push: bool = Field(default=False, alias="AUTO_GIT_PUSH")
+    git_default_branch: str = Field(default="main", alias="GIT_DEFAULT_BRANCH")
+    git_remote_name: str = Field(default="origin", alias="GIT_REMOTE_NAME")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -45,6 +60,10 @@ class Settings(BaseSettings):
     @property
     def use_mock_llm(self) -> bool:
         return self.llm_mode.lower() == "mock"
+
+    @property
+    def linear_configured(self) -> bool:
+        return bool(self.linear_api_key and self.linear_team_id)
 
 
 @lru_cache

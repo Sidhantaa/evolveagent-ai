@@ -1357,6 +1357,21 @@ h2 {
   font-weight: 800;
 }
 
+.linear-badge,
+.linear-goal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #8eb4ff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.linear-goal-meta a {
+  color: #8eb4ff;
+  text-decoration: underline;
+}
+
 .agent-template-card p,
 .goal-detail p,
 .task-card p {
@@ -1364,6 +1379,16 @@ h2 {
   color: #aeb9c3;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.task-notes {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(114, 192, 255, 0.08);
+  color: #d7e3ee;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .agent-template-card button,

@@ -85,6 +85,8 @@ class UpdateGoalTaskRequest(BaseModel):
     phase: str | None = Field(default=None, max_length=80)
     status: str | None = Field(default=None, pattern="^(pending|running|needs_approval|blocked|done|failed)$")
     priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    last_result_summary: str | None = Field(default=None, max_length=2000)
+    completion_note: str | None = Field(default=None, max_length=2000, description="Optional note when marking done; posted to Linear and task summary.")
     depends_on: list[str] | None = None
     recommended_agent: str | None = Field(default=None, max_length=120)
     estimated_effort: str | None = Field(default=None, pattern="^(small|medium|large)$")
@@ -147,3 +149,12 @@ class UpdateWorkspaceMemoryRequest(BaseModel):
     source: str | None = Field(default=None, pattern="^(chat|file|recording|goal|feedback|manual)$")
     importance: str | None = Field(default=None, pattern="^(low|medium|high)$")
     tags: list[str] | None = None
+
+
+class LinearCommentRequest(BaseModel):
+    body: str = Field(..., min_length=1, max_length=8000)
+
+
+class LinearCursorVerifyRequest(BaseModel):
+    completion_note: str | None = Field(default=None, max_length=2000)
+    auto_commit: bool = Field(default=False, description="Stage and commit safe files after verification passes.")

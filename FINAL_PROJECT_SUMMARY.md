@@ -53,6 +53,7 @@ MVP v2.6 supports real OpenAI text mode, optional Deep Mode consensus across con
 - Workspace memory timeline with add, search, filter, edit, and delete controls
 - Relevant workspace memory retrieval before agent runs with capped context
 - Workspace-filtered analytics and learning reports
+- Linear issue sync into Mission Control with governed git commit workflow and In Progress poll detection
 
 ## Architecture Overview
 

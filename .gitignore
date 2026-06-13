@@ -32,5 +32,7 @@ backend/app/data/task_graphs.json
 backend/app/data/custom_agents.json
 backend/app/data/workspaces.json
 backend/app/data/workspace_memory.json
+backend/app/data/linear_links.json
+backend/app/data/codex_jobs.json
 *.log
 logs/

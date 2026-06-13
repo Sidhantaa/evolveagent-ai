@@ -718,3 +718,142 @@ def test_workspace_memory_and_scoped_run_flow():
     archived = client.delete(f"/api/workspaces/{workspace_id}")
     assert archived.status_code == 200
     assert archived.json()["workspace"]["status"] == "archived"
+
+
+def test_linear_status_endpoint(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "linear_api_key", None)
+    monkeypatch.setattr(settings, "linear_team_id", None)
+    response = client.get("/api/linear/status")
+    body = response.json()
+    assert response.status_code == 200
+    assert body["configured"] is False
+
+
+def test_linear_sync_select_and_links_with_mock(monkeypatch):
+    from app.config import settings
+
+    issue = {
+        "id": "linear-issue-1",
+        "identifier": "EVO-99",
+        "title": "Linear sync test",
+        "description": "Sync this issue into Mission Control",
+        "priority": 2,
+        "url": "https://linear.app/issue/EVO-99",
+        "updatedAt": "2026-06-11T00:00:00.000Z",
+        "status": "Backlog",
+        "status_type": "backlog",
+        "assignee": "Dev",
+    }
+
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+    monkeypatch.setattr("app.api.routes.linear_service.get_linear_issue", lambda issue_id: issue)
+    monkeypatch.setattr("app.api.routes.linear_service.add_linear_comment", lambda issue_id, body: {"id": "comment-1", "body": body})
+
+    sync_response = client.post("/api/linear/issues/linear-issue-1/sync")
+    assert sync_response.status_code == 200
+    sync_body = sync_response.json()
+    assert sync_body["goal"]["title"]
+    assert sync_body["link"]["linear_identifier"] == "EVO-99"
+
+    select_response = client.post("/api/linear/issues/linear-issue-1/select")
+    assert select_response.status_code == 200
+    assert select_response.json()["link"]["status"] == "selected"
+
+    links_response = client.get("/api/linear/links")
+    assert links_response.status_code == 200
+    assert any(item["linear_issue_id"] == "linear-issue-1" for item in links_response.json())
+
+    analytics = client.get("/api/analytics").json()
+    assert "linear_issues_synced" in analytics
+    learning = client.get("/api/learning/report").json()
+    assert "linear_tasks_synced" in learning
+    governance = client.get("/api/governance").json()
+    assert any("linear" in event.get("action_type", "") for event in governance.get("recent_events", []))
+
+
+def test_linear_poll_status_endpoint():
+    response = client.get("/api/linear/poll/status")
+    assert response.status_code == 200
+    body = response.json()
+    assert "running" in body
+    assert "poll_interval_seconds" in body
+    assert "last_processed" in body
+
+
+def test_linear_poll_run_once_with_mock(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "linear_sync_enabled", True)
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+    monkeypatch.setattr(
+        "app.api.routes.linear_service.list_in_progress_issues",
+        lambda limit=50: [
+            {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
+        ],
+    )
+    monkeypatch.setattr("app.api.routes.linear_link_service.get_link_by_issue", lambda issue_id: None)
+    monkeypatch.setattr(
+        "app.api.routes.linear_orchestration.prepare_in_progress_issue",
+        lambda issue_id, workspace_id=None: {
+            "branch": {"branch": "linear/evo-1", "success": True},
+            "prepared_for_cursor": True,
+        },
+    )
+
+    response = client.post("/api/linear/poll/run-once")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["processed"]) == 1
+    assert body["processed"][0]["identifier"] == "EVO-1"
+
+
+def test_linear_complete_endpoint_updates_status_and_comment(monkeypatch):
+    from app.config import settings
+
+    issue_id = "7f7a0445-e93b-4be5-86f6-c6e4b243cbff"
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+    monkeypatch.setattr(
+        "app.api.routes.linear_service.update_linear_issue_status",
+        lambda issue_id, status_name=None, prefer_completed=False: {
+            "id": issue_id,
+            "identifier": "EVO-1",
+            "status": "Done",
+            "status_type": "completed",
+        },
+    )
+    monkeypatch.setattr(
+        "app.api.routes.linear_service.add_linear_comment",
+        lambda issue_id, body: {"id": "comment-done", "body": body},
+    )
+
+    # Ensure a link exists with all tasks effectively complete path
+    monkeypatch.setattr(
+        "app.api.routes.linear_link_service.get_link_by_issue",
+        lambda issue_id: {
+            "linear_issue_id": issue_id,
+            "linear_identifier": "EVO-1",
+            "goal_id": "goal-complete-1",
+            "branch_name": "linear/evo-1",
+            "status": "selected",
+            "commits": [{"hash": "abc1234"}],
+            "pushes": [],
+        },
+    )
+    monkeypatch.setattr(
+        "app.api.routes.linear_orchestration.goals.get_goal",
+        lambda goal_id: (
+            {"goal_id": goal_id},
+            {"tasks": [{"task_id": "t1", "status": "done"}, {"task_id": "t2", "status": "done"}]},
+        ),
+    )
+
+    response = client.post(f"/api/linear/issues/{issue_id}/complete")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["completed"] is True
+    assert body["linear_status"]["status"] == "Done"

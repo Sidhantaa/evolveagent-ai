@@ -301,3 +301,7 @@ EvolveAgent AI is a full-stack multi-agent AI workspace I built with FastAPI and
 - Export Markdown/JSON works
 - Backend tests pass
 - Frontend build passes
+- Linear status endpoint works when configured or unconfigured
+- Linear panel can sync/select/run issues when backend is configured
+- Poll worker detects In Progress issues and prepares branches (manual poll via Developer Mode)
+- Mission Control goal cards show Linear identifier, branch, commit, and push status when linked

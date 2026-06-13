@@ -43,6 +43,9 @@ import {
   createWorkspaceMemory,
   applyAutomation,
   approvePromptVersion,
+  completeLinearIssue,
+  getLinearCursorHandoff,
+  verifyLinearCursorWork,
   createChat,
   deleteChat,
   deleteMessage,
@@ -57,6 +60,12 @@ import {
   getGoals,
   getHistory,
   getLearningReport,
+  getLinearIssues,
+  getLinearLinks,
+  getLinearPollStatus,
+  getLinearStatus,
+  getCodexJobs,
+  runCodexForLinearIssue,
   getProviderStatus,
   getWorkspaceMemory,
   getWorkspaces,
@@ -64,8 +73,12 @@ import {
   renameChat,
   rollbackPromptVersion,
   runGoalTask,
+  runLinearIssue,
+  runLinearPollOnce,
   runWorkflow,
+  selectLinearIssue,
   sendFeedback,
+  syncLinearIssue,
   updateWorkspace,
   updateWorkspaceMemory,
   updateGoalTask,
@@ -219,10 +232,18 @@ function App() {
   const [showMemoryPanel, setShowMemoryPanel] = useState(false)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
+  const [linearStatus, setLinearStatus] = useState(null)
+  const [linearIssues, setLinearIssues] = useState([])
+  const [linearLinks, setLinearLinks] = useState([])
+  const [linearPollStatus, setLinearPollStatus] = useState(null)
+  const [codexJobs, setCodexJobs] = useState([])
+  const [showLinearPanel, setShowLinearPanel] = useState(false)
+  const [linearBusyId, setLinearBusyId] = useState('')
 
   useEffect(() => {
     refreshWorkspaces()
     refreshProviderStatus()
+    refreshLinearStatus()
   }, [])
 
   useEffect(() => {
@@ -238,6 +259,7 @@ function App() {
     refreshMissionControl(workspaceId)
     refreshCustomAgents(workspaceId)
     refreshWorkspaceMemory(workspaceId)
+    refreshLinearData(workspaceId)
   }, [workspaceId])
 
   useEffect(() => {
@@ -294,6 +316,115 @@ function App() {
   async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
     setCustomAgents(await getCustomAgents(nextWorkspaceId))
     setAgentTemplates(await getAgentTemplates())
+  }
+
+  async function refreshLinearStatus() {
+    setLinearStatus(await getLinearStatus())
+  }
+
+  async function refreshLinearData(nextWorkspaceId = workspaceId) {
+    const status = await getLinearStatus()
+    setLinearStatus(status)
+    setLinearLinks(await getLinearLinks(nextWorkspaceId))
+    setLinearPollStatus(await getLinearPollStatus())
+    try {
+      setCodexJobs(await getCodexJobs())
+    } catch {
+      setCodexJobs([])
+    }
+    if (status?.configured) {
+      try {
+        setLinearIssues(await getLinearIssues())
+      } catch {
+        setLinearIssues([])
+      }
+    } else {
+      setLinearIssues([])
+    }
+  }
+
+  async function handleLinearAction(action, issueId) {
+    setLinearBusyId(issueId)
+    setError('')
+    try {
+      if (action === 'sync') await syncLinearIssue(issueId, workspaceId)
+      if (action === 'select') await selectLinearIssue(issueId, workspaceId)
+      if (action === 'run') await runLinearIssue(issueId, workspaceId)
+      if (action === 'complete') await completeLinearIssue(issueId)
+      if (action === 'cursor-handoff') await handleCopyCursorHandoff(issueId)
+      if (action === 'cursor-verify') await handleVerifyCursorWork(issueId)
+      await refreshLinearData(workspaceId)
+      await refreshMissionControl(workspaceId)
+      await refreshAnalytics(workspaceId)
+      await refreshLearningReport(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLinearBusyId('')
+    }
+  }
+
+  async function handleCopyCursorHandoff(issueId, variant = 'cursor') {
+    const handoff = await getLinearCursorHandoff(issueId)
+    const text = variant === 'codex' ? handoff.codex_prompt : handoff.cursor_prompt
+    if (!text) throw new Error('Cursor handoff not available yet. Move issue to In Progress or Select first.')
+    await navigator.clipboard.writeText(text)
+    setCopied(`${variant === 'codex' ? 'Codex' : 'Cursor'} prompt copied`)
+    window.setTimeout(() => setCopied(''), 2000)
+    return handoff
+  }
+
+  async function handleVerifyCursorWork(issueId) {
+    const note = window.prompt(
+      'Optional: what did Cursor/Codex change and how was it tested?',
+      '',
+    )
+    const autoCommit = window.confirm('Auto-commit safe staged files if verification passes?')
+    const result = await verifyLinearCursorWork(issueId, {
+      completion_note: note?.trim() || undefined,
+      auto_commit: autoCommit,
+    })
+    if (result.verified) {
+      setCopied(`Verified — Linear ${result.linear_completion?.identifier || 'issue'} marked Done`)
+    } else {
+      setError('Verification failed. Fix tests/build, then try again.')
+    }
+    window.setTimeout(() => setCopied(''), 2500)
+    return result
+  }
+
+  function linearLinkForIssue(issueId) {
+    return linearLinks.find((item) => item.linear_issue_id === issueId)
+  }
+
+  function latestCodexJobForIssue(issueId) {
+    return codexJobs.find((item) => item.issue_id === issueId)
+  }
+
+  async function handleRunAutonomousCodex(issueId) {
+    setLinearBusyId(issueId)
+    setError('')
+    try {
+      const result = await runCodexForLinearIssue(issueId)
+      const job = result.job
+      if (job?.status === 'passed') {
+        setCopied(`Codex worker passed — ${job.issue_identifier} marked Done in Linear`)
+      } else if (job?.error) {
+        setError(job.error)
+      } else if (result.error) {
+        setError(result.error)
+      }
+      await refreshLinearData(workspaceId)
+      window.setTimeout(() => setCopied(''), 3000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLinearBusyId('')
+    }
+  }
+
+  function linearLinkForGoal(goalId) {
+    return linearLinks.find((item) => item.goal_id === goalId)
   }
 
   async function refreshWorkspaceMemory(nextWorkspaceId = workspaceId) {
@@ -432,9 +563,23 @@ function App() {
 
   async function handleMarkGoalTaskDone(goalId, taskId) {
     try {
-      await updateGoalTask(goalId, taskId, { status: 'done' })
+      const completionNote = window.prompt(
+        'Optional completion note (what was done, how it was verified):',
+        '',
+      )
+      const payload = { status: 'done' }
+      if (completionNote && completionNote.trim()) {
+        payload.completion_note = completionNote.trim()
+        payload.last_result_summary = completionNote.trim()
+      }
+      const result = await updateGoalTask(goalId, taskId, payload)
       await handleSelectGoal(goalId)
       await refreshMissionControl()
+      await refreshLinearData(workspaceId)
+      if (result?.linear_sync?.completed) {
+        setCopied(`Linear ${result.linear_sync.identifier || 'issue'} marked Done`)
+        window.setTimeout(() => setCopied(''), 2000)
+      }
     } catch (err) {
       setError(err.message)
     }
@@ -967,6 +1112,14 @@ function App() {
                 <strong>{analytics.custom_agents_count || 0}</strong>
               </div>
               <div>
+                <span>Linear synced</span>
+                <strong>{analytics.linear_issues_synced || 0}</strong>
+              </div>
+              <div>
+                <span>Linear commits</span>
+                <strong>{analytics.linear_linked_commits || 0}</strong>
+              </div>
+              <div>
                 <span>Feedback</span>
                 <strong>
                   {analytics.feedback_summary?.helpful || 0}/{analytics.feedback_summary?.not_helpful || 0}/{analytics.feedback_summary?.saved || 0}
@@ -1002,16 +1155,46 @@ function App() {
                 Create goal from prompt
               </button>
               {goals.length === 0 && <p className="muted">No goals yet.</p>}
-              {goals.slice(0, 6).map((goal) => (
-                <button className="goal-card" type="button" key={goal.goal_id} onClick={() => handleSelectGoal(goal.goal_id)}>
-                  <strong>{goal.title}</strong>
-                  <span>{goal.status} · {goal.progress_percent || 0}% · {goal.risk_level} risk</span>
-                </button>
-              ))}
+              {goals.slice(0, 6).map((goal) => {
+                const link = linearLinkForGoal(goal.goal_id)
+                return (
+                  <button className="goal-card" type="button" key={goal.goal_id} onClick={() => handleSelectGoal(goal.goal_id)}>
+                    <strong>{goal.title}</strong>
+                    <span>{goal.status} · {goal.progress_percent || 0}% · {goal.risk_level} risk</span>
+                    {link && (
+                      <span className="linear-badge">
+                        {link.linear_identifier}
+                        {link.branch_name ? ` · ${link.branch_name}` : ''}
+                        {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash?.slice(0, 7)}` : ''}
+                        {link.pushes?.length ? ' · pushed' : ''}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
               {selectedGoal?.goal && (
                 <div className="goal-detail">
                   <h3>{selectedGoal.goal.title}</h3>
                   <p>{selectedGoal.goal.description}</p>
+                  {(() => {
+                    const link = linearLinkForGoal(selectedGoal.goal.goal_id)
+                    if (!link) return null
+                    return (
+                      <div className="linear-goal-meta">
+                        <span>Linear: {link.linear_identifier} · {link.status}</span>
+                        {link.linear_url && (
+                          <a href={link.linear_url} target="_blank" rel="noreferrer">
+                            Open in Linear
+                          </a>
+                        )}
+                        {link.branch_name && <span>Branch: {link.branch_name}</span>}
+                        {link.commits?.length ? (
+                          <span>Latest commit: {link.commits[link.commits.length - 1].hash}</span>
+                        ) : null}
+                        {link.pushes?.length ? <span>Push: completed</span> : <span>Push: not yet</span>}
+                      </div>
+                    )
+                  })()}
                   <div className="progress-bar">
                     <span style={{ width: `${selectedGoal.goal.progress_percent || 0}%` }} />
                   </div>
@@ -1022,6 +1205,11 @@ function App() {
                         <span>{task.phase} · {task.priority} · {task.status}</span>
                       </div>
                       <p>{task.description}</p>
+                      {task.last_result_summary && (
+                        <p className="task-notes">
+                          <strong>Notes:</strong> {task.last_result_summary}
+                        </p>
+                      )}
                       <div className="inline-actions">
                         <button type="button" onClick={() => handleRunGoalTask(selectedGoal.goal.goal_id, task.task_id)}>
                           Run task
@@ -1068,6 +1256,186 @@ function App() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowLinearPanel((current) => !current)}>
+            <span>
+              <GitBranch size={15} />
+              Linear
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showLinearPanel && (
+            <div className="mission-panel">
+              <div className="provider-card">
+                <div>
+                  <span>Configured</span>
+                  <strong>{linearStatus?.configured ? 'yes' : 'no'}</strong>
+                </div>
+                <div>
+                  <span>Sync enabled</span>
+                  <strong>{linearStatus?.sync_enabled ? 'yes' : 'no'}</strong>
+                </div>
+                <div>
+                  <span>Auto push</span>
+                  <strong>{linearStatus?.auto_git_push ? 'yes' : 'no'}</strong>
+                </div>
+                <div>
+                  <span>Poll worker</span>
+                  <strong>{linearPollStatus?.running ? 'running' : 'idle'}</strong>
+                </div>
+                <div>
+                  <span>Cursor worker</span>
+                  <strong>{linearStatus?.linear_cursor_worker ? 'enabled' : 'off'}</strong>
+                </div>
+                <div>
+                  <span>Codex worker</span>
+                  <strong>{linearStatus?.codex_worker_enabled ? 'enabled' : 'off'}</strong>
+                </div>
+                <div>
+                  <span>Codex mode</span>
+                  <strong>{linearStatus?.codex_worker_mode || 'manual_trigger'}</strong>
+                </div>
+                <div>
+                  <span>Auto Codex</span>
+                  <strong>{linearStatus?.linear_autonomous_codex_worker ? 'on' : 'off'}</strong>
+                </div>
+                {linearPollStatus?.last_poll_at && (
+                  <div>
+                    <span>Last poll</span>
+                    <strong>{new Date(linearPollStatus.last_poll_at).toLocaleString()}</strong>
+                  </div>
+                )}
+              </div>
+              {developerMode && linearPollStatus && (
+                <details className="developer-prompt-block">
+                  <summary>Poll metadata</summary>
+                  <pre>{JSON.stringify(linearPollStatus, null, 2)}</pre>
+                  <button type="button" onClick={async () => { await runLinearPollOnce(); await refreshLinearData(workspaceId) }}>
+                    Run poll once
+                  </button>
+                </details>
+              )}
+              {!linearStatus?.configured && (
+                <p className="muted">Add LINEAR_API_KEY and LINEAR_TEAM_ID to backend/.env, then restart the backend.</p>
+              )}
+              {linearIssues.length === 0 && linearStatus?.configured && (
+                <p className="muted">No Linear issues found for the configured team/project.</p>
+              )}
+              {codexJobs.length > 0 && (
+                <details className="developer-prompt-block">
+                  <summary>Codex jobs ({codexJobs.length})</summary>
+                  {codexJobs.slice(0, 6).map((job) => (
+                    <div className="agent-template-card" key={job.job_id}>
+                      <strong>{job.issue_identifier || job.issue_id}</strong>
+                      <span>{job.status} · {job.branch_name}</span>
+                      {job.commit_hash && <p className="muted">Commit: {job.commit_hash}</p>}
+                      {job.error && <p className="muted">{job.error}</p>}
+                    </div>
+                  ))}
+                </details>
+              )}
+              {linearIssues.slice(0, 8).map((issue) => {
+                const link = linearLinkForIssue(issue.id)
+                const codexJob = latestCodexJobForIssue(issue.id)
+                return (
+                  <div className="agent-template-card" key={issue.id}>
+                    <strong>{issue.identifier}</strong>
+                    <span>{issue.status} · priority {issue.priority ?? 0}</span>
+                    <p>{issue.title}</p>
+                    {link && (
+                      <p className="muted">
+                        Local: {link.status}
+                        {link.branch_name ? ` · ${link.branch_name}` : ''}
+                        {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash}` : ''}
+                      </p>
+                    )}
+                    {codexJob && (
+                      <details className="developer-prompt-block">
+                        <summary>Codex job: {codexJob.status}</summary>
+                        <p className="muted">Branch: {codexJob.branch_name}</p>
+                        <p className="muted">Handoff: {codexJob.handoff_path}</p>
+                        {codexJob.changed_files?.length > 0 && (
+                          <p className="muted">Changed: {codexJob.changed_files.join(', ')}</p>
+                        )}
+                        {codexJob.test_results?.map((item) => (
+                          <p className="muted" key={item.command}>
+                            {item.command}: {item.success ? 'pass' : 'fail'}
+                          </p>
+                        ))}
+                        {codexJob.commit_hash && <p className="muted">Commit: {codexJob.commit_hash}</p>}
+                        <p className="muted">Linear Done: {codexJob.linear_done ? 'yes' : 'no'}</p>
+                        {codexJob.error && <p className="muted">{codexJob.error}</p>}
+                      </details>
+                    )}
+                    {developerMode && (
+                      <details className="developer-prompt-block">
+                        <summary>Raw issue JSON</summary>
+                        <pre>{JSON.stringify(issue, null, 2)}</pre>
+                        {link && <pre>{JSON.stringify(link, null, 2)}</pre>}
+                      </details>
+                    )}
+                    <div className="inline-actions">
+                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('sync', issue.id)}>
+                        Sync
+                      </button>
+                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('select', issue.id)}>
+                        Select
+                      </button>
+                      {link?.branch_name && (
+                        <>
+                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-handoff', issue.id)}>
+                            Copy Cursor prompt
+                          </button>
+                          <button
+                            type="button"
+                            disabled={linearBusyId === issue.id}
+                            onClick={async () => {
+                              setLinearBusyId(issue.id)
+                              try {
+                                await handleCopyCursorHandoff(issue.id, 'codex')
+                              } catch (err) {
+                                setError(err.message)
+                              } finally {
+                                setLinearBusyId('')
+                              }
+                            }}
+                          >
+                            Copy Codex prompt
+                          </button>
+                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-verify', issue.id)}>
+                            Verify Cursor work
+                          </button>
+                          <button
+                            type="button"
+                            disabled={linearBusyId === issue.id || !linearStatus?.codex_worker_enabled}
+                            onClick={() => handleRunAutonomousCodex(issue.id)}
+                            title={linearStatus?.codex_worker_enabled ? 'Run autonomous Codex worker' : 'Enable CODEX_WORKER_ENABLED in backend/.env'}
+                          >
+                            Run Autonomous Codex
+                          </button>
+                        </>
+                      )}
+                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
+                        Run task (EvolveAgent AI)
+                      </button>
+                      {developerMode && link?.status !== 'completed' && (
+                        <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
+                          Force Done in Linear
+                        </button>
+                      )}
+                      {issue.url && (
+                        <a href={issue.url} target="_blank" rel="noreferrer">
+                          Open
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>

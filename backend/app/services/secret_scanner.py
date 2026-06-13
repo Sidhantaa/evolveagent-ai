@@ -5,7 +5,8 @@ from app.models.response_models import SecretScanResult
 
 class SecretScanner:
     patterns: list[tuple[str, re.Pattern[str]]] = [
-        ("env_api_key", re.compile(r"\b(?:OPENAI|ANTHROPIC|GEMINI|MISTRAL)_API_KEY\s*=\s*[^\s]+", re.I)),
+        ("env_api_key", re.compile(r"\b(?:OPENAI|ANTHROPIC|GEMINI|MISTRAL|LINEAR)_API_KEY\s*=\s*[^\s]+", re.I)),
+        ("linear_key", re.compile(r"\blin_api_[A-Za-z0-9_]+\b")),
         ("openai_key", re.compile(r"\bsk-[A-Za-z0-9_-]{10,}\b")),
         ("github_token", re.compile(r"\bghp_[A-Za-z0-9_]{10,}\b")),
         ("private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S)),

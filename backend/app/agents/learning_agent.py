@@ -82,6 +82,45 @@ class LearningAgent:
             "proposed_prompt_versions": [
                 item for item in self.storage.read_list("prompt_versions.json") if item.get("status") == "proposed"
             ],
+            **self.linear_insights(workspace_id),
+        }
+
+    def linear_insights(self, workspace_id: str | None = None) -> dict:
+        links = self.filter_workspace(self.storage.read_list("linear_links.json"), workspace_id)
+        linear_runs = [item for item in self.filter_workspace(self.storage.read_list("agent_analytics.json"), workspace_id) if item.get("task_type") == "linear_task"]
+        blockers = [
+            {"reason": note.get("note"), "issue": link.get("linear_identifier")}
+            for link in links
+            if link.get("status") in {"failed", "blocked"}
+            for note in (link.get("notes") or [])[-1:]
+        ]
+        agent_scores: dict[str, list[float]] = defaultdict(list)
+        for run in linear_runs:
+            for score in run.get("per_agent_scores", []):
+                average = (score.get("usefulness_score", 0) + score.get("clarity_score", 0)) / 2
+                agent_scores[score.get("agent_name", "Unknown Agent")].append(average)
+        best_agents = sorted(
+            (
+                {"agent_name": name, "average_score": round(sum(values) / len(values), 2)}
+                for name, values in agent_scores.items()
+                if values
+            ),
+            key=lambda item: item["average_score"],
+            reverse=True,
+        )
+        return {
+            "linear_tasks_synced": len(links),
+            "linear_tasks_completed": sum(1 for item in links if item.get("status") == "completed"),
+            "recurring_linear_blockers": blockers[:5],
+            "best_agents_for_linear_tasks": best_agents[:5],
+            "linear_task_completion_performance": {
+                "runs": len(linear_runs),
+                "completed_links": sum(1 for item in links if item.get("status") == "completed"),
+            },
+            "recommended_linear_workflow_improvements": [
+                "Run one Linear subtask per execution and review approval plans before apply.",
+                "Keep AUTO_GIT_PUSH=false until commits and tests are stable.",
+            ],
         }
 
     @staticmethod

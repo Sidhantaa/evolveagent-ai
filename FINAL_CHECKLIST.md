@@ -64,8 +64,9 @@ npm run build
 - Mock image request shows image preview and prompt.
 - Feedback buttons save helpful/not helpful/saved ratings.
 - Analytics panel shows run and feedback metrics.
+- Linear panel shows connection status, issues, sync/select/run actions, poll worker status, and local link metadata.
 - Export Markdown/JSON works.
-- Mission Control shows goals, progress, task cards, run task, and mark done controls.
+- Mission Control shows goals, progress, task cards, Linear link metadata when synced, run task, and mark done controls.
 - Goal planning creates a saved task graph.
 - Custom Agent Builder lists templates and can create an agent from a template.
 - Developer Mode shows goal/task metadata and custom agent metadata.

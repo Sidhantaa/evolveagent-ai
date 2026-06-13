@@ -682,6 +682,43 @@ npm run build
 - `POST /api/learning/approve-prompt`
 - `POST /api/learning/reject-prompt`
 - `POST /api/learning/rollback-prompt`
+- `GET /api/linear/status`
+- `GET /api/linear/issues`
+- `GET /api/linear/issues/{issue_id}`
+- `POST /api/linear/issues/{issue_id}/sync`
+- `POST /api/linear/issues/{issue_id}/select`
+- `POST /api/linear/issues/{issue_id}/run`
+- `POST /api/linear/issues/{issue_id}/comment`
+- `POST /api/linear/issues/{issue_id}/complete`
+- `GET /api/linear/links`
+- `GET /api/linear/poll/status`
+- `POST /api/linear/poll/run-once`
+- `GET /api/linear/issues/{issue_id}/cursor-handoff`
+- `POST /api/linear/issues/{issue_id}/cursor-verify`
+- `POST /api/linear/issues/{issue_id}/codex-run`
+- `GET /api/codex/jobs`
+- `GET /api/codex/jobs/{job_id}`
+
+## EvolveAgent + Linear Workflow
+
+EvolveAgent can sync Linear issues into Mission Control and assist with selected tasks using the existing governed automation workflow.
+
+1. Add `LINEAR_API_KEY`, `LINEAR_TEAM_ID`, and optional `LINEAR_PROJECT_ID` to `backend/.env`.
+2. Set `LINEAR_SYNC_ENABLED=true`, `LINEAR_CURSOR_WORKER=true`, and keep `AUTO_GIT_PUSH=false` until testing is stable.
+3. Start backend and frontend.
+4. Open the **Linear** sidebar panel.
+5. **Sync** an issue, or move it to **In Progress** in Linear — poll detects it, syncs Mission Control, creates branch `linear/evo-*`, writes `docs/linear-handoffs/EVO-*.md`, and posts a Cursor/Codex handoff comment.
+6. **Copy Cursor prompt** or **Copy Codex prompt** from the Linear panel (or open the handoff file).
+7. Implement in **Cursor Agent** or **Codex** on the prepared branch.
+8. Click **Verify Cursor work** — runs `pytest` + `npm run build`, optionally commits safe files, marks Mission Control done, and closes Linear with a summary.
+9. Optional: **Run task (EvolveAgent AI)** uses built-in agents instead of Cursor/Codex.
+10. Enable `AUTO_GIT_PUSH=true` only after commits and tests are stable.
+
+**Handoff API:** `GET /api/linear/issues/{issue_id}/cursor-handoff` · `POST /api/linear/issues/{issue_id}/cursor-verify`
+
+When `LINEAR_SYNC_ENABLED=true`, the backend polls Linear every `LINEAR_POLL_INTERVAL_SECONDS` (default 60) for issues in **In Progress**. Poll status is visible in the Linear panel; Developer Mode shows raw poll metadata and a manual **Run poll once** action.
+
+Linear API keys are server-side only and are never exposed in frontend responses or logs.
 
 ## Limitations
 

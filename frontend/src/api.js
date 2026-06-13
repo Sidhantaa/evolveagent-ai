@@ -428,3 +428,108 @@ export async function deleteWorkspaceMemory(workspaceId, memoryId) {
   if (!response.ok) throw new Error(`Memory delete failed with status ${response.status}`)
   return response.json()
 }
+
+export async function getLinearStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/linear/status`)
+    if (!response.ok) return { configured: false }
+    return response.json()
+  } catch {
+    return { configured: false }
+  }
+}
+
+export async function getLinearIssues() {
+  const response = await fetch(`${API_BASE}/api/linear/issues`)
+  if (!response.ok) throw new Error(`Linear issues request failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getLinearLinks(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/links${query({ workspace_id: workspaceId })}`)
+  if (!response.ok) return []
+  return response.json()
+}
+
+export async function syncLinearIssue(issueId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/sync${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Linear sync failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function selectLinearIssue(issueId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/select${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Linear select failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function runLinearIssue(issueId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/run${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Linear run failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getLinearPollStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/linear/poll/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function runLinearPollOnce() {
+  const response = await fetch(`${API_BASE}/api/linear/poll/run-once`, { method: 'POST' })
+  if (!response.ok) throw new Error(`Linear poll failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function completeLinearIssue(issueId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/complete`, { method: 'POST' })
+  if (!response.ok) throw new Error(`Linear complete failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getLinearCursorHandoff(issueId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/cursor-handoff`)
+  if (!response.ok) throw new Error(`Cursor handoff failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function verifyLinearCursorWork(issueId, payload = {}) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/cursor-verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Cursor verify failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function runCodexForLinearIssue(issueId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/codex-run`, { method: 'POST' })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Codex run failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getCodexJobs() {
+  const response = await fetch(`${API_BASE}/api/codex/jobs`)
+  if (!response.ok) throw new Error(`Codex jobs failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getCodexJob(jobId) {
+  const response = await fetch(`${API_BASE}/api/codex/jobs/${jobId}`)
+  if (!response.ok) throw new Error(`Codex job failed with status ${response.status}`)
+  return response.json()
+}

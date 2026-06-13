@@ -113,15 +113,50 @@ def test_project_scanner_ignores_unsafe_folders(tmp_path):
     (tmp_path / ".env").write_text("SECRET=value", encoding="utf-8")
     (tmp_path / "node_modules").mkdir()
     (tmp_path / "node_modules" / "bad.js").write_text("x", encoding="utf-8")
+    (tmp_path / "backend" / "app" / "data").mkdir(parents=True)
+    (tmp_path / "backend" / "app" / "data" / "tasks.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "backend" / "app" / "main.py").write_text("from fastapi import FastAPI\n", encoding="utf-8")
+    (tmp_path / "backend" / "tests").mkdir(parents=True)
     (tmp_path / "frontend" / "src").mkdir(parents=True)
     (tmp_path / "frontend" / "src" / "App.jsx").write_text("export default function App() {}", encoding="utf-8")
-    (tmp_path / "frontend" / "package.json").write_text('{"dependencies":{"react":"latest","vite":"latest"}}', encoding="utf-8")
+    (tmp_path / "frontend" / "src" / "styles.css").write_text(".app {}", encoding="utf-8")
+    (tmp_path / "frontend" / "package.json").write_text(
+        '{"scripts":{"build":"vite build","test":"vitest"},"dependencies":{"react":"latest","vite":"latest"}}',
+        encoding="utf-8",
+    )
 
     result = ProjectScannerAgent(tmp_path).scan("change the ui")
 
+    assert "FastAPI" in result.frameworks_detected
     assert "React" in result.frameworks_detected
+    assert "Vite" in result.frameworks_detected
+    assert result.package_manager == "npm"
+    assert "frontend/src" in result.source_roots
+    assert "backend/app" in result.source_roots
+    assert "frontend/src/App.jsx" in result.relevant_files
+    assert "frontend/src/styles.css" in result.relevant_files
+    assert "npm run build" in result.build_commands
+    assert "pytest" in result.test_commands
+    assert "npm test" in result.test_commands
+    assert result.scanned_files_count >= 3
+    assert result.ignored_paths_count >= 2
     assert all(".env" not in file for file in result.relevant_files)
     assert all("node_modules" not in file for file in result.relevant_files)
+    assert all("backend/app/data" not in file for file in result.relevant_files)
+
+
+def test_project_scanner_ranks_backend_api_files(tmp_path):
+    (tmp_path / "backend" / "app" / "api").mkdir(parents=True)
+    (tmp_path / "backend" / "app" / "api" / "routes.py").write_text("router = None\n", encoding="utf-8")
+    (tmp_path / "backend" / "app" / "services").mkdir(parents=True)
+    (tmp_path / "backend" / "app" / "services" / "git_service.py").write_text("class GitService: pass\n", encoding="utf-8")
+    (tmp_path / "frontend" / "src").mkdir(parents=True)
+    (tmp_path / "frontend" / "src" / "App.jsx").write_text("export default function App() {}", encoding="utf-8")
+
+    result = ProjectScannerAgent(tmp_path).scan("add git api route")
+
+    assert result.relevant_files[0] == "backend/app/api/routes.py"
+    assert "backend/app/services/git_service.py" in result.relevant_files
 
 
 def test_implementation_planner_requires_approval(tmp_path):
