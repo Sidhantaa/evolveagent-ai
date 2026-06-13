@@ -44,6 +44,7 @@ class StorageService:
             "agent_jobs.json",
             "system_prompt_registry.json",
             "quality_runs.json",
+            "app_builder_projects.json",
         ):
             self._ensure_file(filename)
 

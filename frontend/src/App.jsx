@@ -41,6 +41,7 @@ import {
 import remarkGfm from 'remark-gfm'
 import {
   API_BASE,
+  createAppBuilderPlan,
   createCustomAgent,
   createGoal,
   createWorkspace,
@@ -57,6 +58,7 @@ import {
   deleteWorkspaceMemory,
   getAnalytics,
   getAgentTemplates,
+  getAppBuilderTemplates,
   getChat,
   getChats,
   getCustomAgents,
@@ -102,6 +104,7 @@ import {
   runLinearPollOnce,
   runQualityChecks,
   runWorkflow,
+  scaffoldAppBuilderPlan,
   selectLinearIssue,
   sendFeedback,
   syncLinearIssue,
@@ -342,6 +345,14 @@ function App() {
   const [qualityStatus, setQualityStatus] = useState(null)
   const [qualityBusy, setQualityBusy] = useState(false)
   const [qualityError, setQualityError] = useState('')
+  const [showAppBuilder, setShowAppBuilder] = useState(false)
+  const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
+  const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
+  const [appBuilderStack, setAppBuilderStack] = useState('fastapi-react')
+  const [appBuilderPlan, setAppBuilderPlan] = useState(null)
+  const [appBuilderResult, setAppBuilderResult] = useState(null)
+  const [appBuilderBusy, setAppBuilderBusy] = useState(false)
+  const [appBuilderError, setAppBuilderError] = useState('')
   const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
@@ -368,6 +379,7 @@ function App() {
     refreshProviderStatus()
     refreshLinearStatus()
     refreshAssistantCommands()
+    refreshAppBuilderTemplates()
   }, [])
 
   useEffect(() => {
@@ -461,6 +473,14 @@ function App() {
 
   async function refreshQualityStatus() {
     setQualityStatus(await getQualityStatus())
+  }
+
+  async function refreshAppBuilderTemplates() {
+    const templates = await getAppBuilderTemplates()
+    setAppBuilderTemplates(templates)
+    if (templates.length > 0 && !templates.find((template) => template.stack_id === appBuilderStack)) {
+      setAppBuilderStack(templates[0].stack_id)
+    }
   }
 
   async function refreshMissionControl(nextWorkspaceId = workspaceId) {
@@ -781,6 +801,39 @@ function App() {
       setQualityError(err.message)
     } finally {
       setQualityBusy(false)
+    }
+  }
+
+  async function handleCreateAppBuilderPlan() {
+    setAppBuilderBusy(true)
+    setAppBuilderError('')
+    setAppBuilderResult(null)
+    try {
+      const plan = await createAppBuilderPlan({
+        prompt: appBuilderPrompt,
+        stack_id: appBuilderStack,
+        workspace_id: workspaceId,
+      })
+      setAppBuilderPlan(plan)
+    } catch (err) {
+      setAppBuilderError(err.message)
+    } finally {
+      setAppBuilderBusy(false)
+    }
+  }
+
+  async function handleScaffoldAppBuilderPlan() {
+    if (!appBuilderPlan?.plan_id) return
+    setAppBuilderBusy(true)
+    setAppBuilderError('')
+    try {
+      const result = await scaffoldAppBuilderPlan({ plan_id: appBuilderPlan.plan_id, approved: true })
+      setAppBuilderResult(result)
+      setAppBuilderPlan(result.plan || appBuilderPlan)
+    } catch (err) {
+      setAppBuilderError(err.message)
+    } finally {
+      setAppBuilderBusy(false)
     }
   }
 
@@ -1746,6 +1799,69 @@ function App() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowAppBuilder((current) => !current)}>
+            <span>
+              <Layers3 size={15} />
+              App Builder
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showAppBuilder && (
+            <div className="mission-panel">
+              <select value={appBuilderStack} onChange={(event) => setAppBuilderStack(event.target.value)}>
+                {appBuilderTemplates.map((template) => (
+                  <option key={template.stack_id} value={template.stack_id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                value={appBuilderPrompt}
+                onChange={(event) => setAppBuilderPrompt(event.target.value)}
+                placeholder="Describe the app you want to scaffold"
+                rows={4}
+              />
+              <button className="secondary-button full-width" type="button" disabled={appBuilderBusy} onClick={handleCreateAppBuilderPlan}>
+                {appBuilderBusy ? 'Working...' : 'Create build plan'}
+              </button>
+              {appBuilderError && <p className="provider-warning">{appBuilderError}</p>}
+              {appBuilderPlan && (
+                <div className="goal-detail">
+                  <h3>{appBuilderPlan.app_name}</h3>
+                  <p>{appBuilderPlan.stack?.name} · {appBuilderPlan.risk_level} risk · {appBuilderPlan.status}</p>
+                  {(appBuilderPlan.features || []).length > 0 && (
+                    <ul>{appBuilderPlan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+                  )}
+                  {(appBuilderPlan.wizard_steps || []).map((step) => (
+                    <div className="agent-template-card" key={`${appBuilderPlan.plan_id}-${step.step}`}>
+                      <strong>{step.step}. {step.title}</strong>
+                      <span>{step.value}</span>
+                    </div>
+                  ))}
+                  <p className="muted">
+                    Scaffold output writes to an ignored local preview folder only after approval.
+                  </p>
+                  <button
+                    className="secondary-button full-width"
+                    type="button"
+                    disabled={appBuilderBusy || appBuilderPlan.status === 'blocked'}
+                    onClick={handleScaffoldAppBuilderPlan}
+                  >
+                    Approve scaffold preview
+                  </button>
+                </div>
+              )}
+              {appBuilderResult && (
+                <div className={`command-result ${appBuilderResult.success ? 'success' : 'failed'}`}>
+                  <strong>{appBuilderResult.success ? 'Scaffold created' : 'Scaffold not created'}</strong>
+                  <pre>{appBuilderResult.summary || JSON.stringify(appBuilderResult.errors || [], null, 2)}</pre>
                 </div>
               )}
             </div>

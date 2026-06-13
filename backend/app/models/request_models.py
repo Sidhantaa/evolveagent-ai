@@ -209,6 +209,25 @@ class QualityLinearSummaryRequest(BaseModel):
     quality_run_id: str | None = Field(default=None, max_length=120)
 
 
+class AppBuilderPlanRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    stack_id: str = Field(default="fastapi-react", max_length=80)
+    workspace_id: str | None = None
+
+
+class AppBuilderScaffoldRequest(BaseModel):
+    plan_id: str = Field(..., min_length=1, max_length=120)
+    approved: bool = False
+
+
+class AppBuilderWizardRequest(BaseModel):
+    plan_id: str | None = Field(default=None, max_length=120)
+    app_name: str | None = Field(default=None, max_length=120)
+    stack_id: str | None = Field(default=None, max_length=80)
+    features: list[str] = Field(default_factory=list, max_length=12)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
 class AssistantCommandRequest(BaseModel):
     input_text: str = Field(default="", max_length=2000)
     workspace_id: str | None = None

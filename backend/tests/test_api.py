@@ -154,6 +154,33 @@ def test_quality_run_endpoint_uses_quality_service():
     assert body["quality_gate"]["passed"] is True
 
 
+def test_app_builder_templates_endpoint():
+    response = client.get("/api/app-builder/templates")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert any(item["stack_id"] == "fastapi-react" for item in body)
+
+
+def test_app_builder_plan_and_scaffold_endpoints():
+    plan_response = client.post(
+        "/api/app-builder/plan",
+        json={"prompt": "Build an AI resume analyzer app with upload and dashboard", "stack_id": "fastapi-react"},
+    )
+    plan = plan_response.json()
+
+    assert plan_response.status_code == 200
+    assert plan["requires_approval"] is True
+    assert plan["governance"]["safe_to_scaffold"] is True
+
+    rejected_response = client.post("/api/app-builder/scaffold", json={"plan_id": plan["plan_id"], "approved": False})
+    rejected = rejected_response.json()
+
+    assert rejected_response.status_code == 200
+    assert rejected["success"] is False
+    assert rejected["requires_approval"] is True
+
+
 def test_workspace_knowledge_search_and_export():
     workspace_response = client.post("/api/workspaces", json={"name": "Knowledge Test"})
     workspace_id = workspace_response.json()["workspace_id"]

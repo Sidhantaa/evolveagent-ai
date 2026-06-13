@@ -535,6 +535,36 @@ export async function suggestQualityTests(changedFiles = []) {
   return response.json()
 }
 
+export async function getAppBuilderTemplates() {
+  try {
+    const response = await fetch(`${API_BASE}/api/app-builder/templates`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function createAppBuilderPlan(payload) {
+  const response = await fetch(`${API_BASE}/api/app-builder/plan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`App Builder plan failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function scaffoldAppBuilderPlan(payload) {
+  const response = await fetch(`${API_BASE}/api/app-builder/scaffold`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`App Builder scaffold failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function getLinearStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/linear/status`)

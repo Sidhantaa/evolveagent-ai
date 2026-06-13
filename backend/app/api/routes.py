@@ -11,6 +11,9 @@ from app.agents.memory_agent import MemoryAgent
 from app.agents.test_generation_agent import TestGenerationAgent
 from app.models.request_models import (
     AgentJobActionRequest,
+    AppBuilderPlanRequest,
+    AppBuilderScaffoldRequest,
+    AppBuilderWizardRequest,
     ApprovalDecisionRequest,
     AutomationApplyRequest,
     AssistantCommandRequest,
@@ -58,6 +61,7 @@ from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
 from app.services.knowledge_service import KnowledgeService
 from app.services.assistant_command_service import AssistantCommandService
+from app.services.app_builder_service import AppBuilderService
 from app.services.approval_service import ApprovalService
 from app.services.agent_scheduler_service import AgentSchedulerService
 from app.services.kernel_service import KernelService
@@ -112,6 +116,7 @@ test_quality_service = TestQualityService(
     governance_service=governance_service,
     test_generation_agent=TestGenerationAgent(),
 )
+app_builder_service = AppBuilderService(storage, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -224,6 +229,43 @@ def post_quality_linear_summary(request: QualityLinearSummaryRequest) -> dict:
     except LinearServiceError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     return {"posted": True, "issue_id": request.issue_id, "quality_run_id": run.get("quality_run_id"), "comment": comment}
+
+
+@router.get("/app-builder/templates")
+def list_app_builder_templates() -> list[dict]:
+    return app_builder_service.list_templates()
+
+
+@router.get("/app-builder/plans")
+def list_app_builder_plans(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    return app_builder_service.list_plans(workspace_id)
+
+
+@router.get("/app-builder/plans/{plan_id}")
+def get_app_builder_plan(plan_id: str) -> dict:
+    plan = app_builder_service.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="App builder plan not found")
+    return plan
+
+
+@router.post("/app-builder/plan")
+def create_app_builder_plan(request: AppBuilderPlanRequest) -> dict:
+    return app_builder_service.create_plan(
+        prompt=request.prompt,
+        stack_id=request.stack_id,
+        workspace_id=request.workspace_id,
+    )
+
+
+@router.post("/app-builder/wizard")
+def update_app_builder_wizard(request: AppBuilderWizardRequest) -> dict:
+    return app_builder_service.update_wizard(request.model_dump())
+
+
+@router.post("/app-builder/scaffold")
+def scaffold_app_builder_plan(request: AppBuilderScaffoldRequest) -> dict:
+    return app_builder_service.scaffold(plan_id=request.plan_id, approved=request.approved)
 
 
 @router.post("/workspaces")
