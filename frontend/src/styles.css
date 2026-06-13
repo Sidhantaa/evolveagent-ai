@@ -2231,6 +2231,233 @@ ul {
   color: var(--color-text-muted);
 }
 
+/* v3.5 token reconciliation for older dark-only surfaces */
+.app-shell,
+.chat-workspace,
+.sidebar,
+.inspector {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.provider-card,
+.workspace-card,
+.memory-panel,
+.metric-card,
+.inspector-section,
+.analytics-panel > div,
+.history-item,
+.message-content,
+.empty-orb,
+.prompt-grid button,
+.goal-card,
+.agent-template-card,
+.task-card,
+.task-preview,
+.detail-card,
+.agent-list details,
+.provider-row,
+.image-result-card img,
+.inspector-image,
+.code-block {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.chat-message.user .message-content,
+.mode-toggle button.active,
+.input-shell,
+.inline-code,
+.raw-json,
+.code-block pre,
+.task-card,
+.task-preview {
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
+}
+
+.sidebar,
+.inspector,
+.chat-topbar,
+.inspector.visible {
+  border-color: var(--color-border);
+}
+
+.sidebar-brand p,
+.chat-topbar p,
+.provider-card span,
+.mini-grid span,
+.history-item small,
+.model-meta span,
+.trace-heading span,
+.message-label,
+.composer-controls,
+.chat-empty p,
+.markdown-content blockquote,
+.code-toolbar,
+.attached-file-list > span,
+.agent-template-card p,
+.goal-detail p,
+.task-card p,
+.trace-item p,
+.safety,
+.workspace-card p,
+.memory-card p,
+.detail-card p,
+.detail-card ul,
+.agent-list p {
+  color: var(--color-text-muted);
+}
+
+.provider-card strong,
+.mini-grid strong,
+.history-item,
+.chat-empty h2,
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.inspector-section h3,
+.message-content,
+.goal-card strong,
+.agent-template-card strong,
+.task-card strong,
+.task-preview strong,
+.detail-card strong,
+.trace-heading strong,
+.memory-card strong {
+  color: var(--color-text-primary);
+}
+
+.new-chat-button,
+.workspace-actions button,
+.secondary-button,
+.export-actions button,
+.raw-toggle,
+.message-actions button,
+.chat-row-actions button,
+.automation-actions button,
+.code-toolbar button,
+.file-chip button {
+  border-color: var(--color-border-strong);
+  background: color-mix(in srgb, var(--color-bg-elevated) 86%, var(--color-text-primary) 14%);
+  color: var(--color-text-secondary);
+}
+
+.new-chat-button:hover,
+.prompt-grid button:hover,
+.message-actions button:hover,
+.history-item:hover,
+.secondary-button:hover,
+.chat-row-actions button:hover,
+.export-actions button:hover {
+  border-color: var(--color-glow-cyan);
+  background: color-mix(in srgb, var(--color-bg-elevated) 78%, var(--color-accent-cyan) 22%);
+}
+
+.workspace-card select,
+.tools-panel select,
+.tools-panel textarea,
+.memory-controls input,
+.memory-controls select,
+.composer-controls select,
+.jarvis-workspace-select {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
+}
+
+.input-shell textarea {
+  color: var(--color-text-primary);
+}
+
+.chat-composer {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-bg-surface) 0%, transparent) 0%,
+    var(--color-bg-surface) 24%,
+    var(--color-bg-surface) 100%
+  );
+}
+
+.progress-step span,
+.trace-number.skipped {
+  background: color-mix(in srgb, var(--color-bg-panel) 80%, var(--color-text-primary) 20%);
+  color: var(--color-text-muted);
+}
+
+.trace-number,
+.progress-step.active span,
+.input-shell > .send-button,
+.automation-actions button:first-child {
+  background: var(--color-accent-green);
+  color: var(--color-bg-base);
+}
+
+.prompt-box,
+.automation-plan-card,
+.goal-result-card,
+.developer-help,
+.file-chip,
+.attached-file-pill,
+.memory-card {
+  border-color: color-mix(in srgb, var(--color-accent-green) 28%, transparent);
+  background: color-mix(in srgb, var(--color-accent-green) 9%, transparent);
+  color: var(--color-text-primary);
+}
+
+.composer-controls select,
+.input-shell,
+.chat-composer,
+.message-content,
+.inspector-section,
+.provider-card,
+.workspace-card,
+.memory-panel {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+[data-theme="light"] .jarvis-composer {
+  background: linear-gradient(
+    180deg,
+    rgba(232, 244, 252, 0),
+    rgba(232, 244, 252, 0.94) 24%,
+    var(--color-bg-jarvis) 100%
+  );
+}
+
+[data-theme="light"] .jarvis-composer .input-shell,
+[data-theme="light"] .simple-mode .chat-message.user .message-content,
+[data-theme="light"] .simple-mode .chat-message.assistant .message-content,
+[data-theme="light"] .simple-mode .goal-result-card,
+[data-theme="light"] .simple-mode .automation-plan-card {
+  background: var(--color-bg-glass);
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .jarvis-composer .input-shell textarea,
+[data-theme="light"] .jarvis-option-subtitle {
+  color: var(--color-text-secondary);
+}
+
+[data-theme="light"] .jarvis-option-icon {
+  background: var(--color-bg-panel);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 [data-theme="light"] .app-shell.simple-mode {
   background:
     radial-gradient(circle at 50% 18%, var(--color-glow-cyan-bg), transparent 42%),
