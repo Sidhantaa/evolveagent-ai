@@ -19,6 +19,8 @@ import {
   Keyboard,
   Layers3,
   Library,
+  Menu,
+  Moon,
   MoreHorizontal,
   Paperclip,
   Mic,
@@ -28,6 +30,7 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
+  Sun,
   Terminal,
   ThumbsDown,
   ThumbsUp,
@@ -144,6 +147,29 @@ const promptCards = [
   'Create a full implementation plan for a SaaS app',
 ]
 
+const ONBOARDING_STEPS = [
+  {
+    title: 'Speak or Type',
+    body: 'Simple Mode opens with a voice-first command center. Tap Speak for microphone input or Type to focus the composer.',
+  },
+  {
+    title: 'Developer Mode',
+    body: 'Switch to Dev for the engineering dashboard: inspector, tool trace, approvals, analytics, and raw run JSON.',
+  },
+  {
+    title: 'Mission Control',
+    body: 'Create goals, run tasks, and track completion. Linear-linked issues sync branches and handoffs when configured.',
+  },
+  {
+    title: 'Knowledge Base',
+    body: 'Search workspace knowledge and manage pinned memory to give EvolveAgent stronger project context.',
+  },
+  {
+    title: 'Agent Jobs',
+    body: 'Queue, start, pause, and monitor background agent jobs from the Developer sidebar when the scheduler is enabled.',
+  },
+]
+
 const progressSteps = [
   'Master Agent is understanding your request',
   'Task type is being detected',
@@ -219,6 +245,10 @@ function App() {
   const [taskType, setTaskType] = useState('auto')
   const [deepMode, setDeepMode] = useState(false)
   const [developerMode, setDeveloperMode] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('evolveagent-theme') || 'dark')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
+  const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
   const [sessionId, setSessionId] = useState(null)
   const [selectedRunId, setSelectedRunId] = useState(null)
@@ -289,6 +319,15 @@ function App() {
   const [codexJobs, setCodexJobs] = useState([])
   const [showLinearPanel, setShowLinearPanel] = useState(false)
   const [linearBusyId, setLinearBusyId] = useState('')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('evolveagent-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    if (!developerMode) setSidebarOpen(false)
+  }, [developerMode])
 
   useEffect(() => {
     refreshWorkspaces()
@@ -1196,6 +1235,23 @@ function App() {
   const providerList = providerStatus?.available_providers?.join(', ') || 'none'
   const realProvidersAvailable = (providerStatus?.available_providers || []).filter((provider) => provider !== 'mock')
   const realModeWithoutRealProvider = providerStatus?.llm_mode === 'real' && realProvidersAvailable.length === 0
+  function toggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
+  function dismissOnboarding() {
+    localStorage.setItem('evolveagent-onboarding-dismissed', '1')
+    setShowOnboarding(false)
+  }
+
+  function nextOnboardingStep() {
+    if (onboardingStep >= ONBOARDING_STEPS.length - 1) {
+      dismissOnboarding()
+      return
+    }
+    setOnboardingStep((current) => current + 1)
+  }
+
   const previewText = (text, limit = 360) => {
     const compact = String(text || '').replace(/\s+/g, ' ').trim()
     if (compact.length <= limit) return compact
@@ -1203,8 +1259,35 @@ function App() {
   }
 
   return (
-    <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'}`}>
-      <aside className="sidebar">
+    <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'} ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      {developerMode && sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
+        />
+      )}
+      {showOnboarding && (
+        <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+          <div className="onboarding-card">
+            <div className="onboarding-steps" aria-hidden="true">
+              {ONBOARDING_STEPS.map((step, index) => (
+                <span className={`onboarding-step-dot ${index === onboardingStep ? 'active' : ''}`} key={step.title} />
+              ))}
+            </div>
+            <h3 id="onboarding-title">{ONBOARDING_STEPS[onboardingStep].title}</h3>
+            <p>{ONBOARDING_STEPS[onboardingStep].body}</p>
+            <div className="onboarding-actions">
+              <button type="button" onClick={dismissOnboarding}>Skip</button>
+              <button type="button" onClick={nextOnboardingStep}>
+                {onboardingStep >= ONBOARDING_STEPS.length - 1 ? 'Get started' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-mark">
             <Brain size={21} />
@@ -1882,6 +1965,23 @@ function App() {
                 <p>Your request is routed through specialist agents and returned as one final answer.</p>
               </div>
               <div className="topbar-actions">
+                <button
+                  type="button"
+                  className="sidebar-toggle"
+                  onClick={() => setSidebarOpen((current) => !current)}
+                  aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                  aria-expanded={sidebarOpen}
+                >
+                  <Menu size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="theme-toggle-button"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
                 <div className="mode-toggle" role="group" aria-label="Mode toggle">
                   <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
                     Simple
@@ -1916,6 +2016,14 @@ function App() {
                 <p>Voice-controlled multi-agent operating system</p>
               </div>
               <div className="topbar-actions jarvis-topbar-actions">
+                <button
+                  type="button"
+                  className="theme-toggle-button"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
                 <select
                   className="jarvis-workspace-select"
                   value={workspaceId || ''}
