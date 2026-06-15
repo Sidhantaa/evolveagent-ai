@@ -45,6 +45,8 @@ class StorageService:
             "system_prompt_registry.json",
             "quality_runs.json",
             "app_builder_projects.json",
+            "debate_sessions.json",
+            "simulation_runs.json",
         ):
             self._ensure_file(filename)
 

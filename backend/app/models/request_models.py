@@ -228,6 +228,22 @@ class AppBuilderWizardRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class DebateCreateRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    workspace_id: str | None = None
+    agents: list[str] = Field(default_factory=list, max_length=6)
+
+
+class SimulationCreateRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    scenario: str | None = Field(default=None, max_length=1000)
+    workspace_id: str | None = None
+
+
+class DebateConsensusRequest(BaseModel):
+    debate_id: str = Field(..., min_length=1, max_length=120)
+
+
 class AssistantCommandRequest(BaseModel):
     input_text: str = Field(default="", max_length=2000)
     workspace_id: str | None = None

@@ -565,6 +565,36 @@ export async function scaffoldAppBuilderPlan(payload) {
   return response.json()
 }
 
+export async function getDebateSummary(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/debate/summary${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function createDebateSession(payload) {
+  const response = await fetch(`${API_BASE}/api/debate/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Debate session failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function createSimulationRun(payload) {
+  const response = await fetch(`${API_BASE}/api/simulations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Simulation run failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function getLinearStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/linear/status`)

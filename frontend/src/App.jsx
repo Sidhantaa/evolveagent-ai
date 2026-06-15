@@ -42,6 +42,8 @@ import remarkGfm from 'remark-gfm'
 import {
   API_BASE,
   createAppBuilderPlan,
+  createDebateSession,
+  createSimulationRun,
   createCustomAgent,
   createGoal,
   createWorkspace,
@@ -71,6 +73,7 @@ import {
   getLinearPollStatus,
   getLinearStatus,
   getCodexJobs,
+  getDebateSummary,
   runCodexForLinearIssue,
   getApprovals,
   submitApprovalDecision,
@@ -353,6 +356,14 @@ function App() {
   const [appBuilderResult, setAppBuilderResult] = useState(null)
   const [appBuilderBusy, setAppBuilderBusy] = useState(false)
   const [appBuilderError, setAppBuilderError] = useState('')
+  const [showDebatePanel, setShowDebatePanel] = useState(false)
+  const [debatePrompt, setDebatePrompt] = useState('Debate whether we should automate this workflow now or simulate it first')
+  const [simulationScenario, setSimulationScenario] = useState('No file edits, commands, or external calls during simulation')
+  const [debateSummary, setDebateSummary] = useState(null)
+  const [debateResult, setDebateResult] = useState(null)
+  const [simulationResult, setSimulationResult] = useState(null)
+  const [debateBusy, setDebateBusy] = useState(false)
+  const [debateError, setDebateError] = useState('')
   const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
@@ -397,6 +408,7 @@ function App() {
     refreshWorkspaceMemory(workspaceId)
     refreshKnowledge(workspaceId)
     refreshLinearData(workspaceId)
+    refreshDebateSummary(workspaceId)
   }, [workspaceId])
 
   useEffect(() => {
@@ -481,6 +493,10 @@ function App() {
     if (templates.length > 0 && !templates.find((template) => template.stack_id === appBuilderStack)) {
       setAppBuilderStack(templates[0].stack_id)
     }
+  }
+
+  async function refreshDebateSummary(nextWorkspaceId = workspaceId) {
+    setDebateSummary(await getDebateSummary(nextWorkspaceId))
   }
 
   async function refreshMissionControl(nextWorkspaceId = workspaceId) {
@@ -834,6 +850,38 @@ function App() {
       setAppBuilderError(err.message)
     } finally {
       setAppBuilderBusy(false)
+    }
+  }
+
+  async function handleCreateDebateSession() {
+    setDebateBusy(true)
+    setDebateError('')
+    try {
+      const result = await createDebateSession({ prompt: debatePrompt, workspace_id: workspaceId })
+      setDebateResult(result)
+      await refreshDebateSummary(workspaceId)
+    } catch (err) {
+      setDebateError(err.message)
+    } finally {
+      setDebateBusy(false)
+    }
+  }
+
+  async function handleCreateSimulationRun() {
+    setDebateBusy(true)
+    setDebateError('')
+    try {
+      const result = await createSimulationRun({
+        prompt: debatePrompt,
+        scenario: simulationScenario,
+        workspace_id: workspaceId,
+      })
+      setSimulationResult(result)
+      await refreshDebateSummary(workspaceId)
+    } catch (err) {
+      setDebateError(err.message)
+    } finally {
+      setDebateBusy(false)
     }
   }
 
@@ -1862,6 +1910,81 @@ function App() {
                 <div className={`command-result ${appBuilderResult.success ? 'success' : 'failed'}`}>
                   <strong>{appBuilderResult.success ? 'Scaffold created' : 'Scaffold not created'}</strong>
                   <pre>{appBuilderResult.summary || JSON.stringify(appBuilderResult.errors || [], null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowDebatePanel((current) => !current)}>
+            <span>
+              <Route size={15} />
+              Debate + Simulation
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showDebatePanel && (
+            <div className="mission-panel">
+              <textarea
+                value={debatePrompt}
+                onChange={(event) => setDebatePrompt(event.target.value)}
+                placeholder="Decision or plan to debate"
+                rows={3}
+              />
+              <textarea
+                value={simulationScenario}
+                onChange={(event) => setSimulationScenario(event.target.value)}
+                placeholder="Simulation scenario"
+                rows={2}
+              />
+              <div className="inline-actions">
+                <button type="button" disabled={debateBusy} onClick={handleCreateDebateSession}>
+                  Run debate
+                </button>
+                <button type="button" disabled={debateBusy} onClick={handleCreateSimulationRun}>
+                  Simulate
+                </button>
+              </div>
+              {debateError && <p className="provider-warning">{debateError}</p>}
+              {debateSummary && (
+                <div className="provider-card">
+                  <div>
+                    <span>Debates</span>
+                    <strong>{debateSummary.total_debates || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Simulations</span>
+                    <strong>{debateSummary.total_simulations || 0}</strong>
+                  </div>
+                </div>
+              )}
+              {debateResult && (
+                <div className="goal-detail">
+                  <h3>Debate result</h3>
+                  <p>{debateResult.consensus?.final_recommendation}</p>
+                  {(debateResult.turns || []).map((turn) => (
+                    <div className="agent-template-card" key={`${debateResult.debate_id}-${turn.agent_name}`}>
+                      <strong>{turn.agent_name}</strong>
+                      <span>score {turn.score}</span>
+                      <p className="muted">{turn.recommendation}</p>
+                    </div>
+                  ))}
+                  <p className="muted">{debateResult.consensus?.why}</p>
+                </div>
+              )}
+              {simulationResult && (
+                <div className="goal-detail">
+                  <h3>Simulation result</h3>
+                  <p>{simulationResult.recommendation?.summary}</p>
+                  {(simulationResult.outcomes || []).map((outcome) => (
+                    <div className="agent-template-card" key={`${simulationResult.simulation_id}-${outcome.mode}`}>
+                      <strong>{outcome.mode}</strong>
+                      <span>{outcome.risk_level} risk</span>
+                      <p className="muted">{outcome.expected_result}</p>
+                    </div>
+                  ))}
+                  <p className="muted">Side effects: {(simulationResult.side_effects || []).length}</p>
                 </div>
               )}
             </div>

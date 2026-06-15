@@ -25,6 +25,8 @@ from app.models.request_models import (
     CreateGoalTaskRequest,
     CreateWorkspaceMemoryRequest,
     CreateWorkspaceRequest,
+    DebateConsensusRequest,
+    DebateCreateRequest,
     FeedbackRequest,
     GitBranchRequest,
     GitCommitRequest,
@@ -35,6 +37,7 @@ from app.models.request_models import (
     QualityRunRequest,
     RenameChatRequest,
     RunRequest,
+    SimulationCreateRequest,
     TestSuggestionRequest,
     UpdateCustomAgentRequest,
     UpdateGoalRequest,
@@ -78,6 +81,7 @@ from app.services.linear_poll_worker import LinearPollWorker
 from app.services.git_service import GitService
 from app.services.codex_job_service import CodexJobService
 from app.services.codex_worker_service import CodexWorkerService, CodexWorkerError
+from app.services.debate_simulation_service import DebateSimulationService
 from app.services.secret_scanner import SecretScanner
 
 router = APIRouter()
@@ -117,6 +121,7 @@ test_quality_service = TestQualityService(
     test_generation_agent=TestGenerationAgent(),
 )
 app_builder_service = AppBuilderService(storage, governance_service)
+debate_simulation_service = DebateSimulationService(storage, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -266,6 +271,63 @@ def update_app_builder_wizard(request: AppBuilderWizardRequest) -> dict:
 @router.post("/app-builder/scaffold")
 def scaffold_app_builder_plan(request: AppBuilderScaffoldRequest) -> dict:
     return app_builder_service.scaffold(plan_id=request.plan_id, approved=request.approved)
+
+
+@router.get("/debate/summary")
+def get_debate_simulation_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    return debate_simulation_service.summary(workspace_id)
+
+
+@router.get("/debate/sessions")
+def list_debate_sessions(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    return debate_simulation_service.list_debates(workspace_id)
+
+
+@router.get("/debate/sessions/{debate_id}")
+def get_debate_session(debate_id: str) -> dict:
+    debate = debate_simulation_service.get_debate(debate_id)
+    if not debate:
+        raise HTTPException(status_code=404, detail="Debate session not found")
+    return debate
+
+
+@router.post("/debate/sessions")
+def create_debate_session(request: DebateCreateRequest) -> dict:
+    return debate_simulation_service.create_debate(
+        prompt=request.prompt,
+        workspace_id=request.workspace_id,
+        agents=request.agents,
+    )
+
+
+@router.post("/debate/consensus")
+def select_debate_consensus(request: DebateConsensusRequest) -> dict:
+    result = debate_simulation_service.consensus_for(request.debate_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("error", "Debate session not found"))
+    return result
+
+
+@router.get("/simulations")
+def list_simulation_runs(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    return debate_simulation_service.list_simulations(workspace_id)
+
+
+@router.get("/simulations/{simulation_id}")
+def get_simulation_run(simulation_id: str) -> dict:
+    simulation = debate_simulation_service.get_simulation(simulation_id)
+    if not simulation:
+        raise HTTPException(status_code=404, detail="Simulation run not found")
+    return simulation
+
+
+@router.post("/simulations")
+def create_simulation_run(request: SimulationCreateRequest) -> dict:
+    return debate_simulation_service.create_simulation(
+        prompt=request.prompt,
+        scenario=request.scenario,
+        workspace_id=request.workspace_id,
+    )
 
 
 @router.post("/workspaces")

@@ -43,5 +43,7 @@ backend/app/data/agent_jobs.json
 backend/app/data/system_prompt_registry.json
 backend/app/data/quality_runs.json
 backend/app/data/app_builder_projects.json
+backend/app/data/debate_sessions.json
+backend/app/data/simulation_runs.json
 *.log
 logs/

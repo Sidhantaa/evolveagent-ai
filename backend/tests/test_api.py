@@ -181,6 +181,48 @@ def test_app_builder_plan_and_scaffold_endpoints():
     assert rejected["requires_approval"] is True
 
 
+def test_debate_session_and_consensus_endpoints():
+    response = client.post(
+        "/api/debate/sessions",
+        json={"prompt": "Debate whether simulation mode should run before automation."},
+    )
+    debate = response.json()
+
+    assert response.status_code == 200
+    assert debate["debate_id"]
+    assert debate["turns"]
+    assert debate["consensus"]["selected_agent"]
+
+    consensus_response = client.post("/api/debate/consensus", json={"debate_id": debate["debate_id"]})
+    consensus = consensus_response.json()
+
+    assert consensus_response.status_code == 200
+    assert consensus["success"] is True
+    assert consensus["consensus"]["confidence"] >= 80
+
+
+def test_simulation_endpoint_returns_side_effect_free_outcomes():
+    response = client.post(
+        "/api/simulations",
+        json={"prompt": "Simulate adding a risky automation feature", "scenario": "No file edits allowed"},
+    )
+    simulation = response.json()
+
+    assert response.status_code == 200
+    assert simulation["simulation_id"]
+    assert simulation["side_effects"] == []
+    assert len(simulation["outcomes"]) == 3
+
+
+def test_debate_summary_endpoint():
+    response = client.get("/api/debate/summary")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert "total_debates" in body
+    assert "total_simulations" in body
+
+
 def test_workspace_knowledge_search_and_export():
     workspace_response = client.post("/api/workspaces", json={"name": "Knowledge Test"})
     workspace_id = workspace_response.json()["workspace_id"]
