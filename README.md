@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v3.5 checkpoint — Professional UI/UX Polish
+**Current version:** v6.0 — Real Memory Intelligence
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a polished Jarvis-style interface, project memory, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, safe tool routing, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a polished Jarvis-style interface, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, safe tool routing, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v3.5 checkpoint keeps the Agent OS foundation and adds professional UI/UX polish: a Jarvis-style Simple Mode command center, responsive Developer Mode sidebar, light/dark theme tokens, onboarding walkthrough, improved accessibility labels, reduced-motion handling, and cleaner theme-consistent panels.
+The current v6.0 checkpoint completes the memory intelligence layer: workspace memories are scored, tiered, indexed locally, retrieved semantically, consolidated through tracked jobs, and surfaced in Developer Mode with quality reasons, retention actions, tier history, and recommendations.
+
+The v3.5 checkpoint added professional UI/UX polish: a Jarvis-style Simple Mode command center, responsive Developer Mode sidebar, light/dark theme tokens, onboarding walkthrough, improved accessibility labels, reduced-motion handling, and cleaner theme-consistent panels.
 
 The v3.0 foundation added the operating-system pieces underneath the UI: a Project Brain knowledge base with cross-session links and memory ranking, Assistant Tools, a governed Tool Router and local plugin manifest loader, Approval Workflow 2.0, Agent Jobs, a System Prompt Registry, and a thin Kernel Service around request orchestration.
 
@@ -67,6 +69,12 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - Workspace memory timeline with add, search, filter, edit, and delete controls
 - Memory retrieval before agent runs with capped context and Developer Mode visibility
 - Workspace-filtered analytics and learning reports
+- Real Memory Intelligence with quality scoring, scoring reasons, and quality recommendations
+- Long-term memory tiers: hot, warm, and archived
+- Tier maintenance with tier transition history, retention actions, and stale-memory review
+- Local JSON-backed sparse memory vector index without external vector DB dependency
+- Semantic-style memory retrieval using local vector scoring, synonym expansion, quality boosts, and pinned/high-value fallback
+- Memory consolidation jobs with preview, apply, immediate run mode, job history, and archived duplicate tracking
 - Project Brain / Knowledge Base search across memory, chats, files, recordings, goals, and custom agents
 - Cross-session knowledge links between related memories, chats, goals, files, and recordings
 - Memory importance ranking with pinning, recency, usage, and importance signals
@@ -199,7 +207,7 @@ flowchart TD
 13. Frontend displays a clean answer in Simple Mode or detailed trace in Developer Mode.
 14. User can submit feedback, which is saved and reflected in analytics.
 
-## Workspace Memory Workflow
+## Workspace Memory and Real Memory Intelligence Workflow
 
 The workspace layer lets the app separate projects such as EvolveAgent AI, resume work, school notes, pharmacy PA support, or business planning.
 
@@ -208,9 +216,9 @@ Workspace behavior:
 1. A default workspace is created automatically on startup or first use.
 2. `/api/run` accepts `workspace_id`; if omitted, the default workspace is used.
 3. Chat sessions, messages, uploaded files, recordings, goals, task graphs, custom agents, feedback, analytics, learning records, and governance events can store `workspace_id`.
-4. Before a run, the Master Agent retrieves a small capped set of relevant high-value workspace memories.
+4. Before a run, the Master Agent retrieves a small capped set of relevant high-value workspace memories using local semantic-style scoring.
 5. Simple Mode stays clean and only shows the final answer.
-6. Developer Mode shows whether workspace memory was used, memory IDs, memory type, importance, and memory context size.
+6. Developer Mode shows whether workspace memory was used, memory IDs, memory type, importance, quality score, tier, and memory context size.
 7. Analytics and learning reports can be filtered by `workspace_id`.
 
 Workspace memory entries support:
@@ -222,7 +230,18 @@ Workspace memory entries support:
 - `task_result`
 - `learned_pattern`
 
-This is not model training. The system uses workspace memory as controlled context for future orchestration and answers.
+v6.0 Memory Intelligence adds:
+
+- quality scoring with specific reasons and recommendations
+- hot/warm/archived long-term memory tiers
+- tier transition history and retention actions
+- local JSON-backed sparse vector-style memory index
+- semantic-style retrieval with local vector scoring and synonym expansion
+- duplicate memory consolidation preview/apply jobs
+- archive/restore controls for low-quality or stale memory
+- Memory panel controls for re-score, maintain tiers, rebuild index, create consolidation job, run job, and apply job
+
+This is not model training. The system uses workspace memory as controlled context for future orchestration and answers. The local vector-style index is JSON-backed and intentionally avoids a vector database for the current MVP.
 
 ## Mission Control Workflow
 
@@ -268,10 +287,10 @@ The Project Brain layer searches across workspace memory, chats, files, recordin
 - workspace-scoped knowledge search
 - markdown and JSON export
 - cross-session knowledge links between related records
-- memory importance ranking based on manual pinning, importance, usage, and recency
+- memory ranking based on pinning, importance, usage, recency, quality score, tier, and local semantic retrieval
 - Developer Mode visibility for linked items and memory retrieval metadata
 
-This is still JSON-backed and intentionally not a vector database.
+This is still JSON-backed and intentionally not a production vector database. v6.0 adds a local sparse vector-style index for semantic retrieval without external infrastructure.
 
 ## Assistant Tools and Tool Router
 
@@ -742,6 +761,18 @@ npm run build
 - `GET /api/workspaces/{workspace_id}/memory/{memory_id}`
 - `PATCH /api/workspaces/{workspace_id}/memory/{memory_id}`
 - `DELETE /api/workspaces/{workspace_id}/memory/{memory_id}`
+- `GET /api/workspaces/{workspace_id}/memory/intelligence`
+- `POST /api/workspaces/{workspace_id}/memory/re-score`
+- `POST /api/workspaces/{workspace_id}/memory/tiers/maintain`
+- `POST /api/workspaces/{workspace_id}/memory/index/rebuild`
+- `GET /api/workspaces/{workspace_id}/memory/search`
+- `POST /api/workspaces/{workspace_id}/memory/consolidate`
+- `POST /api/workspaces/{workspace_id}/memory/consolidation-jobs`
+- `GET /api/workspaces/{workspace_id}/memory/consolidation-jobs`
+- `GET /api/workspaces/{workspace_id}/memory/consolidation-jobs/{job_id}`
+- `POST /api/workspaces/{workspace_id}/memory/consolidation-jobs/{job_id}/apply`
+- `POST /api/workspaces/{workspace_id}/memory/{memory_id}/archive`
+- `POST /api/workspaces/{workspace_id}/memory/{memory_id}/restore`
 - `POST /api/files/upload`
 - `POST /api/recordings/upload`
 - `POST /api/feedback`
@@ -864,7 +895,7 @@ Automation safety rules:
 - Additional model routing policies and cost tracking
 - Real image API
 - OCR/scanned PDF support
-- Vector memory and retrieval
+- Production-grade vector DB or embedding provider integration
 - File search across prior uploads
 - Deployment
 - Agent performance dashboard improvements
@@ -886,3 +917,4 @@ Automation safety rules:
 - Added Mission Control with goal planning, task graph storage, progress tracking, runnable subtasks, and goal/task analytics.
 - Built a governed Custom Agent Builder with reusable specialist agents and prebuilt Agent Skill Store templates.
 - Added workspace-scoped project memory with a memory timeline, relevant memory retrieval, workspace-filtered chats/goals/agents, and workspace-specific analytics/learning reports.
+- Implemented a real memory intelligence layer with quality scoring, hot/warm/archive tiers, tier transition history, local sparse vector-style indexing, semantic retrieval, duplicate consolidation jobs, and Developer Mode memory controls.
