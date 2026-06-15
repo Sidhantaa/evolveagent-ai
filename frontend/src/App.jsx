@@ -43,6 +43,7 @@ import {
   API_BASE,
   createAppBuilderPlan,
   createDebateSession,
+  createMemoryConsolidationJob,
   createSimulationRun,
   createCustomAgent,
   createGoal,
@@ -68,6 +69,7 @@ import {
   getGoals,
   getHistory,
   getLearningReport,
+  getMemoryConsolidationJobs,
   getLinearIssues,
   getLinearLinks,
   getLinearPollStatus,
@@ -103,6 +105,7 @@ import {
   pinWorkspaceMemory,
   rebuildWorkspaceMemoryIndex,
   rescoreWorkspaceMemory,
+  applyMemoryConsolidationJob,
   getWorkspaces,
   rejectPromptVersion,
   renameChat,
@@ -374,6 +377,7 @@ function App() {
   const [memoryType, setMemoryType] = useState('')
   const [memoryTier, setMemoryTier] = useState('')
   const [memoryIntelligence, setMemoryIntelligence] = useState(null)
+  const [memoryConsolidationJobs, setMemoryConsolidationJobs] = useState([])
   const [memoryBusy, setMemoryBusy] = useState(false)
   const [linearStatus, setLinearStatus] = useState(null)
   const [linearIssues, setLinearIssues] = useState([])
@@ -775,6 +779,7 @@ function App() {
     ])
     setWorkspaceMemory(memories)
     setMemoryIntelligence(intelligence)
+    setMemoryConsolidationJobs(await getMemoryConsolidationJobs(nextWorkspaceId))
   }
 
   async function refreshKnowledge(nextWorkspaceId = workspaceId) {
@@ -1013,6 +1018,36 @@ function App() {
       }))
       await refreshWorkspaceMemory(workspaceId)
       setCopied(approved ? 'Duplicate memories archived' : 'Consolidation preview ready')
+      window.setTimeout(() => setCopied(''), 1600)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMemoryBusy(false)
+    }
+  }
+
+  async function handleCreateConsolidationJob(apply = false) {
+    if (!workspaceId) return
+    setMemoryBusy(true)
+    try {
+      await createMemoryConsolidationJob(workspaceId, apply)
+      await refreshWorkspaceMemory(workspaceId)
+      setCopied(apply ? 'Consolidation job completed' : 'Consolidation job created')
+      window.setTimeout(() => setCopied(''), 1600)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMemoryBusy(false)
+    }
+  }
+
+  async function handleApplyConsolidationJob(jobId) {
+    if (!workspaceId || !jobId) return
+    setMemoryBusy(true)
+    try {
+      await applyMemoryConsolidationJob(workspaceId, jobId)
+      await refreshWorkspaceMemory(workspaceId)
+      setCopied('Consolidation job applied')
       window.setTimeout(() => setCopied(''), 1600)
     } catch (err) {
       setError(err.message)
@@ -1631,13 +1666,29 @@ function App() {
                 <button className="secondary-button" type="button" onClick={handleRebuildMemoryIndex} disabled={memoryBusy}>
                   Rebuild index
                 </button>
-                <button className="secondary-button" type="button" onClick={() => handleConsolidateMemory(false)} disabled={memoryBusy}>
-                  Preview merge
+                <button className="secondary-button" type="button" onClick={() => handleCreateConsolidationJob(false)} disabled={memoryBusy}>
+                  Create job
                 </button>
-                <button className="secondary-button" type="button" onClick={() => handleConsolidateMemory(true)} disabled={memoryBusy}>
-                  Apply merge
+                <button className="secondary-button" type="button" onClick={() => handleCreateConsolidationJob(true)} disabled={memoryBusy}>
+                  Run job
                 </button>
               </div>
+              {memoryConsolidationJobs.length > 0 && (
+                <div className="memory-jobs">
+                  <strong>Consolidation jobs</strong>
+                  {memoryConsolidationJobs.slice(0, 3).map((job) => (
+                    <div className="memory-job-row" key={job.job_id}>
+                      <span>{formatType(job.status)} · {job.duplicate_group_count || 0} groups · {job.archived_memory_ids?.length || 0} archived</span>
+                      <span>{job.created_at ? new Date(job.created_at).toLocaleString() : ''}</span>
+                      {job.status === 'preview_ready' && (
+                        <button type="button" onClick={() => handleApplyConsolidationJob(job.job_id)} disabled={memoryBusy}>
+                          Apply
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               <button className="secondary-button full-width" type="button" onClick={handleAddMemory}>
                 Add memory
               </button>
