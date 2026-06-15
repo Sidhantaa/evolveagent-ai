@@ -165,6 +165,10 @@ class UpdateWorkspaceMemoryRequest(BaseModel):
     pinned: bool | None = None
 
 
+class MemoryConsolidateRequest(BaseModel):
+    approved: bool = Field(default=False, description="Preview by default; archive duplicates only when approved.")
+
+
 class CreateKnowledgeLinkRequest(BaseModel):
     source_type: str = Field(..., pattern="^(memory|chat|file|recording|goal|custom_agent)$")
     source_id: str = Field(..., min_length=1, max_length=160)

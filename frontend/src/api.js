@@ -401,6 +401,35 @@ export async function getWorkspaceMemory(workspaceId, params = {}) {
   }
 }
 
+export async function getWorkspaceMemoryIntelligence(workspaceId) {
+  if (!workspaceId) return null
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/intelligence`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function rescoreWorkspaceMemory(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/re-score`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Memory re-score failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function consolidateWorkspaceMemory(workspaceId, approved = false) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/consolidate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approved }),
+  })
+  if (!response.ok) throw new Error(`Memory consolidation failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function createWorkspaceMemory(workspaceId, payload) {
   const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory`, {
     method: 'POST',
@@ -423,6 +452,15 @@ export async function updateWorkspaceMemory(workspaceId, memoryId, payload) {
 
 export async function pinWorkspaceMemory(workspaceId, memoryId, pinned = true) {
   const action = pinned ? 'pin' : 'unpin'
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}/${action}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Memory ${action} failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function archiveWorkspaceMemory(workspaceId, memoryId, archived = true) {
+  const action = archived ? 'archive' : 'restore'
   const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}/${action}`, {
     method: 'POST',
   })

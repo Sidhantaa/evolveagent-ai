@@ -430,6 +430,34 @@ h2 {
   font-weight: 850;
 }
 
+.memory-intelligence {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(139, 180, 255, 0.18);
+  border-radius: 9px;
+  background: rgba(139, 180, 255, 0.055);
+  padding: 10px;
+}
+
+.memory-intelligence strong {
+  color: #eef5ed;
+  font-size: 13px;
+}
+
+.memory-intelligence span,
+.memory-intelligence p {
+  color: #aeb9c5;
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.memory-tier-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
 .analytics-toggle {
   display: flex;
   align-items: center;

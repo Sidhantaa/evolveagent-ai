@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from math import exp
 from uuid import uuid4
 
+from app.services.memory_intelligence_service import MemoryIntelligenceService
 from app.services.storage_service import StorageService
 
 
@@ -13,6 +14,7 @@ class WorkspaceService:
 
     def __init__(self, storage: StorageService):
         self.storage = storage
+        self.memory_intelligence = MemoryIntelligenceService(storage)
         self.ensure_default_workspace()
 
     def ensure_default_workspace(self) -> dict:
@@ -105,14 +107,26 @@ class WorkspaceService:
             "usage_count": 0,
             "last_used_at": None,
         }
+        memory.update(self.memory_intelligence.score_memory(memory))
         self.storage.append("workspace_memory.json", memory)
         return memory
 
-    def list_memory(self, workspace_id: str, query: str | None = None, memory_type: str | None = None) -> list[dict]:
+    def list_memory(
+        self,
+        workspace_id: str,
+        query: str | None = None,
+        memory_type: str | None = None,
+        tier: str | None = None,
+        include_archived: bool = True,
+    ) -> list[dict]:
         resolved = self.resolve_workspace_id(workspace_id)
         items = [item for item in self.storage.read_list("workspace_memory.json") if item.get("workspace_id") == resolved]
         if memory_type:
             items = [item for item in items if item.get("type") == memory_type]
+        if tier:
+            items = [item for item in items if self.memory_intelligence.ensure_metadata(item).get("memory_tier") == tier]
+        elif not include_archived:
+            items = [item for item in items if self.memory_intelligence.ensure_metadata(item).get("memory_tier") != "archived"]
         if query:
             lowered = query.lower()
             items = [
@@ -120,9 +134,12 @@ class WorkspaceService:
                 for item in items
                 if lowered in f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
             ]
+        items = [self.memory_intelligence.public_memory(item) for item in items]
         return sorted(
             items,
             key=lambda item: (
+                item.get("memory_tier") == "hot",
+                float(item.get("quality_score") or 0),
                 self.memory_importance_score(item),
                 item.get("updated_at") or item.get("created_at") or "",
             ),
@@ -150,6 +167,7 @@ class WorkspaceService:
             if key in updates and updates[key] is not None:
                 memory[key] = updates[key]
         memory["updated_at"] = datetime.now(UTC).isoformat()
+        memory.update(self.memory_intelligence.score_memory(memory))
         self.storage.write_list("workspace_memory.json", memories)
         return memory
 
@@ -173,9 +191,11 @@ class WorkspaceService:
             if len(token.strip(".,:;!?()[]{}")) > 3
         }
         scored = []
-        for item in self.list_memory(workspace_id):
+        for item in self.list_memory(workspace_id, include_archived=False):
             haystack = f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
-            score = self.memory_importance_score(item)
+            score = self.memory_importance_score(item) + (float(item.get("quality_score") or 0) * 0.3)
+            if item.get("memory_tier") == "hot":
+                score += 20
             if words:
                 score += sum(1 for word in words if word in haystack)
             if score > 1 or item.get("importance") == "high":
@@ -197,6 +217,11 @@ class WorkspaceService:
     def memory_importance_score(self, memory: dict) -> float:
         importance_weight = {"high": 50.0, "medium": 25.0, "low": 10.0}
         score = importance_weight.get(memory.get("importance", "medium"), 25.0)
+        score += float(memory.get("quality_score") or 0) * 0.15
+        if memory.get("memory_tier") == "hot":
+            score += 20.0
+        if memory.get("memory_tier") == "archived":
+            score -= 60.0
         score += min(int(memory.get("usage_count") or 0), 20) * 2.0
         if memory.get("pinned"):
             score += 100.0
