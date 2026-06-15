@@ -438,6 +438,35 @@ export async function consolidateWorkspaceMemory(workspaceId, approved = false) 
   return response.json()
 }
 
+export async function createMemoryConsolidationJob(workspaceId, apply = false) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/consolidation-jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apply }),
+  })
+  if (!response.ok) throw new Error(`Memory consolidation job failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getMemoryConsolidationJobs(workspaceId) {
+  if (!workspaceId) return []
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/consolidation-jobs`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function applyMemoryConsolidationJob(workspaceId, jobId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/consolidation-jobs/${jobId}/apply`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Memory consolidation job apply failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function createWorkspaceMemory(workspaceId, payload) {
   const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory`, {
     method: 'POST',

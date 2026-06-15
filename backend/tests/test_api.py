@@ -1257,6 +1257,71 @@ def test_workspace_memory_consolidation_and_archive_restore():
     assert archived_again.json()["memory_tier"] == "archived"
 
 
+def test_workspace_memory_consolidation_job_lifecycle():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Memory Consolidation Job", "description": "job lifecycle test"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    payload = {
+        "type": "summary",
+        "title": "Agent memory rules",
+        "content": "Agent memory should prefer FastAPI, React, pytest, and concise implementation notes.",
+        "source": "manual",
+        "importance": "medium",
+        "tags": ["agent", "memory"],
+    }
+    client.post(f"/api/workspaces/{workspace_id}/memory", json=payload)
+    client.post(f"/api/workspaces/{workspace_id}/memory", json={**payload, "content": payload["content"] + " Keep duplicate notes consolidated."})
+
+    created = client.post(f"/api/workspaces/{workspace_id}/memory/consolidation-jobs", json={"apply": False})
+    assert created.status_code == 200
+    job = created.json()
+    assert job["status"] == "preview_ready"
+    assert job["duplicate_group_count"] >= 1
+    assert job["archived_memory_ids"] == []
+
+    listed = client.get(f"/api/workspaces/{workspace_id}/memory/consolidation-jobs")
+    assert listed.status_code == 200
+    assert any(item["job_id"] == job["job_id"] for item in listed.json())
+
+    fetched = client.get(f"/api/workspaces/{workspace_id}/memory/consolidation-jobs/{job['job_id']}")
+    assert fetched.status_code == 200
+    assert fetched.json()["job_id"] == job["job_id"]
+
+    applied = client.post(f"/api/workspaces/{workspace_id}/memory/consolidation-jobs/{job['job_id']}/apply")
+    assert applied.status_code == 200
+    applied_body = applied.json()
+    assert applied_body["status"] == "completed"
+    assert applied_body["archived_memory_ids"]
+    assert applied_body["completed_at"]
+
+
+def test_workspace_memory_consolidation_job_can_apply_immediately():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Immediate Consolidation Job", "description": "apply mode test"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    payload = {
+        "type": "summary",
+        "title": "Project testing strategy",
+        "content": "Use pytest and npm build before merging EvolveAgent changes.",
+        "source": "manual",
+        "importance": "medium",
+        "tags": ["testing"],
+    }
+    client.post(f"/api/workspaces/{workspace_id}/memory", json=payload)
+    client.post(f"/api/workspaces/{workspace_id}/memory", json={**payload, "content": payload["content"] + " Keep this policy current."})
+
+    created = client.post(f"/api/workspaces/{workspace_id}/memory/consolidation-jobs", json={"apply": True})
+    assert created.status_code == 200
+    body = created.json()
+    assert body["status"] == "completed"
+    assert body["mode"] == "apply"
+    assert body["archived_memory_ids"]
+
+
 def test_workspace_memory_vector_index_and_semantic_retrieval():
     workspace = client.post(
         "/api/workspaces",

@@ -458,6 +458,30 @@ h2 {
   gap: 5px;
 }
 
+.memory-jobs {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(154, 210, 141, 0.14);
+  border-radius: 9px;
+  padding: 9px;
+}
+
+.memory-jobs strong {
+  color: #eef5ed;
+  font-size: 12px;
+}
+
+.memory-job-row {
+  display: grid;
+  gap: 4px;
+  color: #aeb9c5;
+  font-size: 11px;
+}
+
+.memory-job-row button {
+  justify-self: start;
+}
+
 .analytics-toggle {
   display: flex;
   align-items: center;

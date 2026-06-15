@@ -35,6 +35,7 @@ backend/app/data/custom_agents.json
 backend/app/data/workspaces.json
 backend/app/data/workspace_memory.json
 backend/app/data/memory_vectors.json
+backend/app/data/memory_consolidation_jobs.json
 backend/app/data/knowledge_links.json
 backend/app/data/tool_registry.json
 backend/app/data/plugin_manifests.json

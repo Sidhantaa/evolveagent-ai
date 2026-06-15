@@ -46,6 +46,7 @@ from app.models.request_models import (
     UpdateWorkspaceRequest,
     LinearCommentRequest,
     LinearCursorVerifyRequest,
+    MemoryConsolidationJobRequest,
     MemoryConsolidateRequest,
     RegisterToolRequest,
     UpdateSystemPromptRequest,
@@ -422,6 +423,39 @@ def semantic_search_workspace_memory(
 def consolidate_workspace_memory(workspace_id: str, request: MemoryConsolidateRequest) -> dict:
     resolved = workspace_service.resolve_workspace_id(workspace_id)
     return memory_intelligence_service.consolidate(resolved, approved=request.approved)
+
+
+@router.post("/workspaces/{workspace_id}/memory/consolidation-jobs")
+def create_memory_consolidation_job(workspace_id: str, request: MemoryConsolidationJobRequest) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.create_consolidation_job(resolved, apply=request.apply)
+
+
+@router.get("/workspaces/{workspace_id}/memory/consolidation-jobs")
+def list_memory_consolidation_jobs(
+    workspace_id: str,
+    limit: int = Query(default=20, ge=1, le=100),
+) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.list_consolidation_jobs(resolved, limit=limit)
+
+
+@router.get("/workspaces/{workspace_id}/memory/consolidation-jobs/{job_id}")
+def get_memory_consolidation_job(workspace_id: str, job_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    job = memory_intelligence_service.get_consolidation_job(resolved, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Memory consolidation job not found")
+    return job
+
+
+@router.post("/workspaces/{workspace_id}/memory/consolidation-jobs/{job_id}/apply")
+def apply_memory_consolidation_job(workspace_id: str, job_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    job = memory_intelligence_service.apply_consolidation_job(resolved, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Memory consolidation job not found")
+    return job
 
 
 @router.get("/workspaces/{workspace_id}/memory/{memory_id}")

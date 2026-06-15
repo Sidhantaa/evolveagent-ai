@@ -291,6 +291,81 @@ class MemoryIntelligenceService:
         self.rebuild_index(workspace_id)
         return {"workspace_id": workspace_id, "applied": True, "archived_memory_ids": archived, "groups": preview["groups"]}
 
+    def create_consolidation_job(self, workspace_id: str, apply: bool = False) -> dict:
+        now = datetime.now(UTC).isoformat()
+        preview = self.consolidation_preview(workspace_id)
+        job = {
+            "job_id": str(uuid4()),
+            "workspace_id": workspace_id,
+            "status": "running" if apply else "preview_ready",
+            "mode": "apply" if apply else "preview",
+            "duplicate_group_count": len(preview["groups"]),
+            "candidate_memory_count": sum(len(group.get("duplicate_memory_ids", [])) for group in preview["groups"]),
+            "groups": preview["groups"],
+            "archived_memory_ids": [],
+            "created_at": now,
+            "updated_at": now,
+            "completed_at": None,
+            "error": None,
+        }
+        if apply:
+            try:
+                result = self.consolidate(workspace_id, approved=True)
+                job["status"] = "completed"
+                job["archived_memory_ids"] = result.get("archived_memory_ids", [])
+                job["groups"] = result.get("groups", preview["groups"])
+                job["completed_at"] = datetime.now(UTC).isoformat()
+                job["updated_at"] = job["completed_at"]
+            except Exception as error:  # pragma: no cover - defensive job logging
+                job["status"] = "failed"
+                job["error"] = str(error)
+                job["updated_at"] = datetime.now(UTC).isoformat()
+        self.storage.append("memory_consolidation_jobs.json", job)
+        return job
+
+    def list_consolidation_jobs(self, workspace_id: str, limit: int = 20) -> list[dict]:
+        jobs = [
+            item
+            for item in self.storage.read_list("memory_consolidation_jobs.json")
+            if item.get("workspace_id") == workspace_id
+        ]
+        return sorted(jobs, key=lambda item: item.get("created_at") or "", reverse=True)[:limit]
+
+    def get_consolidation_job(self, workspace_id: str, job_id: str) -> dict | None:
+        return next(
+            (
+                item
+                for item in self.storage.read_list("memory_consolidation_jobs.json")
+                if item.get("workspace_id") == workspace_id and item.get("job_id") == job_id
+            ),
+            None,
+        )
+
+    def apply_consolidation_job(self, workspace_id: str, job_id: str) -> dict | None:
+        jobs = self.storage.read_list("memory_consolidation_jobs.json")
+        job = next((item for item in jobs if item.get("workspace_id") == workspace_id and item.get("job_id") == job_id), None)
+        if job is None:
+            return None
+        if job.get("status") == "completed":
+            return job
+        now = datetime.now(UTC).isoformat()
+        job["status"] = "running"
+        job["updated_at"] = now
+        try:
+            result = self.consolidate(workspace_id, approved=True)
+            job["status"] = "completed"
+            job["archived_memory_ids"] = result.get("archived_memory_ids", [])
+            job["groups"] = result.get("groups", job.get("groups", []))
+            job["completed_at"] = datetime.now(UTC).isoformat()
+            job["updated_at"] = job["completed_at"]
+            job["error"] = None
+        except Exception as error:  # pragma: no cover - defensive job logging
+            job["status"] = "failed"
+            job["error"] = str(error)
+            job["updated_at"] = datetime.now(UTC).isoformat()
+        self.storage.write_list("memory_consolidation_jobs.json", jobs)
+        return job
+
     def archive_memory(self, workspace_id: str, memory_id: str, archived: bool = True) -> dict | None:
         memories = self.storage.read_list("workspace_memory.json")
         memory = next(

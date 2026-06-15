@@ -169,6 +169,10 @@ class MemoryConsolidateRequest(BaseModel):
     approved: bool = Field(default=False, description="Preview by default; archive duplicates only when approved.")
 
 
+class MemoryConsolidationJobRequest(BaseModel):
+    apply: bool = Field(default=False, description="Create a preview job by default; apply immediately only when true.")
+
+
 class CreateKnowledgeLinkRequest(BaseModel):
     source_type: str = Field(..., pattern="^(memory|chat|file|recording|goal|custom_agent)$")
     source_id: str = Field(..., min_length=1, max_length=160)
