@@ -85,22 +85,43 @@ class MemoryIntelligenceService:
             reasons.append("possible duplicate")
 
         score = max(0, min(100, round(score, 1)))
+        tier_decision = self.tier_decision(memory, score)
         return {
             "quality_score": score,
             "quality_reasons": reasons[:5],
+            "quality_recommendation": self.quality_recommendation(memory, score, reasons),
             "semantic_terms": self.semantic_terms(memory),
             "memory_vector_id": self.vector_id(memory),
-            "memory_tier": self.tier_for(memory, score),
+            "memory_tier": tier_decision["tier"],
+            "tier_reason": tier_decision["reason"],
+            "retention_action": tier_decision["retention_action"],
         }
 
     def tier_for(self, memory: dict, quality_score: float) -> str:
+        return self.tier_decision(memory, quality_score)["tier"]
+
+    def tier_decision(self, memory: dict, quality_score: float) -> dict:
         if memory.get("memory_tier") == "archived":
-            return "archived"
-        if memory.get("pinned") or memory.get("importance") == "high" or quality_score >= 72 or int(memory.get("usage_count") or 0) >= 5:
-            return "hot"
+            return {
+                "tier": "archived",
+                "reason": "manually archived or consolidated",
+                "retention_action": "keep_archived",
+            }
+        usage_count = int(memory.get("usage_count") or 0)
+        age_days = self.age_days(memory.get("updated_at") or memory.get("created_at"))
+        if memory.get("pinned"):
+            return {"tier": "hot", "reason": "pinned by user", "retention_action": "keep_hot"}
+        if memory.get("importance") == "high" and quality_score >= 45:
+            return {"tier": "hot", "reason": "high importance", "retention_action": "keep_hot"}
+        if quality_score >= 78 or usage_count >= 5:
+            return {"tier": "hot", "reason": "high score or frequent use", "retention_action": "keep_hot"}
         if quality_score < 35:
-            return "archived"
-        return "warm"
+            return {"tier": "archived", "reason": "low quality score", "retention_action": "archive"}
+        if age_days > 120 and usage_count == 0 and memory.get("importance") == "low":
+            return {"tier": "archived", "reason": "stale low-importance memory", "retention_action": "archive"}
+        if age_days > 60 and usage_count == 0 and quality_score < 55:
+            return {"tier": "warm", "reason": "stale but still usable", "retention_action": "review"}
+        return {"tier": "warm", "reason": "usable workspace context", "retention_action": "keep_warm"}
 
     def rescore_workspace(self, workspace_id: str) -> dict:
         memories = self.storage.read_list("workspace_memory.json")
@@ -115,8 +136,17 @@ class MemoryIntelligenceService:
         for memory in memories:
             if memory.get("workspace_id") != workspace_id:
                 continue
+            old_tier = memory.get("memory_tier", "warm")
             scoring = self.score_memory(memory, duplicate_penalty=memory.get("memory_id") in duplicate_ids)
             memory.update(scoring)
+            self.record_tier_transition(memory, old_tier, memory.get("memory_tier"), memory.get("tier_reason"))
+            if not memory.get("tier_history"):
+                memory["tier_history"] = [{
+                    "from": "unclassified",
+                    "to": memory.get("memory_tier", "warm"),
+                    "reason": memory.get("tier_reason") or "initial tier classification",
+                    "created_at": now,
+                }]
             memory["updated_at"] = memory.get("updated_at") or now
             rescored.append(memory)
         self.storage.write_list("workspace_memory.json", memories)
@@ -135,10 +165,35 @@ class MemoryIntelligenceService:
             "total_memories": len(scored),
             "average_quality_score": average,
             "tiers": [{"tier": tier, "count": count} for tier, count in tiers.most_common()],
+            "recommended_actions": self.recommended_actions(scored),
             "vector_index": self.index_summary(workspace_id),
             "hot_memories": [self.public_memory(item) for item in sorted(scored, key=lambda row: row.get("quality_score") or 0, reverse=True)[:5]],
             "suggested_consolidations": self.consolidation_preview(workspace_id)["groups"],
         }
+
+    def maintain_tiers(self, workspace_id: str) -> dict:
+        before = {
+            item.get("memory_id"): item.get("memory_tier", "warm")
+            for item in self.storage.read_list("workspace_memory.json")
+            if item.get("workspace_id") == workspace_id
+        }
+        summary = self.rescore_workspace(workspace_id)
+        memories = [
+            item for item in self.storage.read_list("workspace_memory.json")
+            if item.get("workspace_id") == workspace_id
+        ]
+        transitions = [
+            {
+                "memory_id": item.get("memory_id"),
+                "title": item.get("title"),
+                "from": before.get(item.get("memory_id"), "warm"),
+                "to": item.get("memory_tier", "warm"),
+                "reason": item.get("tier_reason"),
+            }
+            for item in memories
+            if before.get(item.get("memory_id"), "warm") != item.get("memory_tier", "warm")
+        ]
+        return {**summary, "tier_transitions": transitions}
 
     def semantic_search(self, workspace_id: str, query: str, limit: int = 10, include_archived: bool = False) -> dict:
         if not query.strip():
@@ -275,10 +330,12 @@ class MemoryIntelligenceService:
             duplicate_tags = set()
             for memory in memories:
                 if memory.get("memory_id") in duplicate_ids:
+                    old_tier = memory.get("memory_tier", "warm")
                     memory["memory_tier"] = "archived"
                     memory["consolidated_into"] = keep_id
                     memory["archived_at"] = now
                     memory["updated_at"] = now
+                    self.record_tier_transition(memory, old_tier, "archived", "consolidated duplicate")
                     archived.append(memory.get("memory_id"))
                     duplicate_tags.update(memory.get("tags") or [])
             for memory in memories:
@@ -375,12 +432,14 @@ class MemoryIntelligenceService:
         if memory is None:
             return None
         now = datetime.now(UTC).isoformat()
+        old_tier = memory.get("memory_tier", "warm")
         memory["memory_tier"] = "archived" if archived else self.score_memory({**memory, "memory_tier": "warm"})["memory_tier"]
         memory["archived_at"] = now if archived else None
         memory["updated_at"] = now
         if not archived:
             memory.pop("consolidated_into", None)
         memory.update(self.score_memory(memory))
+        self.record_tier_transition(memory, old_tier, memory.get("memory_tier"), "manual archive" if archived else "manual restore")
         self.storage.write_list("workspace_memory.json", memories)
         self.rebuild_index(workspace_id)
         return self.public_memory(memory)
@@ -449,9 +508,13 @@ class MemoryIntelligenceService:
             "last_used_at",
             "quality_score",
             "quality_reasons",
+            "quality_recommendation",
             "semantic_terms",
             "memory_vector_id",
             "memory_tier",
+            "tier_reason",
+            "tier_history",
+            "retention_action",
             "consolidated_into",
             "created_at",
             "updated_at",
@@ -530,3 +593,54 @@ class MemoryIntelligenceService:
             parsed = parsed.replace(tzinfo=UTC)
         age_days = max((datetime.now(UTC) - parsed).total_seconds() / 86400, 0)
         return 12.0 * exp(-age_days / 45.0)
+
+    def age_days(self, timestamp: str | None) -> float:
+        if not timestamp:
+            return 0.0
+        try:
+            parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        except ValueError:
+            return 0.0
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return max((datetime.now(UTC) - parsed).total_seconds() / 86400, 0)
+
+    def quality_recommendation(self, memory: dict, score: float, reasons: list[str]) -> str:
+        if score >= 80:
+            return "Keep as strong workspace context."
+        if memory.get("pinned"):
+            return "Pinned memory should stay visible; refresh content if it becomes stale."
+        if "thin content" in reasons:
+            return "Add more specific project details or archive this memory."
+        if score < 45:
+            return "Review for usefulness; archive if it no longer guides current work."
+        return "Keep available, but let usage and recency decide future tier changes."
+
+    def recommended_actions(self, memories: list[dict]) -> list[dict]:
+        actions = []
+        for memory in memories:
+            if memory.get("retention_action") in {"archive", "review"} or (
+                memory.get("memory_tier") == "archived" and float(memory.get("quality_score") or 0) < 45
+            ):
+                actions.append({
+                    "memory_id": memory.get("memory_id"),
+                    "title": memory.get("title"),
+                    "action": memory.get("retention_action") or "review",
+                    "reason": memory.get("tier_reason"),
+                    "quality_score": memory.get("quality_score"),
+                })
+        return sorted(actions, key=lambda item: item.get("quality_score") or 0)[:8]
+
+    def record_tier_transition(self, memory: dict, old_tier: str | None, new_tier: str | None, reason: str | None) -> None:
+        old_tier = old_tier or "warm"
+        new_tier = new_tier or "warm"
+        if old_tier == new_tier:
+            return
+        history = list(memory.get("tier_history") or [])
+        history.append({
+            "from": old_tier,
+            "to": new_tier,
+            "reason": reason or "tier rule update",
+            "created_at": datetime.now(UTC).isoformat(),
+        })
+        memory["tier_history"] = history[-10:]

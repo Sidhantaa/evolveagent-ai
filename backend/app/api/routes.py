@@ -402,6 +402,12 @@ def rescore_workspace_memory(workspace_id: str) -> dict:
     return memory_intelligence_service.rescore_workspace(resolved)
 
 
+@router.post("/workspaces/{workspace_id}/memory/tiers/maintain")
+def maintain_workspace_memory_tiers(workspace_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.maintain_tiers(resolved)
+
+
 @router.post("/workspaces/{workspace_id}/memory/index/rebuild")
 def rebuild_workspace_memory_index(workspace_id: str) -> dict:
     resolved = workspace_service.resolve_workspace_id(workspace_id)

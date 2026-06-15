@@ -420,6 +420,14 @@ export async function rescoreWorkspaceMemory(workspaceId) {
   return response.json()
 }
 
+export async function maintainWorkspaceMemoryTiers(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/tiers/maintain`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Memory tier maintenance failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function rebuildWorkspaceMemoryIndex(workspaceId) {
   const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/index/rebuild`, {
     method: 'POST',

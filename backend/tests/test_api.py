@@ -1322,6 +1322,77 @@ def test_workspace_memory_consolidation_job_can_apply_immediately():
     assert body["archived_memory_ids"]
 
 
+def test_memory_tier_maintenance_records_transitions_and_recommendations():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Tier Maintenance", "description": "tier transition test"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    thin = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "summary",
+            "title": "Old note",
+            "content": "misc",
+            "source": "manual",
+            "importance": "low",
+            "tags": [],
+        },
+    ).json()
+    strong = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "Important architecture",
+            "content": "The current architecture uses FastAPI services, React panels, pytest, governance, and workspace scoped memory retrieval.",
+            "source": "manual",
+            "importance": "high",
+            "tags": ["architecture"],
+        },
+    ).json()
+
+    maintained = client.post(f"/api/workspaces/{workspace_id}/memory/tiers/maintain")
+    assert maintained.status_code == 200
+    body = maintained.json()
+    assert "recommended_actions" in body
+    assert any(item["memory_id"] == thin["memory_id"] for item in body["recommended_actions"])
+
+    archived = client.get(f"/api/workspaces/{workspace_id}/memory/{thin['memory_id']}").json()
+    assert archived["memory_tier"] == "archived"
+    assert archived["retention_action"] == "keep_archived"
+    assert archived["tier_history"]
+    assert archived["quality_recommendation"]
+
+    hot = client.get(f"/api/workspaces/{workspace_id}/memory/{strong['memory_id']}").json()
+    assert hot["memory_tier"] == "hot"
+    assert hot["tier_reason"] in {"high importance", "high score or frequent use"}
+
+
+def test_memory_quality_scoring_exposes_reason_and_recommendation():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Quality Scoring", "description": "recommendation test"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    memory = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "decision",
+            "title": "Testing policy",
+            "content": "Always run backend pytest and frontend npm build before merging memory intelligence changes.",
+            "source": "manual",
+            "importance": "medium",
+            "tags": ["testing", "quality"],
+        },
+    ).json()
+
+    assert memory["quality_score"] > 0
+    assert memory["quality_reasons"]
+    assert memory["quality_recommendation"]
+    assert memory["tier_reason"]
+    assert memory["retention_action"] in {"keep_hot", "keep_warm", "review", "archive", "keep_archived"}
+
+
 def test_workspace_memory_vector_index_and_semantic_retrieval():
     workspace = client.post(
         "/api/workspaces",

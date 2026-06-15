@@ -91,6 +91,7 @@ import {
   getSystemPrompts,
   getSystemPrompt,
   upsertSystemPrompt,
+  maintainWorkspaceMemoryTiers,
   getProviderStatus,
   getQualityStatus,
   getWorkspaceMemory,
@@ -1007,6 +1008,22 @@ function App() {
     }
   }
 
+  async function handleMaintainMemoryTiers() {
+    if (!workspaceId) return
+    setMemoryBusy(true)
+    try {
+      const result = await maintainWorkspaceMemoryTiers(workspaceId)
+      setMemoryIntelligence(result)
+      await refreshWorkspaceMemory(workspaceId)
+      setCopied(`${result.tier_transitions?.length || 0} tier transition(s) applied`)
+      window.setTimeout(() => setCopied(''), 1600)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMemoryBusy(false)
+    }
+  }
+
   async function handleConsolidateMemory(approved = false) {
     if (!workspaceId) return
     setMemoryBusy(true)
@@ -1657,11 +1674,17 @@ function App() {
                   {(memoryIntelligence.suggested_consolidations || []).length > 0 && (
                     <p>{memoryIntelligence.suggested_consolidations.length} duplicate group(s) can be consolidated.</p>
                   )}
+                  {(memoryIntelligence.recommended_actions || []).length > 0 && (
+                    <p>{memoryIntelligence.recommended_actions.length} memory item(s) need review or archive attention.</p>
+                  )}
                 </div>
               )}
               <div className="inline-actions">
                 <button className="secondary-button" type="button" onClick={handleRescoreMemory} disabled={memoryBusy}>
                   Re-score
+                </button>
+                <button className="secondary-button" type="button" onClick={handleMaintainMemoryTiers} disabled={memoryBusy}>
+                  Maintain tiers
                 </button>
                 <button className="secondary-button" type="button" onClick={handleRebuildMemoryIndex} disabled={memoryBusy}>
                   Rebuild index
@@ -1706,6 +1729,15 @@ function App() {
                   <p>{previewText(memory.content, 150)}</p>
                   {(memory.quality_reasons || []).length > 0 && (
                     <p className="muted">Why: {(memory.quality_reasons || []).join(', ')}</p>
+                  )}
+                  {memory.tier_reason && (
+                    <p className="muted">Tier: {memory.tier_reason} · {memory.retention_action || 'keep'}</p>
+                  )}
+                  {memory.quality_recommendation && (
+                    <p className="muted">Recommendation: {memory.quality_recommendation}</p>
+                  )}
+                  {(memory.tier_history || []).length > 0 && (
+                    <p className="muted">Last move: {formatType(memory.tier_history[memory.tier_history.length - 1].from)} → {formatType(memory.tier_history[memory.tier_history.length - 1].to)}</p>
                   )}
                   <div className="chat-row-actions">
                     <button type="button" onClick={() => handleToggleMemoryPin(memory)}>
