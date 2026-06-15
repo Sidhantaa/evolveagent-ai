@@ -92,12 +92,16 @@ import {
   getProviderStatus,
   getQualityStatus,
   getWorkspaceMemory,
+  getWorkspaceMemoryIntelligence,
   getWorkspaceKnowledge,
   searchWorkspaceKnowledge,
   exportWorkspaceKnowledge,
   getAssistantCommands,
   runAssistantCommand,
+  archiveWorkspaceMemory,
+  consolidateWorkspaceMemory,
   pinWorkspaceMemory,
+  rescoreWorkspaceMemory,
   getWorkspaces,
   rejectPromptVersion,
   renameChat,
@@ -367,6 +371,9 @@ function App() {
   const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
+  const [memoryTier, setMemoryTier] = useState('')
+  const [memoryIntelligence, setMemoryIntelligence] = useState(null)
+  const [memoryBusy, setMemoryBusy] = useState(false)
   const [linearStatus, setLinearStatus] = useState(null)
   const [linearIssues, setLinearIssues] = useState([])
   const [linearLinks, setLinearLinks] = useState([])
@@ -434,7 +441,7 @@ function App() {
       refreshWorkspaceMemory(workspaceId)
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [memorySearch, memoryType, workspaceId])
+  }, [memorySearch, memoryType, memoryTier, workspaceId])
 
   useEffect(() => {
     if (!workspaceId) return
@@ -757,12 +764,16 @@ function App() {
 
   async function refreshWorkspaceMemory(nextWorkspaceId = workspaceId) {
     if (!nextWorkspaceId) return
-    setWorkspaceMemory(
-      await getWorkspaceMemory(nextWorkspaceId, {
+    const [memories, intelligence] = await Promise.all([
+      getWorkspaceMemory(nextWorkspaceId, {
         q: memorySearch,
         memory_type: memoryType,
+        tier: memoryTier,
       }),
-    )
+      getWorkspaceMemoryIntelligence(nextWorkspaceId),
+    ])
+    setWorkspaceMemory(memories)
+    setMemoryIntelligence(intelligence)
   }
 
   async function refreshKnowledge(nextWorkspaceId = workspaceId) {
@@ -969,6 +980,51 @@ function App() {
       await pinWorkspaceMemory(workspaceId, memory.memory_id, !memory.pinned)
       await refreshWorkspaceMemory(workspaceId)
       await refreshKnowledge(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleRescoreMemory() {
+    if (!workspaceId) return
+    setMemoryBusy(true)
+    try {
+      const result = await rescoreWorkspaceMemory(workspaceId)
+      setMemoryIntelligence(result)
+      await refreshWorkspaceMemory(workspaceId)
+      setCopied('Memory re-scored')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMemoryBusy(false)
+    }
+  }
+
+  async function handleConsolidateMemory(approved = false) {
+    if (!workspaceId) return
+    setMemoryBusy(true)
+    try {
+      const result = await consolidateWorkspaceMemory(workspaceId, approved)
+      setMemoryIntelligence((current) => ({
+        ...(current || {}),
+        suggested_consolidations: result.groups || [],
+      }))
+      await refreshWorkspaceMemory(workspaceId)
+      setCopied(approved ? 'Duplicate memories archived' : 'Consolidation preview ready')
+      window.setTimeout(() => setCopied(''), 1600)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMemoryBusy(false)
+    }
+  }
+
+  async function handleArchiveMemory(memory) {
+    if (!workspaceId) return
+    try {
+      await archiveWorkspaceMemory(workspaceId, memory.memory_id, memory.memory_tier !== 'archived')
+      await refreshWorkspaceMemory(workspaceId)
     } catch (err) {
       setError(err.message)
     }
@@ -1521,6 +1577,39 @@ function App() {
                   <option value="task_result">Task result</option>
                   <option value="learned_pattern">Learned pattern</option>
                 </select>
+                <select value={memoryTier} onChange={(event) => setMemoryTier(event.target.value)}>
+                  <option value="">All tiers</option>
+                  <option value="hot">Hot</option>
+                  <option value="warm">Warm</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+              {memoryIntelligence && (
+                <div className="memory-intelligence">
+                  <strong>Memory Intelligence</strong>
+                  <span>
+                    {memoryIntelligence.total_memories || 0} memories · avg score {memoryIntelligence.average_quality_score || 0}
+                  </span>
+                  <div className="memory-tier-row">
+                    {(memoryIntelligence.tiers || []).map((tier) => (
+                      <span className="status-pill" key={tier.tier}>{formatType(tier.tier)} {tier.count}</span>
+                    ))}
+                  </div>
+                  {(memoryIntelligence.suggested_consolidations || []).length > 0 && (
+                    <p>{memoryIntelligence.suggested_consolidations.length} duplicate group(s) can be consolidated.</p>
+                  )}
+                </div>
+              )}
+              <div className="inline-actions">
+                <button className="secondary-button" type="button" onClick={handleRescoreMemory} disabled={memoryBusy}>
+                  Re-score
+                </button>
+                <button className="secondary-button" type="button" onClick={() => handleConsolidateMemory(false)} disabled={memoryBusy}>
+                  Preview merge
+                </button>
+                <button className="secondary-button" type="button" onClick={() => handleConsolidateMemory(true)} disabled={memoryBusy}>
+                  Apply merge
+                </button>
               </div>
               <button className="secondary-button full-width" type="button" onClick={handleAddMemory}>
                 Add memory
@@ -1531,13 +1620,21 @@ function App() {
                   <strong>{memory.title}</strong>
                   <span>
                     {formatType(memory.type)} · {memory.importance}
+                    {memory.memory_tier ? ` · ${formatType(memory.memory_tier)}` : ''}
+                    {memory.quality_score !== undefined ? ` · score ${memory.quality_score}` : ''}
                     {memory.pinned ? ' · pinned' : ''}
                     {memory.usage_count ? ` · used ${memory.usage_count}` : ''}
                   </span>
                   <p>{previewText(memory.content, 150)}</p>
+                  {(memory.quality_reasons || []).length > 0 && (
+                    <p className="muted">Why: {(memory.quality_reasons || []).join(', ')}</p>
+                  )}
                   <div className="chat-row-actions">
                     <button type="button" onClick={() => handleToggleMemoryPin(memory)}>
                       {memory.pinned ? 'Unpin' : 'Pin'}
+                    </button>
+                    <button type="button" onClick={() => handleArchiveMemory(memory)}>
+                      {memory.memory_tier === 'archived' ? 'Restore' : 'Archive'}
                     </button>
                     <button type="button" onClick={() => handleEditMemory(memory)}>Edit</button>
                     <button type="button" onClick={() => handleDeleteMemory(memory.memory_id)}>Delete</button>

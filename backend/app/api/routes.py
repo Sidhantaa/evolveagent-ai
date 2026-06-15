@@ -46,6 +46,7 @@ from app.models.request_models import (
     UpdateWorkspaceRequest,
     LinearCommentRequest,
     LinearCursorVerifyRequest,
+    MemoryConsolidateRequest,
     RegisterToolRequest,
     UpdateSystemPromptRequest,
 )
@@ -62,6 +63,7 @@ from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
+from app.services.memory_intelligence_service import MemoryIntelligenceService
 from app.services.knowledge_service import KnowledgeService
 from app.services.assistant_command_service import AssistantCommandService
 from app.services.app_builder_service import AppBuilderService
@@ -103,6 +105,7 @@ user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
+memory_intelligence_service = MemoryIntelligenceService(storage)
 knowledge_service = KnowledgeService(storage, workspace_service)
 assistant_commands = AssistantCommandService(workspace_service, knowledge_service)
 tool_registry = ToolRegistryService(storage, permission_service)
@@ -374,8 +377,45 @@ def list_workspace_memory(
     workspace_id: str,
     q: str | None = Query(default=None),
     memory_type: str | None = Query(default=None),
+    tier: str | None = Query(default=None, pattern="^(hot|warm|archived)$"),
+    include_archived: bool = Query(default=True),
 ) -> list[dict]:
-    return workspace_service.list_memory(workspace_id, query=q, memory_type=memory_type)
+    return workspace_service.list_memory(
+        workspace_id,
+        query=q,
+        memory_type=memory_type,
+        tier=tier,
+        include_archived=include_archived,
+    )
+
+
+@router.get("/workspaces/{workspace_id}/memory/intelligence")
+def get_workspace_memory_intelligence(workspace_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.summary(resolved)
+
+
+@router.post("/workspaces/{workspace_id}/memory/re-score")
+def rescore_workspace_memory(workspace_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.rescore_workspace(resolved)
+
+
+@router.get("/workspaces/{workspace_id}/memory/search")
+def semantic_search_workspace_memory(
+    workspace_id: str,
+    q: str = Query(default=""),
+    limit: int = Query(default=10, ge=1, le=50),
+    include_archived: bool = Query(default=False),
+) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.semantic_search(resolved, q, limit=limit, include_archived=include_archived)
+
+
+@router.post("/workspaces/{workspace_id}/memory/consolidate")
+def consolidate_workspace_memory(workspace_id: str, request: MemoryConsolidateRequest) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    return memory_intelligence_service.consolidate(resolved, approved=request.approved)
 
 
 @router.get("/workspaces/{workspace_id}/memory/{memory_id}")
@@ -412,6 +452,24 @@ def pin_workspace_memory(workspace_id: str, memory_id: str) -> dict:
 @router.post("/workspaces/{workspace_id}/memory/{memory_id}/unpin")
 def unpin_workspace_memory(workspace_id: str, memory_id: str) -> dict:
     memory = workspace_service.update_memory(workspace_id, memory_id, {"pinned": False})
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.post("/workspaces/{workspace_id}/memory/{memory_id}/archive")
+def archive_workspace_memory_item(workspace_id: str, memory_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    memory = memory_intelligence_service.archive_memory(resolved, memory_id, archived=True)
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.post("/workspaces/{workspace_id}/memory/{memory_id}/restore")
+def restore_workspace_memory_item(workspace_id: str, memory_id: str) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    memory = memory_intelligence_service.archive_memory(resolved, memory_id, archived=False)
     if memory is None:
         raise HTTPException(status_code=404, detail="Workspace memory not found")
     return memory

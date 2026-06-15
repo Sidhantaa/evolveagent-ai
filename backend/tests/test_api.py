@@ -1166,6 +1166,97 @@ def test_workspace_memory_and_scoped_run_flow():
     assert archived.json()["workspace"]["status"] == "archived"
 
 
+def test_workspace_memory_intelligence_search_and_tiers():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Memory Intelligence", "description": "v6 test workspace"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+
+    first = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "FastAPI backend decision",
+            "content": "Use FastAPI service routes with focused pytest coverage for backend architecture work.",
+            "source": "manual",
+            "importance": "high",
+            "tags": ["backend", "fastapi"],
+        },
+    ).json()
+    client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "decision",
+            "title": "Frontend style preference",
+            "content": "Prefer concise React panels with clean developer mode metadata.",
+            "source": "manual",
+            "importance": "medium",
+            "tags": ["frontend"],
+        },
+    )
+
+    summary = client.get(f"/api/workspaces/{workspace_id}/memory/intelligence")
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["total_memories"] >= 2
+    assert "average_quality_score" in body
+
+    search = client.get(f"/api/workspaces/{workspace_id}/memory/search?q=backend%20pytest")
+    assert search.status_code == 200
+    results = search.json()["results"]
+    assert results
+    assert results[0]["memory"]["memory_id"] == first["memory_id"]
+    assert "backend" in results[0]["matched_terms"]
+
+    rescored = client.post(f"/api/workspaces/{workspace_id}/memory/re-score")
+    assert rescored.status_code == 200
+    listed = client.get(f"/api/workspaces/{workspace_id}/memory?tier=hot").json()
+    assert any(item["memory_id"] == first["memory_id"] for item in listed)
+
+
+def test_workspace_memory_consolidation_and_archive_restore():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Memory Consolidation", "description": "duplicate memory test"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    payload = {
+        "type": "summary",
+        "title": "Resume project stack",
+        "content": "The resume project uses React, FastAPI, OpenAI, and pytest for validation.",
+        "source": "manual",
+        "importance": "medium",
+        "tags": ["resume", "stack"],
+    }
+    first = client.post(f"/api/workspaces/{workspace_id}/memory", json=payload).json()
+    second = client.post(f"/api/workspaces/{workspace_id}/memory", json={**payload, "content": payload["content"] + " Keep notes concise."}).json()
+
+    preview = client.post(f"/api/workspaces/{workspace_id}/memory/consolidate", json={"approved": False})
+    assert preview.status_code == 200
+    groups = preview.json()["groups"]
+    assert groups
+    duplicate_ids = set(groups[0]["duplicate_memory_ids"])
+    assert first["memory_id"] in duplicate_ids or second["memory_id"] in duplicate_ids
+
+    applied = client.post(f"/api/workspaces/{workspace_id}/memory/consolidate", json={"approved": True})
+    assert applied.status_code == 200
+    assert applied.json()["applied"] is True
+    assert applied.json()["archived_memory_ids"]
+
+    archived_id = applied.json()["archived_memory_ids"][0]
+    archived = client.get(f"/api/workspaces/{workspace_id}/memory?tier=archived").json()
+    assert any(item["memory_id"] == archived_id for item in archived)
+
+    restored = client.post(f"/api/workspaces/{workspace_id}/memory/{archived_id}/restore")
+    assert restored.status_code == 200
+    assert restored.json()["memory_tier"] != "archived"
+
+    archived_again = client.post(f"/api/workspaces/{workspace_id}/memory/{archived_id}/archive")
+    assert archived_again.status_code == 200
+    assert archived_again.json()["memory_tier"] == "archived"
+
+
 def test_linear_status_endpoint(monkeypatch):
     from app.config import settings
 
