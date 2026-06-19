@@ -2741,6 +2741,10 @@ function App() {
                 <p>Voice-controlled multi-agent operating system</p>
               </div>
               <div className="topbar-actions jarvis-topbar-actions">
+                <div className="jarvis-status-strip" aria-label="System status">
+                  <span>{modeLabel}</span>
+                  <span>{workspaces.find((workspace) => workspace.workspace_id === workspaceId)?.name || 'Default Workspace'}</span>
+                </div>
                 <button
                   type="button"
                   className="theme-toggle-button"
@@ -2749,18 +2753,6 @@ function App() {
                 >
                   {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                 </button>
-                <select
-                  className="jarvis-workspace-select"
-                  value={workspaceId || ''}
-                  onChange={(event) => setWorkspaceId(event.target.value)}
-                  aria-label="Select workspace"
-                >
-                  {workspaces.map((workspace) => (
-                    <option key={workspace.workspace_id} value={workspace.workspace_id}>
-                      {workspace.name}
-                    </option>
-                  ))}
-                </select>
                 <button className="jarvis-icon-button" type="button" onClick={newChat} aria-label="New chat">
                   <MessageSquarePlus size={16} />
                 </button>
@@ -2784,7 +2776,12 @@ function App() {
               <div className="jarvis-ring" aria-hidden="true" />
               <div className="jarvis-command-header">
                 <h2>EvolveAgent AI</h2>
-                <p>Voice-controlled multi-agent operating system</p>
+                <p>Speak a command or type a mission</p>
+              </div>
+              <div className="jarvis-system-readout" aria-label="Capabilities">
+                <span>Agents online</span>
+                <span>Memory active</span>
+                <span>Tools governed</span>
               </div>
               <div className="jarvis-command-options">
                 <button
@@ -2796,14 +2793,14 @@ function App() {
                     <Mic size={28} />
                   </span>
                   <strong>Speak</strong>
-                  <span className="jarvis-option-subtitle">Give EvolveAgent a voice command.</span>
+                  <span className="jarvis-option-subtitle">Start with voice and edit before sending.</span>
                 </button>
                 <button type="button" className="jarvis-command-option type" onClick={focusComposer}>
                   <span className="jarvis-option-icon">
                     <Keyboard size={28} />
                   </span>
                   <strong>Type</strong>
-                  <span className="jarvis-option-subtitle">Send a text command.</span>
+                  <span className="jarvis-option-subtitle">Open the command line for text, files, or goals.</span>
                 </button>
               </div>
               {listening && <p className="jarvis-listening">Listening for your command...</p>}

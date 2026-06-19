@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v7.5 — Tool Execution and Plugin Polish
+**Current version:** v8.0 — Demo-Ready Product Polish
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a polished Jarvis-style interface, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v7.5 checkpoint polishes the governed tool layer: tool selections are stored as execution history, read-only tool runs include success and quality metadata, plugin manifests receive stricter validation, and Developer Mode shows recent tool activity without exposing tool internals in Simple Mode.
+The current v8.0 checkpoint makes the project more demo-ready: Simple Mode opens as a focused Jarvis-style command console with two clear entry points, Speak and Type, while Developer Mode keeps the detailed workbench for traces, tools, approvals, analytics, memory, jobs, and governance.
+
+The v7.5 checkpoint polished the governed tool layer: tool selections are stored as execution history, read-only tool runs include success and quality metadata, plugin manifests receive stricter validation, and Developer Mode shows recent tool activity without exposing tool internals in Simple Mode.
 
 The v6.0 checkpoint completed the memory intelligence layer: workspace memories are scored, tiered, indexed locally, retrieved semantically, consolidated through tracked jobs, and surfaced in Developer Mode with quality reasons, retention actions, tier history, and recommendations.
 
@@ -94,6 +96,8 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - System Prompt Registry integrated with prompt versioning
 - Kernel Service wrapper for request intake, routing, scheduling, and governance integration
 - Jarvis-style Simple Mode start experience with voice/text-first controls
+- Focused v8 Simple Mode command console with Speak and Type as the primary entry points
+- Simple Mode system readout for agents, memory, and governed tools without exposing internal traces
 - Responsive Developer Mode sidebar with mobile overlay behavior
 - Light/dark theme toggle backed by CSS design tokens
 - First-run onboarding walkthrough
@@ -748,6 +752,8 @@ npm run build
 
 ## Demo Prompts
 
+- Simple Mode: click **Speak** and say "Explain how EvolveAgent AI works."
+- Simple Mode: click **Type** and send "Build an AI resume analyzer app."
 - Explain how EvolveAgent AI works.
 - Add dark mode to this app.
 - Run tests for this project.

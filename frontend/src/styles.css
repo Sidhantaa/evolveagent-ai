@@ -1957,6 +1957,26 @@ ul {
   gap: 10px;
 }
 
+.jarvis-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 999px;
+  background: rgba(8, 16, 24, 0.62);
+  color: #b7eaff;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jarvis-status-strip span + span {
+  padding-left: 8px;
+  border-left: 1px solid rgba(125, 211, 252, 0.16);
+}
+
 .jarvis-workspace-select {
   min-height: 34px;
   border: 1px solid rgba(56, 189, 248, 0.22);
@@ -2037,7 +2057,7 @@ ul {
 .jarvis-command-header {
   position: relative;
   z-index: 1;
-  margin-bottom: 34px;
+  margin-bottom: 18px;
 }
 
 .jarvis-command-header h2 {
@@ -2054,6 +2074,27 @@ ul {
   color: #8fdcff;
   font-size: 14px;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jarvis-system-readout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.jarvis-system-readout span {
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 999px;
+  background: rgba(8, 16, 24, 0.68);
+  color: #b7eaff;
+  padding: 7px 11px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -2212,6 +2253,12 @@ ul {
 
   .jarvis-topbar-actions {
     justify-content: space-between;
+  }
+
+  .jarvis-status-strip {
+    order: 3;
+    width: 100%;
+    justify-content: center;
   }
 }
 
