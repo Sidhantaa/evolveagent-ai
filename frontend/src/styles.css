@@ -604,6 +604,12 @@ h2 {
   line-height: 1.45;
 }
 
+.provider-warning.provider-ok {
+  border-color: rgba(154, 210, 141, 0.25);
+  background: rgba(154, 210, 141, 0.08);
+  color: #c9efc0;
+}
+
 .history-list {
   display: grid;
   gap: 8px;

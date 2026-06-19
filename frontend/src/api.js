@@ -104,6 +104,19 @@ export async function getProviderStatus() {
   }
 }
 
+export async function runProviderSmokeTest(payload = {}) {
+  const response = await fetch(`${API_BASE}/api/providers/smoke-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Provider check failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getAnalytics(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/analytics${query({ workspace_id: workspaceId })}`)

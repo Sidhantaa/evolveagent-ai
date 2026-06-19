@@ -96,6 +96,7 @@ import {
   getToolSummary,
   maintainWorkspaceMemoryTiers,
   getProviderStatus,
+  runProviderSmokeTest,
   getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceMemoryIntelligence,
@@ -302,6 +303,8 @@ function App() {
   const [chats, setChats] = useState([])
   const [history, setHistory] = useState([])
   const [providerStatus, setProviderStatus] = useState(null)
+  const [providerCheck, setProviderCheck] = useState(null)
+  const [providerCheckBusy, setProviderCheckBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [learningReport, setLearningReport] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -486,6 +489,19 @@ function App() {
 
   async function refreshProviderStatus() {
     setProviderStatus(await getProviderStatus())
+  }
+
+  async function handleProviderCheck(provider) {
+    setProviderCheckBusy(true)
+    try {
+      const result = await runProviderSmokeTest({ provider, live: false })
+      setProviderCheck(result)
+      await refreshProviderStatus()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setProviderCheckBusy(false)
+    }
   }
 
   async function refreshAssistantCommands() {
@@ -1978,6 +1994,44 @@ function App() {
               <span className={providerStatus.gemini_configured ? 'configured' : ''}>Gemini {providerStatus.gemini_configured ? 'ready' : 'not set'}</span>
               <span className={providerStatus.mistral_configured ? 'configured' : ''}>Mistral {providerStatus.mistral_configured ? 'ready' : 'not set'}</span>
             </div>
+          )}
+          {providerStatus?.status_message && (
+            <p className={`provider-warning ${providerStatus.real_mode_ready ? 'provider-ok' : ''}`}>
+              {providerStatus.status_message}
+            </p>
+          )}
+          {providerStatus?.provider_details?.length > 0 && (
+            <details className="developer-prompt-block">
+              <summary>Provider readiness</summary>
+              <div className="agent-list compact-list">
+                {providerStatus.provider_details.map((provider) => (
+                  <div className="provider-row" key={provider.provider}>
+                    <strong>{provider.label}</strong>
+                    <div className="model-meta">
+                      <span>{provider.model}</span>
+                      <span>{provider.configured ? 'configured' : 'missing key'}</span>
+                      {provider.ready && <span>ready</span>}
+                      {provider.fallback_provider && <span>fallback {provider.fallback_provider}</span>}
+                    </div>
+                    <p>{provider.reason}</p>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => handleProviderCheck(provider.provider)}
+                      disabled={providerCheckBusy}
+                    >
+                      Check {provider.label}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {providerCheck && (
+                <div className={`command-result ${providerCheck.success ? 'success' : 'failed'}`}>
+                  <strong>{providerCheck.provider} check</strong>
+                  <pre>{providerCheck.message}</pre>
+                </div>
+              )}
+            </details>
           )}
           {realModeWithoutRealProvider && (
             <p className="provider-warning">Real mode is enabled, but no real provider key is configured. Mock fallback will be used.</p>

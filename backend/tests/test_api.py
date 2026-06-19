@@ -587,6 +587,57 @@ def test_provider_status_endpoint():
     assert body["default_provider"] == "mock"
     assert body["available_providers"] == ["mock"]
     assert body["openai_configured"] is False
+    assert body["real_mode_ready"] is False
+    assert body["fallback_provider"] == "mock"
+    assert body["provider_details"]
+    assert any(item["provider"] == "mock" and item["configured"] for item in body["provider_details"])
+
+
+def test_provider_status_real_mode_readiness(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "llm_mode", "real")
+    monkeypatch.setattr(settings, "default_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    response = client.get("/api/providers/status")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["llm_mode"] == "real"
+    assert body["default_provider"] == "openai"
+    assert body["default_model"]
+    assert body["real_mode_ready"] is True
+    assert body["openai_configured"] is True
+    assert "Real mode is ready" in body["status_message"]
+
+
+def test_provider_smoke_test_dry_run_and_mocked_live(monkeypatch):
+    from app.config import settings
+    from app.api import routes
+
+    monkeypatch.setattr(settings, "llm_mode", "real")
+    monkeypatch.setattr(settings, "default_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    dry_response = client.post("/api/providers/smoke-test", json={"provider": "openai", "live": False})
+    dry = dry_response.json()
+    assert dry_response.status_code == 200
+    assert dry["success"] is True
+    assert dry["live"] is False
+
+    original_generate = routes.llm_router.providers["openai"].generate
+    routes.llm_router.providers["openai"].generate = lambda system, user, model=None: "provider ready"
+    try:
+        live_response = client.post("/api/providers/smoke-test", json={"provider": "openai", "live": True})
+    finally:
+        routes.llm_router.providers["openai"].generate = original_generate
+
+    live = live_response.json()
+    assert live_response.status_code == 200
+    assert live["success"] is True
+    assert live["live"] is True
+    assert live["output_preview"] == "provider ready"
 
 
 def test_feedback_and_analytics_endpoints():

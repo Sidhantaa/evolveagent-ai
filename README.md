@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v8.0 — Demo-Ready Product Polish
+**Current version:** v8.5 — Real Provider Activation and QA
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with real-provider readiness diagnostics, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v8.0 checkpoint makes the project more demo-ready: Simple Mode opens as a focused Jarvis-style command console with two clear entry points, Speak and Type, while Developer Mode keeps the detailed workbench for traces, tools, approvals, analytics, memory, jobs, and governance.
+The current v8.5 checkpoint improves real-provider activation and QA: `/api/providers/status` returns readiness details, configured models, fallback information, and status messages, while Developer Mode can run safe dry provider checks without making paid API calls by default.
+
+The v8.0 checkpoint made the project more demo-ready: Simple Mode opens as a focused Jarvis-style command console with two clear entry points, Speak and Type, while Developer Mode keeps the detailed workbench for traces, tools, approvals, analytics, memory, jobs, and governance.
 
 The v7.5 checkpoint polished the governed tool layer: tool selections are stored as execution history, read-only tool runs include success and quality metadata, plugin manifests receive stricter validation, and Developer Mode shows recent tool activity without exposing tool internals in Simple Mode.
 
@@ -29,6 +31,8 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - Master Orchestrator Agent for task classification and routing
 - Specialist agents for research, logic, risk, strategy, writing, judging, evolution, memory, file analysis, and image prompts
 - Real OpenAI text mode with mock fallback
+- Real-provider readiness diagnostics with model, fallback, and status-message visibility
+- Dry provider smoke checks from Developer Mode without calling paid APIs by default
 - Deep Mode multi-LLM consensus across configured OpenAI, Claude, Gemini, and Mistral providers
 - Consensus winner, comparison notes, and model tournament tracking in Developer Mode
 - Provider/model metadata and fallback visibility
@@ -703,6 +707,20 @@ GEMINI_MODEL=gemini-1.5-pro
 MISTRAL_API_KEY=
 MISTRAL_MODEL=mistral-large-latest
 ```
+
+Provider QA endpoints:
+
+- `GET /api/providers/status` returns mode, configured providers, default model, fallback provider, status message, and per-provider readiness details.
+- `POST /api/providers/smoke-test` supports dry checks by default: `{ "provider": "openai", "live": false }`.
+- Live provider checks are opt-in only: `{ "provider": "openai", "live": true }`.
+
+Recommended real-mode verification:
+
+1. Set `LLM_MODE=real`, `DEFAULT_PROVIDER=openai`, and `OPENAI_API_KEY`.
+2. Restart the backend.
+3. Open Developer Mode and confirm OpenAI shows `ready`.
+4. Run a dry provider check first.
+5. Send a short chat prompt and confirm provider/model metadata is OpenAI.
 
 ## Backend Setup
 

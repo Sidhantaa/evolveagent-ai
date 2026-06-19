@@ -136,6 +136,11 @@ class ProviderStatus(BaseModel):
     mistral_configured: bool
     default_provider: str
     available_providers: list[str]
+    real_mode_ready: bool = False
+    default_model: str = "mock-agent-model"
+    fallback_provider: str = "mock"
+    status_message: str = ""
+    provider_details: list[dict] = Field(default_factory=list)
 
 
 class ImageResult(BaseModel):

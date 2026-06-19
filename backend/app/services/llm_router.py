@@ -148,6 +148,7 @@ class LLMRouter:
         }.get(provider, False)
 
     def status(self) -> ProviderStatus:
+        details = self.provider_details()
         if settings.use_mock_llm:
             return ProviderStatus(
                 llm_mode=settings.llm_mode,
@@ -157,6 +158,11 @@ class LLMRouter:
                 mistral_configured=False,
                 default_provider="mock",
                 available_providers=["mock"],
+                real_mode_ready=False,
+                default_model="mock-agent-model",
+                fallback_provider="mock",
+                status_message="Mock mode is active. Real providers are not used until LLM_MODE=real.",
+                provider_details=details,
             )
         configured = {
             "openai": self.provider_configured("openai"),
@@ -175,7 +181,96 @@ class LLMRouter:
             mistral_configured=configured["mistral"],
             default_provider=default_provider,
             available_providers=available,
+            real_mode_ready=any(configured.values()),
+            default_model=self.model_for_provider(default_provider),
+            fallback_provider="mock",
+            status_message=self._status_message(default_provider, configured),
+            provider_details=details,
         )
+
+    def provider_details(self) -> list[dict]:
+        details = []
+        for provider in ["openai", "anthropic", "gemini", "mistral", "mock"]:
+            configured = self.provider_configured(provider)
+            details.append(
+                {
+                    "provider": provider,
+                    "label": self.provider_label(provider),
+                    "configured": configured,
+                    "model": self.model_for_provider(provider),
+                    "ready": configured and (provider == "mock" or not settings.use_mock_llm),
+                    "reason": self._provider_reason(provider, configured),
+                    "fallback_provider": "mock" if provider != "mock" else None,
+                }
+            )
+        return details
+
+    def smoke_test(self, provider: str | None = None, live: bool = False) -> dict:
+        selected_provider = provider or self.status().default_provider
+        if selected_provider not in self.providers:
+            return {"success": False, "provider": selected_provider, "live": live, "message": "Unknown provider."}
+        configured = self.provider_configured(selected_provider)
+        model = self.model_for_provider(selected_provider)
+        if not live:
+            return {
+                "success": configured,
+                "provider": selected_provider,
+                "model": model,
+                "live": False,
+                "message": self._provider_reason(selected_provider, configured),
+                "fallback_provider": "mock" if selected_provider != "mock" else None,
+            }
+        if not configured:
+            return {
+                "success": False,
+                "provider": selected_provider,
+                "model": model,
+                "live": True,
+                "message": self._provider_reason(selected_provider, configured),
+                "fallback_provider": "mock",
+            }
+        started = perf_counter()
+        try:
+            output = self.providers[selected_provider].generate(
+                "You are a provider readiness checker. Reply with a short success message.",
+                "Return the words provider ready.",
+                model,
+            )
+            return {
+                "success": True,
+                "provider": selected_provider,
+                "model": model,
+                "live": True,
+                "latency_ms": int((perf_counter() - started) * 1000),
+                "message": "Provider live check succeeded.",
+                "output_preview": output[:120],
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "provider": selected_provider,
+                "model": model,
+                "live": True,
+                "latency_ms": int((perf_counter() - started) * 1000),
+                "message": f"Provider live check failed: {exc}",
+                "fallback_provider": "mock",
+            }
+
+    def _provider_reason(self, provider: str, configured: bool) -> str:
+        if provider == "mock":
+            return "Mock fallback is always available."
+        if settings.use_mock_llm:
+            return "LLM_MODE=mock, so this provider will not be called."
+        if configured:
+            return "API key is configured and provider can be selected."
+        return f"{provider.upper()} API key is not configured; mock fallback will be used."
+
+    def _status_message(self, default_provider: str, configured: dict[str, bool]) -> str:
+        if any(configured.values()):
+            if default_provider == "mock":
+                return "Real mode is enabled, but the configured default provider is unavailable. Mock fallback is active."
+            return f"Real mode is ready. Default provider is {self.provider_label(default_provider)}."
+        return "Real mode is enabled, but no real provider keys are configured. Mock fallback is active."
 
     def fallback_routes(self, original_provider: str) -> list[RouteChoice]:
         routes = [

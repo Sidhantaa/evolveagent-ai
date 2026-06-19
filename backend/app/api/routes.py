@@ -34,6 +34,7 @@ from app.models.request_models import (
     PromptDecisionRequest,
     PromptProposalRequest,
     QualityLinearSummaryRequest,
+    ProviderSmokeTestRequest,
     QualityRunRequest,
     RenameChatRequest,
     RunRequest,
@@ -1332,6 +1333,11 @@ def delete_custom_agent(agent_id: str) -> dict:
 @router.get("/providers/status", response_model=ProviderStatus)
 def get_provider_status() -> ProviderStatus:
     return llm_router.status()
+
+
+@router.post("/providers/smoke-test")
+def provider_smoke_test(request: ProviderSmokeTestRequest) -> dict:
+    return llm_router.smoke_test(provider=request.provider, live=request.live)
 
 
 @router.get("/chats")

@@ -212,6 +212,11 @@ class TestSuggestionRequest(BaseModel):
     changed_files: list[str] = Field(default_factory=list, max_length=50)
 
 
+class ProviderSmokeTestRequest(BaseModel):
+    provider: str | None = Field(default=None, pattern="^(openai|anthropic|gemini|mistral|mock)$")
+    live: bool = Field(default=False, description="When false, only checks configuration/readiness without calling a paid API.")
+
+
 class QualityLinearSummaryRequest(BaseModel):
     issue_id: str = Field(..., min_length=1, max_length=120)
     quality_run_id: str | None = Field(default=None, max_length=120)
