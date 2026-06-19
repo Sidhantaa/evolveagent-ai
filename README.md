@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v6.0 — Real Memory Intelligence
+**Current version:** v7.5 — Tool Execution and Plugin Polish
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a polished Jarvis-style interface, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, safe tool routing, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a polished Jarvis-style interface, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v6.0 checkpoint completes the memory intelligence layer: workspace memories are scored, tiered, indexed locally, retrieved semantically, consolidated through tracked jobs, and surfaced in Developer Mode with quality reasons, retention actions, tier history, and recommendations.
+The current v7.5 checkpoint polishes the governed tool layer: tool selections are stored as execution history, read-only tool runs include success and quality metadata, plugin manifests receive stricter validation, and Developer Mode shows recent tool activity without exposing tool internals in Simple Mode.
+
+The v6.0 checkpoint completed the memory intelligence layer: workspace memories are scored, tiered, indexed locally, retrieved semantically, consolidated through tracked jobs, and surfaced in Developer Mode with quality reasons, retention actions, tier history, and recommendations.
 
 The v3.5 checkpoint added professional UI/UX polish: a Jarvis-style Simple Mode command center, responsive Developer Mode sidebar, light/dark theme tokens, onboarding walkthrough, improved accessibility labels, reduced-motion handling, and cleaner theme-consistent panels.
 
@@ -82,7 +84,11 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - Assistant Tools for calculator, random password generation, system info, temperature conversion, and knowledge search
 - Tool Registry and Tool Router for governed tool selection
 - Local plugin manifest loader with invalid-plugin isolation and governance logging
-- Developer Mode Tool Trace for selected tools, sanitized inputs, permission level, execution status, and result summary
+- Persisted tool execution history with execution IDs, success status, quality scores, and quality notes
+- Tool execution summary endpoints for recent history, blocked counts, approval-required counts, and average quality
+- Stricter plugin manifest validation for naming, duplicate tools, schema shape, version length, and permission levels
+- Developer Mode Tool Trace for selected tools, sanitized inputs, permission level, execution status, result summary, and execution quality
+- Developer Mode Tool History panel with recent governed tool activity and manual refresh
 - Approval Workflow 2.0 with approval chains, queue endpoints, audit records, rejection/rollback records, and optional webhook notification
 - Agent Jobs scheduler with persisted jobs, lifecycle states, pause/resume/cancel/heartbeat controls, health monitoring, and governance logging
 - System Prompt Registry integrated with prompt versioning
@@ -302,9 +308,23 @@ The Assistant Tools layer adds small safe utilities such as:
 - temperature conversion
 - knowledge search
 
-The Tool Registry stores tool metadata, permission level, enabled status, and input schema. The Tool Router lets the Master workflow select relevant tools while preserving governance controls. Developer Mode shows a Tool Trace with tool name, source, permission level, selected/executed/blocked status, sanitized input, and result summary. Simple Mode does not show tool internals.
+The Tool Registry stores tool metadata, permission level, enabled status, and input schema. The Tool Router lets the Master workflow select relevant tools while preserving governance controls. Read-only assistant commands may execute automatically; approval-gated, blocked, or plugin-only tools are traced but not silently executed.
 
-Local plugins can be registered through manifest files. Invalid plugins are skipped and logged instead of crashing the app.
+Developer Mode shows:
+
+- per-run Tool Trace with tool name, source, permission level, selected/executed/blocked status, sanitized input, result summary, execution ID, and quality metadata
+- Tool History with recent executions, blocked/approval-required counts, average quality, timestamps, and manual refresh
+- plugin validation failures through governance logs
+
+Simple Mode does not show tool internals.
+
+Local plugins can be registered through manifest files. Invalid plugins are skipped and logged instead of crashing the app. Manifest validation checks plugin name shape, duplicate tool names, input schema objects, permission levels, and basic metadata limits.
+
+Tool history APIs:
+
+- `GET /api/tools/history`
+- `GET /api/tools/history/{execution_id}`
+- `GET /api/tools/summary`
 
 ## Approval Workflow 2.0
 

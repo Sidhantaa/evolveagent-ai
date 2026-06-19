@@ -1725,6 +1725,29 @@ h2 {
   font-size: 13px;
 }
 
+.tool-history-header,
+.tool-history-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tool-history-header {
+  margin: 8px 0 10px;
+}
+
+.tool-history-header p {
+  margin: 0;
+}
+
+.tool-history-title small,
+.provider-row small {
+  color: #94a0ac;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .raw-json {
   max-height: 420px;
   overflow: auto;

@@ -27,6 +27,7 @@ import {
   MessageSquarePlus,
   PanelRight,
   Route,
+  RefreshCw,
   Send,
   ShieldAlert,
   Sparkles,
@@ -354,6 +355,8 @@ function App() {
   const [assistantCommands, setAssistantCommands] = useState([])
   const [toolHistory, setToolHistory] = useState([])
   const [toolSummary, setToolSummary] = useState(null)
+  const [toolHistoryUpdatedAt, setToolHistoryUpdatedAt] = useState('')
+  const [toolHistoryBusy, setToolHistoryBusy] = useState(false)
   const [selectedCommand, setSelectedCommand] = useState('help')
   const [commandInput, setCommandInput] = useState('')
   const [commandResult, setCommandResult] = useState(null)
@@ -494,12 +497,19 @@ function App() {
   }
 
   async function refreshToolHistory(nextWorkspaceId = workspaceId) {
-    const [history, summary] = await Promise.all([
-      getToolHistory(nextWorkspaceId, 20),
-      getToolSummary(nextWorkspaceId),
-    ])
-    setToolHistory(history)
-    setToolSummary(summary)
+    if (!nextWorkspaceId) return
+    setToolHistoryBusy(true)
+    try {
+      const [history, summary] = await Promise.all([
+        getToolHistory(nextWorkspaceId, 20),
+        getToolSummary(nextWorkspaceId),
+      ])
+      setToolHistory(history)
+      setToolSummary(summary)
+      setToolHistoryUpdatedAt(new Date().toLocaleTimeString())
+    } finally {
+      setToolHistoryBusy(false)
+    }
   }
 
   async function refreshAnalytics(nextWorkspaceId = workspaceId) {
@@ -1879,6 +1889,21 @@ function App() {
               {developerMode && (
                 <details className="developer-prompt-block">
                   <summary>Tool execution history</summary>
+                  <div className="tool-history-header">
+                    <p className="muted">
+                      Recent governed tool selections and execution quality.
+                      {toolHistoryUpdatedAt ? ` Refreshed ${toolHistoryUpdatedAt}.` : ''}
+                    </p>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => refreshToolHistory(workspaceId)}
+                      disabled={toolHistoryBusy}
+                    >
+                      <RefreshCw size={14} />
+                      Refresh
+                    </button>
+                  </div>
                   {toolSummary ? (
                     <div className="mini-grid">
                       <div>
@@ -1907,8 +1932,12 @@ function App() {
                     <div className="agent-list compact-list">
                       {toolHistory.slice(0, 8).map((item) => (
                         <div className="provider-row" key={item.execution_id}>
-                          <strong>{item.tool_name}</strong>
+                          <div className="tool-history-title">
+                            <strong>{item.tool_name}</strong>
+                            <small>{item.created_at ? new Date(item.created_at).toLocaleString() : ''}</small>
+                          </div>
                           <div className="model-meta">
+                            <span>{item.source || 'n/a'}</span>
                             <span>{item.permission_level}</span>
                             {item.executed && <span>executed</span>}
                             {item.blocked && <span>blocked</span>}
@@ -1916,6 +1945,7 @@ function App() {
                             <span>quality {item.quality_score}</span>
                           </div>
                           {item.result_summary && <p>{previewText(item.result_summary, 120)}</p>}
+                          {item.quality_notes && <small>{item.quality_notes}</small>}
                         </div>
                       ))}
                     </div>
