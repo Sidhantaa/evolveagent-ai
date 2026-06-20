@@ -257,6 +257,13 @@ function runModeLabel(result, fallbackMode) {
   return fallbackMode
 }
 
+function capabilityModeLabel(label, status, modeKey, activeKey) {
+  if (!status) return `${label}: checking`
+  const mode = status[modeKey] || 'unknown'
+  const active = status[activeKey] || ''
+  return active ? `${label}: ${mode} (${active})` : `${label}: ${mode}`
+}
+
 function messageKey(message) {
   return message.message_id || message.id
 }
@@ -1596,7 +1603,9 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  const modeLabel = providerStatus ? `${providerStatus.llm_mode} mode` : 'checking'
+  const modeLabel = capabilityModeLabel('Text', providerStatus, 'llm_mode', 'default_provider')
+  const imageModeLabel = capabilityModeLabel('Image', imageProviderStatus, 'image_mode', 'active_provider')
+  const transcriptionModeLabel = capabilityModeLabel('Audio', transcriptionProviderStatus, 'transcription_mode', 'active_provider')
   const providerList = providerStatus?.available_providers?.join(', ') || 'none'
   const realProvidersAvailable = (providerStatus?.available_providers || []).filter((provider) => provider !== 'mock')
   const realModeWithoutRealProvider = providerStatus?.llm_mode === 'real' && realProvidersAvailable.length === 0
@@ -2017,12 +2026,20 @@ function App() {
           </div>
           <div className="provider-card">
             <div>
-              <span>Mode</span>
+              <span>Text</span>
               <strong>{modeLabel}</strong>
             </div>
             <div>
-              <span>Available</span>
+              <span>Text providers</span>
               <strong>{providerList}</strong>
+            </div>
+            <div>
+              <span>Image</span>
+              <strong>{imageModeLabel}</strong>
+            </div>
+            <div>
+              <span>Audio</span>
+              <strong>{transcriptionModeLabel}</strong>
             </div>
           </div>
           {providerStatus && (
@@ -2894,6 +2911,7 @@ function App() {
               <div className="topbar-actions jarvis-topbar-actions">
                 <div className="jarvis-status-strip" aria-label="System status">
                   <span>{modeLabel}</span>
+                  <span>{imageModeLabel}</span>
                   <span>{workspaces.find((workspace) => workspace.workspace_id === workspaceId)?.name || 'Default Workspace'}</span>
                 </div>
                 <button
@@ -3026,6 +3044,11 @@ function App() {
                   {imageResult && (
                     <div className="image-result-card">
                       <img src={assetUrl(imageResult.image_url)} alt="Generated image preview" />
+                      {imageResult.fallback_used && (
+                        <p className="fallback-note">
+                          Real image generation failed, so this preview used the mock fallback.
+                        </p>
+                      )}
                       <div className="prompt-box">
                         <span>Prompt used</span>
                         <p>{imageResult.prompt}</p>
