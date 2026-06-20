@@ -937,7 +937,7 @@ class MasterOrchestratorAgent:
                 best_type = task_type
                 best_matches = matches
         if best_matches == 0:
-            return "general", 62
+            return "general", 78
         if best_type == "image_generation":
             return best_type, min(96, 85 + best_matches * 4)
         if best_type == "app_automation":
@@ -1004,6 +1004,8 @@ class MasterOrchestratorAgent:
         final_output = (
             "I generated an image using a safe image prompt."
             if image_result.provider != "mock_image"
+            else "Real image generation failed, so I used the mock preview fallback."
+            if image_result.fallback_used
             else "I created an image preview using a safe image prompt."
         )
         workflow_trace = [
@@ -1076,10 +1078,10 @@ class MasterOrchestratorAgent:
                 "Memory Agent",
             ],
             selection_reason=(
-                "The Master Agent detected an image creation request and used the lightweight mock image workflow "
+                "The Master Agent detected an image creation request and used the dedicated image workflow "
                 "instead of the normal text-analysis workflow."
             ),
-            retry_policy="Regenerate the safe prompt and mock preview if the user requests another version.",
+            retry_policy="Regenerate the safe prompt and image preview if the user requests another version.",
         )
         judge_result = self.judge.evaluate([image_agent_output], final_output=final_output).model_copy(
             update={

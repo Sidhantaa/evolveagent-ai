@@ -368,6 +368,13 @@ def test_system_explanation_confidence_is_high():
     assert confidence > 62
 
 
+def test_general_text_confidence_is_not_low():
+    task_type, confidence = MasterOrchestratorAgent.detect_task_type_with_confidence("Tell me how to organize my day")
+
+    assert task_type == "general"
+    assert confidence >= 75
+
+
 def test_image_generation_confidence_is_high():
     task_type, confidence = MasterOrchestratorAgent.detect_task_type_with_confidence("create me photo of spiderman")
 
@@ -413,6 +420,23 @@ def test_image_generation_uses_mock_image_agent(tmp_path):
     assert response.judge_result.classification_correct is True
     assert response.judge_result.capability_supported is True
     assert response.judge_result.reason == "Image generation completed with provider 'mock_image'."
+
+
+def test_image_generation_real_failure_has_clear_fallback_message(tmp_path, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "image_mode", "real")
+    monkeypatch.setattr(settings, "image_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    storage = StorageService(data_dir=str(tmp_path))
+    master = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    response = master.run(RunRequest(user_input="generate image of a sunflower", task_type="auto"))
+
+    assert response.task_type == "image_generation"
+    assert response.image_result is not None
+    assert response.image_result.fallback_used is True
+    assert "mock preview fallback" in response.final_output.lower()
 
 
 def test_existing_session_adds_message_history_and_context(tmp_path):
