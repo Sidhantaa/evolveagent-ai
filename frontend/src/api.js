@@ -140,6 +140,29 @@ export async function runImageSmokeTest(payload = {}) {
   return body
 }
 
+export async function getTranscriptionProviderStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/transcription/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function runTranscriptionSmokeTest(payload = {}) {
+  const response = await fetch(`${API_BASE}/api/transcription/smoke-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Transcription provider check failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getAnalytics(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/analytics${query({ workspace_id: workspaceId })}`)

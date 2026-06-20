@@ -41,6 +41,7 @@ from app.models.request_models import (
     RunRequest,
     SimulationCreateRequest,
     TestSuggestionRequest,
+    TranscriptionSmokeTestRequest,
     UpdateCustomAgentRequest,
     UpdateGoalRequest,
     UpdateGoalTaskRequest,
@@ -1351,6 +1352,16 @@ def get_image_provider_status() -> dict:
 @router.post("/images/smoke-test")
 def image_smoke_test(request: ImageSmokeTestRequest) -> dict:
     return image_service.smoke_test(live=request.live, prompt=request.prompt)
+
+
+@router.get("/transcription/status")
+def get_transcription_provider_status() -> dict:
+    return recording_service.transcription.status()
+
+
+@router.post("/transcription/smoke-test")
+def transcription_smoke_test(request: TranscriptionSmokeTestRequest) -> dict:
+    return recording_service.transcription.smoke_test(live=request.live)
 
 
 @router.get("/chats")

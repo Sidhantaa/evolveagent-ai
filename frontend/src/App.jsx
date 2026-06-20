@@ -99,6 +99,8 @@ import {
   runProviderSmokeTest,
   getImageProviderStatus,
   runImageSmokeTest,
+  getTranscriptionProviderStatus,
+  runTranscriptionSmokeTest,
   getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceMemoryIntelligence,
@@ -310,6 +312,9 @@ function App() {
   const [imageProviderStatus, setImageProviderStatus] = useState(null)
   const [imageProviderCheck, setImageProviderCheck] = useState(null)
   const [imageProviderBusy, setImageProviderBusy] = useState(false)
+  const [transcriptionProviderStatus, setTranscriptionProviderStatus] = useState(null)
+  const [transcriptionProviderCheck, setTranscriptionProviderCheck] = useState(null)
+  const [transcriptionProviderBusy, setTranscriptionProviderBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [learningReport, setLearningReport] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -495,6 +500,7 @@ function App() {
   async function refreshProviderStatus() {
     setProviderStatus(await getProviderStatus())
     setImageProviderStatus(await getImageProviderStatus())
+    setTranscriptionProviderStatus(await getTranscriptionProviderStatus())
   }
 
   async function handleProviderCheck(provider) {
@@ -520,6 +526,19 @@ function App() {
       setError(err.message)
     } finally {
       setImageProviderBusy(false)
+    }
+  }
+
+  async function handleTranscriptionProviderCheck() {
+    setTranscriptionProviderBusy(true)
+    try {
+      const result = await runTranscriptionSmokeTest({ live: false })
+      setTranscriptionProviderCheck(result)
+      setTranscriptionProviderStatus(await getTranscriptionProviderStatus())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setTranscriptionProviderBusy(false)
     }
   }
 
@@ -2081,6 +2100,35 @@ function App() {
                 <div className={`command-result ${imageProviderCheck.success ? 'success' : 'failed'}`}>
                   <strong>image check</strong>
                   <pre>{imageProviderCheck.message}</pre>
+                </div>
+              )}
+            </details>
+          )}
+          {transcriptionProviderStatus && (
+            <details className="developer-prompt-block">
+              <summary>Transcription provider</summary>
+              <div className="provider-row">
+                <strong>{transcriptionProviderStatus.active_provider}</strong>
+                <div className="model-meta">
+                  <span>{transcriptionProviderStatus.transcription_mode} mode</span>
+                  <span>{transcriptionProviderStatus.active_model}</span>
+                  {transcriptionProviderStatus.real_transcription_ready && <span>real ready</span>}
+                  <span>fallback {transcriptionProviderStatus.fallback_provider}</span>
+                </div>
+                <p>{transcriptionProviderStatus.status_message}</p>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleTranscriptionProviderCheck}
+                  disabled={transcriptionProviderBusy}
+                >
+                  Check transcription provider
+                </button>
+              </div>
+              {transcriptionProviderCheck && (
+                <div className={`command-result ${transcriptionProviderCheck.success ? 'success' : 'failed'}`}>
+                  <strong>transcription check</strong>
+                  <pre>{transcriptionProviderCheck.message}</pre>
                 </div>
               )}
             </details>
