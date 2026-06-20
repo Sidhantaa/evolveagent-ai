@@ -375,6 +375,13 @@ def test_image_generation_confidence_is_high():
     assert confidence >= 85
 
 
+def test_image_followup_edit_confidence_is_high():
+    task_type, confidence = MasterOrchestratorAgent.detect_task_type_with_confidence("add butterfly on sun flower")
+
+    assert task_type == "image_generation"
+    assert confidence >= 85
+
+
 def test_image_agent_rewrites_spidermen_typo(tmp_path):
     storage = StorageService(data_dir=str(tmp_path))
     master = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))

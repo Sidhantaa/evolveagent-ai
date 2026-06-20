@@ -124,3 +124,11 @@ def test_image_agent_cleans_prompt_punctuation():
     assert ".." not in prompt
     assert ",," not in prompt
     assert "AI assistant" in prompt
+
+
+def test_image_agent_cleans_give_me_image_command():
+    prompt, safety_rewritten = ImageAgent().build_safe_prompt("give me image of sunflower")
+
+    assert safety_rewritten is False
+    assert "give me image" not in prompt.lower()
+    assert "sunflower" in prompt.lower()

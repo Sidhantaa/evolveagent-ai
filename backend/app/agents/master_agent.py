@@ -818,6 +818,39 @@ class MasterOrchestratorAgent:
     @staticmethod
     def detect_task_type_with_confidence(user_input: str) -> tuple[str, int]:
         text = user_input.lower()
+        image_edit_verbs = (
+            "add ",
+            "put ",
+            "place ",
+            "insert ",
+            "include ",
+            "remove ",
+            "change ",
+            "replace ",
+            "edit ",
+        )
+        visual_subject_terms = (
+            "image",
+            "photo",
+            "picture",
+            "drawing",
+            "illustration",
+            "logo",
+            "poster",
+            "flower",
+            "sunflower",
+            "sun flower",
+            "butterfly",
+            "car",
+            "background",
+            "sky",
+            "tree",
+            "portrait",
+            "character",
+        )
+        if any(text.startswith(verb) for verb in image_edit_verbs) and any(term in text for term in visual_subject_terms):
+            return "image_generation", 88
+
         keyword_map = {
             "image_generation": [
                 "create image",
