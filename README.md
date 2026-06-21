@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v11.0 — Real API QA + Cost Controls
+**Current version:** v11.5 — Autonomous Research Agent Foundation
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with governed research sessions, citation tracking, source credibility scoring, real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v11.0 checkpoint adds real API QA and cost-control visibility. Developer Mode now includes a Real API Control panel with paid-capability readiness, dry-check defaults, live-call warnings, provider/model/size notes, and simple cost-estimate guidance before text, image, or transcription workflows use paid provider APIs.
+The current v11.5 checkpoint adds the Autonomous Research Agent foundation. Research sessions are governed by approval state, sources are registered with local credibility scores, claims can be linked to citations, and Developer Mode includes a Research Agent panel for reviewing reports, evidence gaps, source counts, and citation counts. This foundation does not perform unrestricted web browsing; it stores and evaluates approved research artifacts safely.
+
+The v11.0 checkpoint added real API QA and cost-control visibility. Developer Mode includes a Real API Control panel with paid-capability readiness, dry-check defaults, live-call warnings, provider/model/size notes, and simple cost-estimate guidance before text, image, or transcription workflows use paid provider APIs.
 
 The v10.0 checkpoint added a unified real-API control layer for text, image, and transcription capabilities. Developer Mode can check text-provider readiness, image-provider readiness, and transcription-provider readiness through safe dry checks. Real API calls remain opt-in and every capability keeps mock fallback behavior for local demos and tests.
 
@@ -62,6 +64,11 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - Recording upload and transcript analysis for `.mp3`, `.m4a`, `.wav`, `.mp4`, and `.webm`
 - `recording_summary` task workflow with mock/OpenAI transcription modes
 - Recording Analysis Agent for summaries, key points, action items, decisions, study notes, and Q&A
+- Governed research sessions with approval/rejection flow
+- Source registration with local credibility scoring
+- Citation tracking that links claims to sources
+- Research report generation with evidence gaps and top sources
+- Developer Mode Research Agent panel for research sessions and reports
 - Advanced Adaptive Learning Engine for orchestration-level self-optimization reports
 - Task-specific strongest/weakest agent insights
 - Workflow strategy memory with average score, feedback positive rate, fallback rate, and recommended workflow

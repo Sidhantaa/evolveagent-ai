@@ -659,6 +659,64 @@ export async function deleteKnowledgeLink(workspaceId, linkId) {
   return response.json()
 }
 
+export async function getResearchSessions(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/research/sessions${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function createResearchSession(payload) {
+  const response = await fetch(`${API_BASE}/api/research/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Research session failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function approveResearchSession(researchId) {
+  const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/approve`, { method: 'POST' })
+  if (!response.ok) throw new Error(`Research approval failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function rejectResearchSession(researchId) {
+  const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/reject`, { method: 'POST' })
+  if (!response.ok) throw new Error(`Research rejection failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function addResearchSource(researchId, payload) {
+  const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/sources`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Research source failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function addResearchCitation(researchId, payload) {
+  const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/citations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Research citation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getResearchReport(researchId) {
+  const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/report`)
+  if (!response.ok) throw new Error(`Research report failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function getAssistantCommands() {
   try {
     const response = await fetch(`${API_BASE}/api/assistant/commands`)

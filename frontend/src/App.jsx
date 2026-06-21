@@ -45,6 +45,7 @@ import {
   createAppBuilderPlan,
   createDebateSession,
   createMemoryConsolidationJob,
+  createResearchSession,
   createSimulationRun,
   createCustomAgent,
   createGoal,
@@ -103,6 +104,8 @@ import {
   runTranscriptionSmokeTest,
   getRealApiSummary,
   getRealApiLiveWarning,
+  getResearchReport,
+  getResearchSessions,
   getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceMemoryIntelligence,
@@ -119,6 +122,8 @@ import {
   applyMemoryConsolidationJob,
   getWorkspaces,
   rejectPromptVersion,
+  approveResearchSession,
+  rejectResearchSession,
   renameChat,
   rollbackPromptVersion,
   runGoalTask,
@@ -405,6 +410,12 @@ function App() {
   const [simulationResult, setSimulationResult] = useState(null)
   const [debateBusy, setDebateBusy] = useState(false)
   const [debateError, setDebateError] = useState('')
+  const [showResearchPanel, setShowResearchPanel] = useState(false)
+  const [researchQuery, setResearchQuery] = useState('Research real API provider readiness and summarize trustworthy sources')
+  const [researchSessions, setResearchSessions] = useState([])
+  const [researchReport, setResearchReport] = useState(null)
+  const [researchBusy, setResearchBusy] = useState(false)
+  const [researchError, setResearchError] = useState('')
   const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
@@ -454,6 +465,7 @@ function App() {
     refreshKnowledge(workspaceId)
     refreshLinearData(workspaceId)
     refreshDebateSummary(workspaceId)
+    refreshResearchSessions(workspaceId)
   }, [workspaceId])
 
   useEffect(() => {
@@ -612,6 +624,10 @@ function App() {
 
   async function refreshDebateSummary(nextWorkspaceId = workspaceId) {
     setDebateSummary(await getDebateSummary(nextWorkspaceId))
+  }
+
+  async function refreshResearchSessions(nextWorkspaceId = workspaceId) {
+    setResearchSessions(await getResearchSessions(nextWorkspaceId))
   }
 
   async function refreshMissionControl(nextWorkspaceId = workspaceId) {
@@ -1003,6 +1019,53 @@ function App() {
       setDebateError(err.message)
     } finally {
       setDebateBusy(false)
+    }
+  }
+
+  async function handleCreateResearchSession() {
+    if (!researchQuery.trim()) return
+    setResearchBusy(true)
+    setResearchError('')
+    try {
+      const session = await createResearchSession({
+        query: researchQuery,
+        workspace_id: workspaceId,
+        require_approval: true,
+      })
+      setResearchReport(await getResearchReport(session.research_id))
+      await refreshResearchSessions(workspaceId)
+    } catch (err) {
+      setResearchError(err.message)
+    } finally {
+      setResearchBusy(false)
+    }
+  }
+
+  async function handleResearchDecision(researchId, decision) {
+    setResearchBusy(true)
+    setResearchError('')
+    try {
+      const session = decision === 'approve'
+        ? await approveResearchSession(researchId)
+        : await rejectResearchSession(researchId)
+      setResearchReport(await getResearchReport(session.research_id))
+      await refreshResearchSessions(workspaceId)
+    } catch (err) {
+      setResearchError(err.message)
+    } finally {
+      setResearchBusy(false)
+    }
+  }
+
+  async function handleViewResearchReport(researchId) {
+    setResearchBusy(true)
+    setResearchError('')
+    try {
+      setResearchReport(await getResearchReport(researchId))
+    } catch (err) {
+      setResearchError(err.message)
+    } finally {
+      setResearchBusy(false)
     }
   }
 
@@ -2521,6 +2584,85 @@ function App() {
             </div>
           )}
         </section>
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowResearchPanel((current) => !current)}>
+              <span>
+                <Library size={15} />
+                Research Agent
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showResearchPanel && (
+              <div className="mission-panel">
+                <textarea
+                  value={researchQuery}
+                  onChange={(event) => setResearchQuery(event.target.value)}
+                  rows={3}
+                  aria-label="Research query"
+                />
+                <button
+                  className="secondary-button full-width"
+                  type="button"
+                  disabled={researchBusy}
+                  onClick={handleCreateResearchSession}
+                >
+                  {researchBusy ? 'Creating...' : 'Create governed research'}
+                </button>
+                {researchError && <p className="provider-warning">{researchError}</p>}
+                {researchReport && (
+                  <div className="goal-detail">
+                    <h3>Research report</h3>
+                    <p>{researchReport.summary}</p>
+                    <div className="provider-card">
+                      <div>
+                        <span>Sources</span>
+                        <strong>{researchReport.source_count || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Citations</span>
+                        <strong>{researchReport.citation_count || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Status</span>
+                        <strong>{researchReport.status}</strong>
+                      </div>
+                    </div>
+                    {(researchReport.evidence_gaps || []).map((gap) => (
+                      <p className="muted" key={gap}>{gap}</p>
+                    ))}
+                  </div>
+                )}
+                {researchSessions.length === 0 && <p className="muted">No research sessions yet.</p>}
+                {researchSessions.slice(0, 6).map((session) => (
+                  <div className="agent-template-card" key={session.research_id}>
+                    <strong>{session.query}</strong>
+                    <span>
+                      {session.status} · {session.source_count || 0} sources · {session.citation_count || 0} citations
+                    </span>
+                    <p className="muted">Credibility avg: {session.average_credibility_score || 0}</p>
+                    <div className="inline-actions">
+                      {session.status === 'pending_approval' && (
+                        <>
+                          <button type="button" disabled={researchBusy} onClick={() => handleResearchDecision(session.research_id, 'approve')}>
+                            Approve
+                          </button>
+                          <button type="button" disabled={researchBusy} onClick={() => handleResearchDecision(session.research_id, 'reject')}>
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      <button type="button" disabled={researchBusy} onClick={() => handleViewResearchReport(session.research_id)}>
+                        Report
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {developerMode && (
           <section className="sidebar-section">
