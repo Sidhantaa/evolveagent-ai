@@ -50,6 +50,9 @@ class StorageService:
             "app_builder_projects.json",
             "debate_sessions.json",
             "simulation_runs.json",
+            "research_sessions.json",
+            "research_sources.json",
+            "research_citations.json",
         ):
             self._ensure_file(filename)
 

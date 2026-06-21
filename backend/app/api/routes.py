@@ -39,6 +39,9 @@ from app.models.request_models import (
     ProviderSmokeTestRequest,
     QualityRunRequest,
     RenameChatRequest,
+    ResearchCitationCreateRequest,
+    ResearchSessionCreateRequest,
+    ResearchSourceCreateRequest,
     RunRequest,
     SimulationCreateRequest,
     TestSuggestionRequest,
@@ -66,6 +69,7 @@ from app.services.image_service import ImageService
 from app.services.prompt_version_service import PromptVersionService
 from app.services.recording_service import RecordingService
 from app.services.real_api_control_service import RealApiControlService
+from app.services.research_session_service import ResearchSessionService
 from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
@@ -136,6 +140,7 @@ test_quality_service = TestQualityService(
 )
 app_builder_service = AppBuilderService(storage, governance_service)
 debate_simulation_service = DebateSimulationService(storage, governance_service)
+research_session_service = ResearchSessionService(storage, workspace_service, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -342,6 +347,83 @@ def create_simulation_run(request: SimulationCreateRequest) -> dict:
         scenario=request.scenario,
         workspace_id=request.workspace_id,
     )
+
+
+@router.get("/research/sessions")
+def list_research_sessions(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    return research_session_service.list_sessions(workspace_id)
+
+
+@router.post("/research/sessions")
+def create_research_session(request: ResearchSessionCreateRequest) -> dict:
+    return research_session_service.create_session(
+        query=request.query,
+        workspace_id=request.workspace_id,
+        require_approval=request.require_approval,
+        notes=request.notes,
+    )
+
+
+@router.get("/research/sessions/{research_id}")
+def get_research_session(research_id: str) -> dict:
+    session = research_session_service.get_session(research_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return session
+
+
+@router.post("/research/sessions/{research_id}/approve")
+def approve_research_session(research_id: str) -> dict:
+    session = research_session_service.approve_session(research_id, approved=True)
+    if not session:
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return session
+
+
+@router.post("/research/sessions/{research_id}/reject")
+def reject_research_session(research_id: str) -> dict:
+    session = research_session_service.approve_session(research_id, approved=False)
+    if not session:
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return session
+
+
+@router.post("/research/sessions/{research_id}/sources")
+def add_research_source(research_id: str, request: ResearchSourceCreateRequest) -> dict:
+    source = research_session_service.add_source(research_id, request.model_dump())
+    if not source:
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return source
+
+
+@router.get("/research/sessions/{research_id}/sources")
+def list_research_sources(research_id: str) -> list[dict]:
+    if not research_session_service.get_session(research_id):
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return research_session_service.list_sources(research_id)
+
+
+@router.post("/research/sessions/{research_id}/citations")
+def add_research_citation(research_id: str, request: ResearchCitationCreateRequest) -> dict:
+    citation = research_session_service.add_citation(research_id, request.model_dump())
+    if not citation:
+        raise HTTPException(status_code=404, detail="Research session or source not found")
+    return citation
+
+
+@router.get("/research/sessions/{research_id}/citations")
+def list_research_citations(research_id: str) -> list[dict]:
+    if not research_session_service.get_session(research_id):
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return research_session_service.list_citations(research_id)
+
+
+@router.get("/research/sessions/{research_id}/report")
+def get_research_report(research_id: str) -> dict:
+    report = research_session_service.generate_report(research_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return report
 
 
 @router.post("/workspaces")

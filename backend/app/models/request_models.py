@@ -270,6 +270,27 @@ class DebateConsensusRequest(BaseModel):
     debate_id: str = Field(..., min_length=1, max_length=120)
 
 
+class ResearchSessionCreateRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=4000)
+    workspace_id: str | None = None
+    require_approval: bool = True
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class ResearchSourceCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=300)
+    url: str = Field(..., min_length=1, max_length=1000)
+    snippet: str = Field(default="", max_length=4000)
+    publisher: str | None = Field(default=None, max_length=200)
+    fetched: bool = False
+
+
+class ResearchCitationCreateRequest(BaseModel):
+    source_id: str = Field(..., min_length=1, max_length=120)
+    claim: str = Field(..., min_length=1, max_length=1000)
+    quote: str | None = Field(default=None, max_length=1000)
+
+
 class AssistantCommandRequest(BaseModel):
     input_text: str = Field(default="", max_length=2000)
     workspace_id: str | None = None
