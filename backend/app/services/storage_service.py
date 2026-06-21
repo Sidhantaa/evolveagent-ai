@@ -53,6 +53,7 @@ class StorageService:
             "research_sessions.json",
             "research_sources.json",
             "research_citations.json",
+            "digital_twin_profiles.json",
         ):
             self._ensure_file(filename)
 

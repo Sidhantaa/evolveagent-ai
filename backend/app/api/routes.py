@@ -27,6 +27,7 @@ from app.models.request_models import (
     CreateWorkspaceRequest,
     DebateConsensusRequest,
     DebateCreateRequest,
+    DigitalTwinUpdateRequest,
     FeedbackRequest,
     GitBranchRequest,
     GitCommitRequest,
@@ -98,6 +99,7 @@ from app.services.git_service import GitService
 from app.services.codex_job_service import CodexJobService
 from app.services.codex_worker_service import CodexWorkerService, CodexWorkerError
 from app.services.debate_simulation_service import DebateSimulationService
+from app.services.digital_twin_service import DigitalTwinService
 from app.services.secret_scanner import SecretScanner
 
 router = APIRouter()
@@ -149,6 +151,7 @@ research_search_service = ResearchSearchService(
     governance_service=governance_service,
     research_session_service=research_session_service,
 )
+digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -1140,6 +1143,24 @@ def decide_approval(approval_id: str, request: ApprovalDecisionRequest) -> dict:
 def get_learning_report(workspace_id: str | None = Query(default=None)) -> dict:
     resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
     return learning_agent.report(workspace_id=resolved)
+
+
+@router.get("/digital-twin/profile")
+def get_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
+    return digital_twin_service.get_profile(workspace_id)
+
+
+@router.post("/digital-twin/profile/refresh")
+def refresh_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
+    return digital_twin_service.refresh_profile(workspace_id)
+
+
+@router.patch("/digital-twin/profile")
+def update_digital_twin_profile(request: DigitalTwinUpdateRequest) -> dict:
+    return digital_twin_service.update_profile(
+        workspace_id=request.workspace_id,
+        updates=request.model_dump(exclude={"workspace_id"}, exclude_none=True),
+    )
 
 
 @router.get("/learning/prompt-versions")

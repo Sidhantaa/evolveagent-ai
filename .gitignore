@@ -51,5 +51,6 @@ backend/app/data/simulation_runs.json
 backend/app/data/research_sessions.json
 backend/app/data/research_sources.json
 backend/app/data/research_citations.json
+backend/app/data/digital_twin_profiles.json
 *.log
 logs/

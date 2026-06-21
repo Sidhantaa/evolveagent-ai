@@ -301,6 +301,30 @@ export async function getLearningReport(workspaceId) {
   }
 }
 
+export async function getDigitalTwinProfile(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/digital-twin/profile${query({ workspace_id: workspaceId })}`)
+  if (!response.ok) throw new Error(`Digital Twin profile failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function refreshDigitalTwinProfile(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/digital-twin/profile/refresh${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Digital Twin refresh failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function updateDigitalTwinProfile(payload) {
+  const response = await fetch(`${API_BASE}/api/digital-twin/profile`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Digital Twin update failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function approvePromptVersion(payload) {
   const response = await fetch(`${API_BASE}/api/learning/approve-prompt`, {
     method: 'POST',

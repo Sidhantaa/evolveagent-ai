@@ -71,6 +71,7 @@ import {
   getGoals,
   getHistory,
   getLearningReport,
+  getDigitalTwinProfile,
   getMemoryConsolidationJobs,
   getLinearIssues,
   getLinearLinks,
@@ -100,6 +101,7 @@ import {
   runProviderSmokeTest,
   getImageProviderStatus,
   runImageSmokeTest,
+  refreshDigitalTwinProfile,
   getTranscriptionProviderStatus,
   runTranscriptionSmokeTest,
   getRealApiSummary,
@@ -137,6 +139,7 @@ import {
   sendFeedback,
   syncLinearIssue,
   updateWorkspace,
+  updateDigitalTwinProfile,
   updateWorkspaceMemory,
   updateGoalTask,
   uploadFiles,
@@ -335,6 +338,9 @@ function App() {
   const [realApiWarningBusy, setRealApiWarningBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [learningReport, setLearningReport] = useState(null)
+  const [digitalTwinProfile, setDigitalTwinProfile] = useState(null)
+  const [digitalTwinBusy, setDigitalTwinBusy] = useState(false)
+  const [digitalTwinError, setDigitalTwinError] = useState('')
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [loading, setLoading] = useState(false)
   const [progressIndex, setProgressIndex] = useState(0)
@@ -460,6 +466,7 @@ function App() {
     refreshChats(workspaceId)
     refreshAnalytics(workspaceId)
     refreshLearningReport(workspaceId)
+    refreshDigitalTwin(workspaceId)
     refreshMissionControl(workspaceId)
     refreshCustomAgents(workspaceId)
     refreshWorkspaceMemory(workspaceId)
@@ -609,6 +616,16 @@ function App() {
 
   async function refreshLearningReport(nextWorkspaceId = workspaceId) {
     setLearningReport(await getLearningReport(nextWorkspaceId))
+  }
+
+  async function refreshDigitalTwin(nextWorkspaceId = workspaceId) {
+    if (!nextWorkspaceId) return
+    try {
+      setDigitalTwinProfile(await getDigitalTwinProfile(nextWorkspaceId))
+      setDigitalTwinError('')
+    } catch (err) {
+      setDigitalTwinError(err.message)
+    }
   }
 
   async function refreshQualityStatus() {
@@ -1375,6 +1392,45 @@ function App() {
       setCopied(`Prompt ${action} saved`)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function handleRefreshDigitalTwin() {
+    setDigitalTwinBusy(true)
+    setDigitalTwinError('')
+    try {
+      setDigitalTwinProfile(await refreshDigitalTwinProfile(workspaceId))
+      setCopied('Digital Twin profile refreshed')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setDigitalTwinError(err.message)
+    } finally {
+      setDigitalTwinBusy(false)
+    }
+  }
+
+  async function handleUpdateDigitalTwin() {
+    const detailLevel = window.prompt('Detail level', digitalTwinProfile?.style_profile?.detail_level || 'balanced')
+    if (!detailLevel) return
+    const format = window.prompt('Preferred format', digitalTwinProfile?.style_profile?.format || 'mixed')
+    if (!format) return
+    const tone = window.prompt('Preferred tone', digitalTwinProfile?.style_profile?.tone || 'direct and practical')
+    if (!tone) return
+    setDigitalTwinBusy(true)
+    setDigitalTwinError('')
+    try {
+      setDigitalTwinProfile(await updateDigitalTwinProfile({
+        workspace_id: workspaceId,
+        detail_level: detailLevel,
+        format,
+        tone,
+      }))
+      setCopied('Digital Twin profile updated')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setDigitalTwinError(err.message)
+    } finally {
+      setDigitalTwinBusy(false)
     }
   }
 
@@ -4323,6 +4379,58 @@ function App() {
               </details>
             )}
 
+
+            {learningReport && (
+              <details className="inspector-section">
+                <summary>
+                  <Brain size={15} />
+                  Digital Twin
+                  <ChevronDown size={15} />
+                </summary>
+                {digitalTwinError && <p className="provider-warning">{digitalTwinError}</p>}
+                {digitalTwinProfile ? (
+                  <>
+                    <div className="mini-grid">
+                      <div>
+                        <span>Detail</span>
+                        <strong>{digitalTwinProfile.style_profile?.detail_level || 'balanced'}</strong>
+                      </div>
+                      <div>
+                        <span>Technical</span>
+                        <strong>{digitalTwinProfile.style_profile?.technical_level || 'adaptive'}</strong>
+                      </div>
+                      <div>
+                        <span>Format</span>
+                        <strong>{digitalTwinProfile.style_profile?.format || 'mixed'}</strong>
+                      </div>
+                      <div>
+                        <span>Planning</span>
+                        <strong>{digitalTwinProfile.style_profile?.planning_style || 'pragmatic'}</strong>
+                      </div>
+                    </div>
+                    <h3>Top preferences</h3>
+                    <ul>
+                      {(digitalTwinProfile.top_preferences || []).slice(0, 5).map((item) => (
+                        <li key={item.preference}>{item.preference}: {item.score}</li>
+                      ))}
+                    </ul>
+                    <h3>Recommendations</h3>
+                    <ul>
+                      {(digitalTwinProfile.recommendations || []).map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                    <p className="muted">{digitalTwinProfile.safety_note}</p>
+                    <div className="inline-actions">
+                      <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleRefreshDigitalTwin}>Refresh</button>
+                      <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleUpdateDigitalTwin}>Update style</button>
+                    </div>
+                  </>
+                ) : (
+                  <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleRefreshDigitalTwin}>
+                    Create Digital Twin profile
+                  </button>
+                )}
+              </details>
+            )}
 
             {learningReport && (
               <details className="inspector-section">

@@ -326,3 +326,13 @@ class ResearchSearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     workspace_id: str | None = None
     max_results: int = Field(default=5, ge=1, le=10)
+
+
+class DigitalTwinUpdateRequest(BaseModel):
+    workspace_id: str | None = None
+    detail_level: str | None = Field(default=None, max_length=120)
+    technical_level: str | None = Field(default=None, max_length=120)
+    format: str | None = Field(default=None, max_length=120)
+    planning_style: str | None = Field(default=None, max_length=120)
+    tone: str | None = Field(default=None, max_length=120)
+    notes: str | None = Field(default=None, max_length=1000)
