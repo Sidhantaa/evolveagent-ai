@@ -691,6 +691,16 @@ export async function rejectResearchSession(researchId) {
   return response.json()
 }
 
+export async function runSessionControlledSearch(researchId, payload) {
+  const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Search failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function addResearchSource(researchId, payload) {
   const response = await fetch(`${API_BASE}/api/research/sessions/${researchId}/sources`, {
     method: 'POST',
