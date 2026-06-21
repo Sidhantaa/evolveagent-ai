@@ -124,6 +124,7 @@ import {
   rejectPromptVersion,
   approveResearchSession,
   rejectResearchSession,
+  runSessionControlledSearch,
   renameChat,
   rollbackPromptVersion,
   runGoalTask,
@@ -1062,6 +1063,24 @@ function App() {
     setResearchError('')
     try {
       setResearchReport(await getResearchReport(researchId))
+    } catch (err) {
+      setResearchError(err.message)
+    } finally {
+      setResearchBusy(false)
+    }
+  }
+
+  async function handleRunControlledSearch(researchId, query) {
+    setResearchBusy(true)
+    setResearchError('')
+    try {
+      const updated = await runSessionControlledSearch(researchId, {
+        query: query,
+        workspace_id: workspaceId,
+        max_results: 5,
+      })
+      setResearchReport(await getResearchReport(updated.research_id))
+      await refreshResearchSessions(workspaceId)
     } catch (err) {
       setResearchError(err.message)
     } finally {
@@ -2653,10 +2672,30 @@ function App() {
                           </button>
                         </>
                       )}
+                      {session.status === 'active' && (
+                        <button type="button" disabled={researchBusy} onClick={() => handleRunControlledSearch(session.research_id, session.query)}>
+                          Run controlled search
+                        </button>
+                      )}
                       <button type="button" disabled={researchBusy} onClick={() => handleViewResearchReport(session.research_id)}>
                         Report
                       </button>
                     </div>
+                    {researchReport && researchReport.research_id === session.research_id && researchReport.top_sources && researchReport.top_sources.length > 0 && (
+                      <div style={{ marginTop: '8px', paddingLeft: '8px', borderLeft: '2px solid #5a5a5a' }}>
+                        <p style={{ fontWeight: 'bold', fontSize: '11px', margin: '4px 0' }}>Controlled Search Sources:</p>
+                        {researchReport.top_sources.map((source) => (
+                          <div key={source.source_id || source.url} style={{ fontSize: '11px', marginBottom: '4px' }}>
+                            <a href={source.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: '#61afef' }}>
+                              {source.title}
+                            </a>
+                            <span style={{ color: '#abb2bf', marginLeft: '6px' }}>
+                              ({source.publisher} · Score: {source.credibility_score})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

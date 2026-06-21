@@ -89,3 +89,80 @@ def test_research_unknown_session_returns_404():
         json={"title": "No source", "url": "https://example.com"},
     )
     assert source_response.status_code == 404
+
+
+def test_controlled_research_search_api():
+    # 1. Test mock research search directly
+    search_response = client.post(
+        "/api/research/search",
+        json={
+            "query": "Compare real image API provider options",
+            "max_results": 3,
+        },
+    )
+    assert search_response.status_code == 200
+    res = search_response.json()
+    assert res["query"] == "Compare real image API provider options"
+    assert res["provider"] == "mock_research_search"
+    assert res["external_fetch_used"] is False
+    assert len(res["results"]) > 0
+    assert len(res["results"]) <= 3
+
+    # Check shape & credibility
+    for item in res["results"]:
+        assert "title" in item
+        assert "url" in item
+        assert "publisher" in item
+        assert "snippet" in item
+        assert "credibility_score" in item
+        assert item["credibility_label"] in ["low", "medium", "high"]
+
+    # 2. Test search with missing research session ID (should return 404)
+    missing_session_response = client.post(
+        "/api/research/sessions/non-existent-session-id/search",
+        json={
+            "query": "Compare real image API provider options",
+            "max_results": 2,
+        },
+    )
+    assert missing_session_response.status_code == 404
+
+    # 3. Create a session, search & add sources
+    workspace_id = routes.workspace_service.default_workspace_id()
+    create_response = client.post(
+        "/api/research/sessions",
+        json={
+            "workspace_id": workspace_id,
+            "query": "Search for cloud security and governance policies",
+        },
+    )
+    assert create_response.status_code == 200
+    session = create_response.json()
+    assert session["status"] == "pending_approval"
+
+    # Run controlled search for this session
+    session_search_response = client.post(
+        f"/api/research/sessions/{session['research_id']}/search",
+        json={
+            "query": "cloud security and governance policies",
+            "max_results": 2,
+        },
+    )
+    assert session_search_response.status_code == 200
+    updated_session = session_search_response.json()
+
+    # Confirm sources are added
+    assert updated_session["source_count"] > 0
+    assert updated_session["source_count"] <= 2
+    assert updated_session["search_result"]["provider"] == "mock_research_search"
+    assert updated_session["search_result"]["external_fetch_used"] is False
+    assert len(updated_session["sources_added"]) == updated_session["source_count"]
+
+    # Confirm sources list has the new sources
+    sources_response = client.get(f"/api/research/sessions/{session['research_id']}/sources")
+    assert sources_response.status_code == 200
+    sources = sources_response.json()
+    assert len(sources) == updated_session["source_count"]
+    for src in sources:
+        assert src["research_id"] == session["research_id"]
+        assert src["fetched"] is True

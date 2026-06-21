@@ -1,0 +1,123 @@
+project:
+  name: EvolveAgent AI
+  repo_path: /Users/manitdankhara/evolveagent-ai
+  stack:
+    backend: FastAPI
+    frontend: React
+    storage: JSON files through StorageService
+  default_branch: main
+
+agent_policy:
+  mode: guarded
+  multi_agent_workflow: true
+  require_status_check_before_edit: true
+  preserve_existing_features: true
+  avoid_unrelated_refactors: true
+  simple_mode_must_remain_clean: true
+  developer_mode_for_internal_details: true
+  use_all_roles_for_substantial_tasks:
+    - planner
+    - backend
+    - frontend
+    - security_governance
+    - testing
+    - reviewer
+  small_task_roles:
+    - planner
+    - reviewer
+
+agent_roles:
+  planner:
+    purpose: Inspect requirements, identify affected files, and define the smallest safe implementation plan.
+  backend:
+    purpose: Handle FastAPI routes, services, agents, storage, governance integration, and backend tests.
+  frontend:
+    purpose: Handle React UI, frontend API helpers, Simple Mode, and Developer Mode behavior.
+  security_governance:
+    purpose: Check protected paths, secret exposure, permission rules, unsafe commands, and runtime data.
+  testing:
+    purpose: Run focused tests first, then full backend tests and frontend build when needed.
+  reviewer:
+    purpose: Review final diff for regressions, unrelated changes, missing tests, and unsafe files.
+  fallback_instruction: If the tool cannot spawn real sub-agents, simulate these roles sequentially and report each role's findings.
+
+protected_paths:
+  never_read_or_print:
+    - .env
+    - backend/.env
+  never_edit_or_stage:
+    - .env
+    - backend/.env
+    - .git/
+    - node_modules/
+    - venv/
+    - __pycache__/
+    - backend/app/data/
+    - backend/app/uploads/
+    - logs/
+    - .pytest_cache/
+    - frontend/dist/
+
+forbidden_commands:
+  - git reset --hard
+  - git checkout -- .
+  - rm -rf
+  - git push --force
+  - npm install
+  - pip install
+  - git clean
+
+allowed_verification_commands:
+  backend_full: cd backend && ./venv/bin/pytest -q
+  frontend_build: cd frontend && npm run build
+  git_status: git status --short
+  git_branch: git branch --show-current
+
+backend_conventions:
+  routes_file: backend/app/api/routes.py
+  services_dir: backend/app/services
+  agents_dir: backend/app/agents
+  models_dir: backend/app/models
+  tests_dir: backend/tests
+  rules:
+    - Keep FastAPI routes thin.
+    - Put business logic in services.
+    - Use StorageService for JSON persistence.
+    - Do not commit runtime JSON files.
+    - Log risky or stateful actions through GovernanceService.
+    - Use SafeFileEditor for file edits.
+    - Use SafeCommandRunner for command execution.
+    - Preserve mock fallback when real APIs are unavailable.
+
+frontend_conventions:
+  main_file: frontend/src/App.jsx
+  api_client: frontend/src/api.js
+  rules:
+    - Simple Mode shows user-facing answers only.
+    - Developer Mode shows provider, workflow, governance, analytics, and raw details.
+    - Do not expose secrets, internal file paths, or raw security internals in Simple Mode.
+    - Keep frontend changes focused and avoid broad redesigns unless requested.
+
+git_policy:
+  stage_only_intended_files: true
+  never_stage_runtime_data: true
+  commit_message_style: "EVO-###: short description"
+  push_after_tests_pass: true
+  no_force_push: true
+
+linear_policy:
+  credentials_location: backend/.env
+  never_print_credentials: true
+  prefer_local_backend_endpoints: true
+  mark_done_only_after_merge_or_user_confirmation: true
+  if_cache_stale: sync_issue
+
+task_completion_report:
+  include:
+    - branch
+    - files_changed
+    - commit_hash
+    - backend_test_result
+    - frontend_build_result
+    - linear_status_if_updated
+    - known_limitations
