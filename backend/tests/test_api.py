@@ -77,6 +77,75 @@ def test_run_endpoint_accepts_short_chat_message():
     assert body["security_report"]["risk_level"] == "low"
 
 
+def test_slack_integration_status_disabled(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "slack_notifications_enabled", False)
+    monkeypatch.setattr(settings, "slack_webhook_url", None)
+    monkeypatch.setattr(settings, "slack_default_channel", None)
+
+    response = client.get("/api/integrations/slack/status")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["enabled"] is False
+    assert body["configured"] is False
+    assert body["default_channel_set"] is False
+
+
+def test_slack_test_notification_skips_without_webhook(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "slack_notifications_enabled", True)
+    monkeypatch.setattr(settings, "slack_webhook_url", None)
+
+    response = client.post("/api/integrations/slack/test", json={"text": "Slack test"})
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["sent"] is False
+    assert body["skipped"] is True
+    assert body["reason"] == "Slack webhook URL is not configured."
+
+
+def test_slack_test_notification_posts_and_redacts(monkeypatch):
+    from app.config import settings
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(settings, "slack_notifications_enabled", True)
+    monkeypatch.setattr(settings, "slack_webhook_url", "https://hooks.slack.test/services/demo")
+    monkeypatch.setattr(settings, "slack_default_channel", "#agent-updates")
+    monkeypatch.setattr("app.services.slack_notification_service.httpx.post", fake_post)
+
+    response = client.post(
+        "/api/integrations/slack/test",
+        json={"text": "Slack test sk-1234567890SECRET", "channel": "#dev"},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["sent"] is True
+    assert body["skipped"] is False
+    assert body["redaction_count"] == 1
+    assert captured["url"] == "https://hooks.slack.test/services/demo"
+    assert captured["json"]["channel"] == "#dev"
+    assert "sk-1234567890SECRET" not in captured["json"]["text"]
+    assert "[REDACTED_SECRET]" in captured["json"]["text"]
+
+
 def test_run_blocks_high_risk_prompt_and_logs_governance():
     response = client.post(
         "/api/run",

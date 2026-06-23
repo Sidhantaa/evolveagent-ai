@@ -48,6 +48,7 @@ from app.models.request_models import (
     RetentionPolicyRequest,
     RunRequest,
     SimulationCreateRequest,
+    SlackTestNotificationRequest,
     TestSuggestionRequest,
     TranscriptionSmokeTestRequest,
     UpdateCustomAgentRequest,
@@ -104,6 +105,7 @@ from app.services.debate_simulation_service import DebateSimulationService
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.secret_scanner import SecretScanner
 from app.services.compliance_service import ComplianceService
+from app.services.slack_notification_service import SlackNotificationService
 
 router = APIRouter()
 storage = StorageService()
@@ -156,6 +158,7 @@ research_search_service = ResearchSearchService(
 )
 digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
 compliance_service = ComplianceService(storage, governance_service)
+slack_notifications = SlackNotificationService(storage, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -793,9 +796,31 @@ def list_plugins() -> list[dict]:
     return plugin_loader.load_plugins()
 
 
+@router.get("/integrations/slack/status")
+def get_slack_integration_status() -> dict:
+    return slack_notifications.status()
+
+
+@router.get("/integrations/slack/notifications")
+def list_slack_notifications(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
+    return slack_notifications.list_notifications(limit=limit)
+
+
+@router.post("/integrations/slack/test")
+def send_slack_test_notification(request: SlackTestNotificationRequest) -> dict:
+    resolved_workspace_id = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
+    return slack_notifications.send_test_message(
+        text=request.text,
+        channel=request.channel,
+        workspace_id=resolved_workspace_id,
+    )
+
+
 @router.post("/run", response_model=RunResponse)
 def run_workflow(request: RunRequest) -> RunResponse:
-    return kernel_service.run_workflow(request)
+    response = kernel_service.run_workflow(request)
+    slack_notifications.notify_run_completed(response)
+    return response
 
 
 @router.post("/agent-jobs")

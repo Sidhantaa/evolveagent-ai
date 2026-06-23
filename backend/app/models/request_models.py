@@ -348,3 +348,9 @@ class RetentionPolicyRequest(BaseModel):
     action: str | None = Field(default=None, pattern="^(keep|review|archive)$")
     enabled: bool | None = None
     description: str | None = Field(default=None, max_length=1000)
+
+
+class SlackTestNotificationRequest(BaseModel):
+    text: str = Field(default="EvolveAgent AI Slack notification test.", max_length=2000)
+    channel: str | None = Field(default=None, max_length=120)
+    workspace_id: str | None = None

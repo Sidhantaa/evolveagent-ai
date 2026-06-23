@@ -54,6 +54,7 @@ backend/app/data/research_citations.json
 backend/app/data/digital_twin_profiles.json
 backend/app/data/compliance_policies.json
 backend/app/data/compliance_reports.json
+backend/app/data/slack_notifications.json
 *.log
 logs/
 evolveagent-ai/

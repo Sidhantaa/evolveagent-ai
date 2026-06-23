@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     git_default_branch: str = Field(default="main", alias="GIT_DEFAULT_BRANCH")
     git_remote_name: str = Field(default="origin", alias="GIT_REMOTE_NAME")
     approval_webhook_url: str | None = Field(default=None, alias="APPROVAL_WEBHOOK_URL")
+    slack_notifications_enabled: bool = Field(default=False, alias="SLACK_NOTIFICATIONS_ENABLED")
+    slack_webhook_url: str | None = Field(default=None, alias="SLACK_WEBHOOK_URL")
+    slack_default_channel: str | None = Field(default=None, alias="SLACK_DEFAULT_CHANNEL")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

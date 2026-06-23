@@ -56,6 +56,7 @@ class StorageService:
             "digital_twin_profiles.json",
             "compliance_policies.json",
             "compliance_reports.json",
+            "slack_notifications.json",
         ):
             self._ensure_file(filename)
 
