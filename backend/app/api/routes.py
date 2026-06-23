@@ -33,6 +33,7 @@ from app.models.request_models import (
     GitCommitRequest,
     GitPushRequest,
     ImageSmokeTestRequest,
+    PiiScanRequest,
     PromptDecisionRequest,
     PromptProposalRequest,
     QualityLinearSummaryRequest,
@@ -44,6 +45,7 @@ from app.models.request_models import (
     ResearchSessionCreateRequest,
     ResearchSourceCreateRequest,
     ResearchSearchRequest,
+    RetentionPolicyRequest,
     RunRequest,
     SimulationCreateRequest,
     TestSuggestionRequest,
@@ -101,6 +103,7 @@ from app.services.codex_worker_service import CodexWorkerService, CodexWorkerErr
 from app.services.debate_simulation_service import DebateSimulationService
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.secret_scanner import SecretScanner
+from app.services.compliance_service import ComplianceService
 
 router = APIRouter()
 storage = StorageService()
@@ -152,6 +155,7 @@ research_search_service = ResearchSearchService(
     research_session_service=research_session_service,
 )
 digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
+compliance_service = ComplianceService(storage, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -1275,6 +1279,74 @@ def get_governance(workspace_id: str | None = Query(default=None)) -> dict:
         "blocked_actions": len(blocked),
         "recent_events": list(reversed(events[-20:])),
     }
+
+
+@router.get("/compliance/summary")
+def get_compliance_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return compliance_service.compliance_report(resolved)
+
+
+@router.get("/compliance/admin-console")
+def get_compliance_admin_console(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return compliance_service.admin_summary(resolved)
+
+
+@router.get("/compliance/audit-log")
+def get_compliance_audit_log(
+    workspace_id: str | None = Query(default=None),
+    action_type: str | None = Query(default=None),
+    blocked: bool | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    events = compliance_service.audit_events(resolved, action_type=action_type, blocked=blocked, limit=limit)
+    return {"workspace_id": resolved, "events": events, "count": len(events)}
+
+
+@router.get("/compliance/export")
+def export_compliance_report(
+    workspace_id: str | None = Query(default=None),
+    format: str = Query(default="markdown", pattern="^(markdown|json)$"),
+) -> PlainTextResponse:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    content = compliance_service.export_report(resolved, format=format)
+    media_type = "application/json" if format == "json" else "text/markdown"
+    return PlainTextResponse(content, media_type=media_type)
+
+
+@router.get("/compliance/retention-policies")
+def get_retention_policies(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return compliance_service.retention_review(resolved)
+
+
+@router.patch("/compliance/retention-policies/{collection}")
+def update_retention_policy(collection: str, request: RetentionPolicyRequest) -> dict:
+    if "/" in collection or "\\" in collection or not collection.endswith(".json"):
+        raise HTTPException(status_code=400, detail="Collection must be a safe JSON filename.")
+    return compliance_service.upsert_policy(collection, request.model_dump(exclude_none=True))
+
+
+@router.post("/compliance/pii-scan")
+def scan_pii(request: PiiScanRequest) -> dict:
+    result = compliance_service.scan_pii(request.text, redact=request.redact)
+    if result["pii_detected"]:
+        governance_service.log_event(
+            GovernanceEvent(
+                task_type="compliance",
+                agent_name="Compliance Service",
+                action_type="pii_redaction",
+                tool_used="ComplianceService",
+                permission_level="read_only",
+                approved=False,
+                blocked=False,
+                risk_score=35,
+                reason=f"Detected PII-like values: {', '.join(result['detected_types'])}",
+            )
+        )
+    return result
 
 
 @router.post("/goals")

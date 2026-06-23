@@ -54,6 +54,8 @@ class StorageService:
             "research_sources.json",
             "research_citations.json",
             "digital_twin_profiles.json",
+            "compliance_policies.json",
+            "compliance_reports.json",
         ):
             self._ensure_file(filename)
 

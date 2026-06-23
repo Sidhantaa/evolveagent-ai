@@ -205,6 +205,52 @@ export async function getAnalytics(workspaceId) {
   }
 }
 
+export async function getComplianceSummary(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/compliance/summary${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getComplianceAuditLog(workspaceId, limit = 25) {
+  try {
+    const response = await fetch(`${API_BASE}/api/compliance/audit-log${query({ workspace_id: workspaceId, limit })}`)
+    if (!response.ok) return { events: [] }
+    return response.json()
+  } catch {
+    return { events: [] }
+  }
+}
+
+export async function getComplianceRetentionPolicies(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/compliance/retention-policies${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function scanCompliancePii(text, redact = true) {
+  const response = await fetch(`${API_BASE}/api/compliance/pii-scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, redact }),
+  })
+  if (!response.ok) throw new Error(`PII scan failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function exportComplianceReport(workspaceId, format = 'markdown') {
+  const response = await fetch(`${API_BASE}/api/compliance/export${query({ workspace_id: workspaceId, format })}`)
+  if (!response.ok) throw new Error(`Compliance export failed with status ${response.status}`)
+  return response.text()
+}
+
 export async function sendFeedback(payload) {
   const response = await fetch(`${API_BASE}/api/feedback`, {
     method: 'POST',

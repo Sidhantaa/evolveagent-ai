@@ -54,6 +54,7 @@ import {
   applyAutomation,
   approvePromptVersion,
   completeLinearIssue,
+  exportComplianceReport,
   getLinearCursorHandoff,
   verifyLinearCursorWork,
   createChat,
@@ -66,6 +67,9 @@ import {
   getAppBuilderTemplates,
   getChat,
   getChats,
+  getComplianceAuditLog,
+  getComplianceRetentionPolicies,
+  getComplianceSummary,
   getCustomAgents,
   getGoal,
   getGoals,
@@ -135,6 +139,7 @@ import {
   runQualityChecks,
   runWorkflow,
   scaffoldAppBuilderPlan,
+  scanCompliancePii,
   selectLinearIssue,
   sendFeedback,
   syncLinearIssue,
@@ -337,6 +342,14 @@ function App() {
   const [realApiWarning, setRealApiWarning] = useState(null)
   const [realApiWarningBusy, setRealApiWarningBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
+  const [showCompliancePanel, setShowCompliancePanel] = useState(false)
+  const [complianceSummary, setComplianceSummary] = useState(null)
+  const [complianceAudit, setComplianceAudit] = useState([])
+  const [complianceRetention, setComplianceRetention] = useState(null)
+  const [piiScanText, setPiiScanText] = useState('person@example.com called 555-123-4567')
+  const [piiScanResult, setPiiScanResult] = useState(null)
+  const [complianceBusy, setComplianceBusy] = useState(false)
+  const [complianceError, setComplianceError] = useState('')
   const [learningReport, setLearningReport] = useState(null)
   const [digitalTwinProfile, setDigitalTwinProfile] = useState(null)
   const [digitalTwinBusy, setDigitalTwinBusy] = useState(false)
@@ -465,6 +478,7 @@ function App() {
     refreshHistory()
     refreshChats(workspaceId)
     refreshAnalytics(workspaceId)
+    refreshCompliance(workspaceId)
     refreshLearningReport(workspaceId)
     refreshDigitalTwin(workspaceId)
     refreshMissionControl(workspaceId)
@@ -484,6 +498,7 @@ function App() {
     refreshToolHistory(workspaceId)
     refreshCodexJobs()
     refreshQualityStatus()
+    refreshCompliance(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -612,6 +627,49 @@ function App() {
 
   async function refreshAnalytics(nextWorkspaceId = workspaceId) {
     setAnalytics(await getAnalytics(nextWorkspaceId))
+  }
+
+  async function refreshCompliance(nextWorkspaceId = workspaceId) {
+    if (!nextWorkspaceId) return
+    const [summary, audit, retention] = await Promise.all([
+      getComplianceSummary(nextWorkspaceId),
+      getComplianceAuditLog(nextWorkspaceId, 25),
+      getComplianceRetentionPolicies(nextWorkspaceId),
+    ])
+    setComplianceSummary(summary)
+    setComplianceAudit(audit?.events || [])
+    setComplianceRetention(retention)
+  }
+
+  async function handlePiiScan() {
+    setComplianceBusy(true)
+    setComplianceError('')
+    try {
+      setPiiScanResult(await scanCompliancePii(piiScanText, true))
+      await refreshCompliance(workspaceId)
+    } catch (err) {
+      setComplianceError(err.message)
+    } finally {
+      setComplianceBusy(false)
+    }
+  }
+
+  async function handleComplianceExport(format) {
+    setComplianceBusy(true)
+    setComplianceError('')
+    try {
+      const content = await exportComplianceReport(workspaceId, format)
+      const extension = format === 'json' ? 'json' : 'md'
+      downloadFile(
+        `evolveagent-compliance.${extension}`,
+        content,
+        format === 'json' ? 'application/json' : 'text/markdown',
+      )
+    } catch (err) {
+      setComplianceError(err.message)
+    } finally {
+      setComplianceBusy(false)
+    }
   }
 
   async function refreshLearningReport(nextWorkspaceId = workspaceId) {
@@ -2432,6 +2490,101 @@ function App() {
             </div>
           )}
         </section>
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCompliancePanel((current) => !current)}>
+              <span>
+                <ShieldAlert size={15} />
+                Compliance
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCompliancePanel && (
+              <div className="analytics-panel">
+                {complianceSummary ? (
+                  <>
+                    <div>
+                      <span>Audit events</span>
+                      <strong>{complianceSummary.summary?.total_audit_events || 0}</strong>
+                    </div>
+                    <div>
+                      <span>Blocked</span>
+                      <strong>{complianceSummary.summary?.blocked_actions || 0}</strong>
+                    </div>
+                    <div>
+                      <span>High risk</span>
+                      <strong>{complianceSummary.summary?.high_risk_events || 0}</strong>
+                    </div>
+                    <div>
+                      <span>PII findings</span>
+                      <strong>{complianceSummary.summary?.pii_findings || 0}</strong>
+                    </div>
+                    <div>
+                      <span>Retention review</span>
+                      <strong>{complianceSummary.summary?.retention_items_needing_review || 0}</strong>
+                    </div>
+                    <div>
+                      <span>Policies</span>
+                      <strong>{complianceRetention?.policies?.length || 0}</strong>
+                    </div>
+                  </>
+                ) : (
+                  <p className="muted">Compliance data is not available yet.</p>
+                )}
+                <div className="developer-prompt-block">
+                  <span>PII scan</span>
+                  <textarea value={piiScanText} onChange={(event) => setPiiScanText(event.target.value)} />
+                  <button className="secondary-button" type="button" onClick={handlePiiScan} disabled={complianceBusy}>
+                    Scan sample
+                  </button>
+                  {piiScanResult && (
+                    <p>
+                      {piiScanResult.status}: {piiScanResult.redaction_count} redaction(s){' '}
+                      {(piiScanResult.detected_types || []).join(', ')}
+                    </p>
+                  )}
+                </div>
+                <div className="agent-list compact-list">
+                  <h3>Retention review</h3>
+                  {(complianceRetention?.reviews || []).slice(0, 5).map((item) => (
+                    <div className="provider-row" key={item.collection}>
+                      <strong>{item.collection}</strong>
+                      <div className="model-meta">
+                        <span>{item.action}</span>
+                        <span>{item.records_needing_review} review</span>
+                        <span>{item.retention_days} days</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="agent-list compact-list">
+                  <h3>Recent audit events</h3>
+                  {complianceAudit.slice(0, 5).map((event) => (
+                    <div className="provider-row" key={event.event_id || `${event.action_type}-${event.created_at}`}>
+                      <strong>{event.action_type}</strong>
+                      <div className="model-meta">
+                        <span>{event.permission_level}</span>
+                        {event.blocked && <span>blocked</span>}
+                        <span>risk {event.risk_score || 0}</span>
+                      </div>
+                      <p>{event.reason}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="button-row">
+                  <button className="secondary-button" type="button" onClick={() => handleComplianceExport('markdown')} disabled={complianceBusy}>
+                    Export MD
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => handleComplianceExport('json')} disabled={complianceBusy}>
+                    Export JSON
+                  </button>
+                </div>
+                {complianceError && <p className="error-text">{complianceError}</p>}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowMissionControl((current) => !current)}>

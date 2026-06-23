@@ -336,3 +336,15 @@ class DigitalTwinUpdateRequest(BaseModel):
     planning_style: str | None = Field(default=None, max_length=120)
     tone: str | None = Field(default=None, max_length=120)
     notes: str | None = Field(default=None, max_length=1000)
+
+
+class PiiScanRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=20_000)
+    redact: bool = True
+
+
+class RetentionPolicyRequest(BaseModel):
+    retention_days: int | None = Field(default=None, ge=1, le=3650)
+    action: str | None = Field(default=None, pattern="^(keep|review|archive)$")
+    enabled: bool | None = None
+    description: str | None = Field(default=None, max_length=1000)

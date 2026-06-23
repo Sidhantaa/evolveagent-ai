@@ -104,6 +104,43 @@ def test_governance_endpoint_returns_summary():
     assert "recent_events" in body
 
 
+def test_compliance_endpoints_return_report_and_redact_pii():
+    scan_response = client.post("/api/compliance/pii-scan", json={"text": "Email person@example.com", "redact": True})
+    scan = scan_response.json()
+
+    assert scan_response.status_code == 200
+    assert scan["pii_detected"] is True
+    assert "person@example.com" not in scan["redacted_text"]
+
+    summary_response = client.get("/api/compliance/summary")
+    summary = summary_response.json()
+    assert summary_response.status_code == 200
+    assert "summary" in summary
+    assert "retention" in summary
+    assert "admin" in summary
+
+    audit_response = client.get("/api/compliance/audit-log?limit=5")
+    audit = audit_response.json()
+    assert audit_response.status_code == 200
+    assert "events" in audit
+
+    export_response = client.get("/api/compliance/export?format=markdown")
+    assert export_response.status_code == 200
+    assert "Compliance Report" in export_response.text
+
+
+def test_retention_policy_update_endpoint():
+    response = client.patch(
+        "/api/compliance/retention-policies/messages.json",
+        json={"retention_days": 180, "action": "review", "enabled": True},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["collection"] == "messages.json"
+    assert body["retention_days"] == 180
+
+
 def test_quality_suggest_tests_endpoint():
     response = client.post(
         "/api/quality/suggest-tests",
