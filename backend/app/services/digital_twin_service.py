@@ -114,6 +114,37 @@ class DigitalTwinService:
         self._log("digital_twin_profile_updated", resolved, "Applied manual Digital Twin profile override.")
         return profile
 
+    def export_profile(self, workspace_id: str | None = None) -> dict[str, Any]:
+        resolved = self.workspace_service.resolve_workspace_id(workspace_id)
+        profile = self.get_profile(resolved)
+        self._log("digital_twin_profile_exported", resolved, "Exported Digital Twin profile data for the user.")
+        return {
+            "exported_at": datetime.now(UTC).isoformat(),
+            "workspace_id": resolved,
+            "format": "evolveagent.digital_twin.v1",
+            "profile": profile,
+        }
+
+    def reset_profile(self, workspace_id: str | None = None) -> dict[str, Any]:
+        resolved = self.workspace_service.resolve_workspace_id(workspace_id)
+        self._remove_profile(resolved)
+        self._log("digital_twin_profile_reset", resolved, "Reset Digital Twin profile; manual overrides cleared and re-derived.")
+        return self.refresh_profile(resolved)
+
+    def delete_profile(self, workspace_id: str | None = None) -> dict[str, Any]:
+        resolved = self.workspace_service.resolve_workspace_id(workspace_id)
+        removed = self._remove_profile(resolved)
+        self._log("digital_twin_profile_deleted", resolved, "Deleted Digital Twin profile data at user request.")
+        return {"workspace_id": resolved, "deleted": removed}
+
+    def _remove_profile(self, workspace_id: str) -> bool:
+        profiles = self.storage.read_list(self.filename)
+        remaining = [item for item in profiles if item.get("workspace_id") != workspace_id]
+        if len(remaining) == len(profiles):
+            return False
+        self.storage.write_list(self.filename, remaining)
+        return True
+
     def _profile_for(self, workspace_id: str) -> dict[str, Any] | None:
         return next(
             (item for item in self.storage.read_list(self.filename) if item.get("workspace_id") == workspace_id),

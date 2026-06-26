@@ -156,6 +156,9 @@ import {
   syncLinearIssue,
   updateWorkspace,
   updateDigitalTwinProfile,
+  exportDigitalTwinProfile,
+  resetDigitalTwinProfile,
+  deleteDigitalTwinProfile,
   updateWorkspaceMemory,
   updateGoalTask,
   uploadFiles,
@@ -1590,6 +1593,58 @@ function App() {
         tone,
       }))
       setCopied('Digital Twin profile updated')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setDigitalTwinError(err.message)
+    } finally {
+      setDigitalTwinBusy(false)
+    }
+  }
+
+  async function handleExportDigitalTwin() {
+    setDigitalTwinBusy(true)
+    setDigitalTwinError('')
+    try {
+      const data = await exportDigitalTwinProfile(workspaceId)
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `digital-twin-${workspaceId || 'profile'}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+      setCopied('Digital Twin profile exported')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setDigitalTwinError(err.message)
+    } finally {
+      setDigitalTwinBusy(false)
+    }
+  }
+
+  async function handleResetDigitalTwin() {
+    if (!window.confirm('Reset Digital Twin profile? This clears your manual style overrides and re-derives from activity.')) return
+    setDigitalTwinBusy(true)
+    setDigitalTwinError('')
+    try {
+      setDigitalTwinProfile(await resetDigitalTwinProfile(workspaceId))
+      setCopied('Digital Twin profile reset')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setDigitalTwinError(err.message)
+    } finally {
+      setDigitalTwinBusy(false)
+    }
+  }
+
+  async function handleDeleteDigitalTwin() {
+    if (!window.confirm('Delete all Digital Twin profile data for this workspace? This cannot be undone.')) return
+    setDigitalTwinBusy(true)
+    setDigitalTwinError('')
+    try {
+      await deleteDigitalTwinProfile(workspaceId)
+      setDigitalTwinProfile(null)
+      setCopied('Digital Twin profile deleted')
       window.setTimeout(() => setCopied(''), 1300)
     } catch (err) {
       setDigitalTwinError(err.message)
@@ -4940,6 +4995,9 @@ function App() {
                     <div className="inline-actions">
                       <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleRefreshDigitalTwin}>Refresh</button>
                       <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleUpdateDigitalTwin}>Update style</button>
+                      <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleExportDigitalTwin}>Export</button>
+                      <button className="secondary-button" type="button" disabled={digitalTwinBusy} onClick={handleResetDigitalTwin}>Reset</button>
+                      <button className="secondary-button danger" type="button" disabled={digitalTwinBusy} onClick={handleDeleteDigitalTwin}>Delete</button>
                     </div>
                   </>
                 ) : (
