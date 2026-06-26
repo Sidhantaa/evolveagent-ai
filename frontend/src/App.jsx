@@ -81,6 +81,12 @@ import {
   getLinearLinks,
   getLinearPollStatus,
   getLinearStatus,
+  getSlackStatus,
+  getSlackNotifications,
+  sendSlackTest,
+  getNotionStatus,
+  getNotionExports,
+  sendNotionExport,
   getCodexJobs,
   getDebateSummary,
   runCodexForLinearIssue,
@@ -451,6 +457,13 @@ function App() {
   const [codexJobsAvailable, setCodexJobsAvailable] = useState(false)
   const [showCodexJobs, setShowCodexJobs] = useState(false)
   const [linearBusyId, setLinearBusyId] = useState('')
+  const [showIntegrations, setShowIntegrations] = useState(false)
+  const [slackStatus, setSlackStatus] = useState(null)
+  const [slackNotifications, setSlackNotifications] = useState([])
+  const [slackBusy, setSlackBusy] = useState(false)
+  const [notionStatus, setNotionStatus] = useState(null)
+  const [notionExports, setNotionExports] = useState([])
+  const [notionBusy, setNotionBusy] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -499,6 +512,7 @@ function App() {
     refreshCodexJobs()
     refreshQualityStatus()
     refreshCompliance(workspaceId)
+    refreshIntegrations()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -855,6 +869,44 @@ function App() {
     const result = await getCodexJobs()
     setCodexJobsAvailable(result.available)
     setCodexJobs(result.items || [])
+  }
+
+  async function refreshIntegrations() {
+    const [slack, notion] = await Promise.all([getSlackStatus(), getNotionStatus()])
+    setSlackStatus(slack)
+    setNotionStatus(notion)
+    setSlackNotifications(await getSlackNotifications(10))
+    setNotionExports(await getNotionExports(10))
+  }
+
+  async function handleSlackTest() {
+    setSlackBusy(true)
+    setError('')
+    try {
+      await sendSlackTest({})
+      await refreshIntegrations()
+      setCopied('Slack test sent')
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSlackBusy(false)
+    }
+  }
+
+  async function handleNotionTestExport() {
+    setNotionBusy(true)
+    setError('')
+    try {
+      await sendNotionExport({ title: 'Test export', content: 'This is a test export from EvolveAgent AI.' })
+      await refreshIntegrations()
+      setCopied('Notion test export sent')
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setNotionBusy(false)
+    }
   }
 
   async function refreshLinearStatus() {
@@ -2123,6 +2175,143 @@ function App() {
                   ))}
                 </details>
               )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowIntegrations((current) => !current)}>
+            <span>
+              <Layers3 size={15} />
+              Integrations
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showIntegrations && (
+            <div className="memory-panel integrations-panel">
+              <div className="integration-card">
+                <div className="integration-card-header">
+                  <strong>Slack</strong>
+                  <span className={`integration-badge ${slackStatus?.enabled ? 'enabled' : 'disabled'}`}>
+                    {slackStatus?.enabled ? 'enabled' : 'disabled'}
+                  </span>
+                </div>
+                {slackStatus ? (
+                  <>
+                    <div className="mini-grid">
+                      <div>
+                        <span>Configured</span>
+                        <strong>{slackStatus.configured ? 'Yes' : 'No'}</strong>
+                      </div>
+                      <div>
+                        <span>Channel</span>
+                        <strong>{slackStatus.default_channel || 'none'}</strong>
+                      </div>
+                    </div>
+                    {slackStatus.last_error && (
+                      <p className="integration-error">Last error: {slackStatus.last_error}</p>
+                    )}
+                    {!slackStatus.enabled && (
+                      <p className="muted">Set SLACK_NOTIFICATIONS_ENABLED=true and SLACK_WEBHOOK_URL in .env to enable.</p>
+                    )}
+                    {slackStatus.enabled && !slackStatus.configured && (
+                      <p className="muted">Enabled but webhook not configured. Set SLACK_WEBHOOK_URL in .env.</p>
+                    )}
+                    {slackStatus.enabled && slackStatus.configured && (
+                      <button
+                        className="secondary-button full-width"
+                        type="button"
+                        onClick={handleSlackTest}
+                        disabled={slackBusy}
+                      >
+                        {slackBusy ? 'Sending...' : 'Send test notification'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="muted">Slack status unavailable.</p>
+                )}
+                {slackNotifications.length > 0 ? (
+                  <details className="developer-prompt-block">
+                    <summary>Recent notifications ({slackNotifications.length})</summary>
+                    {slackNotifications.slice(0, 5).map((item, index) => (
+                      <div className="integration-activity" key={item.notification_id || index}>
+                        <span className={item.success ? 'success' : 'failed'}>{item.success ? 'sent' : 'failed'}</span>
+                        <p>{previewText(item.text || item.message || '', 100)}</p>
+                        {item.created_at && <small>{new Date(item.created_at).toLocaleString()}</small>}
+                      </div>
+                    ))}
+                  </details>
+                ) : slackStatus?.enabled ? (
+                  <p className="muted">No notifications yet.</p>
+                ) : null}
+              </div>
+
+              <div className="integration-card">
+                <div className="integration-card-header">
+                  <strong>Notion</strong>
+                  <span className={`integration-badge ${notionStatus?.enabled ? 'enabled' : 'disabled'}`}>
+                    {notionStatus?.enabled ? 'enabled' : 'disabled'}
+                  </span>
+                </div>
+                {notionStatus ? (
+                  <>
+                    <div className="mini-grid">
+                      <div>
+                        <span>Configured</span>
+                        <strong>{notionStatus.configured ? 'Yes' : 'No'}</strong>
+                      </div>
+                      <div>
+                        <span>Parent page</span>
+                        <strong>{notionStatus.parent_page_id ? 'set' : 'none'}</strong>
+                      </div>
+                    </div>
+                    {notionStatus.last_error && (
+                      <p className="integration-error">Last error: {notionStatus.last_error}</p>
+                    )}
+                    {!notionStatus.enabled && (
+                      <p className="muted">Set NOTION_SYNC_ENABLED=true, NOTION_API_KEY, and NOTION_PARENT_PAGE_ID in .env to enable.</p>
+                    )}
+                    {notionStatus.enabled && !notionStatus.configured && (
+                      <p className="muted">Enabled but not fully configured. Set NOTION_API_KEY and NOTION_PARENT_PAGE_ID in .env.</p>
+                    )}
+                    {notionStatus.enabled && notionStatus.configured && (
+                      <button
+                        className="secondary-button full-width"
+                        type="button"
+                        onClick={handleNotionTestExport}
+                        disabled={notionBusy}
+                      >
+                        {notionBusy ? 'Exporting...' : 'Send test export'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="muted">Notion status unavailable.</p>
+                )}
+                {notionExports.length > 0 ? (
+                  <details className="developer-prompt-block">
+                    <summary>Recent exports ({notionExports.length})</summary>
+                    {notionExports.slice(0, 5).map((item, index) => (
+                      <div className="integration-activity" key={item.export_id || index}>
+                        <span className={item.success ? 'success' : 'failed'}>{item.success ? 'exported' : 'failed'}</span>
+                        <p>{previewText(item.title || '', 100)}</p>
+                        {item.created_at && <small>{new Date(item.created_at).toLocaleString()}</small>}
+                      </div>
+                    ))}
+                  </details>
+                ) : notionStatus?.enabled ? (
+                  <p className="muted">No exports yet.</p>
+                ) : null}
+              </div>
+
+              <button
+                className="secondary-button full-width"
+                type="button"
+                onClick={refreshIntegrations}
+              >
+                Refresh status
+              </button>
             </div>
           )}
         </section>

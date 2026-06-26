@@ -907,6 +907,72 @@ export async function createSimulationRun(payload) {
   return response.json()
 }
 
+export async function getSlackStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/integrations/slack/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getSlackNotifications(limit = 20) {
+  try {
+    const response = await fetch(`${API_BASE}/api/integrations/slack/notifications${query({ limit })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function sendSlackTest(payload = {}) {
+  const response = await fetch(`${API_BASE}/api/integrations/slack/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Slack test failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getNotionStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/integrations/notion/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getNotionExports(limit = 20) {
+  try {
+    const response = await fetch(`${API_BASE}/api/integrations/notion/exports${query({ limit })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function sendNotionExport(payload) {
+  const response = await fetch(`${API_BASE}/api/integrations/notion/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Notion export failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getLinearStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/linear/status`)
