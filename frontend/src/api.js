@@ -371,6 +371,28 @@ export async function updateDigitalTwinProfile(payload) {
   return response.json()
 }
 
+export async function exportDigitalTwinProfile(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/digital-twin/profile/export${query({ workspace_id: workspaceId })}`)
+  if (!response.ok) throw new Error(`Digital Twin export failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function resetDigitalTwinProfile(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/digital-twin/profile/reset${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Digital Twin reset failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function deleteDigitalTwinProfile(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/digital-twin/profile${query({ workspace_id: workspaceId })}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error(`Digital Twin delete failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function approvePromptVersion(payload) {
   const response = await fetch(`${API_BASE}/api/learning/approve-prompt`, {
     method: 'POST',

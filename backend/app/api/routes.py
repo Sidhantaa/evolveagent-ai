@@ -1300,6 +1300,21 @@ def update_digital_twin_profile(request: DigitalTwinUpdateRequest) -> dict:
     )
 
 
+@router.get("/digital-twin/profile/export")
+def export_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
+    return digital_twin_service.export_profile(workspace_id)
+
+
+@router.post("/digital-twin/profile/reset")
+def reset_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
+    return digital_twin_service.reset_profile(workspace_id)
+
+
+@router.delete("/digital-twin/profile")
+def delete_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
+    return digital_twin_service.delete_profile(workspace_id)
+
+
 @router.get("/learning/prompt-versions")
 def get_prompt_versions() -> list[dict]:
     return prompt_versions.list_versions()

@@ -108,3 +108,42 @@ def test_digital_twin_api_profile_refresh_and_update():
     get_response = client.get(f"/api/digital-twin/profile?workspace_id={workspace_id}")
     assert get_response.status_code == 200
     assert get_response.json()["manual_overrides"]["detail_level"] == "concise"
+
+
+def test_digital_twin_export_reset_and_delete_privacy_controls():
+    workspace_response = client.post(
+        "/api/workspaces",
+        json={"name": "Twin Privacy Workspace", "description": "Privacy controls"},
+    )
+    workspace_id = workspace_response.json()["workspace_id"]
+
+    client.patch(
+        "/api/digital-twin/profile",
+        json={"workspace_id": workspace_id, "detail_level": "detailed", "notes": "remember me"},
+    )
+
+    # Export returns the full profile in a portable wrapper.
+    export_response = client.get(f"/api/digital-twin/profile/export?workspace_id={workspace_id}")
+    assert export_response.status_code == 200
+    exported = export_response.json()
+    assert exported["workspace_id"] == workspace_id
+    assert exported["format"] == "evolveagent.digital_twin.v1"
+    assert exported["profile"]["manual_overrides"]["notes"] == "remember me"
+
+    # Reset clears manual overrides and re-derives a fresh profile.
+    reset_response = client.post(f"/api/digital-twin/profile/reset?workspace_id={workspace_id}")
+    assert reset_response.status_code == 200
+    assert reset_response.json()["manual_overrides"] == {}
+
+    # Re-add an override so we can confirm delete removes stored data.
+    client.patch(
+        "/api/digital-twin/profile",
+        json={"workspace_id": workspace_id, "tone": "warm"},
+    )
+    delete_response = client.delete(f"/api/digital-twin/profile?workspace_id={workspace_id}")
+    assert delete_response.status_code == 200
+    assert delete_response.json() == {"workspace_id": workspace_id, "deleted": True}
+
+    # Deleting again is a no-op (nothing left to remove).
+    second_delete = client.delete(f"/api/digital-twin/profile?workspace_id={workspace_id}")
+    assert second_delete.json()["deleted"] is False
