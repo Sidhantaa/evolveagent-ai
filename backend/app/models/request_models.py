@@ -394,3 +394,18 @@ class AutopilotCheckpointDecisionRequest(BaseModel):
 
 class AutopilotRunControlRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=1000)
+
+
+class EvaluationRunRequest(BaseModel):
+    benchmark_id: str | None = Field(default=None, max_length=120)
+    task_type: str | None = Field(default=None, max_length=120)
+    workspace_id: str | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class EvaluationABTestRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    variant_a: str = Field(..., min_length=1, max_length=160)
+    variant_b: str = Field(..., min_length=1, max_length=160)
+    metric: str = Field(default="overall_judge_score", max_length=80)
+    workspace_id: str | None = None

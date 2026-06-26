@@ -63,6 +63,10 @@ class StorageService:
             "autopilot_actions.json",
             "autopilot_settings.json",
             "autopilot_checkpoints.json",
+            "evaluation_benchmarks.json",
+            "evaluation_runs.json",
+            "evaluation_ab_tests.json",
+            "evaluation_regressions.json",
         ):
             self._ensure_file(filename)
 

@@ -51,10 +51,13 @@ import {
   createGoal,
   createWorkspace,
   createWorkspaceMemory,
+  createEvaluationABTest,
+  createEvaluationRun,
   applyAutomation,
   approvePromptVersion,
   completeLinearIssue,
   exportComplianceReport,
+  exportEvaluationResults,
   getLinearCursorHandoff,
   verifyLinearCursorWork,
   createChat,
@@ -71,6 +74,8 @@ import {
   getComplianceRetentionPolicies,
   getComplianceSummary,
   getCustomAgents,
+  getEvaluationBenchmarks,
+  getEvaluationDashboard,
   getGoal,
   getGoals,
   getHistory,
@@ -428,6 +433,13 @@ function App() {
   const [qualityStatus, setQualityStatus] = useState(null)
   const [qualityBusy, setQualityBusy] = useState(false)
   const [qualityError, setQualityError] = useState('')
+  const [showEvaluationLab, setShowEvaluationLab] = useState(false)
+  const [evaluationDashboard, setEvaluationDashboard] = useState(null)
+  const [evaluationBenchmarks, setEvaluationBenchmarks] = useState([])
+  const [evaluationBusy, setEvaluationBusy] = useState(false)
+  const [evaluationError, setEvaluationError] = useState('')
+  const [abVariantA, setAbVariantA] = useState('openai')
+  const [abVariantB, setAbVariantB] = useState('mock')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -527,6 +539,7 @@ function App() {
     refreshCompliance(workspaceId)
     refreshIntegrations()
     refreshAutopilot(workspaceId)
+    refreshEvaluationLab(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -716,6 +729,15 @@ function App() {
 
   async function refreshQualityStatus() {
     setQualityStatus(await getQualityStatus())
+  }
+
+  async function refreshEvaluationLab(nextWorkspaceId = workspaceId) {
+    const [dashboard, benchmarks] = await Promise.all([
+      getEvaluationDashboard(nextWorkspaceId),
+      getEvaluationBenchmarks(),
+    ])
+    setEvaluationDashboard(dashboard)
+    setEvaluationBenchmarks(benchmarks.benchmarks || [])
   }
 
   async function refreshAppBuilderTemplates() {
@@ -1139,6 +1161,60 @@ function App() {
       setQualityError(err.message)
     } finally {
       setQualityBusy(false)
+    }
+  }
+
+  async function handleCreateEvaluationRun(taskType = '') {
+    setEvaluationBusy(true)
+    setEvaluationError('')
+    try {
+      await createEvaluationRun({
+        workspace_id: workspaceId,
+        task_type: taskType || undefined,
+        notes: 'Created from Developer Mode Evaluation Lab.',
+      })
+      await refreshEvaluationLab(workspaceId)
+      setCopied('Evaluation run created')
+    } catch (err) {
+      setEvaluationError(err.message)
+    } finally {
+      setEvaluationBusy(false)
+    }
+  }
+
+  async function handleCreateEvaluationABTest() {
+    setEvaluationBusy(true)
+    setEvaluationError('')
+    try {
+      await createEvaluationABTest({
+        workspace_id: workspaceId,
+        name: `${abVariantA} vs ${abVariantB}`,
+        variant_a: abVariantA,
+        variant_b: abVariantB,
+      })
+      await refreshEvaluationLab(workspaceId)
+      setCopied('Evaluation A/B comparison created')
+    } catch (err) {
+      setEvaluationError(err.message)
+    } finally {
+      setEvaluationBusy(false)
+    }
+  }
+
+  async function handleExportEvaluation(format) {
+    setEvaluationBusy(true)
+    setEvaluationError('')
+    try {
+      const content = await exportEvaluationResults(workspaceId, format)
+      downloadFile(
+        `evolveagent-evaluation.${format}`,
+        content,
+        format === 'json' ? 'application/json' : 'text/csv',
+      )
+    } catch (err) {
+      setEvaluationError(err.message)
+    } finally {
+      setEvaluationBusy(false)
     }
   }
 
@@ -3389,6 +3465,108 @@ function App() {
                     ))}
                   </>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowEvaluationLab((current) => !current)}>
+              <span>
+                <BarChart3 size={15} />
+                Evaluation Lab
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showEvaluationLab && (
+              <div className="mission-panel">
+                <button
+                  className="secondary-button full-width"
+                  type="button"
+                  disabled={evaluationBusy}
+                  onClick={() => handleCreateEvaluationRun('')}
+                >
+                  {evaluationBusy ? 'Running eval...' : 'Run full benchmark'}
+                </button>
+                {evaluationError && <p className="provider-warning">{evaluationError}</p>}
+                {evaluationDashboard ? (
+                  <>
+                    <div className="provider-card">
+                      <div>
+                        <span>Benchmarks</span>
+                        <strong>{evaluationDashboard.benchmark_count || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Eval runs</span>
+                        <strong>{evaluationDashboard.evaluation_run_count || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Average</span>
+                        <strong>{evaluationDashboard.average_score || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Regressions</span>
+                        <strong>{evaluationDashboard.regression_count || 0}</strong>
+                      </div>
+                    </div>
+                    {evaluationDashboard.latest_run && (
+                      <div className="agent-template-card">
+                        <strong>Latest eval: {evaluationDashboard.latest_run.score}</strong>
+                        <span>{evaluationDashboard.latest_run.status} · {new Date(evaluationDashboard.latest_run.created_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {(evaluationDashboard.score_trend || []).slice(-5).map((point, index) => (
+                      <p className="muted" key={`${point.created_at}-${index}`}>
+                        Trend {index + 1}: score {point.score} · {point.status}
+                      </p>
+                    ))}
+                    {(evaluationDashboard.task_scores || []).slice(0, 5).map((task) => (
+                      <div className="agent-template-card" key={task.task_type}>
+                        <strong>{formatType(task.task_type)}</strong>
+                        <span>avg {task.average_score} · {task.runs} run(s)</span>
+                        <button type="button" disabled={evaluationBusy} onClick={() => handleCreateEvaluationRun(task.task_type)}>
+                          Run task eval
+                        </button>
+                      </div>
+                    ))}
+                    {(evaluationDashboard.regressions || []).slice(0, 3).map((regression) => (
+                      <div className="fallback-note" key={regression.regression_id}>
+                        <strong>{regression.severity} regression · drop {regression.drop}</strong>
+                        <p>{regression.recommendation}</p>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <p className="muted">Evaluation dashboard is not available yet.</p>
+                )}
+                <div className="agent-template-card">
+                  <strong>A/B agent comparison</strong>
+                  <input value={abVariantA} onChange={(event) => setAbVariantA(event.target.value)} />
+                  <input value={abVariantB} onChange={(event) => setAbVariantB(event.target.value)} />
+                  <button type="button" disabled={evaluationBusy} onClick={handleCreateEvaluationABTest}>
+                    Compare variants
+                  </button>
+                </div>
+                <details>
+                  <summary>Benchmark suites ({evaluationBenchmarks.length})</summary>
+                  {evaluationBenchmarks.slice(0, 8).map((benchmark) => (
+                    <p className="muted" key={benchmark.benchmark_id}>
+                      {formatType(benchmark.task_type)} · {benchmark.name}
+                    </p>
+                  ))}
+                </details>
+                <div className="inline-actions">
+                  <button type="button" disabled={evaluationBusy} onClick={() => handleExportEvaluation('json')}>
+                    Export JSON
+                  </button>
+                  <button type="button" disabled={evaluationBusy} onClick={() => handleExportEvaluation('csv')}>
+                    Export CSV
+                  </button>
+                  <button type="button" disabled={evaluationBusy} onClick={() => refreshEvaluationLab(workspaceId)}>
+                    Refresh
+                  </button>
+                </div>
               </div>
             )}
           </section>

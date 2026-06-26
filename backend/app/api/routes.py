@@ -32,6 +32,8 @@ from app.models.request_models import (
     DebateConsensusRequest,
     DebateCreateRequest,
     DigitalTwinUpdateRequest,
+    EvaluationABTestRequest,
+    EvaluationRunRequest,
     FeedbackRequest,
     GitBranchRequest,
     GitCommitRequest,
@@ -109,6 +111,7 @@ from app.services.codex_job_service import CodexJobService
 from app.services.codex_worker_service import CodexWorkerService, CodexWorkerError
 from app.services.debate_simulation_service import DebateSimulationService
 from app.services.digital_twin_service import DigitalTwinService
+from app.services.evaluation_lab_service import EvaluationLabService
 from app.services.secret_scanner import SecretScanner
 from app.services.compliance_service import ComplianceService
 from app.services.slack_notification_service import SlackNotificationService
@@ -165,6 +168,7 @@ research_search_service = ResearchSearchService(
     research_session_service=research_session_service,
 )
 digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
+evaluation_lab_service = EvaluationLabService(storage, governance_service)
 compliance_service = ComplianceService(storage, governance_service)
 slack_notifications = SlackNotificationService(storage, governance_service)
 notion_exports = NotionExportService(storage, governance_service)
@@ -1412,6 +1416,86 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **autopilot_summary,
         "recent_runs": list(reversed(runs[-10:])),
     }
+
+
+@router.get("/evaluation/benchmarks")
+def get_evaluation_benchmarks(task_type: str | None = Query(default=None)) -> dict:
+    benchmarks = evaluation_lab_service.list_benchmarks(task_type=task_type)
+    return {"benchmarks": benchmarks, "count": len(benchmarks)}
+
+
+@router.post("/evaluation/runs")
+def create_evaluation_run(request: EvaluationRunRequest) -> dict:
+    resolved = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
+    try:
+        return evaluation_lab_service.create_run(
+            benchmark_id=request.benchmark_id,
+            task_type=request.task_type,
+            workspace_id=resolved,
+            notes=request.notes,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/evaluation/runs")
+def get_evaluation_runs(
+    workspace_id: str | None = Query(default=None),
+    limit: int = Query(default=25, ge=1, le=100),
+) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    runs = evaluation_lab_service.list_runs(workspace_id=resolved, limit=limit)
+    return {"workspace_id": resolved, "runs": runs, "count": len(runs)}
+
+
+@router.get("/evaluation/dashboard")
+def get_evaluation_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return evaluation_lab_service.dashboard(workspace_id=resolved)
+
+
+@router.post("/evaluation/ab-tests")
+def create_evaluation_ab_test(request: EvaluationABTestRequest) -> dict:
+    resolved = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
+    return evaluation_lab_service.create_ab_test(
+        name=request.name,
+        variant_a=request.variant_a,
+        variant_b=request.variant_b,
+        metric=request.metric,
+        workspace_id=resolved,
+    )
+
+
+@router.get("/evaluation/ab-tests")
+def get_evaluation_ab_tests(
+    workspace_id: str | None = Query(default=None),
+    limit: int = Query(default=25, ge=1, le=100),
+) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    records = evaluation_lab_service.list_ab_tests(workspace_id=resolved, limit=limit)
+    return {"workspace_id": resolved, "ab_tests": records, "count": len(records)}
+
+
+@router.get("/evaluation/regressions")
+def get_evaluation_regressions(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return evaluation_lab_service.regressions(workspace_id=resolved)
+
+
+@router.get("/evaluation/export")
+def export_evaluation_results(
+    workspace_id: str | None = Query(default=None),
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+) -> PlainTextResponse:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    content = evaluation_lab_service.export(workspace_id=resolved, format=format)
+    media_type = "application/json" if format == "json" else "text/csv"
+    extension = "json" if format == "json" else "csv"
+    return PlainTextResponse(
+        content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="evolveagent-evaluation.{extension}"'},
+    )
 
 
 @router.get("/governance")

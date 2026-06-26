@@ -60,6 +60,10 @@ backend/app/data/autopilot_runs.json
 backend/app/data/autopilot_actions.json
 backend/app/data/autopilot_settings.json
 backend/app/data/autopilot_checkpoints.json
+backend/app/data/evaluation_benchmarks.json
+backend/app/data/evaluation_runs.json
+backend/app/data/evaluation_ab_tests.json
+backend/app/data/evaluation_regressions.json
 backend/app/data/*.tmp
 *.log
 logs/
