@@ -205,6 +205,58 @@ export async function getAnalytics(workspaceId) {
   }
 }
 
+export async function getEvaluationDashboard(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/evaluation/dashboard${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getEvaluationBenchmarks(taskType) {
+  try {
+    const response = await fetch(`${API_BASE}/api/evaluation/benchmarks${query({ task_type: taskType })}`)
+    if (!response.ok) return { benchmarks: [] }
+    return response.json()
+  } catch {
+    return { benchmarks: [] }
+  }
+}
+
+export async function createEvaluationRun(payload) {
+  const response = await fetch(`${API_BASE}/api/evaluation/runs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Evaluation run failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function createEvaluationABTest(payload) {
+  const response = await fetch(`${API_BASE}/api/evaluation/ab-tests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `A/B evaluation failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function exportEvaluationResults(workspaceId, format = 'json') {
+  const response = await fetch(`${API_BASE}/api/evaluation/export${query({ workspace_id: workspaceId, format })}`)
+  if (!response.ok) throw new Error(`Evaluation export failed with status ${response.status}`)
+  return response.text()
+}
+
 export async function getComplianceSummary(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/compliance/summary${query({ workspace_id: workspaceId })}`)
