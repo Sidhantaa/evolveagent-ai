@@ -87,6 +87,11 @@ import {
   getNotionStatus,
   getNotionExports,
   sendNotionExport,
+  getAutopilotSettings,
+  updateAutopilotSettings,
+  getAutopilotRuns,
+  getAutopilotCheckpoints,
+  decideAutopilotCheckpoint,
   getCodexJobs,
   getDebateSummary,
   runCodexForLinearIssue,
@@ -464,6 +469,11 @@ function App() {
   const [notionStatus, setNotionStatus] = useState(null)
   const [notionExports, setNotionExports] = useState([])
   const [notionBusy, setNotionBusy] = useState(false)
+  const [showAutopilot, setShowAutopilot] = useState(false)
+  const [autopilotSettings, setAutopilotSettings] = useState(null)
+  const [autopilotRuns, setAutopilotRuns] = useState([])
+  const [autopilotCheckpoints, setAutopilotCheckpoints] = useState([])
+  const [autopilotBusy, setAutopilotBusy] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -513,6 +523,7 @@ function App() {
     refreshQualityStatus()
     refreshCompliance(workspaceId)
     refreshIntegrations()
+    refreshAutopilot(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -906,6 +917,49 @@ function App() {
       setError(err.message)
     } finally {
       setNotionBusy(false)
+    }
+  }
+
+  async function refreshAutopilot(nextWorkspaceId = workspaceId) {
+    const [settings, runs, checkpoints] = await Promise.all([
+      getAutopilotSettings(),
+      getAutopilotRuns(nextWorkspaceId),
+      getAutopilotCheckpoints({ workspaceId: nextWorkspaceId, status: 'pending' }),
+    ])
+    setAutopilotSettings(settings)
+    setAutopilotRuns(runs.slice(0, 8))
+    setAutopilotCheckpoints(checkpoints)
+  }
+
+  async function handleToggleKillSwitch() {
+    if (!autopilotSettings) return
+    setAutopilotBusy(true)
+    setError('')
+    try {
+      const next = !autopilotSettings.kill_switch_enabled
+      await updateAutopilotSettings({ kill_switch_enabled: next })
+      await refreshAutopilot()
+      setCopied(next ? 'Autopilot kill switch ON' : 'Autopilot kill switch OFF')
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAutopilotBusy(false)
+    }
+  }
+
+  async function handleCheckpointDecision(checkpointId, decision) {
+    setAutopilotBusy(true)
+    setError('')
+    try {
+      await decideAutopilotCheckpoint(checkpointId, decision)
+      await refreshAutopilot()
+      setCopied(decision === 'approve' ? 'Checkpoint approved' : 'Checkpoint rejected')
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAutopilotBusy(false)
     }
   }
 
@@ -2311,6 +2365,128 @@ function App() {
                 onClick={refreshIntegrations}
               >
                 Refresh status
+              </button>
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowAutopilot((current) => !current)}>
+            <span>
+              <Bot size={15} />
+              Autopilot
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showAutopilot && (
+            <div className="memory-panel autopilot-panel">
+              <div className="integration-card">
+                <div className="integration-card-header">
+                  <strong>Supervised autopilot</strong>
+                  <span className={`integration-badge ${autopilotSettings?.kill_switch_enabled ? 'disabled' : 'enabled'}`}>
+                    {autopilotSettings?.kill_switch_enabled ? 'kill switch on' : 'active'}
+                  </span>
+                </div>
+                {autopilotSettings ? (
+                  <>
+                    <div className="mini-grid">
+                      <div>
+                        <span>Permission mode</span>
+                        <strong>{autopilotSettings.permission_mode || 'supervised'}</strong>
+                      </div>
+                      <div>
+                        <span>Default tier</span>
+                        <strong>{autopilotSettings.default_permission_level || 'plan_only'}</strong>
+                      </div>
+                    </div>
+                    {autopilotSettings.kill_switch_enabled && (
+                      <p className="integration-error">Kill switch is ON — all autopilot execution is blocked. Planning still works.</p>
+                    )}
+                    <button
+                      className="secondary-button full-width"
+                      type="button"
+                      onClick={handleToggleKillSwitch}
+                      disabled={autopilotBusy}
+                    >
+                      {autopilotBusy
+                        ? 'Updating...'
+                        : autopilotSettings.kill_switch_enabled
+                          ? 'Disable kill switch'
+                          : 'Enable kill switch'}
+                    </button>
+                  </>
+                ) : (
+                  <p className="muted">Autopilot status unavailable.</p>
+                )}
+              </div>
+
+              <div className="integration-card">
+                <div className="integration-card-header">
+                  <strong>Pending checkpoints</strong>
+                  <span className="integration-badge disabled">{autopilotCheckpoints.length}</span>
+                </div>
+                {autopilotCheckpoints.length > 0 ? (
+                  autopilotCheckpoints.map((checkpoint) => (
+                    <div className="autopilot-checkpoint" key={checkpoint.checkpoint_id}>
+                      <p>{previewText(checkpoint.summary || checkpoint.action_type || '', 120)}</p>
+                      <div className="autopilot-checkpoint-meta">
+                        <span>{checkpoint.permission_level}</span>
+                        <span className={`risk-${checkpoint.risk_level || 'medium'}`}>{checkpoint.risk_level || 'medium'} risk</span>
+                      </div>
+                      <div className="autopilot-checkpoint-actions">
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => handleCheckpointDecision(checkpoint.checkpoint_id, 'approve')}
+                          disabled={autopilotBusy}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => handleCheckpointDecision(checkpoint.checkpoint_id, 'reject')}
+                          disabled={autopilotBusy}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="muted">No checkpoints waiting for approval.</p>
+                )}
+              </div>
+
+              <div className="integration-card">
+                <div className="integration-card-header">
+                  <strong>Recent runs</strong>
+                  <span className="integration-badge disabled">{autopilotRuns.length}</span>
+                </div>
+                {autopilotRuns.length > 0 ? (
+                  autopilotRuns.map((run) => (
+                    <div className="integration-activity" key={run.run_id}>
+                      <span className={run.status === 'blocked' || run.status === 'stopped' ? 'failed' : 'success'}>
+                        {run.status}
+                      </span>
+                      <p>{previewText(run.prompt || '', 100)}</p>
+                      <small>
+                        {run.mode} · {run.actions_count ?? 0} action(s)
+                        {run.pending_checkpoints_count ? ` · ${run.pending_checkpoints_count} pending` : ''}
+                      </small>
+                    </div>
+                  ))
+                ) : (
+                  <p className="muted">No autopilot runs yet.</p>
+                )}
+              </div>
+
+              <button
+                className="secondary-button full-width"
+                type="button"
+                onClick={() => refreshAutopilot()}
+              >
+                Refresh autopilot
               </button>
             </div>
           )}

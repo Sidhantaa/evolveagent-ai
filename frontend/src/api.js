@@ -973,6 +973,74 @@ export async function sendNotionExport(payload) {
   return body
 }
 
+export async function getAutopilotSettings() {
+  try {
+    const response = await fetch(`${API_BASE}/api/autopilot/settings`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function updateAutopilotSettings(payload) {
+  const response = await fetch(`${API_BASE}/api/autopilot/settings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Autopilot settings update failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getAutopilotRuns(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/autopilot/runs${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function getAutopilotActions(workspaceId, limit) {
+  try {
+    const response = await fetch(`${API_BASE}/api/autopilot/actions${query({ workspace_id: workspaceId, limit })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function getAutopilotCheckpoints({ workspaceId, status } = {}) {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/autopilot/checkpoints${query({ workspace_id: workspaceId, status })}`,
+    )
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function decideAutopilotCheckpoint(checkpointId, decision, comment) {
+  const response = await fetch(`${API_BASE}/api/autopilot/checkpoints/${checkpointId}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, comment }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Checkpoint decision failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getLinearStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/linear/status`)

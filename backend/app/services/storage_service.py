@@ -2,6 +2,7 @@ import json
 import os
 from threading import Lock
 from typing import Any
+from uuid import uuid4
 
 from app.config import DATA_DIR
 
@@ -58,6 +59,10 @@ class StorageService:
             "compliance_reports.json",
             "slack_notifications.json",
             "notion_exports.json",
+            "autopilot_runs.json",
+            "autopilot_actions.json",
+            "autopilot_settings.json",
+            "autopilot_checkpoints.json",
         ):
             self._ensure_file(filename)
 
@@ -100,7 +105,7 @@ class StorageService:
 
     def _atomic_write(self, filename: str, items: list[dict[str, Any]]) -> None:
         path = self._path(filename)
-        temp_path = f"{path}.tmp"
+        temp_path = f"{path}.{uuid4().hex}.tmp"
         with open(temp_path, "w", encoding="utf-8") as file:
             json.dump(items, file, indent=2)
         os.replace(temp_path, path)

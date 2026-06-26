@@ -360,3 +360,37 @@ class NotionExportRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1, max_length=20_000)
     workspace_id: str | None = None
+
+
+class AutopilotActionRequest(BaseModel):
+    action_type: str = Field(..., min_length=1, max_length=80)
+    summary: str = Field(..., min_length=1, max_length=1000)
+    files_targeted: list[str] = Field(default_factory=list, max_length=5)
+    command_requested: str | None = Field(default=None, max_length=200)
+    risk_level: str = Field(default="medium", pattern="^(low|medium|high)$")
+
+
+class AutopilotRunCreateRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    workspace_id: str | None = None
+    mode: str = Field(default="supervised", pattern="^(supervised|plan_only)$")
+    actions: list[AutopilotActionRequest] = Field(default_factory=list, max_length=12)
+
+
+class AutopilotSettingsUpdateRequest(BaseModel):
+    kill_switch_enabled: bool | None = None
+    permission_mode: str | None = Field(default=None, pattern="^(read_only|plan_only|supervised)$")
+    default_permission_level: str | None = Field(
+        default=None,
+        pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$",
+    )
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class AutopilotCheckpointDecisionRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approve|reject)$")
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+class AutopilotRunControlRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000)

@@ -56,6 +56,11 @@ backend/app/data/compliance_policies.json
 backend/app/data/compliance_reports.json
 backend/app/data/slack_notifications.json
 backend/app/data/notion_exports.json
+backend/app/data/autopilot_runs.json
+backend/app/data/autopilot_actions.json
+backend/app/data/autopilot_settings.json
+backend/app/data/autopilot_checkpoints.json
+backend/app/data/*.tmp
 *.log
 logs/
 evolveagent-ai/

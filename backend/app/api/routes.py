@@ -16,6 +16,10 @@ from app.models.request_models import (
     AppBuilderWizardRequest,
     ApprovalDecisionRequest,
     AutomationApplyRequest,
+    AutopilotCheckpointDecisionRequest,
+    AutopilotRunControlRequest,
+    AutopilotRunCreateRequest,
+    AutopilotSettingsUpdateRequest,
     AssistantCommandRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
@@ -86,6 +90,7 @@ from app.services.knowledge_service import KnowledgeService
 from app.services.assistant_command_service import AssistantCommandService
 from app.services.app_builder_service import AppBuilderService
 from app.services.approval_service import ApprovalService
+from app.services.autopilot_service import AutopilotService
 from app.services.agent_scheduler_service import AgentSchedulerService
 from app.services.kernel_service import KernelService
 from app.services.plugin_loader_service import PluginLoaderService
@@ -130,6 +135,7 @@ user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
+autopilot_service = AutopilotService(storage, permission_service, governance_service)
 memory_intelligence_service = MemoryIntelligenceService(storage)
 knowledge_service = KnowledgeService(storage, workspace_service)
 assistant_commands = AssistantCommandService(workspace_service, knowledge_service)
@@ -839,6 +845,84 @@ def export_to_notion(request: NotionExportRequest) -> dict:
     )
 
 
+@router.get("/autopilot/settings")
+def get_autopilot_settings() -> dict:
+    return autopilot_service.get_settings()
+
+
+@router.patch("/autopilot/settings")
+def update_autopilot_settings(request: AutopilotSettingsUpdateRequest) -> dict:
+    try:
+        return autopilot_service.update_settings(request.model_dump(exclude_none=True))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/autopilot/runs")
+def create_autopilot_run(request: AutopilotRunCreateRequest) -> dict:
+    return autopilot_service.create_run(
+        prompt=request.prompt,
+        workspace_id=request.workspace_id,
+        mode=request.mode,
+        actions=[action.model_dump() for action in request.actions],
+    )
+
+
+@router.get("/autopilot/runs")
+def list_autopilot_runs(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    return autopilot_service.list_runs(workspace_id)
+
+
+@router.get("/autopilot/runs/{run_id}")
+def get_autopilot_run(run_id: str) -> dict:
+    run = autopilot_service.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Autopilot run not found")
+    return run
+
+
+@router.post("/autopilot/runs/{run_id}/start")
+def start_autopilot_run(run_id: str) -> dict:
+    try:
+        return autopilot_service.start_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/autopilot/runs/{run_id}/stop")
+def stop_autopilot_run(run_id: str, request: AutopilotRunControlRequest | None = None) -> dict:
+    try:
+        return autopilot_service.stop_run(run_id, reason=request.reason if request else None)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/autopilot/actions")
+def list_autopilot_actions(
+    run_id: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
+) -> list[dict]:
+    return autopilot_service.list_actions(run_id=run_id, workspace_id=workspace_id)
+
+
+@router.get("/autopilot/checkpoints")
+def list_autopilot_checkpoints(
+    run_id: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
+) -> list[dict]:
+    return autopilot_service.list_checkpoints(run_id=run_id, status=status, workspace_id=workspace_id)
+
+
+@router.post("/autopilot/checkpoints/{checkpoint_id}/decision")
+def decide_autopilot_checkpoint(checkpoint_id: str, request: AutopilotCheckpointDecisionRequest) -> dict:
+    try:
+        return autopilot_service.decide_checkpoint(checkpoint_id, request.decision, request.comment)
+    except ValueError as error:
+        status_code = 404 if "not found" in str(error).lower() else 400
+        raise HTTPException(status_code=status_code, detail=str(error)) from error
+
+
 @router.post("/run", response_model=RunResponse)
 def run_workflow(request: RunRequest) -> RunResponse:
     response = kernel_service.run_workflow(request)
@@ -1273,6 +1357,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
     custom_agent_counts = Counter(item.get("custom_agent_name") for item in runs if item.get("custom_agent_used"))
     linear_links = filter_by_workspace(storage.read_list("linear_links.json"), resolved)
     linear_runs = [item for item in runs if item.get("task_type") == "linear_task"]
+    autopilot_summary = autopilot_service.summary(workspace_id=resolved)
     return {
         "total_runs": total_runs,
         "workspace_id": resolved,
@@ -1309,6 +1394,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         "linear_pushes": sum(len(item.get("pushes", [])) for item in linear_links),
         "linear_failures": sum(1 for item in linear_links if item.get("status") == "failed"),
         "linear_task_runs": len(linear_runs),
+        **autopilot_summary,
         "recent_runs": list(reversed(runs[-10:])),
     }
 

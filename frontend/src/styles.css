@@ -2736,6 +2736,43 @@ ul {
   font-size: var(--font-size-xs);
 }
 
+.autopilot-checkpoint {
+  padding: var(--space-sm) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.autopilot-checkpoint:first-of-type {
+  border-top: none;
+}
+
+.autopilot-checkpoint p {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.autopilot-checkpoint-meta {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.autopilot-checkpoint-meta .risk-high {
+  color: var(--color-danger);
+}
+
+.autopilot-checkpoint-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.autopilot-checkpoint-actions .secondary-button {
+  flex: 1;
+}
+
 .codex-jobs-panel .codex-worker-summary {
   display: flex;
   align-items: center;
