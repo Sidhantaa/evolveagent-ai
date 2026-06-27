@@ -431,3 +431,7 @@ class ProjectRiskUpdateRequest(BaseModel):
 
 class ProjectReportRequest(BaseModel):
     workspace_id: str | None = None
+
+
+class PortfolioReportRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=160)

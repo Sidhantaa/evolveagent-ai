@@ -303,6 +303,55 @@ export async function generateProjectManagerReport(workspaceId) {
   return body
 }
 
+export async function getPortfolioDashboard() {
+  try {
+    const response = await fetch(`${API_BASE}/api/portfolio/dashboard`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getPortfolioHealth() {
+  try {
+    const response = await fetch(`${API_BASE}/api/portfolio/health`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getPortfolioAnalytics() {
+  try {
+    const response = await fetch(`${API_BASE}/api/portfolio/analytics`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function generatePortfolioReport() {
+  const response = await fetch(`${API_BASE}/api/portfolio/reports`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Portfolio report failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function exportPortfolio(format = 'json') {
+  const response = await fetch(`${API_BASE}/api/portfolio/export${query({ format })}`)
+  if (!response.ok) throw new Error(`Portfolio export failed with status ${response.status}`)
+  return response.text()
+}
+
 export async function getComplianceSummary(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/compliance/summary${query({ workspace_id: workspaceId })}`)
