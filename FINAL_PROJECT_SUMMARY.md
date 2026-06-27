@@ -1,4 +1,18 @@
-# EvolveAgent AI v3.5 Checkpoint — Project Summary
+# EvolveAgent AI — Project Summary (current: EvolveAgent OS v15.0)
+
+## Final Platform Positioning
+
+EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
+
+The v15.0 EvolveAgent OS checkpoint is a final platform-readiness layer added additively on top of the existing system:
+
+- **Unified installer readiness** (`GET /api/os/installer`) — backend/frontend setup steps, required + optional env vars, verification commands, detected readiness, and missing-config warnings. Read-only; it never installs or runs anything.
+- **Plugin SDK** (`GET /api/os/plugin-sdk`, `POST /api/os/plugin-sdk/validate`) — declarative plugin manifest schema, permission levels (`read_only`, `plan_only`, `approve_to_edit`, `approve_to_run`, `blocked`), allowed tool types, safety rules, example manifest, and a manifest validator. No remote plugin loading or plugin code execution.
+- **SLA monitoring** (`GET /api/os/sla`) — uptime proxy score, latency, success/fallback rate, blocked actions, failed quality/codex jobs, recent incidents, rating, and recommendations from local data only.
+- **OS scheduler overview** (`GET /api/os/scheduler`) — aggregated queue/approval/automation health on top of the existing `AgentSchedulerService` (not a replacement).
+- **EvolveAgent OS launch panel** (`GET /api/os/summary`) — combined installer readiness, plugin SDK summary, SLA rating, scheduler health, and safety notes, surfaced in a Developer Mode panel. Simple Mode stays clean.
+
+EvolveAgent OS is local-first and governed: not fully autonomous without approval, not a self-training base model, not a production hosted SaaS, and with no unrestricted shell access.
 
 ## Short Summary
 

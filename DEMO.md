@@ -1,6 +1,22 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI v3.5 checkpoint**.
+Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI** — now positioned as **EvolveAgent OS v15.0**.
+
+> **EvolveAgent OS** is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
+
+## EvolveAgent OS v15.0 Demo Add-On
+
+In Developer Mode, open the **EvolveAgent OS** sidebar panel to show the final platform-readiness layer:
+
+- **Installer readiness** — backend/frontend setup steps, required + optional environment variables, verification commands, and missing-config warnings (read-only; nothing is installed or executed).
+- **Plugin SDK** — manifest schema, permission levels, allowed tool types, and a live manifest validator (`POST /api/os/plugin-sdk/validate`).
+- **SLA monitoring** — uptime proxy score, success/fallback rate, blocked actions, failed jobs, and a reliability rating derived from local data only.
+- **Scheduler overview** — queued/running/failed jobs, pending approvals, scheduler health, and bottlenecks.
+- **Launch summary** — `GET /api/os/summary` combines all of the above; use the panel's "Copy launch summary" button for a one-shot platform snapshot.
+
+Talking point: *EvolveAgent OS is local-first and governed — not fully autonomous without approval, not a self-training base model, not a hosted SaaS, and with no unrestricted shell access.*
+
+Simple Mode stays clean and does not expose these OS internals.
 
 ## 2-Minute Demo Script
 

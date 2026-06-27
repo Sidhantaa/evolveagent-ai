@@ -85,6 +85,10 @@ import {
   getPortfolioAnalytics,
   generatePortfolioReport,
   exportPortfolio,
+  getOsSummary,
+  getOsInstaller,
+  getOsSla,
+  getOsScheduler,
   getGoal,
   getGoals,
   getHistory,
@@ -462,6 +466,11 @@ function App() {
   const [portfolioAnalytics, setPortfolioAnalytics] = useState(null)
   const [portfolioBusy, setPortfolioBusy] = useState(false)
   const [portfolioError, setPortfolioError] = useState('')
+  const [showOsPanel, setShowOsPanel] = useState(false)
+  const [osSummary, setOsSummary] = useState(null)
+  const [osInstaller, setOsInstaller] = useState(null)
+  const [osSla, setOsSla] = useState(null)
+  const [osScheduler, setOsScheduler] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -564,6 +573,7 @@ function App() {
     refreshEvaluationLab(workspaceId)
     refreshProjectManager(workspaceId)
     refreshPortfolio()
+    refreshOsPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -854,6 +864,31 @@ function App() {
       setPortfolioError(err.message)
     } finally {
       setPortfolioBusy(false)
+    }
+  }
+
+  async function refreshOsPanel() {
+    const [summary, installer, sla, scheduler] = await Promise.all([
+      getOsSummary(),
+      getOsInstaller(),
+      getOsSla(),
+      getOsScheduler(),
+    ])
+    setOsSummary(summary)
+    setOsInstaller(installer)
+    setOsSla(sla)
+    setOsScheduler(scheduler)
+  }
+
+  async function handleCopyOsSummary() {
+    if (!osSummary) return
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(osSummary, null, 2))
+      setCopied('EvolveAgent OS summary copied')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch {
+      setCopied('Copy failed')
+      window.setTimeout(() => setCopied(''), 1300)
     }
   }
 
@@ -3861,6 +3896,86 @@ function App() {
                     Export Markdown
                   </button>
                   <button type="button" disabled={portfolioBusy} onClick={() => refreshPortfolio()}>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOsPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                EvolveAgent OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOsPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>EvolveAgent OS · v15.0</strong>
+                  <span>Local-first, workspace-aware multi-agent platform.</span>
+                </div>
+                {osSummary ? (
+                  <>
+                    <div className="provider-card">
+                      <div>
+                        <span>SLA</span>
+                        <strong>{osSummary.sla_rating} ({osSummary.uptime_proxy_score ?? osSla?.uptime_proxy_score ?? 0})</strong>
+                      </div>
+                      <div>
+                        <span>Scheduler</span>
+                        <strong>{osSummary.scheduler_health}</strong>
+                      </div>
+                      <div>
+                        <span>Installer</span>
+                        <strong>{(osSummary.installer_readiness?.missing_recommended_config || []).length === 0 ? 'ready' : 'needs config'}</strong>
+                      </div>
+                      <div>
+                        <span>Plugin SDK</span>
+                        <strong>v{osSummary.plugin_sdk?.sdk_version || '1.0'}</strong>
+                      </div>
+                    </div>
+                    {osInstaller && (osInstaller.readiness?.missing_recommended_config || []).length > 0 && (
+                      <>
+                        <h3>Missing config</h3>
+                        {osInstaller.readiness.missing_recommended_config.map((item) => (
+                          <p className="muted" key={item}>{item}</p>
+                        ))}
+                      </>
+                    )}
+                    {osScheduler && (osScheduler.bottlenecks || []).length > 0 && (
+                      <>
+                        <h3>Scheduler bottlenecks</h3>
+                        {osScheduler.bottlenecks.map((item) => (
+                          <p className="muted" key={item}>{item}</p>
+                        ))}
+                      </>
+                    )}
+                    {osSla && (osSla.recommendations || []).length > 0 && (
+                      <>
+                        <h3>SLA recommendations</h3>
+                        {osSla.recommendations.slice(0, 3).map((item) => (
+                          <p className="muted" key={item}>{item}</p>
+                        ))}
+                      </>
+                    )}
+                    <h3>Safety</h3>
+                    {(osSummary.safety_notes || []).slice(0, 2).map((note) => (
+                      <p className="muted" key={note}>{note}</p>
+                    ))}
+                  </>
+                ) : (
+                  <p className="muted">EvolveAgent OS status is not available yet.</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCopyOsSummary} disabled={!osSummary}>
+                    Copy launch summary
+                  </button>
+                  <button type="button" onClick={() => refreshOsPanel()}>
                     Refresh
                   </button>
                 </div>

@@ -1520,3 +1520,43 @@ export async function upsertSystemPrompt(payload) {
   }
   return body
 }
+
+export async function getOsSummary() {
+  try {
+    const response = await fetch(`${API_BASE}/api/os/summary`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getOsInstaller() {
+  try {
+    const response = await fetch(`${API_BASE}/api/os/installer`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getOsSla() {
+  try {
+    const response = await fetch(`${API_BASE}/api/os/sla`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getOsScheduler() {
+  try {
+    const response = await fetch(`${API_BASE}/api/os/scheduler`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
