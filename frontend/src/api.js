@@ -1560,3 +1560,129 @@ export async function getOsScheduler() {
     return null
   }
 }
+
+export async function getAgentMarketplaceDashboard(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-marketplace/dashboard${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getAgentMarketplacePacks() {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-marketplace/packs`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function getAgentMarketplaceTeams(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-marketplace/teams${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function installAgentMarketplacePack(packId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/agent-marketplace/packs/${packId}/install`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace_id: workspaceId }),
+  })
+  if (!response.ok) throw new Error(`Skill pack install failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function rateAgentMarketplaceTeam(teamId, rating, review = '', workspaceId = null) {
+  const response = await fetch(`${API_BASE}/api/agent-marketplace/teams/${teamId}/rate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, review, workspace_id: workspaceId }),
+  })
+  if (!response.ok) throw new Error(`Agent team rating failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function exportAgentMarketplaceTeam(teamId) {
+  const response = await fetch(`${API_BASE}/api/agent-marketplace/teams/${teamId}/export`)
+  if (!response.ok) throw new Error(`Agent team export failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getDepartments() {
+  try {
+    const response = await fetch(`${API_BASE}/api/departments?include_archived=true`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getDepartmentRuns() {
+  try {
+    const response = await fetch(`${API_BASE}/api/departments/runs`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getDepartmentCollaborations() {
+  try {
+    const response = await fetch(`${API_BASE}/api/departments/collaborations`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function seedDepartmentTemplates() {
+  try {
+    const response = await fetch(`${API_BASE}/api/departments/templates/seed`, { method: 'POST' })
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function createDepartment(payload) {
+  const response = await fetch(`${API_BASE}/api/departments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error('Failed to create department')
+  return response.json()
+}
+
+export async function createDepartmentRun(departmentId, task) {
+  const response = await fetch(`${API_BASE}/api/departments/${departmentId}/runs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task }),
+  })
+  if (!response.ok) throw new Error('Failed to plan department run')
+  return response.json()
+}
+
+export async function createDepartmentCollaboration(payload) {
+  const response = await fetch(`${API_BASE}/api/departments/collaborations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error('Failed to plan collaboration')
+  return response.json()
+}

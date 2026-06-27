@@ -70,6 +70,12 @@ class StorageService:
             "project_risks.json",
             "project_status_reports.json",
             "portfolio_reports.json",
+            "agent_marketplace_teams.json",
+            "agent_marketplace_ratings.json",
+            "agent_marketplace_installs.json",
+            "agent_departments.json",
+            "department_runs.json",
+            "department_collaboration.json",
         ):
             self._ensure_file(filename)
 

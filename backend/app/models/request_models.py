@@ -133,6 +133,47 @@ class UpdateCustomAgentRequest(BaseModel):
     enabled: bool | None = None
 
 
+class AgentTeamCreateRequest(BaseModel):
+    workspace_id: str | None = None
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1200)
+    category: str = Field(default="custom", max_length=80)
+    agents: list[dict] = Field(default_factory=list, max_length=12)
+    workflow_packs: list[str] = Field(default_factory=list, max_length=12)
+    permission_profile: str = Field(default="read_only", pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
+    version: str = Field(default="1.0.0", max_length=40)
+    enabled: bool = True
+    benchmark_score: int = Field(default=0, ge=0, le=100)
+
+
+class AgentTeamUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1200)
+    category: str | None = Field(default=None, max_length=80)
+    agents: list[dict] | None = Field(default=None, max_length=12)
+    workflow_packs: list[str] | None = Field(default=None, max_length=12)
+    permission_profile: str | None = Field(default=None, pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
+    version: str | None = Field(default=None, max_length=40)
+    version_notes: str | None = Field(default=None, max_length=500)
+    enabled: bool | None = None
+    benchmark_score: int | None = Field(default=None, ge=0, le=100)
+
+
+class AgentPackInstallRequest(BaseModel):
+    workspace_id: str | None = None
+
+
+class AgentTeamImportRequest(BaseModel):
+    workspace_id: str | None = None
+    payload: dict = Field(default_factory=dict)
+
+
+class AgentTeamRatingRequest(BaseModel):
+    workspace_id: str | None = None
+    rating: int = Field(..., ge=1, le=5)
+    review: str | None = Field(default="", max_length=1000)
+
+
 class CreateWorkspaceRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = Field(default="", max_length=1000)
@@ -439,3 +480,42 @@ class PortfolioReportRequest(BaseModel):
 
 class PluginManifestValidateRequest(BaseModel):
     manifest: dict = Field(default_factory=dict, description="Plugin manifest object to validate.")
+
+
+class DepartmentCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=2000)
+    manager_agent: str | None = Field(default=None, max_length=120)
+    worker_agents: list[str] = Field(default_factory=list)
+    reviewer_agents: list[str] = Field(default_factory=list)
+    auditor_agents: list[str] = Field(default_factory=list)
+    allowed_tools: list[str] = Field(default_factory=list)
+    permission_level: str = Field(
+        default="read_only",
+        pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$",
+    )
+
+
+class DepartmentUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    manager_agent: str | None = Field(default=None, max_length=120)
+    worker_agents: list[str] | None = None
+    reviewer_agents: list[str] | None = None
+    auditor_agents: list[str] | None = None
+    allowed_tools: list[str] | None = None
+    permission_level: str | None = Field(
+        default=None,
+        pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$",
+    )
+    active: bool | None = None
+
+
+class DepartmentRunRequest(BaseModel):
+    task: str = Field(..., min_length=1, max_length=2000)
+
+
+class DepartmentCollaborationRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=2000)
+    departments: list[str] = Field(default_factory=list)
+    lead_department: str | None = Field(default=None, max_length=120)

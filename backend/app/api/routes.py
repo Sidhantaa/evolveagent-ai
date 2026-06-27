@@ -11,6 +11,11 @@ from app.agents.memory_agent import MemoryAgent
 from app.agents.test_generation_agent import TestGenerationAgent
 from app.models.request_models import (
     AgentJobActionRequest,
+    AgentPackInstallRequest,
+    AgentTeamCreateRequest,
+    AgentTeamImportRequest,
+    AgentTeamRatingRequest,
+    AgentTeamUpdateRequest,
     AppBuilderPlanRequest,
     AppBuilderScaffoldRequest,
     AppBuilderWizardRequest,
@@ -31,6 +36,10 @@ from app.models.request_models import (
     CreateWorkspaceRequest,
     DebateConsensusRequest,
     DebateCreateRequest,
+    DepartmentCollaborationRequest,
+    DepartmentCreateRequest,
+    DepartmentRunRequest,
+    DepartmentUpdateRequest,
     DigitalTwinUpdateRequest,
     EvaluationABTestRequest,
     PluginManifestValidateRequest,
@@ -78,6 +87,7 @@ from app.models.request_models import (
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
 from app.services.custom_agent_service import CustomAgentService
+from app.services.agent_marketplace_service import AgentMarketplaceService
 from app.services.goal_service import GoalService
 from app.services.llm_router import llm_router
 from app.services.permission_service import PermissionService
@@ -120,6 +130,7 @@ from app.services.evaluation_lab_service import EvaluationLabService
 from app.services.os_scheduler_service import OSSchedulerService
 from app.services.platform_installer_service import PlatformInstallerService
 from app.services.plugin_sdk_service import PluginSDKService
+from app.services.agent_department_service import AgentDepartmentService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -149,6 +160,7 @@ user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
+agent_marketplace_service = AgentMarketplaceService(storage, custom_agent_service, workspace_service, governance_service)
 autopilot_service = AutopilotService(storage, permission_service, governance_service)
 memory_intelligence_service = MemoryIntelligenceService(storage)
 knowledge_service = KnowledgeService(storage, workspace_service)
@@ -182,6 +194,7 @@ digital_twin_service = DigitalTwinService(storage, workspace_service, governance
 evaluation_lab_service = EvaluationLabService(storage, governance_service)
 project_manager_service = ProjectManagerService(storage, goal_service, governance_service)
 portfolio_service = PortfolioService(storage, workspace_service, governance_service)
+agent_department_service = AgentDepartmentService(storage, governance_service, permission_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -1431,6 +1444,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         "linear_failures": sum(1 for item in linear_links if item.get("status") == "failed"),
         "linear_task_runs": len(linear_runs),
         **autopilot_summary,
+        **agent_department_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -1655,6 +1669,93 @@ def get_os_summary() -> dict:
         "scheduler_health": scheduler["scheduler_health"],
         "safety_notes": installer["safety_notes"],
     }
+
+
+# ----------------------------------------------------------------------
+# v16.0 Multi-Agent Organization (departments / managers / workers / reviewers / auditors)
+# ----------------------------------------------------------------------
+@router.get("/departments")
+def list_departments(include_archived: bool = Query(default=False)) -> dict:
+    departments = agent_department_service.list_departments(include_archived=include_archived)
+    return {"departments": departments, "count": len(departments), **agent_department_service.analytics_summary()}
+
+
+@router.post("/departments")
+def create_department(request: DepartmentCreateRequest) -> dict:
+    return agent_department_service.create_department(
+        name=request.name,
+        description=request.description,
+        manager_agent=request.manager_agent,
+        worker_agents=request.worker_agents,
+        reviewer_agents=request.reviewer_agents,
+        auditor_agents=request.auditor_agents,
+        allowed_tools=request.allowed_tools,
+        permission_level=request.permission_level,
+    )
+
+
+@router.get("/departments/templates")
+def get_department_templates() -> dict:
+    templates = agent_department_service.templates()
+    return {"templates": templates, "count": len(templates)}
+
+
+@router.post("/departments/templates/seed")
+def seed_department_templates() -> dict:
+    return agent_department_service.seed_templates()
+
+
+@router.get("/departments/runs")
+def list_department_runs() -> dict:
+    runs = agent_department_service.list_runs()
+    return {"runs": runs, "count": len(runs)}
+
+
+@router.get("/departments/collaborations")
+def list_department_collaborations() -> dict:
+    collaborations = agent_department_service.list_collaborations()
+    return {"collaborations": collaborations, "count": len(collaborations)}
+
+
+@router.post("/departments/collaborations")
+def create_department_collaboration(request: DepartmentCollaborationRequest) -> dict:
+    return agent_department_service.plan_collaboration(
+        goal=request.goal,
+        departments=request.departments,
+        lead_department=request.lead_department,
+    )
+
+
+@router.get("/departments/{department_id}")
+def get_department(department_id: str) -> dict:
+    department = agent_department_service.get_department(department_id)
+    if department is None:
+        raise HTTPException(status_code=404, detail="Department not found")
+    return department
+
+
+@router.patch("/departments/{department_id}")
+def update_department(department_id: str, request: DepartmentUpdateRequest) -> dict:
+    try:
+        return agent_department_service.update_department(department_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.delete("/departments/{department_id}")
+def archive_department(department_id: str) -> dict:
+    try:
+        return agent_department_service.archive_department(department_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/departments/{department_id}/runs")
+def create_department_run(department_id: str, request: DepartmentRunRequest) -> dict:
+    try:
+        return agent_department_service.plan_run(department_id, request.task)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.get("/governance")
@@ -1962,6 +2063,82 @@ def delete_custom_agent(agent_id: str) -> dict:
     if agent is None:
         raise HTTPException(status_code=404, detail="Custom agent not found")
     return {"disabled": True, "agent": agent}
+
+
+@router.get("/agent-marketplace/dashboard")
+def get_agent_marketplace_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    return agent_marketplace_service.dashboard(workspace_id=workspace_id)
+
+
+@router.get("/agent-marketplace/packs")
+def list_agent_marketplace_packs() -> list[dict]:
+    return agent_marketplace_service.list_packs()
+
+
+@router.get("/agent-marketplace/packs/{pack_id}")
+def get_agent_marketplace_pack(pack_id: str) -> dict:
+    pack = agent_marketplace_service.get_pack(pack_id)
+    if pack is None:
+        raise HTTPException(status_code=404, detail="Agent skill pack not found")
+    return pack
+
+
+@router.get("/agent-marketplace/permission-profiles")
+def list_agent_marketplace_permission_profiles() -> list[dict]:
+    return agent_marketplace_service.permission_profiles()
+
+
+@router.get("/agent-marketplace/teams")
+def list_agent_marketplace_teams(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return agent_marketplace_service.list_teams(workspace_id=resolved)
+
+
+@router.post("/agent-marketplace/teams")
+def create_agent_marketplace_team(request: AgentTeamCreateRequest) -> dict:
+    return agent_marketplace_service.create_team(request.model_dump())
+
+
+@router.patch("/agent-marketplace/teams/{team_id}")
+def update_agent_marketplace_team(team_id: str, request: AgentTeamUpdateRequest) -> dict:
+    team = agent_marketplace_service.update_team(team_id, request.model_dump(exclude_unset=True))
+    if team is None:
+        raise HTTPException(status_code=404, detail="Agent team not found")
+    return team
+
+
+@router.post("/agent-marketplace/teams/import")
+def import_agent_marketplace_team(request: AgentTeamImportRequest) -> dict:
+    return agent_marketplace_service.import_team(request.payload, workspace_id=request.workspace_id)
+
+
+@router.get("/agent-marketplace/teams/{team_id}/export")
+def export_agent_marketplace_team(team_id: str) -> dict:
+    exported = agent_marketplace_service.export_team(team_id)
+    if exported is None:
+        raise HTTPException(status_code=404, detail="Agent team not found")
+    return exported
+
+
+@router.post("/agent-marketplace/teams/{team_id}/rate")
+def rate_agent_marketplace_team(team_id: str, request: AgentTeamRatingRequest) -> dict:
+    try:
+        return agent_marketplace_service.rate_team(
+            team_id=team_id,
+            rating=request.rating,
+            review=request.review or "",
+            workspace_id=request.workspace_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/agent-marketplace/packs/{pack_id}/install")
+def install_agent_marketplace_pack(pack_id: str, request: AgentPackInstallRequest) -> dict:
+    try:
+        return agent_marketplace_service.install_pack(pack_id=pack_id, workspace_id=request.workspace_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/providers/status", response_model=ProviderStatus)

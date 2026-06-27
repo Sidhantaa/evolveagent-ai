@@ -67,6 +67,12 @@ backend/app/data/evaluation_regressions.json
 backend/app/data/project_risks.json
 backend/app/data/project_status_reports.json
 backend/app/data/portfolio_reports.json
+backend/app/data/agent_marketplace_teams.json
+backend/app/data/agent_marketplace_ratings.json
+backend/app/data/agent_marketplace_installs.json
+backend/app/data/agent_departments.json
+backend/app/data/department_runs.json
+backend/app/data/department_collaboration.json
 backend/app/data/*.tmp
 *.log
 logs/

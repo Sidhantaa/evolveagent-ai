@@ -1454,6 +1454,42 @@ def test_custom_agent_builder_api_and_template():
     assert delete_response.json()["disabled"] is True
 
 
+def test_agent_marketplace_api_install_rate_and_export():
+    packs_response = client.get("/api/agent-marketplace/packs")
+    packs = packs_response.json()
+    assert packs_response.status_code == 200
+    assert any(pack["pack_id"] == "resume-ats-pack" for pack in packs)
+
+    dashboard_response = client.get("/api/agent-marketplace/dashboard")
+    assert dashboard_response.status_code == 200
+    assert "permission_profiles" in dashboard_response.json()
+
+    install_response = client.post("/api/agent-marketplace/packs/resume-ats-pack/install", json={})
+    install_body = install_response.json()
+    assert install_response.status_code == 200
+    assert install_body["team"]["name"] == "Resume ATS Pack"
+    assert install_body["created_agents"]
+
+    team_id = install_body["team"]["team_id"]
+    rating_response = client.post(
+        f"/api/agent-marketplace/teams/{team_id}/rate",
+        json={"rating": 5, "review": "Useful agent team"},
+    )
+    assert rating_response.status_code == 200
+    assert rating_response.json()["rating"] == 5
+
+    export_response = client.get(f"/api/agent-marketplace/teams/{team_id}/export")
+    assert export_response.status_code == 200
+    assert export_response.json()["schema"] == "evolveagent.agent_team.v1"
+
+    update_response = client.patch(
+        f"/api/agent-marketplace/teams/{team_id}",
+        json={"version": "1.1.0", "version_notes": "Improved resume workflow."},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["version"] == "1.1.0"
+
+
 def test_v25_analytics_and_learning_fields():
     analytics_response = client.get("/api/analytics")
     analytics = analytics_response.json()

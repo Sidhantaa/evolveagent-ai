@@ -67,6 +67,9 @@ import {
   deleteWorkspaceMemory,
   getAnalytics,
   getAgentTemplates,
+  getAgentMarketplaceDashboard,
+  getAgentMarketplacePacks,
+  getAgentMarketplaceTeams,
   getAppBuilderTemplates,
   getChat,
   getChats,
@@ -89,6 +92,13 @@ import {
   getOsInstaller,
   getOsSla,
   getOsScheduler,
+  getDepartments,
+  getDepartmentRuns,
+  getDepartmentCollaborations,
+  seedDepartmentTemplates,
+  createDepartment,
+  createDepartmentRun,
+  createDepartmentCollaboration,
   getGoal,
   getGoals,
   getHistory,
@@ -113,6 +123,9 @@ import {
   getCodexJobs,
   getDebateSummary,
   runCodexForLinearIssue,
+  installAgentMarketplacePack,
+  rateAgentMarketplaceTeam,
+  exportAgentMarketplaceTeam,
   getApprovals,
   submitApprovalDecision,
   getApprovalAudit,
@@ -404,6 +417,10 @@ function App() {
   const [selectedGoal, setSelectedGoal] = useState(null)
   const [customAgents, setCustomAgents] = useState([])
   const [agentTemplates, setAgentTemplates] = useState([])
+  const [agentMarketplaceDashboard, setAgentMarketplaceDashboard] = useState(null)
+  const [agentMarketplacePacks, setAgentMarketplacePacks] = useState([])
+  const [agentMarketplaceTeams, setAgentMarketplaceTeams] = useState([])
+  const [agentMarketplaceBusyId, setAgentMarketplaceBusyId] = useState('')
   const [showMissionControl, setShowMissionControl] = useState(false)
   const [showApprovals, setShowApprovals] = useState(false)
   const [approvals, setApprovals] = useState([])
@@ -471,6 +488,19 @@ function App() {
   const [osInstaller, setOsInstaller] = useState(null)
   const [osSla, setOsSla] = useState(null)
   const [osScheduler, setOsScheduler] = useState(null)
+  const [showOrgPanel, setShowOrgPanel] = useState(false)
+  const [departments, setDepartments] = useState([])
+  const [departmentOverview, setDepartmentOverview] = useState(null)
+  const [departmentRuns, setDepartmentRuns] = useState([])
+  const [departmentCollaborations, setDepartmentCollaborations] = useState([])
+  const [orgBusy, setOrgBusy] = useState(false)
+  const [orgError, setOrgError] = useState(null)
+  const [newDepartmentName, setNewDepartmentName] = useState('')
+  const [newDepartmentPermission, setNewDepartmentPermission] = useState('read_only')
+  const [runDepartmentId, setRunDepartmentId] = useState('')
+  const [runDepartmentTask, setRunDepartmentTask] = useState('')
+  const [collabGoal, setCollabGoal] = useState('')
+  const [collabDepartments, setCollabDepartments] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -552,6 +582,7 @@ function App() {
     refreshDigitalTwin(workspaceId)
     refreshMissionControl(workspaceId)
     refreshCustomAgents(workspaceId)
+    refreshAgentMarketplace(workspaceId)
     refreshWorkspaceMemory(workspaceId)
     refreshKnowledge(workspaceId)
     refreshLinearData(workspaceId)
@@ -574,6 +605,8 @@ function App() {
     refreshProjectManager(workspaceId)
     refreshPortfolio()
     refreshOsPanel()
+    refreshOrgPanel()
+    refreshAgentMarketplace(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -892,6 +925,85 @@ function App() {
     }
   }
 
+  async function refreshOrgPanel() {
+    const [overview, runs, collaborations] = await Promise.all([
+      getDepartments(),
+      getDepartmentRuns(),
+      getDepartmentCollaborations(),
+    ])
+    setDepartmentOverview(overview)
+    setDepartments(overview?.departments || [])
+    setDepartmentRuns(runs?.runs || [])
+    setDepartmentCollaborations(collaborations?.collaborations || [])
+  }
+
+  async function handleSeedDepartments() {
+    setOrgBusy(true)
+    setOrgError(null)
+    try {
+      await seedDepartmentTemplates()
+      await refreshOrgPanel()
+    } catch (error) {
+      setOrgError(error.message || 'Failed to seed departments')
+    } finally {
+      setOrgBusy(false)
+    }
+  }
+
+  async function handleCreateDepartment(event) {
+    event.preventDefault()
+    if (!newDepartmentName.trim()) return
+    setOrgBusy(true)
+    setOrgError(null)
+    try {
+      await createDepartment({ name: newDepartmentName.trim(), permission_level: newDepartmentPermission })
+      setNewDepartmentName('')
+      setNewDepartmentPermission('read_only')
+      await refreshOrgPanel()
+    } catch (error) {
+      setOrgError(error.message || 'Failed to create department')
+    } finally {
+      setOrgBusy(false)
+    }
+  }
+
+  async function handleCreateDepartmentRun(event) {
+    event.preventDefault()
+    if (!runDepartmentId || !runDepartmentTask.trim()) return
+    setOrgBusy(true)
+    setOrgError(null)
+    try {
+      await createDepartmentRun(runDepartmentId, runDepartmentTask.trim())
+      setRunDepartmentTask('')
+      await refreshOrgPanel()
+    } catch (error) {
+      setOrgError(error.message || 'Failed to plan department run')
+    } finally {
+      setOrgBusy(false)
+    }
+  }
+
+  async function handleCreateCollaboration(event) {
+    event.preventDefault()
+    if (!collabGoal.trim()) return
+    setOrgBusy(true)
+    setOrgError(null)
+    try {
+      const names = collabDepartments
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+      await createDepartmentCollaboration({ goal: collabGoal.trim(), departments: names })
+      setCollabGoal('')
+      setCollabDepartments('')
+      await refreshOrgPanel()
+    } catch (error) {
+      setOrgError(error.message || 'Failed to plan collaboration')
+    } finally {
+      setOrgBusy(false)
+    }
+  }
+
   async function refreshAppBuilderTemplates() {
     const templates = await getAppBuilderTemplates()
     setAppBuilderTemplates(templates)
@@ -1051,6 +1163,17 @@ function App() {
   async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
     setCustomAgents(await getCustomAgents(nextWorkspaceId))
     setAgentTemplates(await getAgentTemplates())
+  }
+
+  async function refreshAgentMarketplace(nextWorkspaceId = workspaceId) {
+    const [dashboard, packs, teams] = await Promise.all([
+      getAgentMarketplaceDashboard(nextWorkspaceId),
+      getAgentMarketplacePacks(),
+      getAgentMarketplaceTeams(nextWorkspaceId),
+    ])
+    setAgentMarketplaceDashboard(dashboard)
+    setAgentMarketplacePacks(packs)
+    setAgentMarketplaceTeams(teams)
   }
 
   async function refreshCodexJobs() {
@@ -1774,6 +1897,59 @@ function App() {
       window.setTimeout(() => setCopied(''), 1300)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function handleInstallAgentPack(packId) {
+    setAgentMarketplaceBusyId(packId)
+    try {
+      await installAgentMarketplacePack(packId, workspaceId)
+      await Promise.all([
+        refreshAgentMarketplace(workspaceId),
+        refreshCustomAgents(workspaceId),
+        refreshAnalytics(workspaceId),
+      ])
+      setCopied('Agent team installed')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentMarketplaceBusyId('')
+    }
+  }
+
+  async function handleRateAgentTeam(teamId) {
+    const rating = Number(window.prompt('Rating 1-5:', '5') || 0)
+    if (!rating) return
+    const review = window.prompt('Optional review:', '') || ''
+    setAgentMarketplaceBusyId(teamId)
+    try {
+      await rateAgentMarketplaceTeam(teamId, rating, review, workspaceId)
+      await refreshAgentMarketplace(workspaceId)
+      setCopied('Agent team rated')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentMarketplaceBusyId('')
+    }
+  }
+
+  async function handleExportAgentTeam(teamId) {
+    setAgentMarketplaceBusyId(teamId)
+    try {
+      const exported = await exportAgentMarketplaceTeam(teamId)
+      downloadFile(
+        `evolveagent-agent-team-${teamId}.json`,
+        JSON.stringify(exported, null, 2),
+        'application/json',
+      )
+      setCopied('Agent team exported')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentMarketplaceBusyId('')
     }
   }
 
@@ -3986,6 +4162,163 @@ function App() {
 
         {developerMode && (
           <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOrgPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Agent Organization
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOrgPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Multi-Agent Organization · v16.0</strong>
+                  <span>Model EvolveAgent as an AI company: departments, managers, workers, reviewers, auditors.</span>
+                </div>
+                {departmentOverview && (
+                  <div className="provider-card">
+                    <div>
+                      <span>Departments</span>
+                      <strong>{departmentOverview.total_departments ?? departments.length}</strong>
+                    </div>
+                    <div>
+                      <span>Active</span>
+                      <strong>{departmentOverview.active_departments ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Runs</span>
+                      <strong>{departmentOverview.department_runs ?? departmentRuns.length}</strong>
+                    </div>
+                    <div>
+                      <span>Collaborations</span>
+                      <strong>{departmentOverview.collaboration_count ?? departmentCollaborations.length}</strong>
+                    </div>
+                  </div>
+                )}
+                {orgError && <p className="error-text">{orgError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleSeedDepartments} disabled={orgBusy}>
+                    Seed default departments
+                  </button>
+                  <button type="button" onClick={() => refreshOrgPanel()} disabled={orgBusy}>
+                    Refresh
+                  </button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateDepartment}>
+                  <h3>Create department</h3>
+                  <input
+                    type="text"
+                    placeholder="Department name"
+                    value={newDepartmentName}
+                    onChange={(event) => setNewDepartmentName(event.target.value)}
+                  />
+                  <select value={newDepartmentPermission} onChange={(event) => setNewDepartmentPermission(event.target.value)}>
+                    <option value="read_only">read_only</option>
+                    <option value="plan_only">plan_only</option>
+                    <option value="approve_to_edit">approve_to_edit</option>
+                    <option value="approve_to_run">approve_to_run</option>
+                    <option value="blocked">blocked</option>
+                  </select>
+                  <button type="submit" disabled={orgBusy || !newDepartmentName.trim()}>
+                    Create
+                  </button>
+                </form>
+
+                <h3>Departments</h3>
+                {departments.length === 0 && <p className="muted">No departments yet. Seed defaults to get started.</p>}
+                {departments.map((department) => (
+                  <div className="agent-template-card" key={department.department_id}>
+                    <strong>
+                      {department.name} {department.active === false ? '· archived' : ''}
+                    </strong>
+                    <span>{department.description}</span>
+                    <p className="muted">Manager: {department.manager_agent}</p>
+                    <p className="muted">Workers: {(department.worker_agents || []).join(', ') || '—'}</p>
+                    <p className="muted">Reviewers: {(department.reviewer_agents || []).join(', ') || '—'}</p>
+                    <p className="muted">Auditors: {(department.auditor_agents || []).join(', ') || '—'}</p>
+                    <p className="muted">Tools: {(department.allowed_tools || []).join(', ') || '—'}</p>
+                    <p className="muted">Permission: {department.permission_level}</p>
+                    <p className="muted code-id">{department.department_id}</p>
+                  </div>
+                ))}
+
+                <form className="stacked-form" onSubmit={handleCreateDepartmentRun}>
+                  <h3>Run department task</h3>
+                  <select value={runDepartmentId} onChange={(event) => setRunDepartmentId(event.target.value)}>
+                    <option value="">Select department…</option>
+                    {departments
+                      .filter((department) => department.active !== false)
+                      .map((department) => (
+                        <option key={department.department_id} value={department.department_id}>
+                          {department.name}
+                        </option>
+                      ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Task for this department"
+                    value={runDepartmentTask}
+                    onChange={(event) => setRunDepartmentTask(event.target.value)}
+                  />
+                  <button type="submit" disabled={orgBusy || !runDepartmentId || !runDepartmentTask.trim()}>
+                    Plan run
+                  </button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateCollaboration}>
+                  <h3>Collaboration planner</h3>
+                  <input
+                    type="text"
+                    placeholder="Cross-department goal"
+                    value={collabGoal}
+                    onChange={(event) => setCollabGoal(event.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Departments (comma separated names)"
+                    value={collabDepartments}
+                    onChange={(event) => setCollabDepartments(event.target.value)}
+                  />
+                  <button type="submit" disabled={orgBusy || !collabGoal.trim()}>
+                    Plan collaboration
+                  </button>
+                </form>
+
+                {departmentRuns.length > 0 && (
+                  <>
+                    <h3>Recent department runs</h3>
+                    {departmentRuns.slice(0, 5).map((run) => (
+                      <div className="agent-template-card" key={run.department_run_id}>
+                        <strong>{run.department_name || run.department_id}</strong>
+                        <span>{run.task}</span>
+                        <p className="muted">
+                          Risk: {run.risk_level} · {run.requires_approval ? 'approval required' : 'no approval'} · {run.status}
+                        </p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {departmentCollaborations.length > 0 && (
+                  <>
+                    <h3>Recent collaborations</h3>
+                    {departmentCollaborations.slice(0, 5).map((collab) => (
+                      <div className="agent-template-card" key={collab.collaboration_id}>
+                        <strong>{collab.goal}</strong>
+                        <p className="muted">Lead: {collab.lead_department || '—'}</p>
+                        <p className="muted">Departments: {(collab.departments || []).join(' → ') || '—'}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowApprovals((current) => !current)}>
               <span>
                 <ShieldAlert size={15} />
@@ -4251,12 +4584,66 @@ function App() {
           <button className="analytics-toggle" type="button" onClick={() => setShowAgentBuilder((current) => !current)}>
             <span>
               <Layers3 size={15} />
-              Agent Builder
+              Agent Builder / Skill Store
             </span>
             <ChevronDown size={15} />
           </button>
           {showAgentBuilder && (
             <div className="mission-panel">
+              <h3>Skill Store 2.0</h3>
+              {agentMarketplaceDashboard && (
+                <div className="analytics-mini-grid">
+                  <div>
+                    <span>Packs</span>
+                    <strong>{agentMarketplaceDashboard.total_packs || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Installed</span>
+                    <strong>{agentMarketplaceDashboard.installed_teams || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Enabled</span>
+                    <strong>{agentMarketplaceDashboard.enabled_teams || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Rating</span>
+                    <strong>{agentMarketplaceDashboard.average_rating || 0}</strong>
+                  </div>
+                </div>
+              )}
+              {agentMarketplacePacks.slice(0, 6).map((pack) => (
+                <div className="agent-template-card" key={pack.pack_id}>
+                  <strong>{pack.name}</strong>
+                  <span>{pack.category} · {pack.permission_profile} · v{pack.version}</span>
+                  <p>{pack.description}</p>
+                  <small className="muted">
+                    {pack.agents?.join(', ')} · installs {pack.install_count || 0} · rating {pack.average_rating || 0}
+                  </small>
+                  <button
+                    type="button"
+                    disabled={agentMarketplaceBusyId === pack.pack_id}
+                    onClick={() => handleInstallAgentPack(pack.pack_id)}
+                  >
+                    {agentMarketplaceBusyId === pack.pack_id ? 'Installing...' : 'Install team'}
+                  </button>
+                </div>
+              ))}
+              <h3>Installed agent teams</h3>
+              {agentMarketplaceTeams.length === 0 && <p className="muted">No installed agent teams yet.</p>}
+              {agentMarketplaceTeams.slice(0, 6).map((team) => (
+                <div className="agent-template-card" key={team.team_id}>
+                  <strong>{team.name}</strong>
+                  <span>{team.permission_profile} · v{team.version} · {team.enabled ? 'enabled' : 'disabled'}</span>
+                  <p>{team.description}</p>
+                  <small className="muted">
+                    {(team.agents || []).map((agent) => agent.name || agent.agent_id).join(', ') || 'No agents'} · rating {team.average_rating || 0}
+                  </small>
+                  <div className="inline-actions">
+                    <button type="button" onClick={() => handleRateAgentTeam(team.team_id)}>Rate</button>
+                    <button type="button" onClick={() => handleExportAgentTeam(team.team_id)}>Export</button>
+                  </div>
+                </div>
+              ))}
               <h3>Custom agents</h3>
               {customAgents.length === 0 && <p className="muted">No custom agents yet.</p>}
               {customAgents.slice(0, 6).map((agent) => (
