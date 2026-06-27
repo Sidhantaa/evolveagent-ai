@@ -33,6 +33,7 @@ from app.models.request_models import (
     DebateCreateRequest,
     DigitalTwinUpdateRequest,
     EvaluationABTestRequest,
+    PortfolioReportRequest,
     ProjectReportRequest,
     ProjectRiskRequest,
     ProjectRiskUpdateRequest,
@@ -115,6 +116,7 @@ from app.services.codex_worker_service import CodexWorkerService, CodexWorkerErr
 from app.services.debate_simulation_service import DebateSimulationService
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.evaluation_lab_service import EvaluationLabService
+from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.secret_scanner import SecretScanner
 from app.services.compliance_service import ComplianceService
@@ -174,6 +176,7 @@ research_search_service = ResearchSearchService(
 digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
 evaluation_lab_service = EvaluationLabService(storage, governance_service)
 project_manager_service = ProjectManagerService(storage, goal_service, governance_service)
+portfolio_service = PortfolioService(storage, workspace_service, governance_service)
 compliance_service = ComplianceService(storage, governance_service)
 slack_notifications = SlackNotificationService(storage, governance_service)
 notion_exports = NotionExportService(storage, governance_service)
@@ -1560,6 +1563,43 @@ def generate_project_report(request: ProjectReportRequest) -> dict:
 def get_project_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
     resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
     return project_manager_service.dashboard(workspace_id=resolved)
+
+
+@router.get("/portfolio/dashboard")
+def get_portfolio_dashboard() -> dict:
+    return portfolio_service.dashboard()
+
+
+@router.get("/portfolio/analytics")
+def get_portfolio_analytics() -> dict:
+    return portfolio_service.analytics()
+
+
+@router.get("/portfolio/health")
+def get_portfolio_health() -> dict:
+    return portfolio_service.health()
+
+
+@router.post("/portfolio/reports")
+def generate_portfolio_report(request: PortfolioReportRequest | None = None) -> dict:
+    return portfolio_service.generate_executive_summary()
+
+
+@router.get("/portfolio/reports")
+def get_portfolio_reports() -> list[dict]:
+    return portfolio_service.list_reports()
+
+
+@router.get("/portfolio/export")
+def export_portfolio(format: str = Query(default="json", pattern="^(json|markdown)$")) -> PlainTextResponse:
+    content = portfolio_service.export(format=format)
+    media_type = "application/json" if format == "json" else "text/markdown"
+    extension = "json" if format == "json" else "md"
+    return PlainTextResponse(
+        content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="evolveagent-portfolio.{extension}"'},
+    )
 
 
 @router.get("/governance")

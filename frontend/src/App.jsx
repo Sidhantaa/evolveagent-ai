@@ -80,6 +80,11 @@ import {
   getProjectManagerRisks,
   createProjectManagerRisk,
   generateProjectManagerReport,
+  getPortfolioDashboard,
+  getPortfolioHealth,
+  getPortfolioAnalytics,
+  generatePortfolioReport,
+  exportPortfolio,
   getGoal,
   getGoals,
   getHistory,
@@ -451,6 +456,12 @@ function App() {
   const [projectManagerError, setProjectManagerError] = useState('')
   const [newRiskTitle, setNewRiskTitle] = useState('')
   const [newRiskSeverity, setNewRiskSeverity] = useState('medium')
+  const [showPortfolio, setShowPortfolio] = useState(false)
+  const [portfolioDashboard, setPortfolioDashboard] = useState(null)
+  const [portfolioHealth, setPortfolioHealth] = useState(null)
+  const [portfolioAnalytics, setPortfolioAnalytics] = useState(null)
+  const [portfolioBusy, setPortfolioBusy] = useState(false)
+  const [portfolioError, setPortfolioError] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -552,6 +563,7 @@ function App() {
     refreshAutopilot(workspaceId)
     refreshEvaluationLab(workspaceId)
     refreshProjectManager(workspaceId)
+    refreshPortfolio()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -794,6 +806,54 @@ function App() {
       setProjectManagerError(err.message)
     } finally {
       setProjectManagerBusy(false)
+    }
+  }
+
+  async function refreshPortfolio() {
+    const [dashboard, health, analytics] = await Promise.all([
+      getPortfolioDashboard(),
+      getPortfolioHealth(),
+      getPortfolioAnalytics(),
+    ])
+    setPortfolioDashboard(dashboard)
+    setPortfolioHealth(health)
+    setPortfolioAnalytics(analytics)
+  }
+
+  async function handleGeneratePortfolioReport() {
+    setPortfolioBusy(true)
+    setPortfolioError('')
+    try {
+      await generatePortfolioReport()
+      await refreshPortfolio()
+      setCopied('Executive summary generated')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setPortfolioError(err.message)
+    } finally {
+      setPortfolioBusy(false)
+    }
+  }
+
+  async function handleExportPortfolio(format) {
+    setPortfolioBusy(true)
+    setPortfolioError('')
+    try {
+      const content = await exportPortfolio(format)
+      const mime = format === 'markdown' ? 'text/markdown' : 'application/json'
+      const blob = new Blob([content], { type: mime })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `evolveagent-portfolio.${format === 'markdown' ? 'md' : 'json'}`
+      link.click()
+      URL.revokeObjectURL(url)
+      setCopied(`Portfolio exported (${format})`)
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setPortfolioError(err.message)
+    } finally {
+      setPortfolioBusy(false)
     }
   }
 
@@ -3716,6 +3776,91 @@ function App() {
                 </div>
                 <div className="inline-actions">
                   <button type="button" disabled={projectManagerBusy} onClick={() => refreshProjectManager(workspaceId)}>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowPortfolio((current) => !current)}>
+              <span>
+                <Layers3 size={15} />
+                Portfolio Mode
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showPortfolio && (
+              <div className="mission-panel">
+                <button
+                  className="secondary-button full-width"
+                  type="button"
+                  disabled={portfolioBusy}
+                  onClick={handleGeneratePortfolioReport}
+                >
+                  {portfolioBusy ? 'Working...' : 'Generate executive summary'}
+                </button>
+                {portfolioError && <p className="provider-warning">{portfolioError}</p>}
+                {portfolioHealth && (
+                  <div className={`agent-template-card risk-${portfolioHealth.rating === 'at_risk' ? 'high' : portfolioHealth.rating === 'watch' ? 'medium' : 'low'}`}>
+                    <strong>Health: {portfolioHealth.score}/100 · {portfolioHealth.rating}</strong>
+                    {(portfolioHealth.drivers || []).slice(0, 2).map((driver) => (
+                      <span key={driver}>{driver}</span>
+                    ))}
+                  </div>
+                )}
+                {portfolioDashboard ? (
+                  <>
+                    <div className="provider-card">
+                      <div>
+                        <span>Workspaces</span>
+                        <strong>{portfolioDashboard.total_workspaces || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Active goals</span>
+                        <strong>{portfolioDashboard.active_goals || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Tasks done</span>
+                        <strong>{portfolioDashboard.completed_tasks || 0}/{portfolioDashboard.total_tasks || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Open risks</span>
+                        <strong>{portfolioDashboard.open_risks || 0}</strong>
+                      </div>
+                    </div>
+                    <h3>Projects</h3>
+                    {(portfolioDashboard.workspace_summaries || []).slice(0, 6).map((summary) => (
+                      <div className="agent-template-card" key={summary.workspace_id}>
+                        <strong>{summary.name}</strong>
+                        <span>
+                          goals {summary.completed_goals}/{summary.goal_count} · tasks {summary.completed_tasks}/{summary.total_tasks} · avg {summary.average_judge_score}
+                        </span>
+                      </div>
+                    ))}
+                    {portfolioAnalytics && (
+                      <>
+                        <h3>Top agents</h3>
+                        {(portfolioAnalytics.top_agents || []).slice(0, 4).map((entry) => (
+                          <p className="muted" key={entry.agent}>{entry.agent}: {entry.runs} run(s)</p>
+                        ))}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <p className="muted">Portfolio dashboard is not available yet.</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" disabled={portfolioBusy} onClick={() => handleExportPortfolio('json')}>
+                    Export JSON
+                  </button>
+                  <button type="button" disabled={portfolioBusy} onClick={() => handleExportPortfolio('markdown')}>
+                    Export Markdown
+                  </button>
+                  <button type="button" disabled={portfolioBusy} onClick={() => refreshPortfolio()}>
                     Refresh
                   </button>
                 </div>
