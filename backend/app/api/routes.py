@@ -33,6 +33,9 @@ from app.models.request_models import (
     DebateCreateRequest,
     DigitalTwinUpdateRequest,
     EvaluationABTestRequest,
+    ProjectReportRequest,
+    ProjectRiskRequest,
+    ProjectRiskUpdateRequest,
     EvaluationRunRequest,
     FeedbackRequest,
     GitBranchRequest,
@@ -112,6 +115,7 @@ from app.services.codex_worker_service import CodexWorkerService, CodexWorkerErr
 from app.services.debate_simulation_service import DebateSimulationService
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.evaluation_lab_service import EvaluationLabService
+from app.services.project_manager_service import ProjectManagerService
 from app.services.secret_scanner import SecretScanner
 from app.services.compliance_service import ComplianceService
 from app.services.slack_notification_service import SlackNotificationService
@@ -169,6 +173,7 @@ research_search_service = ResearchSearchService(
 )
 digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
 evaluation_lab_service = EvaluationLabService(storage, governance_service)
+project_manager_service = ProjectManagerService(storage, goal_service, governance_service)
 compliance_service = ComplianceService(storage, governance_service)
 slack_notifications = SlackNotificationService(storage, governance_service)
 notion_exports = NotionExportService(storage, governance_service)
@@ -1496,6 +1501,65 @@ def export_evaluation_results(
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="evolveagent-evaluation.{extension}"'},
     )
+
+
+@router.get("/project-manager/timeline")
+def get_project_timeline(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return project_manager_service.timeline(workspace_id=resolved)
+
+
+@router.get("/project-manager/resources")
+def get_project_resources(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return project_manager_service.resource_allocation(workspace_id=resolved)
+
+
+@router.get("/project-manager/risks")
+def get_project_risks(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return project_manager_service.risk_register(workspace_id=resolved)
+
+
+@router.post("/project-manager/risks")
+def create_project_risk(request: ProjectRiskRequest) -> dict:
+    resolved = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
+    return project_manager_service.create_risk(
+        title=request.title,
+        description=request.description,
+        severity=request.severity,
+        mitigation=request.mitigation,
+        goal_id=request.goal_id,
+        workspace_id=resolved,
+    )
+
+
+@router.patch("/project-manager/risks/{risk_id}")
+def update_project_risk(risk_id: str, request: ProjectRiskUpdateRequest) -> dict:
+    try:
+        return project_manager_service.update_risk(
+            risk_id, request.model_dump(exclude_none=True)
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/project-manager/reports")
+def get_project_reports(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return project_manager_service.list_status_reports(workspace_id=resolved)
+
+
+@router.post("/project-manager/reports")
+def generate_project_report(request: ProjectReportRequest) -> dict:
+    resolved = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
+    return project_manager_service.generate_status_report(workspace_id=resolved)
+
+
+@router.get("/project-manager/dashboard")
+def get_project_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return project_manager_service.dashboard(workspace_id=resolved)
 
 
 @router.get("/governance")

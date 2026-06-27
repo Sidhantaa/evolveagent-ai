@@ -76,6 +76,10 @@ import {
   getCustomAgents,
   getEvaluationBenchmarks,
   getEvaluationDashboard,
+  getProjectManagerDashboard,
+  getProjectManagerRisks,
+  createProjectManagerRisk,
+  generateProjectManagerReport,
   getGoal,
   getGoals,
   getHistory,
@@ -440,6 +444,13 @@ function App() {
   const [evaluationError, setEvaluationError] = useState('')
   const [abVariantA, setAbVariantA] = useState('openai')
   const [abVariantB, setAbVariantB] = useState('mock')
+  const [showProjectManager, setShowProjectManager] = useState(false)
+  const [projectManagerDashboard, setProjectManagerDashboard] = useState(null)
+  const [projectManagerRisks, setProjectManagerRisks] = useState([])
+  const [projectManagerBusy, setProjectManagerBusy] = useState(false)
+  const [projectManagerError, setProjectManagerError] = useState('')
+  const [newRiskTitle, setNewRiskTitle] = useState('')
+  const [newRiskSeverity, setNewRiskSeverity] = useState('medium')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -540,6 +551,7 @@ function App() {
     refreshIntegrations()
     refreshAutopilot(workspaceId)
     refreshEvaluationLab(workspaceId)
+    refreshProjectManager(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -738,6 +750,51 @@ function App() {
     ])
     setEvaluationDashboard(dashboard)
     setEvaluationBenchmarks(benchmarks.benchmarks || [])
+  }
+
+  async function refreshProjectManager(nextWorkspaceId = workspaceId) {
+    const [dashboard, risks] = await Promise.all([
+      getProjectManagerDashboard(nextWorkspaceId),
+      getProjectManagerRisks(nextWorkspaceId),
+    ])
+    setProjectManagerDashboard(dashboard)
+    setProjectManagerRisks(risks.risks || [])
+  }
+
+  async function handleCreateProjectRisk() {
+    if (!newRiskTitle.trim()) return
+    setProjectManagerBusy(true)
+    setProjectManagerError('')
+    try {
+      await createProjectManagerRisk({
+        title: newRiskTitle.trim(),
+        severity: newRiskSeverity,
+        workspace_id: workspaceId,
+      })
+      setNewRiskTitle('')
+      await refreshProjectManager(workspaceId)
+      setCopied('Risk logged')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setProjectManagerError(err.message)
+    } finally {
+      setProjectManagerBusy(false)
+    }
+  }
+
+  async function handleGenerateProjectReport() {
+    setProjectManagerBusy(true)
+    setProjectManagerError('')
+    try {
+      await generateProjectManagerReport(workspaceId)
+      await refreshProjectManager(workspaceId)
+      setCopied('Status report generated')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setProjectManagerError(err.message)
+    } finally {
+      setProjectManagerBusy(false)
+    }
   }
 
   async function refreshAppBuilderTemplates() {
@@ -3564,6 +3621,101 @@ function App() {
                     Export CSV
                   </button>
                   <button type="button" disabled={evaluationBusy} onClick={() => refreshEvaluationLab(workspaceId)}>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowProjectManager((current) => !current)}>
+              <span>
+                <Flag size={15} />
+                AI Project Manager
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showProjectManager && (
+              <div className="mission-panel">
+                <button
+                  className="secondary-button full-width"
+                  type="button"
+                  disabled={projectManagerBusy}
+                  onClick={handleGenerateProjectReport}
+                >
+                  {projectManagerBusy ? 'Working...' : 'Generate status report'}
+                </button>
+                {projectManagerError && <p className="provider-warning">{projectManagerError}</p>}
+                {projectManagerDashboard ? (
+                  <>
+                    <div className="provider-card">
+                      <div>
+                        <span>Milestones</span>
+                        <strong>{projectManagerDashboard.milestone_summary?.total || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Done</span>
+                        <strong>{projectManagerDashboard.milestone_summary?.completed || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Avg progress</span>
+                        <strong>{projectManagerDashboard.milestone_summary?.average_progress || 0}%</strong>
+                      </div>
+                      <div>
+                        <span>Open risks</span>
+                        <strong>{projectManagerDashboard.risk_summary?.open_risk_count || 0}</strong>
+                      </div>
+                    </div>
+                    {projectManagerDashboard.latest_report && (
+                      <div className="agent-template-card">
+                        <strong>{projectManagerDashboard.latest_report.headline}</strong>
+                        <span>{new Date(projectManagerDashboard.latest_report.generated_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                    <h3>Upcoming milestones</h3>
+                    {(projectManagerDashboard.upcoming_milestones || []).slice(0, 5).map((milestone) => (
+                      <div className="agent-template-card" key={milestone.goal_id}>
+                        <strong>{milestone.title}</strong>
+                        <span>{milestone.status} · {milestone.progress_percent}% · {milestone.task_count} task(s)</span>
+                      </div>
+                    ))}
+                    {(projectManagerDashboard.resource_summary?.agent_load || []).slice(0, 4).map((entry) => (
+                      <p className="muted" key={entry.agent}>
+                        {entry.agent}: {entry.effort_points} effort point(s)
+                      </p>
+                    ))}
+                  </>
+                ) : (
+                  <p className="muted">Project dashboard is not available yet.</p>
+                )}
+                <h3>Risk register ({projectManagerRisks.length})</h3>
+                {projectManagerRisks.slice(0, 5).map((risk, index) => (
+                  <div className={`fallback-note risk-${risk.severity}`} key={risk.risk_id || `${risk.title}-${index}`}>
+                    <strong>{risk.severity} · {risk.title}</strong>
+                    {risk.mitigation && <p>{risk.mitigation}</p>}
+                  </div>
+                ))}
+                <div className="agent-template-card">
+                  <strong>Log a risk</strong>
+                  <input
+                    value={newRiskTitle}
+                    placeholder="Risk description"
+                    onChange={(event) => setNewRiskTitle(event.target.value)}
+                  />
+                  <select value={newRiskSeverity} onChange={(event) => setNewRiskSeverity(event.target.value)}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <button type="button" disabled={projectManagerBusy} onClick={handleCreateProjectRisk}>
+                    Add risk
+                  </button>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" disabled={projectManagerBusy} onClick={() => refreshProjectManager(workspaceId)}>
                     Refresh
                   </button>
                 </div>

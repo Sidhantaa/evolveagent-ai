@@ -2764,6 +2764,18 @@ ul {
   color: var(--color-danger);
 }
 
+.fallback-note.risk-high {
+  border-left: 3px solid var(--color-danger);
+}
+
+.fallback-note.risk-medium {
+  border-left: 3px solid var(--color-warning, #d9822b);
+}
+
+.fallback-note.risk-low {
+  border-left: 3px solid var(--color-border);
+}
+
 .autopilot-checkpoint-actions {
   display: flex;
   gap: var(--space-sm);

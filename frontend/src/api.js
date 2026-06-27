@@ -257,6 +257,52 @@ export async function exportEvaluationResults(workspaceId, format = 'json') {
   return response.text()
 }
 
+export async function getProjectManagerDashboard(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/project-manager/dashboard${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getProjectManagerRisks(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/project-manager/risks${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return { risks: [] }
+    return response.json()
+  } catch {
+    return { risks: [] }
+  }
+}
+
+export async function createProjectManagerRisk(payload) {
+  const response = await fetch(`${API_BASE}/api/project-manager/risks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Risk create failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function generateProjectManagerReport(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/project-manager/reports`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace_id: workspaceId }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Report generation failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getComplianceSummary(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/compliance/summary${query({ workspace_id: workspaceId })}`)

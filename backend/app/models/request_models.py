@@ -409,3 +409,25 @@ class EvaluationABTestRequest(BaseModel):
     variant_b: str = Field(..., min_length=1, max_length=160)
     metric: str = Field(default="overall_judge_score", max_length=80)
     workspace_id: str | None = None
+
+
+class ProjectRiskRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    severity: str = Field(default="medium", pattern="^(low|medium|high)$")
+    mitigation: str = Field(default="", max_length=2000)
+    goal_id: str | None = Field(default=None, max_length=120)
+    workspace_id: str | None = None
+
+
+class ProjectRiskUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    severity: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    mitigation: str | None = Field(default=None, max_length=2000)
+    status: str | None = Field(default=None, pattern="^(open|monitoring|resolved)$")
+    goal_id: str | None = Field(default=None, max_length=120)
+
+
+class ProjectReportRequest(BaseModel):
+    workspace_id: str | None = None

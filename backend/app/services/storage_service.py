@@ -67,6 +67,8 @@ class StorageService:
             "evaluation_runs.json",
             "evaluation_ab_tests.json",
             "evaluation_regressions.json",
+            "project_risks.json",
+            "project_status_reports.json",
         ):
             self._ensure_file(filename)
 
