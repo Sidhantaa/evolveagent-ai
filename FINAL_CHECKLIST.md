@@ -2,6 +2,37 @@
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
+## Final Verification Results (v15.0)
+
+- **Backend tests:** ✅ 222 passed (`cd backend && ./venv/bin/pytest -q`)
+- **Frontend build:** ✅ passed — `vite build`, 1830 modules, `dist/assets/index-*.js` 481.68 kB (gzip 129.51 kB), built in ~1.2s
+- **Git status:** clean working tree except intentionally-ignored local files (`agent.config.yaml` local edit, `.claude-flow/`, `docs/linear-handoffs/evo-274.md`, `evo-275.md` — left untouched per workflow rules)
+- **Secrets/runtime data:** none committed; `.env` files and `backend/app/data/*.json` remain gitignored
+- **Release tag:** `v15.0` — EvolveAgent OS
+
+### Release Readiness Checklist
+
+- [x] README is final and professional (title, description, architecture, features, safety, tech stack, setup, status)
+- [x] Architecture diagram added (`docs/ARCHITECTURE.md` + README + summary)
+- [x] Screenshot guide exists (`screenshots/README.md`)
+- [x] Demo video script exists (`docs/DEMO_VIDEO_SCRIPT.md`)
+- [x] Resume bullets document exists (`docs/RESUME_BULLETS.md`)
+- [x] Interview explanation document exists (`docs/INTERVIEW_EXPLANATION.md`)
+- [x] Project case study exists (`docs/CASE_STUDY.md`)
+- [x] GitHub repo is clean (gitignore covers env/uploads/runtime data/logs/build output)
+- [x] Backend tests pass (222)
+- [x] Frontend build passes
+- [x] `.env.example` files present (`backend/.env.example`, `frontend/.env.example`)
+
+### Known Limitations
+
+- No authentication, cloud database, or deployment setup (intentionally local-first / MVP)
+- No production vector database or RAG search — local JSON index only
+- No OCR for scanned PDFs; no speaker diarization; no full video understanding
+- No real image-generation API enabled by default (mock with fallback path)
+- JSON storage is for MVP/demo scale, not distributed workloads
+- Agent Jobs are local persisted records, not distributed workers
+
 ## Verification Commands
 
 Backend tests:
@@ -139,10 +170,10 @@ npm run build
 
 ## GitHub Cleanup Checklist
 
-- README reflects the v3.5 checkpoint.
-- DEMO.md reflects the v3.5 checkpoint.
-- FINAL_PROJECT_SUMMARY.md reflects the v3.5 checkpoint.
-- FINAL_CHECKLIST.md reflects the v3.5 checkpoint.
+- README reflects the EvolveAgent OS v15.0 checkpoint.
+- DEMO.md reflects the EvolveAgent OS v15.0 checkpoint.
+- FINAL_PROJECT_SUMMARY.md reflects the EvolveAgent OS v15.0 checkpoint.
+- FINAL_CHECKLIST.md reflects the EvolveAgent OS v15.0 checkpoint.
 - WORK_SUMMARY.md maps recent EVO issues to commits.
 - Backend tests pass.
 - Frontend build passes.

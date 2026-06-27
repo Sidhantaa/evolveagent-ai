@@ -14,6 +14,21 @@ The v15.0 EvolveAgent OS checkpoint is a final platform-readiness layer added ad
 
 EvolveAgent OS is local-first and governed: not fully autonomous without approval, not a self-training base model, not a production hosted SaaS, and with no unrestricted shell access.
 
+## Architecture Diagram
+
+```mermaid
+flowchart TD
+    A[User / File / Recording / Linear / Workspace Input] --> B[Master Orchestrator Agent]
+    B --> C[Specialist Agents + Tools]
+    C --> D[Governance + Permission Layer]
+    D --> E[LLM / File / Recording / Automation Workflow]
+    E --> F[Judge Agent + Evaluation Lab]
+    F --> G[Memory + Analytics + Learning]
+    G --> H[Final Answer / Project Update / Export / Report]
+```
+
+Full diagrams (system, agent workflow, governance, Linear/Codex, workspace memory, and evaluation/analytics flows) are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 ## Short Summary
 
 EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI operating workspace. It combines a polished Jarvis-style interface with Master Agent routing, specialist agents, real OpenAI mode with mock fallback, file and recording analysis, mock image previews, Mission Control goals, custom agents, Project Brain search, safe tool routing, approval workflows, analytics, adaptive learning, and Developer Mode transparency.
@@ -126,7 +141,17 @@ Correct learning description:
 - JSON storage is for MVP/demo use
 - Agent Jobs are local persisted jobs, not distributed workers
 
-## Future Roadmap
+## Future Roadmap After v15
+
+- Server-Sent Events streaming for token-by-token responses
+- Production-grade vector database / embedding provider behind the existing memory abstraction
+- OCR and scanned-PDF support; speaker diarization for recordings
+- Richer approval diff previews before applying automation
+- User accounts, team workspaces, and a deployment path
+- Real image-generation API behind the current mock-fallback abstraction
+- Expanded model-routing policies and cost tracking
+
+## Earlier Roadmap Items
 
 - Manual UI QA for v3.5 across Simple Mode, Developer Mode, light/dark theme, onboarding, and responsive layout
 - Better responsive layout and accessibility

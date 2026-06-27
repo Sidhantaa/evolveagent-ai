@@ -1,0 +1,150 @@
+# EvolveAgent AI: Building a Local-First Multi-Agent AI Operating System
+
+A portfolio case study of EvolveAgent AI — what it is, why it was built, how it works, and what was learned.
+
+---
+
+## 1. Overview
+
+EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation. It replaces the single opaque chatbot call with an inspectable, governed pipeline: a Master Orchestrator Agent routes each request through specialist agents, a safety layer, workspace memory, and an evaluation engine, then returns one scored answer. Simple Mode keeps the experience clean for end users; Developer Mode exposes every layer for demos and debugging. The system reached v15.0 with a fully passing backend test suite (222 tests) and a green frontend build.
+
+---
+
+## 2. Problem
+
+A standard chatbot returns one answer with no visibility into how it was produced, no persistent project memory, no safety gates around actions it could take, and no built-in way to measure answer quality. For anyone trying to use an AI assistant for real work — analyzing documents, planning projects, or assisting with development — those gaps make the tool hard to trust, hard to debug, and risky to let act on a codebase.
+
+---
+
+## 3. Motivation
+
+I wanted to understand what a *safe, transparent* AI assistant looks like when you treat it as a system rather than a single model. The goals were: make every decision inspectable, give the assistant durable per-project memory, gate any risky action behind explicit human approval, measure quality continuously, and keep the whole thing local-first so it runs without cloud dependencies or paid keys. The constraint of "additive only — never rebuild" was deliberate: it forced clean architecture and kept the system shippable at every step.
+
+---
+
+## 4. Architecture
+
+The backend is FastAPI with thin routes that delegate to service classes; business logic lives in services, request shapes are Pydantic models, and persistence is JSON through a single StorageService. The frontend is React + Vite with a two-mode UI driven by the same response object.
+
+High-level flow:
+
+```
+User / File / Recording / Linear / Workspace Input
+        ↓
+Master Orchestrator Agent
+        ↓
+Specialist Agents + Tools + Governance
+        ↓
+LLM / File / Recording / Automation Workflow
+        ↓
+Judge + Evaluation + Memory + Analytics
+        ↓
+Final Answer / Project Update / Export / Report
+```
+
+Detailed Mermaid diagrams (system, agent workflow, governance, Linear/Codex, memory, and evaluation flows) are in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+---
+
+## 5. Core Features
+
+- ChatGPT-style workspace with Simple Mode and Developer Mode
+- Master-Agent orchestration over specialist agents
+- Real LLM providers (OpenAI + optional Anthropic/Gemini/Mistral consensus) with mock fallback
+- File and document analysis; recording intelligence with transcription
+- Image Agent (mock, with real-provider fallback path)
+- Workspace memory with quality scoring, tiers, and local semantic retrieval
+- Mission Control goal planning and task graphs
+- Custom Agent Builder and Agent Skill Store
+- Security/governance: prompt-injection firewall, secret scanner, permission system, approval workflow
+- Safe file editor and allowlisted command runner
+- Linear/Codex development workflow, Slack notifications, Notion export
+- AI Evaluation Lab, AI Project Manager, Portfolio Mode
+- EvolveAgent OS platform layer (installer readiness, plugin SDK, SLA monitoring, scheduler overview)
+
+---
+
+## 6. Multi-Agent Workflow
+
+The Master Orchestrator Agent classifies each request and selects a workflow. For text, specialist agents run in a pipeline: **research** gathers context, **logic** structures reasoning, **risk** flags assumptions, **strategy** recommends next steps, and **writing** synthesizes the final answer. A **judge** agent then scores the overall workflow and each agent's contribution, and an **evolution** agent recommends improvements. File, recording, image, goal, and automation tasks branch into this pipeline at the right point. Custom agents are reusable specialists that operate under the same governance and permission rules as built-in agents.
+
+---
+
+## 7. Security and Governance
+
+Safety is a first-class layer, not an afterthought. Every request passes a prompt-injection firewall and a secret scanner. Tools and actions carry permission levels — `read_only`, `plan_only`, `approve_to_edit`, `approve_to_run`, `blocked`. Read-only actions run immediately; edit/run actions go to an approval queue and require explicit human approval; blocked actions are denied. A safe file editor validates paths and blocks `.env`, `.git`, `node_modules`, `venv`, and uploads. The command runner is limited to an allowlist (`npm run build`, `npm test`, `npm run lint`, `pytest`, `python -m pytest`). There is no unrestricted shell, no destructive deletion, and no silent file editing. Every decision is written to a governance log with an audit trail.
+
+---
+
+## 8. Workspace Memory and Mission Control
+
+Workspace memory scopes context per project. Before each run, a small capped set of high-value memories is retrieved with local semantic-style scoring; new results are quality-scored, tiered (hot/warm/archived), indexed in a JSON-backed sparse vector-style index, and periodically consolidated — all without an external vector database. Mission Control turns larger objectives into plans: the Goal Planner Agent generates phases, a task graph, dependencies, risk level, and a next-best-task recommendation, and each task can be run through the standard workflow with progress tracked end to end. Goal mode never silently executes code — automation still goes through approval.
+
+---
+
+## 9. Linear/Codex Automation
+
+An optional, server-side Linear/Codex workflow connects the assistant to real development. When a Linear issue moves to In Progress, the backend can create a `linear/evo-*` branch, write a handoff file under `docs/linear-handoffs/`, and trigger a guarded Codex worker job. The job runs the test suite and frontend build, then posts a success or failure comment back to Linear. Keys live in `backend/.env` and are never exposed to the frontend; full autonomous mode is disabled by default, and verification gates every completion.
+
+---
+
+## 10. AI Evaluation Lab
+
+The Evaluation Lab measures the agents themselves. It runs benchmarks, A/B tests, and regression checks, feeding results back into analytics and the Adaptive Learning Engine. The learning layer self-optimizes the orchestration — prompt versions, workflow strategy, model routing, and user preferences — and proposed prompt changes are approval-gated and reversible. The base LLM is never retrained; only the orchestration around it improves.
+
+---
+
+## 11. Project Manager and Portfolio Mode
+
+The AI Project Manager surfaces project risks and status reports, giving a structured view of where work stands. Portfolio Mode rolls multiple workspaces into a single health view, aggregating regression health and status across projects — useful for demoing the system as a platform rather than a single workspace.
+
+---
+
+## 12. Technical Stack
+
+- **Backend:** Python, FastAPI, Pydantic, Uvicorn, OpenAI SDK, pypdf, python-docx, JSON storage
+- **Frontend:** React, Vite, JavaScript, CSS design tokens, react-markdown, remark-gfm, lucide-react
+- **Testing:** Pytest (222 passing backend tests), Vite build verification
+- **Workflow:** Git branch-per-issue, Linear/Codex automation, Slack/Notion integrations
+
+---
+
+## 13. Challenges
+
+- **Additive-only delivery.** Every release layered new capabilities without breaking existing features or tests, which demanded disciplined service boundaries and careful inspection of existing data shapes.
+- **Real, enforceable safety.** Building a permission model and approval flow that genuinely gate file edits and command execution while staying demoable.
+- **Local semantic memory.** Implementing quality scoring, tiers, and a JSON-backed sparse vector-style index that retrieves relevant context cheaply and deterministically, with no vector database.
+- **Provider abstraction with graceful fallback.** Supporting real OpenAI and optional multi-provider consensus while guaranteeing the app never crashes when keys are missing.
+
+---
+
+## 14. Results
+
+EvolveAgent AI reached v15.0 as a coherent, local-first multi-agent platform: a Master-Agent orchestration core, a real safety/governance layer, workspace memory, file/recording intelligence, Mission Control, custom agents, an evaluation lab, project and portfolio dashboards, and an EvolveAgent OS platform-readiness layer — with 222 passing backend tests and a green frontend build. The two-mode UI makes it both clean for end users and fully transparent for technical review, and mock fallback keeps it demoable anywhere.
+
+---
+
+## 15. Limitations
+
+- No authentication, cloud database, or deployment setup (intentionally local-first/MVP)
+- No production vector database or RAG search — local JSON index only
+- No OCR for scanned PDFs; no speaker diarization; no full video understanding
+- No real image-generation API enabled by default (mock with fallback path)
+- JSON storage is for MVP/demo scale, not distributed workloads
+- Agent Jobs are local persisted records, not distributed workers
+
+---
+
+## 16. Future Roadmap After v15
+
+- Server-Sent Events streaming for token-by-token responses
+- Production-grade vector database / embedding provider behind the existing memory abstraction
+- OCR and scanned-PDF support; speaker diarization for recordings
+- Richer approval diff previews before applying automation
+- User accounts, team workspaces, and a deployment path
+- Real image-generation API behind the current mock-fallback abstraction
+- Expanded model-routing policies and cost tracking
+
+---
+
+*EvolveAgent AI is a decision-support and productivity system. It does not provide legal, medical, financial, or professional advice, and human review is required before acting on its outputs.*

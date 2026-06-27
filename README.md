@@ -1,8 +1,12 @@
-# EvolveAgent AI
+# EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current version:** v15.0 — EvolveAgent OS
+**Current version:** v15.0 — EvolveAgent OS &nbsp;•&nbsp; **Status:** v15.0 completed &nbsp;•&nbsp; **Release:** EvolveAgent OS
+
+EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
+
+> **Documentation:** [Architecture](docs/ARCHITECTURE.md) · [Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md) · [Case Study](docs/CASE_STUDY.md) · [Interview Guide](docs/INTERVIEW_EXPLANATION.md) · [Resume Bullets](docs/RESUME_BULLETS.md) · [Screenshots Guide](screenshots/README.md) · [Demo Guide](DEMO.md) · [Final Checklist](FINAL_CHECKLIST.md)
 
 **One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with governed research sessions, citation tracking, source credibility scoring, real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
@@ -988,6 +992,20 @@ Required configuration stays in `backend/.env` only. Linear API keys are never e
 
 EvolveAgent AI is a decision-support and productivity tool. It does not provide legal, medical, financial, or professional advice. Human review is required before using outputs for important decisions.
 
+Safety guarantees at a glance:
+
+- **No unrestricted shell execution** — only an allowlist of build/test commands runs.
+- **No silent file edits** — file edits are planned and require explicit approval.
+- **Approval required for risky actions** — edit/run actions go through an approval queue.
+- **Secrets are redacted** — a secret scanner strips credentials before storage or logging.
+- **Prompt injection is checked** — a prompt-injection firewall runs on every request.
+- **Governance logs are stored** — every decision is written to an audit trail.
+- **The base LLM is not self-trained** — the model stays fixed; only orchestration improves.
+
+Correct learning description:
+
+> The system self-optimizes its orchestration layer through memory, feedback, prompt versions, workflow strategy tracking, and model performance analytics.
+
 The system stores workflow history, feedback, and analytics for future optimization, but it does **not** train itself, silently modify its own code, or autonomously rewrite agents.
 
 Automation safety rules:
@@ -1013,7 +1031,17 @@ Automation safety rules:
 - Human feedback trends over time
 - User authentication and team sharing
 
+## Project Status
+
+- **Status:** v15.0 completed
+- **Release:** EvolveAgent OS
+- **Backend tests:** 222 passing (Pytest)
+- **Frontend build:** passing (Vite)
+- See [`FINAL_CHECKLIST.md`](FINAL_CHECKLIST.md) for the full release-readiness checklist and known limitations.
+
 ## Resume Bullets
+
+For the full set of resume bullets, technical skills, and interview-ready summaries, see [`docs/RESUME_BULLETS.md`](docs/RESUME_BULLETS.md).
 
 - Built EvolveAgent AI, a ChatGPT-style multi-agent AI workspace using FastAPI, React, and OpenAI with a Master Orchestrator Agent for task classification and routing.
 - Designed specialist agents for research, logic analysis, risk detection, strategy planning, final writing, judging, evolution feedback, memory, file analysis, and image prompt generation.
