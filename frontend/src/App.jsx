@@ -99,6 +99,17 @@ import {
   createDepartment,
   createDepartmentRun,
   createDepartmentCollaboration,
+  getBusinessDashboard,
+  getBusinessLeads,
+  createBusinessLead,
+  getBusinessSupportCases,
+  createBusinessSupportCase,
+  getBusinessDocuments,
+  createBusinessDocument,
+  getBusinessProposals,
+  createBusinessProposal,
+  getBusinessMarketingItems,
+  createBusinessMarketingItem,
   getGoal,
   getGoals,
   getHistory,
@@ -501,6 +512,25 @@ function App() {
   const [runDepartmentTask, setRunDepartmentTask] = useState('')
   const [collabGoal, setCollabGoal] = useState('')
   const [collabDepartments, setCollabDepartments] = useState('')
+  const [showBusinessPanel, setShowBusinessPanel] = useState(false)
+  const [businessDashboard, setBusinessDashboard] = useState(null)
+  const [businessLeads, setBusinessLeads] = useState([])
+  const [businessSupportCases, setBusinessSupportCases] = useState([])
+  const [businessDocuments, setBusinessDocuments] = useState([])
+  const [businessProposals, setBusinessProposals] = useState([])
+  const [businessMarketingItems, setBusinessMarketingItems] = useState([])
+  const [businessBusy, setBusinessBusy] = useState(false)
+  const [businessError, setBusinessError] = useState(null)
+  const [leadName, setLeadName] = useState('')
+  const [leadCompany, setLeadCompany] = useState('')
+  const [caseSubject, setCaseSubject] = useState('')
+  const [casePriority, setCasePriority] = useState('medium')
+  const [docTitle, setDocTitle] = useState('')
+  const [docContent, setDocContent] = useState('')
+  const [proposalTitle, setProposalTitle] = useState('')
+  const [proposalClient, setProposalClient] = useState('')
+  const [marketingTitle, setMarketingTitle] = useState('')
+  const [marketingChannel, setMarketingChannel] = useState('email')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -607,6 +637,7 @@ function App() {
     refreshOsPanel()
     refreshOrgPanel()
     refreshAgentMarketplace(workspaceId)
+    refreshBusinessPanel(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1002,6 +1033,86 @@ function App() {
     } finally {
       setOrgBusy(false)
     }
+  }
+
+  async function refreshBusinessPanel(nextWorkspaceId = workspaceId) {
+    const [dashboard, leads, cases, documents, proposals, marketing] = await Promise.all([
+      getBusinessDashboard(nextWorkspaceId),
+      getBusinessLeads(nextWorkspaceId),
+      getBusinessSupportCases(nextWorkspaceId),
+      getBusinessDocuments(nextWorkspaceId),
+      getBusinessProposals(nextWorkspaceId),
+      getBusinessMarketingItems(nextWorkspaceId),
+    ])
+    setBusinessDashboard(dashboard)
+    setBusinessLeads(leads?.leads || [])
+    setBusinessSupportCases(cases?.support_cases || [])
+    setBusinessDocuments(documents?.documents || [])
+    setBusinessProposals(proposals?.proposals || [])
+    setBusinessMarketingItems(marketing?.marketing_items || [])
+  }
+
+  async function runBusinessAction(action) {
+    setBusinessBusy(true)
+    setBusinessError(null)
+    try {
+      await action()
+      await refreshBusinessPanel(workspaceId)
+    } catch (error) {
+      setBusinessError(error.message || 'Business action failed')
+    } finally {
+      setBusinessBusy(false)
+    }
+  }
+
+  async function handleCreateLead(event) {
+    event.preventDefault()
+    if (!leadName.trim() && !leadCompany.trim()) return
+    await runBusinessAction(async () => {
+      await createBusinessLead({ name: leadName.trim(), company: leadCompany.trim(), workspace_id: workspaceId })
+      setLeadName('')
+      setLeadCompany('')
+    })
+  }
+
+  async function handleCreateSupportCase(event) {
+    event.preventDefault()
+    if (!caseSubject.trim()) return
+    await runBusinessAction(async () => {
+      await createBusinessSupportCase({ subject: caseSubject.trim(), priority: casePriority, workspace_id: workspaceId })
+      setCaseSubject('')
+      setCasePriority('medium')
+    })
+  }
+
+  async function handleCreateBusinessDocument(event) {
+    event.preventDefault()
+    if (!docContent.trim()) return
+    await runBusinessAction(async () => {
+      await createBusinessDocument({ title: docTitle.trim(), content: docContent.trim(), workspace_id: workspaceId })
+      setDocTitle('')
+      setDocContent('')
+    })
+  }
+
+  async function handleCreateProposal(event) {
+    event.preventDefault()
+    if (!proposalTitle.trim()) return
+    await runBusinessAction(async () => {
+      await createBusinessProposal({ title: proposalTitle.trim(), client: proposalClient.trim(), workspace_id: workspaceId })
+      setProposalTitle('')
+      setProposalClient('')
+    })
+  }
+
+  async function handleCreateMarketingItem(event) {
+    event.preventDefault()
+    if (!marketingTitle.trim()) return
+    await runBusinessAction(async () => {
+      await createBusinessMarketingItem({ title: marketingTitle.trim(), channel: marketingChannel, workspace_id: workspaceId })
+      setMarketingTitle('')
+      setMarketingChannel('email')
+    })
   }
 
   async function refreshAppBuilderTemplates() {
@@ -4312,6 +4423,159 @@ function App() {
                     ))}
                   </>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowBusinessPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Business Operator
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showBusinessPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Business Operator · v18.0</strong>
+                  <span>Leads, support triage, document processing, proposals, marketing — drafts only, governed.</span>
+                </div>
+                {businessDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Leads</span><strong>{businessDashboard.total_leads}</strong></div>
+                    <div><span>Qualified</span><strong>{businessDashboard.qualified_leads}</strong></div>
+                    <div><span>Open cases</span><strong>{businessDashboard.open_support_cases}</strong></div>
+                    <div><span>High prio</span><strong>{businessDashboard.high_priority_cases}</strong></div>
+                    <div><span>Proposals</span><strong>{businessDashboard.proposal_count}</strong></div>
+                    <div><span>Drafts</span><strong>{businessDashboard.draft_proposals}</strong></div>
+                    <div><span>Won</span><strong>{businessDashboard.won_leads}</strong></div>
+                    <div><span>Conv. %</span><strong>{businessDashboard.conversion_rate}</strong></div>
+                  </div>
+                )}
+                {businessError && <p className="error-text">{businessError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshBusinessPanel(workspaceId)} disabled={businessBusy}>
+                    Refresh
+                  </button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateLead}>
+                  <h3>New lead</h3>
+                  <input type="text" placeholder="Name" value={leadName} onChange={(event) => setLeadName(event.target.value)} />
+                  <input type="text" placeholder="Company" value={leadCompany} onChange={(event) => setLeadCompany(event.target.value)} />
+                  <button type="submit" disabled={businessBusy || (!leadName.trim() && !leadCompany.trim())}>Add lead</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateSupportCase}>
+                  <h3>New support case</h3>
+                  <input type="text" placeholder="Subject" value={caseSubject} onChange={(event) => setCaseSubject(event.target.value)} />
+                  <select value={casePriority} onChange={(event) => setCasePriority(event.target.value)}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                  <button type="submit" disabled={businessBusy || !caseSubject.trim()}>Triage case</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateBusinessDocument}>
+                  <h3>Process document</h3>
+                  <input type="text" placeholder="Title" value={docTitle} onChange={(event) => setDocTitle(event.target.value)} />
+                  <textarea placeholder="Paste document content" value={docContent} onChange={(event) => setDocContent(event.target.value)} rows={3} />
+                  <button type="submit" disabled={businessBusy || !docContent.trim()}>Process</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateProposal}>
+                  <h3>New proposal draft</h3>
+                  <input type="text" placeholder="Title" value={proposalTitle} onChange={(event) => setProposalTitle(event.target.value)} />
+                  <input type="text" placeholder="Client" value={proposalClient} onChange={(event) => setProposalClient(event.target.value)} />
+                  <button type="submit" disabled={businessBusy || !proposalTitle.trim()}>Draft proposal</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateMarketingItem}>
+                  <h3>New marketing item</h3>
+                  <input type="text" placeholder="Title" value={marketingTitle} onChange={(event) => setMarketingTitle(event.target.value)} />
+                  <select value={marketingChannel} onChange={(event) => setMarketingChannel(event.target.value)}>
+                    <option value="email">email</option>
+                    <option value="linkedin">linkedin</option>
+                    <option value="website">website</option>
+                    <option value="instagram">instagram</option>
+                    <option value="other">other</option>
+                  </select>
+                  <button type="submit" disabled={businessBusy || !marketingTitle.trim()}>Plan item</button>
+                </form>
+
+                {businessLeads.length > 0 && (
+                  <>
+                    <h3>Leads</h3>
+                    {businessLeads.slice(0, 6).map((lead) => (
+                      <div className="agent-template-card" key={lead.lead_id}>
+                        <strong>{lead.name || lead.company || lead.lead_id}</strong>
+                        <span>{lead.company}</span>
+                        <p className="muted">Status: {lead.status} · Source: {lead.source}</p>
+                        {lead.next_step && <p className="muted">Next: {lead.next_step}</p>}
+                        <p className="muted code-id">{lead.lead_id}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {businessSupportCases.length > 0 && (
+                  <>
+                    <h3>Support cases</h3>
+                    {businessSupportCases.slice(0, 6).map((supportCase) => (
+                      <div className="agent-template-card" key={supportCase.case_id}>
+                        <strong>{supportCase.subject}</strong>
+                        <p className="muted">Priority: {supportCase.priority} · {supportCase.status}</p>
+                        <p className="muted">{supportCase.triage_summary}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {businessDocuments.length > 0 && (
+                  <>
+                    <h3>Documents</h3>
+                    {businessDocuments.slice(0, 6).map((doc) => (
+                      <div className="agent-template-card" key={doc.document_id}>
+                        <strong>{doc.title || doc.document_id}</strong>
+                        <p className="muted">Type: {doc.document_type}</p>
+                        <p className="muted">{doc.extracted_summary}</p>
+                        {(doc.risk_flags || []).length > 0 && (
+                          <p className="muted">Risks: {doc.risk_flags.join('; ')}</p>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {businessProposals.length > 0 && (
+                  <>
+                    <h3>Proposal drafts</h3>
+                    {businessProposals.slice(0, 6).map((proposal) => (
+                      <div className="agent-template-card" key={proposal.proposal_id}>
+                        <strong>{proposal.title}</strong>
+                        <p className="muted">Client: {proposal.client || '—'} · {proposal.status}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {businessMarketingItems.length > 0 && (
+                  <>
+                    <h3>Marketing calendar</h3>
+                    {businessMarketingItems.slice(0, 6).map((item) => (
+                      <div className="agent-template-card" key={item.item_id}>
+                        <strong>{item.title}</strong>
+                        <p className="muted">{item.channel} · {item.scheduled_for || 'unscheduled'} · {item.status}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Drafts only — EvolveAgent never sends email, processes payments, or contacts an external CRM.</p>
               </div>
             )}
           </section>

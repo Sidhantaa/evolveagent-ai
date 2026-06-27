@@ -76,6 +76,12 @@ class StorageService:
             "agent_departments.json",
             "department_runs.json",
             "department_collaboration.json",
+            "business_leads.json",
+            "business_support_cases.json",
+            "business_documents.json",
+            "business_proposals.json",
+            "business_marketing_calendar.json",
+            "business_kpis.json",
         ):
             self._ensure_file(filename)
 

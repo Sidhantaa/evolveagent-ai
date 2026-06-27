@@ -1686,3 +1686,73 @@ export async function createDepartmentCollaboration(payload) {
   if (!response.ok) throw new Error('Failed to plan collaboration')
   return response.json()
 }
+
+async function getJson(path) {
+  try {
+    const response = await fetch(`${API_BASE}${path}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+async function postJson(path, payload) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
+  return response.json()
+}
+
+async function patchJson(path, payload) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
+  return response.json()
+}
+
+export function getBusinessDashboard(workspaceId) {
+  return getJson(`/api/business/dashboard${query({ workspace_id: workspaceId })}`)
+}
+export function getBusinessLeads(workspaceId) {
+  return getJson(`/api/business/leads${query({ workspace_id: workspaceId })}`)
+}
+export function createBusinessLead(payload) {
+  return postJson('/api/business/leads', payload)
+}
+export function updateBusinessLead(leadId, payload) {
+  return patchJson(`/api/business/leads/${leadId}`, payload)
+}
+export function getBusinessSupportCases(workspaceId) {
+  return getJson(`/api/business/support-cases${query({ workspace_id: workspaceId })}`)
+}
+export function createBusinessSupportCase(payload) {
+  return postJson('/api/business/support-cases', payload)
+}
+export function updateBusinessSupportCase(caseId, payload) {
+  return patchJson(`/api/business/support-cases/${caseId}`, payload)
+}
+export function getBusinessDocuments(workspaceId) {
+  return getJson(`/api/business/documents${query({ workspace_id: workspaceId })}`)
+}
+export function createBusinessDocument(payload) {
+  return postJson('/api/business/documents', payload)
+}
+export function getBusinessProposals(workspaceId) {
+  return getJson(`/api/business/proposals${query({ workspace_id: workspaceId })}`)
+}
+export function createBusinessProposal(payload) {
+  return postJson('/api/business/proposals', payload)
+}
+export function getBusinessMarketingItems(workspaceId) {
+  return getJson(`/api/business/marketing-calendar${query({ workspace_id: workspaceId })}`)
+}
+export function createBusinessMarketingItem(payload) {
+  return postJson('/api/business/marketing-calendar', payload)
+}

@@ -73,6 +73,12 @@ backend/app/data/agent_marketplace_installs.json
 backend/app/data/agent_departments.json
 backend/app/data/department_runs.json
 backend/app/data/department_collaboration.json
+backend/app/data/business_leads.json
+backend/app/data/business_support_cases.json
+backend/app/data/business_documents.json
+backend/app/data/business_proposals.json
+backend/app/data/business_marketing_calendar.json
+backend/app/data/business_kpis.json
 backend/app/data/*.tmp
 *.log
 logs/

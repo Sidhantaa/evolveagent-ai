@@ -519,3 +519,95 @@ class DepartmentCollaborationRequest(BaseModel):
     goal: str = Field(..., min_length=1, max_length=2000)
     departments: list[str] = Field(default_factory=list)
     lead_department: str | None = Field(default=None, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v18.0 Real Business Automation Layer
+# ----------------------------------------------------------------------
+class BusinessLeadCreateRequest(BaseModel):
+    name: str = Field(default="", max_length=160)
+    company: str = Field(default="", max_length=160)
+    email: str = Field(default="", max_length=200)
+    status: str = Field(default="new", pattern="^(new|contacted|qualified|proposal_sent|won|lost)$")
+    source: str = Field(default="manual", pattern="^(manual|chat|file|recording)$")
+    notes: str = Field(default="", max_length=4000)
+    next_step: str = Field(default="", max_length=500)
+    workspace_id: str | None = None
+
+
+class BusinessLeadUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=160)
+    company: str | None = Field(default=None, max_length=160)
+    email: str | None = Field(default=None, max_length=200)
+    status: str | None = Field(default=None, pattern="^(new|contacted|qualified|proposal_sent|won|lost)$")
+    source: str | None = Field(default=None, pattern="^(manual|chat|file|recording)$")
+    notes: str | None = Field(default=None, max_length=4000)
+    next_step: str | None = Field(default=None, max_length=500)
+
+
+class BusinessSupportCaseCreateRequest(BaseModel):
+    customer: str = Field(default="", max_length=160)
+    subject: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=4000)
+    priority: str = Field(default="medium", pattern="^(low|medium|high)$")
+    status: str = Field(default="open", pattern="^(open|waiting|resolved|escalated)$")
+    workspace_id: str | None = None
+
+
+class BusinessSupportCaseUpdateRequest(BaseModel):
+    customer: str | None = Field(default=None, max_length=160)
+    subject: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    status: str | None = Field(default=None, pattern="^(open|waiting|resolved|escalated)$")
+    triage_summary: str | None = Field(default=None, max_length=1000)
+    draft_reply: str | None = Field(default=None, max_length=4000)
+
+
+class BusinessDocumentCreateRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    document_type: str = Field(default="other", pattern="^(invoice|contract|proposal|receipt|other)$")
+    content: str = Field(default="", max_length=20000)
+    workspace_id: str | None = None
+
+
+class BusinessDocumentUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    document_type: str | None = Field(default=None, pattern="^(invoice|contract|proposal|receipt|other)$")
+    content: str | None = Field(default=None, max_length=20000)
+
+
+class BusinessProposalCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    client: str = Field(default="", max_length=160)
+    scope: str = Field(default="", max_length=4000)
+    draft: str = Field(default="", max_length=8000)
+    lead_id: str | None = Field(default=None, max_length=120)
+    status: str = Field(default="draft", pattern="^(draft|reviewed|sent_manually|archived)$")
+    workspace_id: str | None = None
+
+
+class BusinessProposalUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    client: str | None = Field(default=None, max_length=160)
+    scope: str | None = Field(default=None, max_length=4000)
+    draft: str | None = Field(default=None, max_length=8000)
+    lead_id: str | None = Field(default=None, max_length=120)
+    status: str | None = Field(default=None, pattern="^(draft|reviewed|sent_manually|archived)$")
+
+
+class BusinessMarketingItemCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    channel: str = Field(default="other", pattern="^(email|linkedin|website|instagram|other)$")
+    scheduled_for: str = Field(default="", max_length=60)
+    status: str = Field(default="planned", pattern="^(planned|drafted|approved|posted_manually)$")
+    draft_content: str = Field(default="", max_length=4000)
+    workspace_id: str | None = None
+
+
+class BusinessMarketingItemUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    channel: str | None = Field(default=None, pattern="^(email|linkedin|website|instagram|other)$")
+    scheduled_for: str | None = Field(default=None, max_length=60)
+    status: str | None = Field(default=None, pattern="^(planned|drafted|approved|posted_manually)$")
+    draft_content: str | None = Field(default=None, max_length=4000)
