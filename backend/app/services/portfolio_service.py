@@ -213,7 +213,12 @@ class PortfolioService:
         all_scores = [run.get("overall_judge_score") for item in summaries for run in item["runs"] if isinstance(run.get("overall_judge_score"), (int, float))]
         average_score = round(sum(all_scores) / len(all_scores), 2) if all_scores else 0
         completion_rate = round((completed_tasks / total_tasks) * 100, 2) if total_tasks else 0
-        regressions = self.storage.read_list("evaluation_regressions.json")
+        summary_workspace_ids = {item.get("workspace_id") for item in summaries}
+        regressions = [
+            regression
+            for regression in self.storage.read_list("evaluation_regressions.json")
+            if regression.get("workspace_id") in summary_workspace_ids
+        ]
 
         drivers: list[str] = []
         risks: list[str] = []

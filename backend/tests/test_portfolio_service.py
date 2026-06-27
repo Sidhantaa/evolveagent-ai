@@ -1,6 +1,10 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.governance_service import GovernanceService
+from app.services.portfolio_service import PortfolioService
+from app.services.storage_service import StorageService
+from app.services.workspace_service import WorkspaceService
 
 client = TestClient(app)
 
@@ -71,6 +75,25 @@ def test_health_score_returns_score_rating_and_drivers():
     assert isinstance(health["risks"], list)
     assert isinstance(health["recommendations"], list) and health["recommendations"]
     assert "task_completion_rate" in health["metrics"]
+
+
+def test_health_counts_only_portfolio_workspace_regressions(tmp_path):
+    storage = StorageService(str(tmp_path))
+    workspace_service = WorkspaceService(storage)
+    governance_service = GovernanceService(storage)
+    service = PortfolioService(storage, workspace_service, governance_service)
+    workspace = workspace_service.create_workspace(
+        {"name": "Scoped Regression Portfolio", "description": "test", "tags": []}
+    )
+    storage.append(
+        "evaluation_regressions.json",
+        {"regression_id": "orphan-regression", "workspace_id": "missing-workspace", "severity": "high"},
+    )
+
+    health = service.health()
+
+    assert workspace["workspace_id"]
+    assert health["metrics"]["regressions"] == 0
 
 
 def test_executive_report_generated_and_persisted():
