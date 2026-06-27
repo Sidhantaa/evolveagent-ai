@@ -117,6 +117,11 @@ import {
   createChiefWeeklyPlan,
   createChiefFollowup,
   updateChiefFollowup,
+  getSimulatorDashboard,
+  getSimulatorScenarios,
+  getSimulatorResults,
+  createSimulatorScenario,
+  runSimulatorScenario,
   getGoal,
   getGoals,
   getHistory,
@@ -548,6 +553,17 @@ function App() {
   const [followupTitle, setFollowupTitle] = useState('')
   const [followupDueDate, setFollowupDueDate] = useState('')
   const [followupPriority, setFollowupPriority] = useState('medium')
+  const [showSimulatorPanel, setShowSimulatorPanel] = useState(false)
+  const [simulatorDashboard, setSimulatorDashboard] = useState(null)
+  const [simulatorScenarios, setSimulatorScenarios] = useState([])
+  const [simulatorResults, setSimulatorResults] = useState([])
+  const [simulatorBusy, setSimulatorBusy] = useState(false)
+  const [simulatorError, setSimulatorError] = useState(null)
+  const [scenarioTitle, setScenarioTitle] = useState('')
+  const [scenarioType, setScenarioType] = useState('decision')
+  const [scenarioAssumptions, setScenarioAssumptions] = useState('')
+  const [scenarioOptions, setScenarioOptions] = useState('')
+  const [latestSimResult, setLatestSimResult] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -656,6 +672,7 @@ function App() {
     refreshAgentMarketplace(workspaceId)
     refreshBusinessPanel(workspaceId)
     refreshChiefPanel(workspaceId)
+    refreshSimulatorPanel(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1184,6 +1201,55 @@ function App() {
 
   async function handleMarkFollowupDone(followupId) {
     await runChiefAction(() => updateChiefFollowup(followupId, { status: 'done' }))
+  }
+
+  async function refreshSimulatorPanel(nextWorkspaceId = workspaceId) {
+    const [dashboard, scenarios, results] = await Promise.all([
+      getSimulatorDashboard(nextWorkspaceId),
+      getSimulatorScenarios(nextWorkspaceId),
+      getSimulatorResults(nextWorkspaceId),
+    ])
+    setSimulatorDashboard(dashboard)
+    setSimulatorScenarios(scenarios?.scenarios || [])
+    setSimulatorResults(results?.results || [])
+  }
+
+  async function runSimulatorAction(action) {
+    setSimulatorBusy(true)
+    setSimulatorError(null)
+    try {
+      const value = await action()
+      await refreshSimulatorPanel(workspaceId)
+      return value
+    } catch (error) {
+      setSimulatorError(error.message || 'Simulator action failed')
+      return null
+    } finally {
+      setSimulatorBusy(false)
+    }
+  }
+
+  async function handleCreateScenario(event) {
+    event.preventDefault()
+    if (!scenarioTitle.trim()) return
+    await runSimulatorAction(async () => {
+      await createSimulatorScenario({
+        title: scenarioTitle.trim(),
+        scenario_type: scenarioType,
+        assumptions: scenarioAssumptions.split(',').map((value) => value.trim()).filter(Boolean),
+        options: scenarioOptions.split(',').map((value) => value.trim()).filter(Boolean),
+        workspace_id: workspaceId,
+      })
+      setScenarioTitle('')
+      setScenarioType('decision')
+      setScenarioAssumptions('')
+      setScenarioOptions('')
+    })
+  }
+
+  async function handleRunSimulation(scenarioId) {
+    const result = await runSimulatorAction(() => runSimulatorScenario(scenarioId))
+    if (result) setLatestSimResult(result)
   }
 
   async function refreshAppBuilderTemplates() {
@@ -4747,6 +4813,119 @@ function App() {
                 )}
 
                 <p className="muted">Recommendations only — no reminders are sent, no calendar/email is written, nothing runs automatically.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowSimulatorPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Business Simulator
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSimulatorPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Autonomous Business Simulator · v20.0</strong>
+                  <span>Simulate decisions, cost, time, and risk before acting. Simulation only — not financial advice.</span>
+                </div>
+                {simulatorDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Scenarios</span><strong>{simulatorDashboard.total_scenarios}</strong></div>
+                    <div><span>Results</span><strong>{simulatorDashboard.total_results}</strong></div>
+                    <div><span>Avg risk</span><strong>{simulatorDashboard.average_risk_score}</strong></div>
+                    <div><span>High risk</span><strong>{(simulatorDashboard.high_risk_scenarios || []).length}</strong></div>
+                  </div>
+                )}
+                {simulatorDashboard?.recommended_next_simulation && (
+                  <p className="muted">Next: {simulatorDashboard.recommended_next_simulation}</p>
+                )}
+                {simulatorError && <p className="error-text">{simulatorError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshSimulatorPanel(workspaceId)} disabled={simulatorBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateScenario}>
+                  <h3>New scenario</h3>
+                  <input type="text" placeholder="Title (e.g. Launch with 3 features)" value={scenarioTitle} onChange={(event) => setScenarioTitle(event.target.value)} />
+                  <select value={scenarioType} onChange={(event) => setScenarioType(event.target.value)}>
+                    <option value="decision">decision</option>
+                    <option value="cost">cost</option>
+                    <option value="time">time</option>
+                    <option value="risk">risk</option>
+                    <option value="launch">launch</option>
+                    <option value="workflow">workflow</option>
+                    <option value="custom">custom</option>
+                  </select>
+                  <input type="text" placeholder="Assumptions (comma separated)" value={scenarioAssumptions} onChange={(event) => setScenarioAssumptions(event.target.value)} />
+                  <input type="text" placeholder="Options (comma separated)" value={scenarioOptions} onChange={(event) => setScenarioOptions(event.target.value)} />
+                  <button type="submit" disabled={simulatorBusy || !scenarioTitle.trim()}>Create scenario</button>
+                </form>
+
+                {simulatorScenarios.length > 0 && (
+                  <>
+                    <h3>Scenarios</h3>
+                    {simulatorScenarios.slice(0, 6).map((scenario) => (
+                      <div className="agent-template-card" key={scenario.scenario_id}>
+                        <strong>{scenario.title}</strong>
+                        <p className="muted">{scenario.scenario_type} · {(scenario.options || []).length} option(s)</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleRunSimulation(scenario.scenario_id)} disabled={simulatorBusy}>
+                            Run simulation
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {latestSimResult && (
+                  <div className="agent-template-card">
+                    <strong>Latest result (simulation only)</strong>
+                    <span>{latestSimResult.summary}</span>
+                    <p className="muted">Decision score: {latestSimResult.decision_score}/100 · Confidence: {latestSimResult.confidence}</p>
+                    <p className="muted">
+                      Cost (est.): ${latestSimResult.cost_estimate?.low}–${latestSimResult.cost_estimate?.high}
+                      (~${latestSimResult.cost_estimate?.expected})
+                    </p>
+                    <p className="muted">
+                      Time (est.): {latestSimResult.time_estimate?.best_case_days}–{latestSimResult.time_estimate?.worst_case_days} days
+                      (~{latestSimResult.time_estimate?.expected_days})
+                    </p>
+                    <p className="muted">
+                      Risk: {latestSimResult.risk_estimate?.risk_level} ({latestSimResult.risk_estimate?.risk_score})
+                    </p>
+                    {(latestSimResult.option_comparison || []).length > 0 && (
+                      <>
+                        <p className="muted">Option comparison:</p>
+                        {latestSimResult.option_comparison.map((option, index) => (
+                          <p className="muted" key={index}>
+                            • {option.option}: ~${option.estimated_cost}, ~{option.estimated_days}d, {option.risk_level} risk
+                          </p>
+                        ))}
+                      </>
+                    )}
+                    <p className="muted">→ {latestSimResult.recommendation}</p>
+                  </div>
+                )}
+
+                {simulatorResults.length > 0 && (
+                  <>
+                    <h3>Recent results</h3>
+                    {simulatorResults.slice(0, 5).map((result) => (
+                      <div className="agent-template-card" key={result.result_id}>
+                        <strong>{result.risk_estimate?.risk_level} risk · score {result.decision_score}</strong>
+                        <span>{result.summary}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Simulation only — rough estimates, not financial advice; nothing is executed.</p>
               </div>
             )}
           </section>

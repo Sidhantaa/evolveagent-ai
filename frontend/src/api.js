@@ -1778,3 +1778,19 @@ export function createChiefFollowup(payload) {
 export function updateChiefFollowup(followupId, payload) {
   return patchJson(`/api/chief-of-staff/followups/${followupId}`, payload)
 }
+
+export function getSimulatorDashboard(workspaceId) {
+  return getJson(`/api/business-simulator/dashboard${query({ workspace_id: workspaceId })}`)
+}
+export function getSimulatorScenarios(workspaceId) {
+  return getJson(`/api/business-simulator/scenarios${query({ workspace_id: workspaceId })}`)
+}
+export function getSimulatorResults(workspaceId) {
+  return getJson(`/api/business-simulator/results${query({ workspace_id: workspaceId })}`)
+}
+export function createSimulatorScenario(payload) {
+  return postJson('/api/business-simulator/scenarios', payload)
+}
+export function runSimulatorScenario(scenarioId) {
+  return postJson(`/api/business-simulator/scenarios/${scenarioId}/run`, {})
+}

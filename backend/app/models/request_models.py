@@ -639,3 +639,23 @@ class ChiefFollowupUpdateRequest(BaseModel):
     due_date: str | None = Field(default=None, max_length=10)
     priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
     status: str | None = Field(default=None, pattern="^(open|done|snoozed|archived)$")
+
+
+# ----------------------------------------------------------------------
+# v20.0 Autonomous Business Simulator
+# ----------------------------------------------------------------------
+class SimulationScenarioCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=4000)
+    scenario_type: str = Field(default="decision", pattern="^(decision|cost|time|risk|launch|workflow|custom)$")
+    assumptions: list[str] = Field(default_factory=list)
+    options: list[str] = Field(default_factory=list)
+    workspace_id: str | None = None
+
+
+class SimulationScenarioUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    scenario_type: str | None = Field(default=None, pattern="^(decision|cost|time|risk|launch|workflow|custom)$")
+    assumptions: list[str] | None = None
+    options: list[str] | None = None

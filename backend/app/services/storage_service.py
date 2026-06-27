@@ -86,6 +86,9 @@ class StorageService:
             "chief_weekly_plans.json",
             "chief_followups.json",
             "chief_priority_scores.json",
+            "business_simulations.json",
+            "business_simulation_scenarios.json",
+            "business_simulation_results.json",
         ):
             self._ensure_file(filename)
 

@@ -39,6 +39,8 @@ from app.models.request_models import (
     ChiefFollowupCreateRequest,
     ChiefFollowupUpdateRequest,
     ChiefPlanRequest,
+    SimulationScenarioCreateRequest,
+    SimulationScenarioUpdateRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -146,6 +148,7 @@ from app.services.plugin_sdk_service import PluginSDKService
 from app.services.agent_department_service import AgentDepartmentService
 from app.services.business_operator_service import BusinessOperatorService
 from app.services.chief_of_staff_service import ChiefOfStaffService
+from app.services.business_simulator_service import BusinessSimulatorService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -212,6 +215,7 @@ portfolio_service = PortfolioService(storage, workspace_service, governance_serv
 agent_department_service = AgentDepartmentService(storage, governance_service, permission_service)
 business_operator_service = BusinessOperatorService(storage, governance_service)
 chief_of_staff_service = ChiefOfStaffService(storage, governance_service)
+business_simulator_service = BusinessSimulatorService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -1934,6 +1938,63 @@ def update_chief_followup(followup_id: str, request: ChiefFollowupUpdateRequest)
         return chief_of_staff_service.update_followup(followup_id, request.model_dump(exclude_unset=True))
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Follow-up not found") from error
+
+
+# ----------------------------------------------------------------------
+# v20.0 Autonomous Business Simulator
+# ----------------------------------------------------------------------
+@router.get("/business-simulator/dashboard")
+def get_business_simulator_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    return business_simulator_service.dashboard(workspace_id)
+
+
+@router.get("/business-simulator/scenarios")
+def list_business_simulator_scenarios(workspace_id: str | None = Query(default=None)) -> dict:
+    scenarios = business_simulator_service.list_scenarios(workspace_id)
+    return {"scenarios": scenarios, "count": len(scenarios)}
+
+
+@router.post("/business-simulator/scenarios")
+def create_business_simulator_scenario(request: SimulationScenarioCreateRequest) -> dict:
+    return business_simulator_service.create_scenario(request.model_dump())
+
+
+@router.get("/business-simulator/results")
+def list_business_simulator_results(workspace_id: str | None = Query(default=None)) -> dict:
+    results = business_simulator_service.list_results(workspace_id)
+    return {"results": results, "count": len(results)}
+
+
+@router.get("/business-simulator/results/{result_id}")
+def get_business_simulator_result(result_id: str) -> dict:
+    result = business_simulator_service.get_result(result_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Result not found")
+    return result
+
+
+@router.get("/business-simulator/scenarios/{scenario_id}")
+def get_business_simulator_scenario(scenario_id: str) -> dict:
+    scenario = business_simulator_service.get_scenario(scenario_id)
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return scenario
+
+
+@router.patch("/business-simulator/scenarios/{scenario_id}")
+def update_business_simulator_scenario(scenario_id: str, request: SimulationScenarioUpdateRequest) -> dict:
+    try:
+        return business_simulator_service.update_scenario(scenario_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Scenario not found") from error
+
+
+@router.post("/business-simulator/scenarios/{scenario_id}/run")
+def run_business_simulator_scenario(scenario_id: str) -> dict:
+    try:
+        return business_simulator_service.run_simulation(scenario_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Scenario not found") from error
 
 
 @router.get("/governance")
