@@ -88,6 +88,8 @@ backend/app/data/business_simulation_scenarios.json
 backend/app/data/business_simulation_results.json
 backend/app/data/multimodal_items.json
 backend/app/data/multimodal_analyses.json
+backend/app/data/industry_modes.json
+backend/app/data/industry_mode_runs.json
 backend/app/data/*.tmp
 *.log
 logs/

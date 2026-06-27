@@ -1810,3 +1810,19 @@ export function createMultimodalItem(payload) {
 export function analyzeMultimodalItem(itemId, analysisType) {
   return postJson(`/api/multimodal/items/${itemId}/analyze`, { analysis_type: analysisType })
 }
+
+export function getIndustryModesDashboard() {
+  return getJson('/api/industry-modes/dashboard')
+}
+export function getIndustryModes() {
+  return getJson('/api/industry-modes')
+}
+export function getIndustryModeRuns() {
+  return getJson('/api/industry-modes/runs')
+}
+export function seedIndustryModes() {
+  return postJson('/api/industry-modes/seed', {})
+}
+export function runIndustryMode(modeId, prompt) {
+  return postJson(`/api/industry-modes/${modeId}/run`, { prompt })
+}

@@ -91,6 +91,8 @@ class StorageService:
             "business_simulation_results.json",
             "multimodal_items.json",
             "multimodal_analyses.json",
+            "industry_modes.json",
+            "industry_mode_runs.json",
         ):
             self._ensure_file(filename)
 

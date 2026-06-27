@@ -674,3 +674,22 @@ class MultimodalItemCreateRequest(BaseModel):
 
 class MultimodalAnalyzeRequest(BaseModel):
     analysis_type: str | None = Field(default=None, pattern="^(screenshot|ui_bug|diagram|whiteboard|document_image|custom)$")
+
+
+# ----------------------------------------------------------------------
+# v22.0 Industry Workflow Modes
+# ----------------------------------------------------------------------
+class IndustryModeUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    terminology: list[str] | None = None
+    recommended_agents: list[str] | None = None
+    workflow_templates: list[str] | None = None
+    risk_rules: list[str] | None = None
+    approval_rules: list[str] | None = None
+    enabled: bool | None = None
+
+
+class IndustryModeRunRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=2000)
+    workspace_id: str | None = None

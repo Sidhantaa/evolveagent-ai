@@ -127,6 +127,11 @@ import {
   getMultimodalAnalyses,
   createMultimodalItem,
   analyzeMultimodalItem,
+  getIndustryModesDashboard,
+  getIndustryModes,
+  getIndustryModeRuns,
+  seedIndustryModes,
+  runIndustryMode,
   getGoal,
   getGoals,
   getHistory,
@@ -578,6 +583,14 @@ function App() {
   const [mmType, setMmType] = useState('screenshot')
   const [mmDescription, setMmDescription] = useState('')
   const [latestMmAnalysis, setLatestMmAnalysis] = useState(null)
+  const [showIndustryPanel, setShowIndustryPanel] = useState(false)
+  const [industryDashboard, setIndustryDashboard] = useState(null)
+  const [industryModes, setIndustryModes] = useState([])
+  const [industryRuns, setIndustryRuns] = useState([])
+  const [industryBusy, setIndustryBusy] = useState(false)
+  const [industryError, setIndustryError] = useState(null)
+  const [industryRunModeId, setIndustryRunModeId] = useState('')
+  const [industryPrompt, setIndustryPrompt] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -688,6 +701,7 @@ function App() {
     refreshChiefPanel(workspaceId)
     refreshSimulatorPanel(workspaceId)
     refreshMultimodalPanel(workspaceId)
+    refreshIndustryPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1310,6 +1324,43 @@ function App() {
   async function handleAnalyzeMultimodalItem(itemId, analysisType) {
     const analysis = await runMultimodalAction(() => analyzeMultimodalItem(itemId, analysisType))
     if (analysis) setLatestMmAnalysis(analysis)
+  }
+
+  async function refreshIndustryPanel() {
+    const [dashboard, modes, runs] = await Promise.all([
+      getIndustryModesDashboard(),
+      getIndustryModes(),
+      getIndustryModeRuns(),
+    ])
+    setIndustryDashboard(dashboard)
+    setIndustryModes(modes?.modes || [])
+    setIndustryRuns(runs?.runs || [])
+  }
+
+  async function runIndustryAction(action) {
+    setIndustryBusy(true)
+    setIndustryError(null)
+    try {
+      await action()
+      await refreshIndustryPanel()
+    } catch (error) {
+      setIndustryError(error.message || 'Industry mode action failed')
+    } finally {
+      setIndustryBusy(false)
+    }
+  }
+
+  async function handleSeedIndustryModes() {
+    await runIndustryAction(() => seedIndustryModes())
+  }
+
+  async function handleRunIndustryMode(event) {
+    event.preventDefault()
+    if (!industryRunModeId || !industryPrompt.trim()) return
+    await runIndustryAction(async () => {
+      await runIndustryMode(industryRunModeId, industryPrompt.trim())
+      setIndustryPrompt('')
+    })
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5069,6 +5120,81 @@ function App() {
                 )}
 
                 <p className="muted">Mock mode — local heuristic analysis only; no paid vision API is called.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowIndustryPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Industry Modes
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showIndustryPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Industry Workflow Modes · v22.0</strong>
+                  <span>Configure terminology, recommended agents, templates, and risk/approval rules per industry.</span>
+                </div>
+                {industryDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Modes</span><strong>{industryDashboard.total_modes}</strong></div>
+                    <div><span>Enabled</span><strong>{industryDashboard.enabled_modes}</strong></div>
+                    <div><span>Runs</span><strong>{industryDashboard.total_runs}</strong></div>
+                  </div>
+                )}
+                {industryError && <p className="error-text">{industryError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleSeedIndustryModes} disabled={industryBusy}>Seed default modes</button>
+                  <button type="button" onClick={() => refreshIndustryPanel()} disabled={industryBusy}>Refresh</button>
+                </div>
+
+                {industryModes.length > 0 && (
+                  <>
+                    <h3>Modes</h3>
+                    {industryModes.map((mode) => (
+                      <div className="agent-template-card" key={mode.mode_id}>
+                        <strong>{mode.name} {mode.enabled === false ? '· disabled' : ''}</strong>
+                        <span>{mode.description}</span>
+                        <p className="muted">Agents: {(mode.recommended_agents || []).join(', ') || '—'}</p>
+                        <p className="muted">Templates: {(mode.workflow_templates || []).join('; ') || '—'}</p>
+                        <p className="muted">Risk rules: {(mode.risk_rules || []).join('; ') || '—'}</p>
+                        <p className="muted">Approval: {(mode.approval_rules || []).join('; ') || '—'}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleRunIndustryMode}>
+                  <h3>Run a mode</h3>
+                  <select value={industryRunModeId} onChange={(event) => setIndustryRunModeId(event.target.value)}>
+                    <option value="">Select mode…</option>
+                    {industryModes
+                      .filter((mode) => mode.enabled !== false)
+                      .map((mode) => (
+                        <option key={mode.mode_id} value={mode.mode_id}>{mode.name}</option>
+                      ))}
+                  </select>
+                  <input type="text" placeholder="Prompt for this mode" value={industryPrompt} onChange={(event) => setIndustryPrompt(event.target.value)} />
+                  <button type="submit" disabled={industryBusy || !industryRunModeId || !industryPrompt.trim()}>Run mode</button>
+                </form>
+
+                {industryRuns.length > 0 && (
+                  <>
+                    <h3>Recent runs</h3>
+                    {industryRuns.slice(0, 5).map((run) => (
+                      <div className="agent-template-card" key={run.run_id}>
+                        <strong>{run.mode_name}</strong>
+                        <span>{run.prompt}</span>
+                        <p className="muted">{run.requires_approval ? 'approval required' : 'no approval'} · {run.status}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </section>
