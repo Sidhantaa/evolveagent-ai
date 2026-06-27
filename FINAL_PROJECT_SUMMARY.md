@@ -1,10 +1,10 @@
-# EvolveAgent AI — Project Summary (current: EvolveAgent OS v15.0)
+# EvolveAgent AI — Project Summary (current completed: v21.0 Multi-Modal Real-World Agent)
 
 ## Final Platform Positioning
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
-The v15.0 EvolveAgent OS checkpoint is a final platform-readiness layer added additively on top of the existing system:
+The current completed roadmap state is **v21.0 — Multi-Modal Real-World Agent**. The active development track is **v22.0 — Industry Workflow Modes**. The v15.0 EvolveAgent OS checkpoint remains the platform base and added the readiness layer below:
 
 - **Unified installer readiness** (`GET /api/os/installer`) — backend/frontend setup steps, required + optional env vars, verification commands, detected readiness, and missing-config warnings. Read-only; it never installs or runs anything.
 - **Plugin SDK** (`GET /api/os/plugin-sdk`, `POST /api/os/plugin-sdk/validate`) — declarative plugin manifest schema, permission levels (`read_only`, `plan_only`, `approve_to_edit`, `approve_to_run`, `blocked`), allowed tool types, safety rules, example manifest, and a manifest validator. No remote plugin loading or plugin code execution.
@@ -31,7 +31,7 @@ Full diagrams (system, agent workflow, governance, Linear/Codex, workspace memor
 
 ## Short Summary
 
-EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI operating workspace. It combines a polished Jarvis-style interface with Master Agent routing, specialist agents, real OpenAI mode with mock fallback, file and recording analysis, mock image previews, Mission Control goals, custom agents, Project Brain search, safe tool routing, approval workflows, analytics, adaptive learning, and Developer Mode transparency.
+EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI operating workspace. It combines a polished Jarvis-style interface with Master Agent routing, specialist agents, real OpenAI mode with mock fallback, file and recording analysis, mock image previews, Mission Control goals, custom agents, Project Brain search, safe tool routing, approval workflows, analytics, adaptive learning, Developer Mode transparency, multi-agent departments, workforce marketplace templates, business automation, chief-of-staff planning, business simulation, and multi-modal real-world analysis.
 
 ## Full Technical Summary
 
@@ -92,6 +92,12 @@ The v3.0 checkpoint added the first Agent OS foundation on top of the existing v
 - System Prompt Registry
 - Kernel Service wrapper
 - Professional v3.5 UI polish with Jarvis-style command center, theme tokens, onboarding, accessibility improvements, and responsive layout
+- Multi-agent organization with departments, manager/worker/reviewer/auditor roles, department dashboards, and collaboration planning
+- Agent Workforce Marketplace with reusable team templates, workflow packs, import/export, ratings, benchmark metadata, and permission profiles
+- Business Automation Layer for leads, support triage drafts, document processing, proposals, marketing calendar, and KPI dashboard
+- AI Chief of Staff for planning, priorities, reminders, summaries, and next-action guidance
+- Autonomous Business Simulator for cost, risk, time, and business-impact comparisons
+- Multi-Modal Real-World Agent for screenshot/image/diagram-style analysis, UI issue summaries, and visual workflow interpretation
 
 ## What Problem It Solves
 
@@ -141,15 +147,18 @@ Correct learning description:
 - JSON storage is for MVP/demo use
 - Agent Jobs are local persisted jobs, not distributed workers
 
-## Future Roadmap After v15
+## Future Roadmap After v21
 
-- Server-Sent Events streaming for token-by-token responses
-- Production-grade vector database / embedding provider behind the existing memory abstraction
-- OCR and scanned-PDF support; speaker diarization for recordings
-- Richer approval diff previews before applying automation
-- User accounts, team workspaces, and a deployment path
-- Real image-generation API behind the current mock-fallback abstraction
-- Expanded model-routing policies and cost tracking
+- v22.0 — Industry Workflow Modes
+- v23.0 — Agent-to-Agent Network
+- v24.0 — Self-Healing Project System
+- v25.0 — AI Company Brain
+- v26.0 — Personal Device Operator / Phone Autopilot
+- v27.0 — Real Fine-Tuning + Private Training Lab
+- v28.0 — Personal AI Avatar / Voice Twin
+- v29.0 — Real-Time Life Operating System
+- v30.0 — Universal App Operator
+- v31.0+ — team management, SaaS builder, business operator, compliance intelligence, executive board, innovation lab, simulation world, organization OS, and always-on companion tracks
 
 ## Earlier Roadmap Items
 
@@ -175,7 +184,8 @@ Correct learning description:
 - Added Approval Workflow 2.0 with approval chains, queue endpoints, audit records, rejection handling, optional webhook notification, and governance logging.
 - Built an Agent OS foundation with persisted Agent Jobs, lifecycle controls, health monitoring, System Prompt Registry, and a Kernel Service wrapper around request orchestration.
 - Designed safety controls including prompt-injection checks, secret scanning, protected paths, allowlisted commands, approval-gated automation, and no unrestricted shell execution.
+- Extended the platform through v21 with multi-agent departments, a workforce marketplace, business automation, AI chief-of-staff planning, autonomous business simulation, and multi-modal real-world analysis.
 
 ## Interview Explanation
 
-EvolveAgent AI is a full-stack AI operating workspace I built to explore safe multi-agent orchestration. The system uses a Master Orchestrator Agent to classify requests, retrieve workspace memory, select tools or specialist agents, evaluate output quality, and store feedback and analytics. It supports text, files, recordings, image prompts, voice input, goal planning, custom agents, and approval-gated automation. Developer Mode exposes the workflow trace, provider metadata, consensus candidates, tool trace, approvals, agent jobs, system prompts, and raw JSON. The v3.5 checkpoint adds professional UI polish over the Agent OS foundation while keeping risky actions behind human approval and governance controls.
+EvolveAgent AI is a full-stack AI operating workspace I built to explore safe multi-agent orchestration. The system uses a Master Orchestrator Agent to classify requests, retrieve workspace memory, select tools or specialist agents, evaluate output quality, and store feedback and analytics. It supports text, files, recordings, image prompts, voice input, goal planning, custom agents, and approval-gated automation. Developer Mode exposes the workflow trace, provider metadata, consensus candidates, tool trace, approvals, agent jobs, system prompts, and raw JSON. The roadmap now includes multi-agent departments, an agent workforce marketplace, business automation, chief-of-staff planning, simulation, and multi-modal real-world analysis while keeping risky actions behind human approval and governance controls.

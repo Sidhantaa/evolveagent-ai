@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current version:** v15.0 — EvolveAgent OS &nbsp;•&nbsp; **Status:** v15.0 completed &nbsp;•&nbsp; **Release:** EvolveAgent OS
+**Current completed version:** v21.0 — Multi-Modal Real-World Agent &nbsp;•&nbsp; **Current work:** v22.0 — Industry Workflow Modes &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
 
@@ -16,7 +16,18 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v15.0 checkpoint introduces **EvolveAgent OS**, a final platform-readiness layer added on top of the existing system. It is additive and safe — no feature was removed, no hosting/auth/payments were added. EvolveAgent OS adds:
+The latest completed roadmap checkpoint is **v21.0 — Multi-Modal Real-World Agent**. The current active branch is **v22.0 — Industry Workflow Modes**, which is adding industry-specific workflow modes on top of the completed OS platform.
+
+Completed milestones after the v15.0 OS release:
+
+- **v16.0 — Multi-Agent Organization** — AI departments, manager/worker/reviewer/auditor roles, department dashboards, and cross-agent collaboration planning.
+- **v17.0 — Agent Workforce Marketplace** — reusable agent team templates, import/export, workflow packs, ratings, benchmark metadata, and safe permission profiles.
+- **v18.0 — Real Business Automation Layer** — local lead tracking, support triage drafts, document/invoice processing, proposals, marketing calendar, and business KPI dashboards.
+- **v19.0 — AI Chief of Staff** — daily/weekly planning, priority ranking, reminders, progress summaries, and next-action recommendations.
+- **v20.0 — Autonomous Business Simulator** — decision, cost, time, risk, and business-impact simulations for comparing plans before execution.
+- **v21.0 — Multi-Modal Real-World Agent** — screenshot/image/diagram-style inputs, UI bug analysis, visual workflow interpretation, and real-world input summarization through the governed agent stack.
+
+The v15.0 checkpoint introduced **EvolveAgent OS**, a platform-readiness layer added on top of the existing system. It is additive and safe — no feature was removed, no hosting/auth/payments were added. EvolveAgent OS adds:
 
 - **Unified platform installer** — a read-only `GET /api/os/installer` that returns backend/frontend setup steps, required and optional environment variables, verification commands, detected readiness state, and missing-config warnings. It never installs packages or runs commands.
 - **Plugin ecosystem SDK** — `GET /api/os/plugin-sdk` describes the plugin manifest schema, permission levels (`read_only`, `plan_only`, `approve_to_edit`, `approve_to_run`, `blocked`), allowed tool types, safety rules, and an example manifest. `POST /api/os/plugin-sdk/validate` validates a manifest and returns errors/warnings/normalized output. Plugins are declarative only — EvolveAgent OS never loads remote plugins or executes plugin code.
@@ -1020,23 +1031,23 @@ Automation safety rules:
 
 ## Future Improvements
 
-- Server-Sent Events streaming
-- Additional model routing policies and cost tracking
-- Real image API
-- OCR/scanned PDF support
-- Production-grade vector DB or embedding provider integration
-- File search across prior uploads
-- Deployment
-- Agent performance dashboard improvements
-- Human feedback trends over time
-- User authentication and team sharing
+- Complete and merge **v22.0 — Industry Workflow Modes**
+- v23.0 — Agent-to-Agent Network
+- v24.0 — Self-Healing Project System
+- v25.0 — AI Company Brain
+- v26.0 — Personal Device Operator / Phone Autopilot
+- v27.0 — Real Fine-Tuning + Private Training Lab
+- v28.0 — Personal AI Avatar / Voice Twin
+- v29.0 — Real-Time Life Operating System
+- v30.0 — Universal App Operator
+- v31.0+ — AI team lead, autonomous SaaS builder, business operator, compliance, simulation, organization OS, and always-on companion tracks
 
 ## Project Status
 
-- **Status:** v15.0 completed
-- **Release:** EvolveAgent OS
-- **Backend tests:** 222 passing (Pytest)
-- **Frontend build:** passing (Vite)
+- **Status:** v21.0 completed and merged; v22.0 in progress
+- **Platform release:** EvolveAgent OS
+- **Backend tests:** passing on completed release branches
+- **Frontend build:** passing on completed release branches
 - See [`FINAL_CHECKLIST.md`](FINAL_CHECKLIST.md) for the full release-readiness checklist and known limitations.
 
 ## Resume Bullets
