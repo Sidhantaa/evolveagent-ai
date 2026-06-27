@@ -738,3 +738,25 @@ class SelfHealingVerifyRequest(BaseModel):
     mock_stdout: str = Field(default="", max_length=8000)
     mock_stderr: str = Field(default="", max_length=8000)
     mock_exit_code: int = Field(default=0, ge=0, le=255)
+
+
+# ----------------------------------------------------------------------
+# v25.0 AI Company Brain
+# ----------------------------------------------------------------------
+class CompanyStrategyRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    horizon: str = Field(default="quarter", max_length=40)
+    objectives: list[str] = Field(default_factory=list)
+    focus_areas: list[str] = Field(default_factory=list)
+
+
+class CompanyDecisionRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    context: str = Field(default="", max_length=2000)
+    decision: str = Field(default="", max_length=2000)
+    rationale: str = Field(default="", max_length=2000)
+    impact: str = Field(default="medium", pattern="^(low|medium|high)$")
+
+
+class CompanyReportRequest(BaseModel):
+    workspace_id: str | None = None

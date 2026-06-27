@@ -50,6 +50,9 @@ from app.models.request_models import (
     AgentHandoffCreateRequest,
     SelfHealingCheckRequest,
     SelfHealingVerifyRequest,
+    CompanyStrategyRequest,
+    CompanyDecisionRequest,
+    CompanyReportRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -162,6 +165,7 @@ from app.services.multimodal_agent_service import MultimodalAgentService
 from app.services.industry_mode_service import IndustryModeService
 from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
+from app.services.company_brain_service import CompanyBrainService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -233,6 +237,7 @@ multimodal_agent_service = MultimodalAgentService(storage, governance_service)
 industry_mode_service = IndustryModeService(storage, governance_service)
 agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
+company_brain_service = CompanyBrainService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2201,6 +2206,47 @@ def verify_self_healing_repair(repair_id: str, request: SelfHealingVerifyRequest
         )
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Repair not found") from error
+
+
+# ----------------------------------------------------------------------
+# v25.0 AI Company Brain
+# ----------------------------------------------------------------------
+@router.get("/company-brain/dashboard")
+def get_company_brain_dashboard() -> dict:
+    return company_brain_service.dashboard()
+
+
+@router.post("/company-brain/strategy")
+def create_company_brain_strategy(request: CompanyStrategyRequest) -> dict:
+    return company_brain_service.create_strategy(request.model_dump())
+
+
+@router.get("/company-brain/strategy")
+def list_company_brain_strategy() -> dict:
+    strategy = company_brain_service.list_strategy()
+    return {"strategy": strategy, "count": len(strategy)}
+
+
+@router.post("/company-brain/decisions")
+def create_company_brain_decision(request: CompanyDecisionRequest) -> dict:
+    return company_brain_service.create_decision(request.model_dump())
+
+
+@router.get("/company-brain/decisions")
+def list_company_brain_decisions() -> dict:
+    decisions = company_brain_service.list_decisions()
+    return {"decisions": decisions, "count": len(decisions)}
+
+
+@router.post("/company-brain/reports")
+def create_company_brain_report(request: CompanyReportRequest | None = None) -> dict:
+    return company_brain_service.create_report()
+
+
+@router.get("/company-brain/reports")
+def list_company_brain_reports() -> dict:
+    reports = company_brain_service.list_reports()
+    return {"reports": reports, "count": len(reports)}
 
 
 @router.get("/governance")

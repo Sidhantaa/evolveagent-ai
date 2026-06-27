@@ -96,6 +96,9 @@ backend/app/data/agent_network_audits.json
 backend/app/data/self_healing_checks.json
 backend/app/data/self_healing_findings.json
 backend/app/data/self_healing_repairs.json
+backend/app/data/company_brain_reports.json
+backend/app/data/company_brain_decisions.json
+backend/app/data/company_brain_strategy.json
 backend/app/data/*.tmp
 *.log
 logs/
