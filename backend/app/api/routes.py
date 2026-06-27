@@ -41,6 +41,8 @@ from app.models.request_models import (
     ChiefPlanRequest,
     SimulationScenarioCreateRequest,
     SimulationScenarioUpdateRequest,
+    MultimodalItemCreateRequest,
+    MultimodalAnalyzeRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -149,6 +151,7 @@ from app.services.agent_department_service import AgentDepartmentService
 from app.services.business_operator_service import BusinessOperatorService
 from app.services.chief_of_staff_service import ChiefOfStaffService
 from app.services.business_simulator_service import BusinessSimulatorService
+from app.services.multimodal_agent_service import MultimodalAgentService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -216,6 +219,7 @@ agent_department_service = AgentDepartmentService(storage, governance_service, p
 business_operator_service = BusinessOperatorService(storage, governance_service)
 chief_of_staff_service = ChiefOfStaffService(storage, governance_service)
 business_simulator_service = BusinessSimulatorService(storage, governance_service)
+multimodal_agent_service = MultimodalAgentService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -1995,6 +1999,40 @@ def run_business_simulator_scenario(scenario_id: str) -> dict:
         return business_simulator_service.run_simulation(scenario_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Scenario not found") from error
+
+
+# ----------------------------------------------------------------------
+# v21.0 Multi-Modal Real-World Agent
+# ----------------------------------------------------------------------
+@router.get("/multimodal/dashboard")
+def get_multimodal_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    return multimodal_agent_service.dashboard(workspace_id)
+
+
+@router.get("/multimodal/items")
+def list_multimodal_items(workspace_id: str | None = Query(default=None)) -> dict:
+    items = multimodal_agent_service.list_items(workspace_id)
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/multimodal/items")
+def create_multimodal_item(request: MultimodalItemCreateRequest) -> dict:
+    return multimodal_agent_service.create_item(request.model_dump())
+
+
+@router.get("/multimodal/analyses")
+def list_multimodal_analyses(workspace_id: str | None = Query(default=None)) -> dict:
+    analyses = multimodal_agent_service.list_analyses(workspace_id)
+    return {"analyses": analyses, "count": len(analyses)}
+
+
+@router.post("/multimodal/items/{item_id}/analyze")
+def analyze_multimodal_item(item_id: str, request: MultimodalAnalyzeRequest | None = None) -> dict:
+    analysis_type = request.analysis_type if request else None
+    try:
+        return multimodal_agent_service.analyze_item(item_id, analysis_type)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Item not found") from error
 
 
 @router.get("/governance")

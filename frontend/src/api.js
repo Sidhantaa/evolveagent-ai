@@ -1794,3 +1794,19 @@ export function createSimulatorScenario(payload) {
 export function runSimulatorScenario(scenarioId) {
   return postJson(`/api/business-simulator/scenarios/${scenarioId}/run`, {})
 }
+
+export function getMultimodalDashboard(workspaceId) {
+  return getJson(`/api/multimodal/dashboard${query({ workspace_id: workspaceId })}`)
+}
+export function getMultimodalItems(workspaceId) {
+  return getJson(`/api/multimodal/items${query({ workspace_id: workspaceId })}`)
+}
+export function getMultimodalAnalyses(workspaceId) {
+  return getJson(`/api/multimodal/analyses${query({ workspace_id: workspaceId })}`)
+}
+export function createMultimodalItem(payload) {
+  return postJson('/api/multimodal/items', payload)
+}
+export function analyzeMultimodalItem(itemId, analysisType) {
+  return postJson(`/api/multimodal/items/${itemId}/analyze`, { analysis_type: analysisType })
+}
