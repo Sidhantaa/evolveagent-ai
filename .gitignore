@@ -86,6 +86,8 @@ backend/app/data/chief_priority_scores.json
 backend/app/data/business_simulations.json
 backend/app/data/business_simulation_scenarios.json
 backend/app/data/business_simulation_results.json
+backend/app/data/multimodal_items.json
+backend/app/data/multimodal_analyses.json
 backend/app/data/*.tmp
 *.log
 logs/

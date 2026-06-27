@@ -659,3 +659,18 @@ class SimulationScenarioUpdateRequest(BaseModel):
     scenario_type: str | None = Field(default=None, pattern="^(decision|cost|time|risk|launch|workflow|custom)$")
     assumptions: list[str] | None = None
     options: list[str] | None = None
+
+
+# ----------------------------------------------------------------------
+# v21.0 Multi-Modal Real-World Agent
+# ----------------------------------------------------------------------
+class MultimodalItemCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    item_type: str = Field(default="screenshot", pattern="^(screenshot|ui_bug|diagram|whiteboard|document_image|custom)$")
+    description: str = Field(default="", max_length=6000)
+    source_ref: str | None = Field(default=None, max_length=300)
+    workspace_id: str | None = None
+
+
+class MultimodalAnalyzeRequest(BaseModel):
+    analysis_type: str | None = Field(default=None, pattern="^(screenshot|ui_bug|diagram|whiteboard|document_image|custom)$")

@@ -122,6 +122,11 @@ import {
   getSimulatorResults,
   createSimulatorScenario,
   runSimulatorScenario,
+  getMultimodalDashboard,
+  getMultimodalItems,
+  getMultimodalAnalyses,
+  createMultimodalItem,
+  analyzeMultimodalItem,
   getGoal,
   getGoals,
   getHistory,
@@ -564,6 +569,15 @@ function App() {
   const [scenarioAssumptions, setScenarioAssumptions] = useState('')
   const [scenarioOptions, setScenarioOptions] = useState('')
   const [latestSimResult, setLatestSimResult] = useState(null)
+  const [showMultimodalPanel, setShowMultimodalPanel] = useState(false)
+  const [multimodalDashboard, setMultimodalDashboard] = useState(null)
+  const [multimodalItems, setMultimodalItems] = useState([])
+  const [multimodalBusy, setMultimodalBusy] = useState(false)
+  const [multimodalError, setMultimodalError] = useState(null)
+  const [mmTitle, setMmTitle] = useState('')
+  const [mmType, setMmType] = useState('screenshot')
+  const [mmDescription, setMmDescription] = useState('')
+  const [latestMmAnalysis, setLatestMmAnalysis] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -673,6 +687,7 @@ function App() {
     refreshBusinessPanel(workspaceId)
     refreshChiefPanel(workspaceId)
     refreshSimulatorPanel(workspaceId)
+    refreshMultimodalPanel(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1250,6 +1265,51 @@ function App() {
   async function handleRunSimulation(scenarioId) {
     const result = await runSimulatorAction(() => runSimulatorScenario(scenarioId))
     if (result) setLatestSimResult(result)
+  }
+
+  async function refreshMultimodalPanel(nextWorkspaceId = workspaceId) {
+    const [dashboard, items] = await Promise.all([
+      getMultimodalDashboard(nextWorkspaceId),
+      getMultimodalItems(nextWorkspaceId),
+    ])
+    setMultimodalDashboard(dashboard)
+    setMultimodalItems(items?.items || [])
+  }
+
+  async function runMultimodalAction(action) {
+    setMultimodalBusy(true)
+    setMultimodalError(null)
+    try {
+      const value = await action()
+      await refreshMultimodalPanel(workspaceId)
+      return value
+    } catch (error) {
+      setMultimodalError(error.message || 'Multi-modal action failed')
+      return null
+    } finally {
+      setMultimodalBusy(false)
+    }
+  }
+
+  async function handleCreateMultimodalItem(event) {
+    event.preventDefault()
+    if (!mmTitle.trim()) return
+    await runMultimodalAction(async () => {
+      await createMultimodalItem({
+        title: mmTitle.trim(),
+        item_type: mmType,
+        description: mmDescription.trim(),
+        workspace_id: workspaceId,
+      })
+      setMmTitle('')
+      setMmType('screenshot')
+      setMmDescription('')
+    })
+  }
+
+  async function handleAnalyzeMultimodalItem(itemId, analysisType) {
+    const analysis = await runMultimodalAction(() => analyzeMultimodalItem(itemId, analysisType))
+    if (analysis) setLatestMmAnalysis(analysis)
   }
 
   async function refreshAppBuilderTemplates() {
@@ -4926,6 +4986,89 @@ function App() {
                 )}
 
                 <p className="muted">Simulation only — rough estimates, not financial advice; nothing is executed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowMultimodalPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Multi-Modal Agent
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showMultimodalPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Multi-Modal Agent · v21.0</strong>
+                  <span>Describe a screenshot, UI bug, diagram, or whiteboard to get a structured plan. Mock/local analysis only.</span>
+                </div>
+                {multimodalDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Items</span><strong>{multimodalDashboard.total_items}</strong></div>
+                    <div><span>Analyses</span><strong>{multimodalDashboard.total_analyses}</strong></div>
+                    <div><span>Issues</span><strong>{multimodalDashboard.total_issues_found}</strong></div>
+                    <div><span>Mock</span><strong>{multimodalDashboard.mock_mode ? 'on' : 'off'}</strong></div>
+                  </div>
+                )}
+                {multimodalError && <p className="error-text">{multimodalError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshMultimodalPanel(workspaceId)} disabled={multimodalBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateMultimodalItem}>
+                  <h3>New visual item</h3>
+                  <input type="text" placeholder="Title" value={mmTitle} onChange={(event) => setMmTitle(event.target.value)} />
+                  <select value={mmType} onChange={(event) => setMmType(event.target.value)}>
+                    <option value="screenshot">screenshot</option>
+                    <option value="ui_bug">ui_bug</option>
+                    <option value="diagram">diagram</option>
+                    <option value="whiteboard">whiteboard</option>
+                    <option value="document_image">document_image</option>
+                    <option value="custom">custom</option>
+                  </select>
+                  <textarea placeholder="Describe what the image shows" value={mmDescription} onChange={(event) => setMmDescription(event.target.value)} rows={3} />
+                  <button type="submit" disabled={multimodalBusy || !mmTitle.trim()}>Create item</button>
+                </form>
+
+                {multimodalItems.length > 0 && (
+                  <>
+                    <h3>Items</h3>
+                    {multimodalItems.slice(0, 6).map((item) => (
+                      <div className="agent-template-card" key={item.item_id}>
+                        <strong>{item.title}</strong>
+                        <p className="muted">{item.item_type}</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleAnalyzeMultimodalItem(item.item_id, item.item_type)} disabled={multimodalBusy}>
+                            Analyze
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {latestMmAnalysis && (
+                  <div className="agent-template-card">
+                    <strong>Latest analysis · {latestMmAnalysis.analysis_type} (mock)</strong>
+                    <span>{latestMmAnalysis.summary}</span>
+                    {(latestMmAnalysis.detected_elements || []).length > 0 && (
+                      <p className="muted">Detected: {latestMmAnalysis.detected_elements.join(', ')}</p>
+                    )}
+                    {(latestMmAnalysis.issues || []).length > 0 && (
+                      <p className="muted">Issues: {latestMmAnalysis.issues.join('; ')}</p>
+                    )}
+                    {(latestMmAnalysis.recommended_actions || []).map((action, index) => (
+                      <p className="muted" key={index}>→ {action}</p>
+                    ))}
+                    <p className="muted">Confidence: {latestMmAnalysis.confidence}</p>
+                  </div>
+                )}
+
+                <p className="muted">Mock mode — local heuristic analysis only; no paid vision API is called.</p>
               </div>
             )}
           </section>
