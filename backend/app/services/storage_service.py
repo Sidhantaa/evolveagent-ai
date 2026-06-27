@@ -99,6 +99,9 @@ class StorageService:
             "self_healing_checks.json",
             "self_healing_findings.json",
             "self_healing_repairs.json",
+            "company_brain_reports.json",
+            "company_brain_decisions.json",
+            "company_brain_strategy.json",
         ):
             self._ensure_file(filename)
 

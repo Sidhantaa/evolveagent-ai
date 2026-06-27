@@ -1864,3 +1864,22 @@ export function createSelfHealingRepairTask(findingId) {
 export function verifySelfHealingRepair(repairId, payload) {
   return postJson(`/api/self-healing/repairs/${repairId}/verify`, payload || {})
 }
+
+export function getCompanyBrainDashboard() {
+  return getJson('/api/company-brain/dashboard')
+}
+export function getCompanyBrainDecisions() {
+  return getJson('/api/company-brain/decisions')
+}
+export function getCompanyBrainReports() {
+  return getJson('/api/company-brain/reports')
+}
+export function createCompanyBrainStrategy(payload) {
+  return postJson('/api/company-brain/strategy', payload)
+}
+export function createCompanyBrainDecision(payload) {
+  return postJson('/api/company-brain/decisions', payload)
+}
+export function createCompanyBrainReport() {
+  return postJson('/api/company-brain/reports', {})
+}

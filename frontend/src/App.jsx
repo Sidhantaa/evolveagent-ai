@@ -144,6 +144,12 @@ import {
   createSelfHealingCheck,
   createSelfHealingRepairTask,
   verifySelfHealingRepair,
+  getCompanyBrainDashboard,
+  getCompanyBrainDecisions,
+  getCompanyBrainReports,
+  createCompanyBrainStrategy,
+  createCompanyBrainDecision,
+  createCompanyBrainReport,
   getGoal,
   getGoals,
   getHistory,
@@ -620,6 +626,15 @@ function App() {
   const [healingBusy, setHealingBusy] = useState(false)
   const [healingError, setHealingError] = useState(null)
   const [healingCommand, setHealingCommand] = useState('pytest')
+  const [showCompanyBrainPanel, setShowCompanyBrainPanel] = useState(false)
+  const [companyBrainDashboard, setCompanyBrainDashboard] = useState(null)
+  const [companyBrainDecisions, setCompanyBrainDecisions] = useState([])
+  const [companyBrainReport, setCompanyBrainReport] = useState(null)
+  const [companyBrainBusy, setCompanyBrainBusy] = useState(false)
+  const [companyBrainError, setCompanyBrainError] = useState(null)
+  const [strategyTitle, setStrategyTitle] = useState('')
+  const [decisionTitle, setDecisionTitle] = useState('')
+  const [decisionImpact, setDecisionImpact] = useState('medium')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -733,6 +748,7 @@ function App() {
     refreshIndustryPanel()
     refreshAgentNetworkPanel()
     refreshHealingPanel()
+    refreshCompanyBrainPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1480,6 +1496,54 @@ function App() {
 
   async function handleVerifyRepair(repairId) {
     await runHealingAction(() => verifySelfHealingRepair(repairId, { mode: 'run' }))
+  }
+
+  async function refreshCompanyBrainPanel() {
+    const [dashboard, decisions] = await Promise.all([
+      getCompanyBrainDashboard(),
+      getCompanyBrainDecisions(),
+    ])
+    setCompanyBrainDashboard(dashboard)
+    setCompanyBrainDecisions(decisions?.decisions || [])
+  }
+
+  async function runCompanyBrainAction(action) {
+    setCompanyBrainBusy(true)
+    setCompanyBrainError(null)
+    try {
+      const value = await action()
+      await refreshCompanyBrainPanel()
+      return value
+    } catch (error) {
+      setCompanyBrainError(error.message || 'Company Brain action failed')
+      return null
+    } finally {
+      setCompanyBrainBusy(false)
+    }
+  }
+
+  async function handleCreateStrategy(event) {
+    event.preventDefault()
+    if (!strategyTitle.trim()) return
+    await runCompanyBrainAction(async () => {
+      await createCompanyBrainStrategy({ title: strategyTitle.trim() })
+      setStrategyTitle('')
+    })
+  }
+
+  async function handleCreateCompanyDecision(event) {
+    event.preventDefault()
+    if (!decisionTitle.trim()) return
+    await runCompanyBrainAction(async () => {
+      await createCompanyBrainDecision({ title: decisionTitle.trim(), impact: decisionImpact })
+      setDecisionTitle('')
+      setDecisionImpact('medium')
+    })
+  }
+
+  async function handleGenerateCompanyReport() {
+    const report = await runCompanyBrainAction(() => createCompanyBrainReport())
+    if (report) setCompanyBrainReport(report)
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5477,6 +5541,107 @@ function App() {
                 )}
 
                 <p className="muted">No auto-apply — repairs are drafts requiring human approval; only allowlisted commands run; no package installs.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCompanyBrainPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Company Brain
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCompanyBrainPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>AI Company Brain · v25.0</strong>
+                  <span>One company-level view across departments, workforce, business, projects, risks, and governance.</span>
+                </div>
+                {companyBrainDashboard && (
+                  <>
+                    <div className="analytics-mini-grid">
+                      <div><span>Health</span><strong>{companyBrainDashboard.company_health_score}</strong></div>
+                      <div><span>Depts</span><strong>{companyBrainDashboard.departments?.active}</strong></div>
+                      <div><span>Agents</span><strong>{companyBrainDashboard.agent_workforce?.custom_agents}</strong></div>
+                      <div><span>Leads</span><strong>{companyBrainDashboard.business?.total_leads}</strong></div>
+                      <div><span>Goals</span><strong>{companyBrainDashboard.projects?.active_goals}</strong></div>
+                      <div><span>Risks</span><strong>{(companyBrainDashboard.risks || []).length}</strong></div>
+                    </div>
+                    <div className="agent-template-card">
+                      <strong>Business</strong>
+                      <p className="muted">
+                        Won {companyBrainDashboard.business?.won_leads} · Conv {companyBrainDashboard.business?.conversion_rate}% ·
+                        Open cases {companyBrainDashboard.business?.open_support_cases}
+                      </p>
+                    </div>
+                    <div className="agent-template-card">
+                      <strong>Projects / Portfolio</strong>
+                      <p className="muted">
+                        {companyBrainDashboard.projects?.completed_goals}/{companyBrainDashboard.projects?.total_goals} goals done ·
+                        {companyBrainDashboard.projects?.portfolio_reports} portfolio report(s)
+                      </p>
+                    </div>
+                    {(companyBrainDashboard.risks || []).length > 0 && (
+                      <>
+                        <h3>Top risks</h3>
+                        {companyBrainDashboard.risks.slice(0, 5).map((risk, index) => (
+                          <p className="muted" key={index}>• {risk.title} ({risk.severity})</p>
+                        ))}
+                      </>
+                    )}
+                    <h3>Recommended next actions</h3>
+                    {(companyBrainDashboard.recommended_next_actions || []).map((action, index) => (
+                      <p className="muted" key={index}>→ {action}</p>
+                    ))}
+                  </>
+                )}
+                {companyBrainError && <p className="error-text">{companyBrainError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGenerateCompanyReport} disabled={companyBrainBusy}>Generate report</button>
+                  <button type="button" onClick={() => refreshCompanyBrainPanel()} disabled={companyBrainBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateStrategy}>
+                  <h3>Generate strategy</h3>
+                  <input type="text" placeholder="Strategy title" value={strategyTitle} onChange={(event) => setStrategyTitle(event.target.value)} />
+                  <button type="submit" disabled={companyBrainBusy || !strategyTitle.trim()}>Create strategy</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateCompanyDecision}>
+                  <h3>Log a decision</h3>
+                  <input type="text" placeholder="Decision title" value={decisionTitle} onChange={(event) => setDecisionTitle(event.target.value)} />
+                  <select value={decisionImpact} onChange={(event) => setDecisionImpact(event.target.value)}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                  <button type="submit" disabled={companyBrainBusy || !decisionTitle.trim()}>Log decision</button>
+                </form>
+
+                {companyBrainReport && (
+                  <div className="agent-template-card">
+                    <strong>Latest report</strong>
+                    <span>{companyBrainReport.headline}</span>
+                  </div>
+                )}
+
+                {companyBrainDecisions.length > 0 && (
+                  <>
+                    <h3>Recent decisions</h3>
+                    {companyBrainDecisions.slice(0, 5).map((decision) => (
+                      <div className="agent-template-card" key={decision.decision_id}>
+                        <strong>{decision.title}</strong>
+                        <p className="muted">Impact: {decision.impact}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Aggregated from local data only — recommendations, not automated execution.</p>
               </div>
             )}
           </section>
