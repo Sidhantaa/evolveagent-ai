@@ -1,6 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v11.5 — Autonomous Research Agent Foundation
+**Current version:** v15.0 — EvolveAgent OS
+
+EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
 **One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with governed research sessions, citation tracking, source credibility scoring, real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
@@ -10,7 +12,17 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v11.5 checkpoint adds the Autonomous Research Agent foundation. Research sessions are governed by approval state, sources are registered with local credibility scores, claims can be linked to citations, and Developer Mode includes a Research Agent panel for reviewing reports, evidence gaps, source counts, and citation counts. This foundation does not perform unrestricted web browsing; it stores and evaluates approved research artifacts safely.
+The current v15.0 checkpoint introduces **EvolveAgent OS**, a final platform-readiness layer added on top of the existing system. It is additive and safe — no feature was removed, no hosting/auth/payments were added. EvolveAgent OS adds:
+
+- **Unified platform installer** — a read-only `GET /api/os/installer` that returns backend/frontend setup steps, required and optional environment variables, verification commands, detected readiness state, and missing-config warnings. It never installs packages or runs commands.
+- **Plugin ecosystem SDK** — `GET /api/os/plugin-sdk` describes the plugin manifest schema, permission levels (`read_only`, `plan_only`, `approve_to_edit`, `approve_to_run`, `blocked`), allowed tool types, safety rules, and an example manifest. `POST /api/os/plugin-sdk/validate` validates a manifest and returns errors/warnings/normalized output. Plugins are declarative only — EvolveAgent OS never loads remote plugins or executes plugin code.
+- **Production SLA monitoring** — `GET /api/os/sla` derives reliability signals (uptime proxy score, latency, success/fallback rates, blocked actions, failed quality/codex jobs, recent incidents, rating, recommendations) purely from local analytics, governance, quality, evaluation, codex, and autopilot data. No external monitoring tools are called.
+- **OS-level scheduler overview** — `GET /api/os/scheduler` aggregates queue, approval, autopilot, and codex state into an OS-level snapshot (queued/running/paused/failed jobs, pending approvals, scheduler health, bottlenecks, recommendations). It is an overview layer, not a replacement for the existing `AgentSchedulerService`.
+- **EvolveAgent OS branding/launch panel** — `GET /api/os/summary` combines installer readiness, plugin SDK summary, SLA rating, scheduler health, and safety notes; Developer Mode shows an EvolveAgent OS panel with this status and a copy-launch-summary action. Simple Mode stays clean and does not expose raw OS internals.
+
+EvolveAgent OS is local-first and governed: it is **not** fully autonomous without approval, does **not** self-train any base model, is **not** a production hosted SaaS, and provides **no** unrestricted shell access.
+
+The earlier v11.5 checkpoint added the Autonomous Research Agent foundation. Research sessions are governed by approval state, sources are registered with local credibility scores, claims can be linked to citations, and Developer Mode includes a Research Agent panel for reviewing reports, evidence gaps, source counts, and citation counts. This foundation does not perform unrestricted web browsing; it stores and evaluates approved research artifacts safely.
 
 The v11.0 checkpoint added real API QA and cost-control visibility. Developer Mode includes a Real API Control panel with paid-capability readiness, dry-check defaults, live-call warnings, provider/model/size notes, and simple cost-estimate guidance before text, image, or transcription workflows use paid provider APIs.
 

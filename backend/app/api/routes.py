@@ -33,6 +33,7 @@ from app.models.request_models import (
     DebateCreateRequest,
     DigitalTwinUpdateRequest,
     EvaluationABTestRequest,
+    PluginManifestValidateRequest,
     PortfolioReportRequest,
     ProjectReportRequest,
     ProjectRiskRequest,
@@ -116,8 +117,12 @@ from app.services.codex_worker_service import CodexWorkerService, CodexWorkerErr
 from app.services.debate_simulation_service import DebateSimulationService
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.evaluation_lab_service import EvaluationLabService
+from app.services.os_scheduler_service import OSSchedulerService
+from app.services.platform_installer_service import PlatformInstallerService
+from app.services.plugin_sdk_service import PluginSDKService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
+from app.services.sla_monitoring_service import SLAMonitoringService
 from app.services.secret_scanner import SecretScanner
 from app.services.compliance_service import ComplianceService
 from app.services.slack_notification_service import SlackNotificationService
@@ -177,6 +182,10 @@ digital_twin_service = DigitalTwinService(storage, workspace_service, governance
 evaluation_lab_service = EvaluationLabService(storage, governance_service)
 project_manager_service = ProjectManagerService(storage, goal_service, governance_service)
 portfolio_service = PortfolioService(storage, workspace_service, governance_service)
+platform_installer_service = PlatformInstallerService()
+plugin_sdk_service = PluginSDKService()
+sla_monitoring_service = SLAMonitoringService(storage)
+os_scheduler_service = OSSchedulerService(storage)
 compliance_service = ComplianceService(storage, governance_service)
 slack_notifications = SlackNotificationService(storage, governance_service)
 notion_exports = NotionExportService(storage, governance_service)
@@ -1600,6 +1609,52 @@ def export_portfolio(format: str = Query(default="json", pattern="^(json|markdow
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="evolveagent-portfolio.{extension}"'},
     )
+
+
+@router.get("/os/installer")
+def get_os_installer() -> dict:
+    return platform_installer_service.installer()
+
+
+@router.get("/os/plugin-sdk")
+def get_os_plugin_sdk() -> dict:
+    return plugin_sdk_service.sdk()
+
+
+@router.post("/os/plugin-sdk/validate")
+def validate_os_plugin_manifest(request: PluginManifestValidateRequest) -> dict:
+    return plugin_sdk_service.validate(request.manifest)
+
+
+@router.get("/os/sla")
+def get_os_sla() -> dict:
+    return sla_monitoring_service.sla()
+
+
+@router.get("/os/scheduler")
+def get_os_scheduler() -> dict:
+    return os_scheduler_service.overview()
+
+
+@router.get("/os/summary")
+def get_os_summary() -> dict:
+    installer = platform_installer_service.installer()
+    sla = sla_monitoring_service.sla()
+    scheduler = os_scheduler_service.overview()
+    return {
+        "platform": "EvolveAgent OS",
+        "version": "v15.0",
+        "positioning": (
+            "EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed "
+            "automation, plugins, analytics, evaluation, and portfolio management."
+        ),
+        "installer_readiness": installer["readiness"],
+        "plugin_sdk": plugin_sdk_service.summary(),
+        "sla_rating": sla["sla_rating"],
+        "uptime_proxy_score": sla["uptime_proxy_score"],
+        "scheduler_health": scheduler["scheduler_health"],
+        "safety_notes": installer["safety_notes"],
+    }
 
 
 @router.get("/governance")

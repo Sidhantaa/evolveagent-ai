@@ -1,4 +1,6 @@
-# EvolveAgent AI v3.5 Checkpoint — Final Checklist
+# EvolveAgent AI — Final Checklist (current: EvolveAgent OS v15.0)
+
+EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
 ## Verification Commands
 
@@ -15,6 +17,17 @@ Frontend build:
 cd frontend
 npm run build
 ```
+
+## EvolveAgent OS v15.0 Checklist
+
+- [ ] `GET /api/os/installer` returns readiness + setup steps (read-only; nothing installed)
+- [ ] `GET /api/os/plugin-sdk` returns manifest schema + example manifest
+- [ ] `POST /api/os/plugin-sdk/validate` accepts a valid manifest and rejects missing/invalid fields
+- [ ] `GET /api/os/sla` returns uptime proxy score + SLA rating from local data
+- [ ] `GET /api/os/scheduler` returns scheduler health overview
+- [ ] `GET /api/os/summary` combines installer readiness, plugin SDK, SLA rating, scheduler health, and safety notes
+- [ ] Developer Mode shows the EvolveAgent OS panel; Simple Mode stays clean
+- [ ] Positioning is accurate: local-first, governed — not fully autonomous without approval, not self-training a base model, not hosted SaaS, no unrestricted shell access
 
 ## Manual Demo Prompts
 

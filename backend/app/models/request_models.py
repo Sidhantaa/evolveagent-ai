@@ -435,3 +435,7 @@ class ProjectReportRequest(BaseModel):
 
 class PortfolioReportRequest(BaseModel):
     title: str | None = Field(default=None, max_length=160)
+
+
+class PluginManifestValidateRequest(BaseModel):
+    manifest: dict = Field(default_factory=dict, description="Plugin manifest object to validate.")
