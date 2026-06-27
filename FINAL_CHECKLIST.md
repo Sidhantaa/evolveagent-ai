@@ -1,14 +1,16 @@
-# EvolveAgent AI — Final Checklist (current: EvolveAgent OS v15.0)
+# EvolveAgent AI — Final Checklist (current completed: v21.0 Multi-Modal Real-World Agent)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
-## Final Verification Results (v15.0)
+## Current Roadmap Status
 
-- **Backend tests:** ✅ 222 passed (`cd backend && ./venv/bin/pytest -q`)
-- **Frontend build:** ✅ passed — `vite build`, 1830 modules, `dist/assets/index-*.js` 481.68 kB (gzip 129.51 kB), built in ~1.2s
-- **Git status:** clean working tree except intentionally-ignored local files (`agent.config.yaml` local edit, `.claude-flow/`, `docs/linear-handoffs/evo-274.md`, `evo-275.md` — left untouched per workflow rules)
+- **Completed and merged:** v21.0 — Multi-Modal Real-World Agent
+- **Active work:** v22.0 — Industry Workflow Modes
+- **Platform base:** v15.0 — EvolveAgent OS
+- **Backend tests:** passing on completed release branches
+- **Frontend build:** passing on completed release branches
+- **Git status:** may include active v22 source work and local generated files; do not commit runtime data or secrets
 - **Secrets/runtime data:** none committed; `.env` files and `backend/app/data/*.json` remain gitignored
-- **Release tag:** `v15.0` — EvolveAgent OS
 
 ### Release Readiness Checklist
 
@@ -49,7 +51,7 @@ cd frontend
 npm run build
 ```
 
-## EvolveAgent OS v15.0 Checklist
+## Completed Roadmap Checklist Through v21
 
 - [ ] `GET /api/os/installer` returns readiness + setup steps (read-only; nothing installed)
 - [ ] `GET /api/os/plugin-sdk` returns manifest schema + example manifest
@@ -59,6 +61,13 @@ npm run build
 - [ ] `GET /api/os/summary` combines installer readiness, plugin SDK, SLA rating, scheduler health, and safety notes
 - [ ] Developer Mode shows the EvolveAgent OS panel; Simple Mode stays clean
 - [ ] Positioning is accurate: local-first, governed — not fully autonomous without approval, not self-training a base model, not hosted SaaS, no unrestricted shell access
+- [ ] v16 departments and collaboration planning are visible in Developer Mode
+- [ ] v17 workforce marketplace templates/import/export/rating flows work
+- [ ] v18 business automation dashboard and draft-only workflows work
+- [ ] v19 chief-of-staff planning and next-action flows work
+- [ ] v20 business simulation comparisons work
+- [ ] v21 multi-modal real-world analysis workflow works
+- [ ] v22 industry workflow mode work is kept on its feature branch until verified
 
 ## Manual Demo Prompts
 
@@ -170,10 +179,10 @@ npm run build
 
 ## GitHub Cleanup Checklist
 
-- README reflects the EvolveAgent OS v15.0 checkpoint.
-- DEMO.md reflects the EvolveAgent OS v15.0 checkpoint.
-- FINAL_PROJECT_SUMMARY.md reflects the EvolveAgent OS v15.0 checkpoint.
-- FINAL_CHECKLIST.md reflects the EvolveAgent OS v15.0 checkpoint.
+- README reflects v21 completed and v22 in progress.
+- DEMO.md reflects v21 completed and v22 in progress.
+- FINAL_PROJECT_SUMMARY.md reflects v21 completed and v22 in progress.
+- FINAL_CHECKLIST.md reflects v21 completed and v22 in progress.
 - WORK_SUMMARY.md maps recent EVO issues to commits.
 - Backend tests pass.
 - Frontend build passes.

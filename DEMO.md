@@ -1,10 +1,20 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI** — now positioned as **EvolveAgent OS v15.0**.
+Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI** — now positioned as **EvolveAgent OS**, with completed roadmap coverage through **v21.0 — Multi-Modal Real-World Agent** and active work on **v22.0 — Industry Workflow Modes**.
 
 > **EvolveAgent OS** is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
-## EvolveAgent OS v15.0 Demo Add-On
+## Current Demo Positioning
+
+The core demo should present EvolveAgent AI as a governed AI operating workspace:
+
+- **v15.0 OS platform base** — installer readiness, plugin SDK, SLA monitoring, scheduler overview, and launch summary.
+- **v16.0-v17.0 agent organization** — departments, reusable agent teams, workforce templates, ratings, and permission profiles.
+- **v18.0-v20.0 business intelligence** — business automation, AI chief-of-staff planning, and business simulation.
+- **v21.0 multi-modal real-world agent** — visual/screenshot-style analysis and real-world input interpretation through the same governed workflow.
+- **v22.0 in progress** — industry workflow modes for specialized domains.
+
+## EvolveAgent OS Demo Add-On
 
 In Developer Mode, open the **EvolveAgent OS** sidebar panel to show the final platform-readiness layer:
 
@@ -91,7 +101,7 @@ Open Developer Mode and show:
 - System Prompt Registry panel
 - Analytics / Learning panel
 
-Explain that v3.5 adds the polished UI layer over the Agent OS foundation: responsive Developer Mode, onboarding, theme tokens, accessibility improvements, and cleaner panels.
+Explain that the current project has grown from a polished multi-agent chat workbench into a local-first AI operating workspace with departments, agent teams, business workflows, simulation, and multi-modal analysis.
 
 ## Best Demo Prompt Order
 
@@ -153,7 +163,7 @@ Developer Mode is for demos and debugging. It shows workflow trace, provider met
 
 ## Final Interview-Style Explanation
 
-EvolveAgent AI is a full-stack multi-agent AI operating workspace built with FastAPI and React. It routes each request through a Master Orchestrator Agent, specialist agents, judge/evolution feedback, workspace memory, governed tools, and analytics. It supports real OpenAI mode with mock fallback, Deep Mode consensus, file and recording analysis, mock image prompts, voice input, Mission Control goals, custom agents, Project Brain search, approval-gated automation planning, adaptive learning, and Developer Mode transparency. The v3.5 checkpoint adds a more professional Jarvis-style UI, responsive Developer Mode, theme tokens, onboarding, and accessibility polish over the v3.0 Agent OS foundation.
+EvolveAgent AI is a full-stack multi-agent AI operating workspace built with FastAPI and React. It routes each request through a Master Orchestrator Agent, specialist agents, judge/evolution feedback, workspace memory, governed tools, and analytics. It supports real OpenAI mode with mock fallback, Deep Mode consensus, file and recording analysis, mock image prompts, voice input, Mission Control goals, custom agents, Project Brain search, approval-gated automation planning, adaptive learning, and Developer Mode transparency. The roadmap now extends through multi-agent departments, an agent workforce marketplace, business automation, AI chief-of-staff planning, autonomous business simulation, and multi-modal real-world analysis, while keeping risky actions behind approval and governance.
 
 ## Demo Checklist
 
