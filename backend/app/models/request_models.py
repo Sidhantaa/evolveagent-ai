@@ -693,3 +693,29 @@ class IndustryModeUpdateRequest(BaseModel):
 class IndustryModeRunRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=2000)
     workspace_id: str | None = None
+
+
+# ----------------------------------------------------------------------
+# v23.0 Agent-to-Agent Network
+# ----------------------------------------------------------------------
+class AgentContractCreateRequest(BaseModel):
+    source_agent: str = Field(default="", max_length=160)
+    target_agent: str = Field(default="", max_length=160)
+    task: str = Field(..., min_length=1, max_length=2000)
+    expected_output: str = Field(default="", max_length=2000)
+    constraints: list[str] = Field(default_factory=list)
+    status: str = Field(default="draft", pattern="^(draft|sent|accepted|completed|failed|verified)$")
+
+
+class AgentContractUpdateRequest(BaseModel):
+    source_agent: str | None = Field(default=None, max_length=160)
+    target_agent: str | None = Field(default=None, max_length=160)
+    task: str | None = Field(default=None, max_length=2000)
+    expected_output: str | None = Field(default=None, max_length=2000)
+    constraints: list[str] | None = None
+    status: str | None = Field(default=None, pattern="^(draft|sent|accepted|completed|failed|verified)$")
+
+
+class AgentHandoffCreateRequest(BaseModel):
+    handoff_type: str = Field(default="local", pattern="^(local|external_mock)$")
+    payload: dict = Field(default_factory=dict)

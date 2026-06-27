@@ -93,6 +93,9 @@ class StorageService:
             "multimodal_analyses.json",
             "industry_modes.json",
             "industry_mode_runs.json",
+            "agent_network_contracts.json",
+            "agent_network_handoffs.json",
+            "agent_network_audits.json",
         ):
             self._ensure_file(filename)
 

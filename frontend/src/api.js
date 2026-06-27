@@ -1826,3 +1826,22 @@ export function seedIndustryModes() {
 export function runIndustryMode(modeId, prompt) {
   return postJson(`/api/industry-modes/${modeId}/run`, { prompt })
 }
+
+export function getAgentNetworkDashboard() {
+  return getJson('/api/agent-network/dashboard')
+}
+export function getAgentNetworkContracts() {
+  return getJson('/api/agent-network/contracts')
+}
+export function getAgentNetworkAudit() {
+  return getJson('/api/agent-network/audit')
+}
+export function createAgentNetworkContract(payload) {
+  return postJson('/api/agent-network/contracts', payload)
+}
+export function createAgentNetworkHandoff(contractId, handoffType) {
+  return postJson(`/api/agent-network/contracts/${contractId}/handoff`, { handoff_type: handoffType, payload: {} })
+}
+export function verifyAgentNetworkHandoff(handoffId) {
+  return postJson(`/api/agent-network/handoffs/${handoffId}/verify`, {})
+}

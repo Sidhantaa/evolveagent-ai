@@ -45,6 +45,9 @@ from app.models.request_models import (
     MultimodalAnalyzeRequest,
     IndustryModeUpdateRequest,
     IndustryModeRunRequest,
+    AgentContractCreateRequest,
+    AgentContractUpdateRequest,
+    AgentHandoffCreateRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -155,6 +158,7 @@ from app.services.chief_of_staff_service import ChiefOfStaffService
 from app.services.business_simulator_service import BusinessSimulatorService
 from app.services.multimodal_agent_service import MultimodalAgentService
 from app.services.industry_mode_service import IndustryModeService
+from app.services.agent_network_service import AgentNetworkService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -224,6 +228,7 @@ chief_of_staff_service = ChiefOfStaffService(storage, governance_service)
 business_simulator_service = BusinessSimulatorService(storage, governance_service)
 multimodal_agent_service = MultimodalAgentService(storage, governance_service)
 industry_mode_service = IndustryModeService(storage, governance_service)
+agent_network_service = AgentNetworkService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2086,6 +2091,57 @@ def run_industry_mode(mode_id: str, request: IndustryModeRunRequest) -> dict:
         return industry_mode_service.run_mode(mode_id, request.prompt, request.workspace_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Mode not found") from error
+
+
+# ----------------------------------------------------------------------
+# v23.0 Agent-to-Agent Network
+# ----------------------------------------------------------------------
+@router.get("/agent-network/dashboard")
+def get_agent_network_dashboard() -> dict:
+    return agent_network_service.dashboard()
+
+
+@router.get("/agent-network/audit")
+def get_agent_network_audit() -> dict:
+    audit = agent_network_service.audit_log()
+    return {"audit": audit, "count": len(audit)}
+
+
+@router.get("/agent-network/contracts")
+def list_agent_network_contracts() -> dict:
+    contracts = agent_network_service.list_contracts()
+    return {"contracts": contracts, "count": len(contracts)}
+
+
+@router.post("/agent-network/contracts")
+def create_agent_network_contract(request: AgentContractCreateRequest) -> dict:
+    return agent_network_service.create_contract(request.model_dump())
+
+
+@router.patch("/agent-network/contracts/{contract_id}")
+def update_agent_network_contract(contract_id: str, request: AgentContractUpdateRequest) -> dict:
+    try:
+        return agent_network_service.update_contract(contract_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Contract not found") from error
+
+
+@router.post("/agent-network/contracts/{contract_id}/handoff")
+def create_agent_network_handoff(contract_id: str, request: AgentHandoffCreateRequest | None = None) -> dict:
+    handoff_type = request.handoff_type if request else "local"
+    payload = request.payload if request else {}
+    try:
+        return agent_network_service.create_handoff(contract_id, handoff_type, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Contract not found") from error
+
+
+@router.post("/agent-network/handoffs/{handoff_id}/verify")
+def verify_agent_network_handoff(handoff_id: str) -> dict:
+    try:
+        return agent_network_service.verify_handoff(handoff_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Handoff not found") from error
 
 
 @router.get("/governance")

@@ -132,6 +132,12 @@ import {
   getIndustryModeRuns,
   seedIndustryModes,
   runIndustryMode,
+  getAgentNetworkDashboard,
+  getAgentNetworkContracts,
+  getAgentNetworkAudit,
+  createAgentNetworkContract,
+  createAgentNetworkHandoff,
+  verifyAgentNetworkHandoff,
   getGoal,
   getGoals,
   getHistory,
@@ -591,6 +597,16 @@ function App() {
   const [industryError, setIndustryError] = useState(null)
   const [industryRunModeId, setIndustryRunModeId] = useState('')
   const [industryPrompt, setIndustryPrompt] = useState('')
+  const [showAgentNetworkPanel, setShowAgentNetworkPanel] = useState(false)
+  const [agentNetworkDashboard, setAgentNetworkDashboard] = useState(null)
+  const [agentNetworkContracts, setAgentNetworkContracts] = useState([])
+  const [agentNetworkAudit, setAgentNetworkAudit] = useState([])
+  const [agentNetworkBusy, setAgentNetworkBusy] = useState(false)
+  const [agentNetworkError, setAgentNetworkError] = useState(null)
+  const [contractTarget, setContractTarget] = useState('')
+  const [contractTask, setContractTask] = useState('')
+  const [contractExpected, setContractExpected] = useState('')
+  const [latestHandoff, setLatestHandoff] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -702,6 +718,7 @@ function App() {
     refreshSimulatorPanel(workspaceId)
     refreshMultimodalPanel(workspaceId)
     refreshIndustryPanel()
+    refreshAgentNetworkPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1361,6 +1378,57 @@ function App() {
       await runIndustryMode(industryRunModeId, industryPrompt.trim())
       setIndustryPrompt('')
     })
+  }
+
+  async function refreshAgentNetworkPanel() {
+    const [dashboard, contracts, audit] = await Promise.all([
+      getAgentNetworkDashboard(),
+      getAgentNetworkContracts(),
+      getAgentNetworkAudit(),
+    ])
+    setAgentNetworkDashboard(dashboard)
+    setAgentNetworkContracts(contracts?.contracts || [])
+    setAgentNetworkAudit(audit?.audit || [])
+  }
+
+  async function runAgentNetworkAction(action) {
+    setAgentNetworkBusy(true)
+    setAgentNetworkError(null)
+    try {
+      const value = await action()
+      await refreshAgentNetworkPanel()
+      return value
+    } catch (error) {
+      setAgentNetworkError(error.message || 'Agent network action failed')
+      return null
+    } finally {
+      setAgentNetworkBusy(false)
+    }
+  }
+
+  async function handleCreateContract(event) {
+    event.preventDefault()
+    if (!contractTask.trim()) return
+    await runAgentNetworkAction(async () => {
+      await createAgentNetworkContract({
+        target_agent: contractTarget.trim(),
+        task: contractTask.trim(),
+        expected_output: contractExpected.trim(),
+      })
+      setContractTarget('')
+      setContractTask('')
+      setContractExpected('')
+    })
+  }
+
+  async function handleCreateHandoff(contractId, handoffType) {
+    const handoff = await runAgentNetworkAction(() => createAgentNetworkHandoff(contractId, handoffType))
+    if (handoff) setLatestHandoff(handoff)
+  }
+
+  async function handleVerifyHandoff(handoffId) {
+    const verified = await runAgentNetworkAction(() => verifyAgentNetworkHandoff(handoffId))
+    if (verified) setLatestHandoff(verified)
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5195,6 +5263,90 @@ function App() {
                     ))}
                   </>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowAgentNetworkPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Agent Network
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentNetworkPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Agent-to-Agent Network · v23.0</strong>
+                  <span>Local task contracts, mock handoffs, result verification, and audit logs. No real external agent calls.</span>
+                </div>
+                {agentNetworkDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Contracts</span><strong>{agentNetworkDashboard.total_contracts}</strong></div>
+                    <div><span>Handoffs</span><strong>{agentNetworkDashboard.total_handoffs}</strong></div>
+                    <div><span>Verified</span><strong>{agentNetworkDashboard.verified_handoffs}</strong></div>
+                    <div><span>Audits</span><strong>{agentNetworkDashboard.audit_event_count}</strong></div>
+                  </div>
+                )}
+                {agentNetworkError && <p className="error-text">{agentNetworkError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshAgentNetworkPanel()} disabled={agentNetworkBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateContract}>
+                  <h3>New task contract</h3>
+                  <input type="text" placeholder="Target agent" value={contractTarget} onChange={(event) => setContractTarget(event.target.value)} />
+                  <input type="text" placeholder="Task" value={contractTask} onChange={(event) => setContractTask(event.target.value)} />
+                  <input type="text" placeholder="Expected output" value={contractExpected} onChange={(event) => setContractExpected(event.target.value)} />
+                  <button type="submit" disabled={agentNetworkBusy || !contractTask.trim()}>Create contract</button>
+                </form>
+
+                {agentNetworkContracts.length > 0 && (
+                  <>
+                    <h3>Contracts</h3>
+                    {agentNetworkContracts.slice(0, 6).map((contract) => (
+                      <div className="agent-template-card" key={contract.contract_id}>
+                        <strong>{contract.source_agent} → {contract.target_agent}</strong>
+                        <span>{contract.task}</span>
+                        <p className="muted">Status: {contract.status}</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleCreateHandoff(contract.contract_id, 'local')} disabled={agentNetworkBusy}>
+                            Handoff
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {latestHandoff && (
+                  <div className="agent-template-card">
+                    <strong>Latest handoff · {latestHandoff.handoff_type} ({latestHandoff.status})</strong>
+                    <span>{latestHandoff.result?.output}</span>
+                    {latestHandoff.verification?.verified !== undefined && (
+                      <p className="muted">Verified: {String(latestHandoff.verification.verified)}</p>
+                    )}
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleVerifyHandoff(latestHandoff.handoff_id)} disabled={agentNetworkBusy}>
+                        Verify
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {agentNetworkAudit.length > 0 && (
+                  <>
+                    <h3>Audit log</h3>
+                    {agentNetworkAudit.slice(0, 6).map((entry) => (
+                      <p className="muted" key={entry.audit_id}>{entry.event_type}: {entry.detail}</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local/mock protocol only — no real external agent is contacted; every action is audited.</p>
               </div>
             )}
           </section>
