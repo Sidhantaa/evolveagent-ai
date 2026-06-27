@@ -138,6 +138,12 @@ import {
   createAgentNetworkContract,
   createAgentNetworkHandoff,
   verifyAgentNetworkHandoff,
+  getSelfHealingDashboard,
+  getSelfHealingChecks,
+  getSelfHealingFindings,
+  createSelfHealingCheck,
+  createSelfHealingRepairTask,
+  verifySelfHealingRepair,
   getGoal,
   getGoals,
   getHistory,
@@ -607,6 +613,13 @@ function App() {
   const [contractTask, setContractTask] = useState('')
   const [contractExpected, setContractExpected] = useState('')
   const [latestHandoff, setLatestHandoff] = useState(null)
+  const [showHealingPanel, setShowHealingPanel] = useState(false)
+  const [healingDashboard, setHealingDashboard] = useState(null)
+  const [healingFindings, setHealingFindings] = useState([])
+  const [healingRepairs, setHealingRepairs] = useState([])
+  const [healingBusy, setHealingBusy] = useState(false)
+  const [healingError, setHealingError] = useState(null)
+  const [healingCommand, setHealingCommand] = useState('pytest')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -719,6 +732,7 @@ function App() {
     refreshMultimodalPanel(workspaceId)
     refreshIndustryPanel()
     refreshAgentNetworkPanel()
+    refreshHealingPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1429,6 +1443,43 @@ function App() {
   async function handleVerifyHandoff(handoffId) {
     const verified = await runAgentNetworkAction(() => verifyAgentNetworkHandoff(handoffId))
     if (verified) setLatestHandoff(verified)
+  }
+
+  async function refreshHealingPanel() {
+    const [dashboard, findings] = await Promise.all([
+      getSelfHealingDashboard(),
+      getSelfHealingFindings(),
+    ])
+    setHealingDashboard(dashboard)
+    setHealingFindings(findings?.findings || [])
+  }
+
+  async function runHealingAction(action) {
+    setHealingBusy(true)
+    setHealingError(null)
+    try {
+      const value = await action()
+      await refreshHealingPanel()
+      return value
+    } catch (error) {
+      setHealingError(error.message || 'Self-healing action failed')
+      return null
+    } finally {
+      setHealingBusy(false)
+    }
+  }
+
+  async function handleRunHealingCheck() {
+    await runHealingAction(() => createSelfHealingCheck({ command: healingCommand, mode: 'run' }))
+  }
+
+  async function handleCreateRepairTask(findingId) {
+    const repair = await runHealingAction(() => createSelfHealingRepairTask(findingId))
+    if (repair) setHealingRepairs((current) => [repair, ...current].slice(0, 8))
+  }
+
+  async function handleVerifyRepair(repairId) {
+    await runHealingAction(() => verifySelfHealingRepair(repairId, { mode: 'run' }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5347,6 +5398,85 @@ function App() {
                 )}
 
                 <p className="muted">Local/mock protocol only — no real external agent is contacted; every action is audited.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowHealingPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Self-Healing
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showHealingPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Self-Healing Project System · v24.0</strong>
+                  <span>Run allowlisted build/test checks, parse findings, draft repair tasks, verify. No auto-apply.</span>
+                </div>
+                {healingDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Checks</span><strong>{healingDashboard.total_checks}</strong></div>
+                    <div><span>Failed</span><strong>{healingDashboard.failed_checks}</strong></div>
+                    <div><span>Blocked</span><strong>{healingDashboard.blocked_checks}</strong></div>
+                    <div><span>Findings</span><strong>{healingDashboard.open_findings}</strong></div>
+                    <div><span>Drafts</span><strong>{healingDashboard.repair_drafts}</strong></div>
+                    <div><span>Verified</span><strong>{healingDashboard.verified_repairs}</strong></div>
+                  </div>
+                )}
+                {healingError && <p className="error-text">{healingError}</p>}
+                <div className="inline-actions">
+                  <select value={healingCommand} onChange={(event) => setHealingCommand(event.target.value)}>
+                    <option value="pytest">pytest</option>
+                    <option value="npm run build">npm run build</option>
+                  </select>
+                  <button type="button" onClick={handleRunHealingCheck} disabled={healingBusy}>Run check</button>
+                  <button type="button" onClick={() => refreshHealingPanel()} disabled={healingBusy}>Refresh</button>
+                </div>
+
+                {healingFindings.length > 0 && (
+                  <>
+                    <h3>Findings</h3>
+                    {healingFindings.slice(0, 6).map((finding) => (
+                      <div className="agent-template-card" key={finding.finding_id}>
+                        <strong>{finding.finding_type} · {finding.severity}</strong>
+                        <span>{finding.message}</span>
+                        <p className="muted">Status: {finding.status}</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleCreateRepairTask(finding.finding_id)} disabled={healingBusy}>
+                            Draft repair task
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {healingRepairs.length > 0 && (
+                  <>
+                    <h3>Repair drafts (approval required)</h3>
+                    {healingRepairs.slice(0, 5).map((repair) => (
+                      <div className="agent-template-card" key={repair.repair_id}>
+                        <strong>{repair.title}</strong>
+                        <p className="muted">Status: {repair.status} · verify: {repair.verify_command}</p>
+                        {(repair.suggested_patch_plan || []).map((step, index) => (
+                          <p className="muted" key={index}>• {step}</p>
+                        ))}
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleVerifyRepair(repair.repair_id)} disabled={healingBusy}>
+                            Verify
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">No auto-apply — repairs are drafts requiring human approval; only allowlisted commands run; no package installs.</p>
               </div>
             )}
           </section>

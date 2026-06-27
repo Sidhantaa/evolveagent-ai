@@ -719,3 +719,22 @@ class AgentContractUpdateRequest(BaseModel):
 class AgentHandoffCreateRequest(BaseModel):
     handoff_type: str = Field(default="local", pattern="^(local|external_mock)$")
     payload: dict = Field(default_factory=dict)
+
+
+# ----------------------------------------------------------------------
+# v24.0 Self-Healing Project System
+# ----------------------------------------------------------------------
+class SelfHealingCheckRequest(BaseModel):
+    command: str = Field(default="pytest", max_length=120)
+    mode: str = Field(default="run", pattern="^(run|mock)$")
+    mock_stdout: str = Field(default="", max_length=8000)
+    mock_stderr: str = Field(default="", max_length=8000)
+    mock_exit_code: int = Field(default=0, ge=0, le=255)
+    workspace_id: str | None = None
+
+
+class SelfHealingVerifyRequest(BaseModel):
+    mode: str = Field(default="run", pattern="^(run|mock)$")
+    mock_stdout: str = Field(default="", max_length=8000)
+    mock_stderr: str = Field(default="", max_length=8000)
+    mock_exit_code: int = Field(default=0, ge=0, le=255)

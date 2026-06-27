@@ -96,6 +96,9 @@ class StorageService:
             "agent_network_contracts.json",
             "agent_network_handoffs.json",
             "agent_network_audits.json",
+            "self_healing_checks.json",
+            "self_healing_findings.json",
+            "self_healing_repairs.json",
         ):
             self._ensure_file(filename)
 

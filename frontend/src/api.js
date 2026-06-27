@@ -1845,3 +1845,22 @@ export function createAgentNetworkHandoff(contractId, handoffType) {
 export function verifyAgentNetworkHandoff(handoffId) {
   return postJson(`/api/agent-network/handoffs/${handoffId}/verify`, {})
 }
+
+export function getSelfHealingDashboard() {
+  return getJson('/api/self-healing/dashboard')
+}
+export function getSelfHealingChecks() {
+  return getJson('/api/self-healing/checks')
+}
+export function getSelfHealingFindings() {
+  return getJson('/api/self-healing/findings')
+}
+export function createSelfHealingCheck(payload) {
+  return postJson('/api/self-healing/checks', payload)
+}
+export function createSelfHealingRepairTask(findingId) {
+  return postJson(`/api/self-healing/findings/${findingId}/repair-task`, {})
+}
+export function verifySelfHealingRepair(repairId, payload) {
+  return postJson(`/api/self-healing/repairs/${repairId}/verify`, payload || {})
+}
