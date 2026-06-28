@@ -76,6 +76,8 @@ from app.models.request_models import (
     UniversalWorkflowCreateRequest,
     UniversalActionDecisionRequest,
     UniversalHandoffCreateRequest,
+    SaaSProjectCreateRequest,
+    SaaSFeedbackCreateRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -194,6 +196,7 @@ from app.services.training_lab_service import TrainingLabService
 from app.services.avatar_persona_service import AvatarPersonaService
 from app.services.life_os_service import LifeOSService
 from app.services.universal_operator_service import UniversalOperatorService
+from app.services.saas_builder_service import SaaSBuilderService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -271,6 +274,7 @@ training_lab_service = TrainingLabService(storage, governance_service, SecretSca
 avatar_persona_service = AvatarPersonaService(storage, governance_service, image_service)
 life_os_service = LifeOSService(storage, governance_service)
 universal_operator_service = UniversalOperatorService(storage, governance_service)
+saas_builder_service = SaaSBuilderService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2585,6 +2589,76 @@ def list_universal_operator_handoffs() -> dict:
 @router.post("/universal-operator/handoffs")
 def create_universal_operator_handoff(request: UniversalHandoffCreateRequest) -> dict:
     return universal_operator_service.create_handoff(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v32.0 Autonomous SaaS Builder (planning/drafting only — no deploy/payments)
+# ----------------------------------------------------------------------
+@router.get("/saas-builder/dashboard")
+def get_saas_builder_dashboard() -> dict:
+    return saas_builder_service.dashboard()
+
+
+@router.get("/saas-builder/projects")
+def list_saas_projects() -> dict:
+    projects = saas_builder_service.list_projects()
+    return {"projects": projects, "count": len(projects)}
+
+
+@router.post("/saas-builder/projects")
+def create_saas_project(request: SaaSProjectCreateRequest) -> dict:
+    return saas_builder_service.create_project(request.model_dump())
+
+
+@router.get("/saas-builder/projects/{project_id}")
+def get_saas_project(project_id: str) -> dict:
+    project = saas_builder_service.get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def _saas_step(handler, project_id: str) -> dict:
+    try:
+        return handler(project_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Project not found") from error
+
+
+@router.post("/saas-builder/projects/{project_id}/validate")
+def validate_saas_project(project_id: str) -> dict:
+    return _saas_step(saas_builder_service.validate, project_id)
+
+
+@router.post("/saas-builder/projects/{project_id}/roadmap")
+def roadmap_saas_project(project_id: str) -> dict:
+    return _saas_step(saas_builder_service.roadmap, project_id)
+
+
+@router.post("/saas-builder/projects/{project_id}/architecture")
+def architecture_saas_project(project_id: str) -> dict:
+    return _saas_step(saas_builder_service.architecture, project_id)
+
+
+@router.post("/saas-builder/projects/{project_id}/launch-assets")
+def launch_assets_saas_project(project_id: str) -> dict:
+    return _saas_step(saas_builder_service.launch_assets, project_id)
+
+
+@router.post("/saas-builder/projects/{project_id}/feedback")
+def create_saas_feedback(project_id: str, request: SaaSFeedbackCreateRequest) -> dict:
+    try:
+        return saas_builder_service.create_feedback(project_id, request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Project not found") from error
+
+
+@router.get("/saas-builder/projects/{project_id}/feedback")
+def list_saas_feedback(project_id: str) -> dict:
+    if saas_builder_service.get_project(project_id) is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    feedback = saas_builder_service.list_feedback(project_id)
+    return {"feedback": feedback, "count": len(feedback)}
 
 
 @router.get("/governance")

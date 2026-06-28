@@ -929,3 +929,19 @@ class UniversalHandoffCreateRequest(BaseModel):
     from_device: str = Field(default="", max_length=120)
     to_device: str = Field(default="", max_length=120)
     summary: str = Field(default="", max_length=1000)
+
+
+# ----------------------------------------------------------------------
+# v32.0 Autonomous SaaS Builder
+# ----------------------------------------------------------------------
+class SaaSProjectCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    idea: str = Field(default="", max_length=4000)
+
+
+class SaaSFeedbackCreateRequest(BaseModel):
+    type: str = Field(default="feature", pattern="^(feature|bug|improvement|question)$")
+    title: str = Field(..., min_length=1, max_length=200)
+    detail: str = Field(default="", max_length=2000)
+    linked_phase: str = Field(default="", max_length=60)
+    status: str = Field(default="open", pattern="^(open|planned|resolved|wont_do)$")

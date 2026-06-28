@@ -124,6 +124,12 @@ class StorageService:
             "universal_actions.json",
             "universal_handoffs.json",
             "universal_operator_audit.json",
+            "saas_projects.json",
+            "saas_validations.json",
+            "saas_roadmaps.json",
+            "saas_architecture_plans.json",
+            "saas_launch_assets.json",
+            "saas_feedback_items.json",
         ):
             self._ensure_file(filename)
 

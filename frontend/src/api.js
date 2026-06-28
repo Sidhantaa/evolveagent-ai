@@ -2023,3 +2023,34 @@ export function decideUniversalOperatorAction(actionId, decision) {
 export function createUniversalOperatorHandoff(payload) {
   return postJson('/api/universal-operator/handoffs', payload)
 }
+
+export function getSaasBuilderDashboard() {
+  return getJson('/api/saas-builder/dashboard')
+}
+export function getSaasProjects() {
+  return getJson('/api/saas-builder/projects')
+}
+export function getSaasProject(projectId) {
+  return getJson(`/api/saas-builder/projects/${projectId}`)
+}
+export function getSaasFeedback(projectId) {
+  return getJson(`/api/saas-builder/projects/${projectId}/feedback`)
+}
+export function createSaasProject(payload) {
+  return postJson('/api/saas-builder/projects', payload)
+}
+export function validateSaasProject(projectId) {
+  return postJson(`/api/saas-builder/projects/${projectId}/validate`, {})
+}
+export function roadmapSaasProject(projectId) {
+  return postJson(`/api/saas-builder/projects/${projectId}/roadmap`, {})
+}
+export function architectureSaasProject(projectId) {
+  return postJson(`/api/saas-builder/projects/${projectId}/architecture`, {})
+}
+export function launchAssetsSaasProject(projectId) {
+  return postJson(`/api/saas-builder/projects/${projectId}/launch-assets`, {})
+}
+export function createSaasFeedback(projectId, payload) {
+  return postJson(`/api/saas-builder/projects/${projectId}/feedback`, payload)
+}

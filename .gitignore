@@ -121,6 +121,12 @@ backend/app/data/universal_workflows.json
 backend/app/data/universal_actions.json
 backend/app/data/universal_handoffs.json
 backend/app/data/universal_operator_audit.json
+backend/app/data/saas_projects.json
+backend/app/data/saas_validations.json
+backend/app/data/saas_roadmaps.json
+backend/app/data/saas_architecture_plans.json
+backend/app/data/saas_launch_assets.json
+backend/app/data/saas_feedback_items.json
 backend/app/data/*.tmp
 *.log
 logs/
