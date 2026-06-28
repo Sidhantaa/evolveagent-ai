@@ -172,6 +172,7 @@ import {
   getAvatarMeetingSessions,
   createAvatarMeetingSession,
   createAvatarConsent,
+  generateAvatarImage,
   getGoal,
   getGoals,
   getHistory,
@@ -688,6 +689,8 @@ function App() {
   const [avatarTone, setAvatarTone] = useState('friendly')
   const [avatarVoiceMode, setAvatarVoiceMode] = useState('text_only')
   const [meetingTitle, setMeetingTitle] = useState('')
+  const [avatarDescription, setAvatarDescription] = useState('')
+  const [avatarStyle, setAvatarStyle] = useState('illustrated')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -1775,6 +1778,11 @@ function App() {
 
   async function handleGrantConsent() {
     await runAvatarAction(() => createAvatarConsent({ scope: 'persona_behavior', granted: true }))
+  }
+
+  async function handleGenerateAvatarImage(event) {
+    event.preventDefault()
+    await runAvatarAction(() => generateAvatarImage({ description: avatarDescription.trim(), style: avatarStyle }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -6082,6 +6090,41 @@ function App() {
                   </div>
                 )}
                 {avatarError && <p className="error-text">{avatarError}</p>}
+
+                {avatarDashboard?.persona?.avatar_image?.image_url && (
+                  <div className="agent-template-card">
+                    <strong>Avatar</strong>
+                    <img
+                      src={avatarDashboard.persona.avatar_image.image_url}
+                      alt={`${avatarDashboard.persona.avatar_name} avatar`}
+                      style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', marginTop: '8px' }}
+                    />
+                    <p className="muted">
+                      {avatarDashboard.persona.avatar_image.mock_preview ? 'Mock preview' : avatarDashboard.persona.avatar_image.provider} ·
+                      {' '}{avatarDashboard.persona.avatar_image.style}
+                    </p>
+                    <p className="muted">{avatarDashboard.persona.avatar_image.note}</p>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleGenerateAvatarImage}>
+                  <h3>Generate avatar (looks like you)</h3>
+                  <textarea
+                    placeholder="Describe how it should look (e.g. short black hair, glasses, friendly smile, hoodie)"
+                    value={avatarDescription}
+                    onChange={(event) => setAvatarDescription(event.target.value)}
+                    rows={2}
+                  />
+                  <select value={avatarStyle} onChange={(event) => setAvatarStyle(event.target.value)}>
+                    <option value="illustrated">illustrated</option>
+                    <option value="cartoon">cartoon</option>
+                    <option value="minimal">minimal</option>
+                    <option value="3d_stylized">3d_stylized</option>
+                    <option value="pixel">pixel</option>
+                  </select>
+                  <button type="submit" disabled={avatarBusy}>Generate avatar</button>
+                  <p className="muted">Stylized avatar from your description (mock preview unless real image mode is enabled). Not a photo-real clone; never claims to be you.</p>
+                </form>
 
                 <form className="stacked-form" onSubmit={handleSavePersona}>
                   <h3>Persona</h3>

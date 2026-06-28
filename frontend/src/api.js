@@ -1955,3 +1955,6 @@ export function createAvatarMeetingSession(payload) {
 export function createAvatarConsent(payload) {
   return postJson('/api/avatar/consent', payload)
 }
+export function generateAvatarImage(payload) {
+  return postJson('/api/avatar/persona/avatar-image', payload)
+}

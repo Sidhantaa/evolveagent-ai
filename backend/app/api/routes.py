@@ -65,6 +65,7 @@ from app.models.request_models import (
     AvatarVoiceSettingsUpdateRequest,
     AvatarMeetingSessionRequest,
     AvatarConsentRequest,
+    AvatarImageRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -255,7 +256,7 @@ self_healing_service = SelfHealingService(storage, governance_service, safe_comm
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
-avatar_persona_service = AvatarPersonaService(storage, governance_service)
+avatar_persona_service = AvatarPersonaService(storage, governance_service, image_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2432,6 +2433,14 @@ def list_avatar_meeting_sessions() -> dict:
 @router.post("/avatar/consent")
 def create_avatar_consent(request: AvatarConsentRequest) -> dict:
     return avatar_persona_service.create_consent(request.model_dump())
+
+
+@router.post("/avatar/persona/avatar-image")
+def generate_avatar_image(request: AvatarImageRequest) -> dict:
+    try:
+        return avatar_persona_service.generate_avatar_image(request.description, request.style)
+    except ValueError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @router.get("/governance")

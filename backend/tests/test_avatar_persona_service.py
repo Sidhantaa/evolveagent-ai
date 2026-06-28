@@ -73,6 +73,25 @@ def test_governance_event_written():
     assert actions & {"avatar_persona_updated", "avatar_consent_recorded"}
 
 
+def test_generate_stylized_avatar_image():
+    persona = client.post(
+        "/api/avatar/persona/avatar-image",
+        json={"description": "short black hair, glasses, friendly smile, hoodie", "style": "illustrated"},
+    ).json()
+    assert "avatar_image" in persona
+    image = persona["avatar_image"]
+    assert image["image_url"]
+    assert image["style"] == "illustrated"
+    # Mock by default in tests (no real image API).
+    assert image["mock_preview"] is True
+    assert "not a photo-real" in image["note"].lower()
+    # Persona still never claims to be the user.
+    assert persona["impersonation_allowed"] is False
+    # Persisted on the persona.
+    fetched = client.get("/api/avatar/persona").json()
+    assert fetched.get("avatar_image", {}).get("image_url")
+
+
 def test_regression_existing_endpoints():
     response = client.post("/api/run", json={"user_input": "Explain how EvolveAgent AI works."})
     assert response.status_code == 200

@@ -35,9 +35,11 @@ class AvatarPersonaService:
     meeting_file = "meeting_voice_sessions.json"
     consent_file = "persona_consent_records.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, image_service=None):
         self.storage = storage
         self.governance = governance_service
+        # Optional Image Agent for generating a stylized avatar (mock by default).
+        self.image_service = image_service
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -110,6 +112,56 @@ class AvatarPersonaService:
         else:
             self.storage.append(self.persona_file, persona)
         self._log("avatar_persona_updated", f"Updated persona '{persona['avatar_name']}'.")
+        return persona
+
+    # ------------------------------------------------------------------
+    # Avatar image (stylized, via the existing Image Agent; mock by default)
+    # ------------------------------------------------------------------
+    def _persist_persona(self, persona: dict) -> None:
+        personas = self.storage.read_list(self.persona_file)
+        if personas:
+            personas[-1] = persona
+            self.storage.write_list(self.persona_file, personas)
+        else:
+            self.storage.append(self.persona_file, persona)
+
+    def generate_avatar_image(self, description: str = "", style: str = "illustrated") -> dict:
+        """Generate a STYLIZED avatar from a self-description via the Image Agent.
+
+        This is a stylized profile-picture avatar for the AI assistant, based on the
+        description the user provides. It is intentionally NOT a photo-real identity
+        clone and never claims to be the user. Mock preview by default; a real image
+        API is used only if the project is already configured for it.
+        """
+        if self.image_service is None:
+            raise ValueError("Image service unavailable")
+        persona = self.get_persona()
+        clean_description = self._clean(description, 600)
+        clean_style = self._enum(style, ["illustrated", "cartoon", "minimal", "3d_stylized", "pixel"], "illustrated")
+        # Build a safe, stylized prompt — explicitly a non-photoreal assistant avatar.
+        prompt = (
+            f"A {clean_style} stylized avatar illustration for an AI assistant named "
+            f"{persona.get('avatar_name', 'Evo')}. "
+            f"{('Inspired by this description: ' + clean_description + '. ') if clean_description else ''}"
+            "Friendly, clearly a non-photorealistic digital assistant avatar (not a real person, not a deepfake)."
+        )
+        result = self.image_service.generate(prompt=prompt, safety_rewritten=True)
+        result_dict = result.model_dump() if hasattr(result, "model_dump") else dict(result)
+        avatar_image = {
+            "image_url": result_dict.get("image_url"),
+            "prompt": result_dict.get("prompt"),
+            "provider": result_dict.get("provider"),
+            "model": result_dict.get("model"),
+            "mock_preview": result_dict.get("provider") == "mock_image",
+            "style": clean_style,
+            "description_used": clean_description,
+            "note": "Stylized AI-assistant avatar based on your description — not a photo-real identity clone; never claims to be you.",
+            "generated_at": self._now(),
+        }
+        persona["avatar_image"] = avatar_image
+        persona["updated_at"] = self._now()
+        self._persist_persona(persona)
+        self._log("avatar_image_generated", f"Generated stylized avatar image ({avatar_image['provider']}).")
         return persona
 
     # ------------------------------------------------------------------

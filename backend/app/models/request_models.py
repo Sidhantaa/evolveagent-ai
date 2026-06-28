@@ -843,3 +843,8 @@ class AvatarConsentRequest(BaseModel):
     scope: str = Field(default="persona_behavior", max_length=120)
     granted: bool = Field(default=False)
     note: str = Field(default="", max_length=1000)
+
+
+class AvatarImageRequest(BaseModel):
+    description: str = Field(default="", max_length=600, description="Self-description for a stylized avatar (not a photo-real clone).")
+    style: str = Field(default="illustrated", pattern="^(illustrated|cartoon|minimal|3d_stylized|pixel)$")
