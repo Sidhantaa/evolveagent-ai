@@ -203,6 +203,17 @@ import {
   architectureSaasProject,
   launchAssetsSaasProject,
   createSaasFeedback,
+  getTeamManagerDashboard,
+  getTeamMembers,
+  getTeamAssignments,
+  getTeamStandups,
+  getTeamSprints,
+  createTeamMember,
+  createTeamAssignment,
+  updateTeamAssignment,
+  createTeamStandup,
+  createTeamSprint,
+  reviewTeamSprint,
   getGoal,
   getGoals,
   getHistory,
@@ -762,6 +773,20 @@ function App() {
   const [saasIdea, setSaasIdea] = useState('')
   const [saasFeedbackTitle, setSaasFeedbackTitle] = useState('')
   const [saasFeedbackType, setSaasFeedbackType] = useState('feature')
+  const [showTeamPanel, setShowTeamPanel] = useState(false)
+  const [teamDashboard, setTeamDashboard] = useState(null)
+  const [teamMembers, setTeamMembers] = useState([])
+  const [teamAssignments, setTeamAssignments] = useState([])
+  const [teamStandup, setTeamStandup] = useState(null)
+  const [teamSprints, setTeamSprints] = useState([])
+  const [teamBusy, setTeamBusy] = useState(false)
+  const [teamError, setTeamError] = useState(null)
+  const [memberName, setMemberName] = useState('')
+  const [memberType, setMemberType] = useState('human')
+  const [assignmentTitle, setAssignmentTitle] = useState('')
+  const [assignmentOwner, setAssignmentOwner] = useState('')
+  const [assignmentPriority, setAssignmentPriority] = useState('medium')
+  const [sprintName, setSprintName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -882,6 +907,7 @@ function App() {
     refreshLifePanel(workspaceId)
     refreshUniversalPanel()
     refreshSaasPanel()
+    refreshTeamPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1997,6 +2023,77 @@ function App() {
 
   async function handleCreateUniversalHandoff() {
     await runUniversalAction(() => createUniversalOperatorHandoff({ from_device: 'laptop', to_device: 'phone', summary: 'Continue current workflow' }))
+  }
+
+  async function refreshTeamPanel() {
+    const [dashboard, members, assignments, sprints] = await Promise.all([
+      getTeamManagerDashboard(),
+      getTeamMembers(),
+      getTeamAssignments(),
+      getTeamSprints(),
+    ])
+    setTeamDashboard(dashboard)
+    setTeamMembers(members?.members || [])
+    setTeamAssignments(assignments?.assignments || [])
+    setTeamSprints(sprints?.sprints || [])
+  }
+
+  async function runTeamAction(action) {
+    setTeamBusy(true)
+    setTeamError(null)
+    try {
+      const value = await action()
+      await refreshTeamPanel()
+      return value
+    } catch (error) {
+      setTeamError(error.message || 'Team manager action failed')
+      return null
+    } finally {
+      setTeamBusy(false)
+    }
+  }
+
+  async function handleCreateTeamMember(event) {
+    event.preventDefault()
+    if (!memberName.trim()) return
+    await runTeamAction(async () => {
+      await createTeamMember({ name: memberName.trim(), member_type: memberType })
+      setMemberName('')
+      setMemberType('human')
+    })
+  }
+
+  async function handleCreateTeamAssignment(event) {
+    event.preventDefault()
+    if (!assignmentTitle.trim()) return
+    await runTeamAction(async () => {
+      await createTeamAssignment({ title: assignmentTitle.trim(), owner_name: assignmentOwner.trim(), priority: assignmentPriority })
+      setAssignmentTitle('')
+      setAssignmentOwner('')
+      setAssignmentPriority('medium')
+    })
+  }
+
+  async function handleCompleteAssignment(assignmentId) {
+    await runTeamAction(() => updateTeamAssignment(assignmentId, { status: 'done' }))
+  }
+
+  async function handleGenerateStandup() {
+    const standup = await runTeamAction(() => createTeamStandup())
+    if (standup) setTeamStandup(standup)
+  }
+
+  async function handleCreateTeamSprint(event) {
+    event.preventDefault()
+    if (!sprintName.trim()) return
+    await runTeamAction(async () => {
+      await createTeamSprint({ name: sprintName.trim() })
+      setSprintName('')
+    })
+  }
+
+  async function handleReviewSprint(sprintId) {
+    await runTeamAction(() => reviewTeamSprint(sprintId, {}))
   }
 
   async function refreshSaasPanel() {
@@ -6688,6 +6785,121 @@ function App() {
                 )}
 
                 <p className="muted">Mock/planning-first — no real desktop/browser/app automation; sensitive actions (send/delete/pay/share) require approval; nothing is executed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowTeamPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Team Lead / Manager
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showTeamPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>AI Team Lead / Manager · v31.0</strong>
+                  <span>Manage a mixed human + AI team: members, assignments, standups, sprints, analytics. Local planning only.</span>
+                </div>
+                {teamDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Members</span><strong>{teamDashboard.member_count}</strong></div>
+                    <div><span>AI</span><strong>{teamDashboard.ai_member_count}</strong></div>
+                    <div><span>Done</span><strong>{teamDashboard.analytics?.completed_tasks}</strong></div>
+                    <div><span>Blocked</span><strong>{teamDashboard.analytics?.blocked_tasks}</strong></div>
+                    <div><span>Overdue</span><strong>{teamDashboard.analytics?.overdue_tasks}</strong></div>
+                    <div><span>Sprints</span><strong>{teamDashboard.sprint_count}</strong></div>
+                  </div>
+                )}
+                {teamError && <p className="error-text">{teamError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGenerateStandup} disabled={teamBusy}>Generate standup</button>
+                  <button type="button" onClick={() => refreshTeamPanel()} disabled={teamBusy}>Refresh</button>
+                </div>
+
+                {teamStandup && (
+                  <div className="agent-template-card">
+                    <strong>Standup · {teamStandup.date}</strong>
+                    <span>{teamStandup.summary}</span>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateTeamMember}>
+                  <h3>Add member</h3>
+                  <input type="text" placeholder="Name" value={memberName} onChange={(event) => setMemberName(event.target.value)} />
+                  <select value={memberType} onChange={(event) => setMemberType(event.target.value)}>
+                    <option value="human">human</option>
+                    <option value="ai_agent">ai_agent</option>
+                  </select>
+                  <button type="submit" disabled={teamBusy || !memberName.trim()}>Add member</button>
+                </form>
+
+                {teamMembers.length > 0 && (
+                  <>
+                    <h3>Members</h3>
+                    {teamMembers.slice(0, 6).map((member) => (
+                      <p className="muted" key={member.member_id}>• {member.name} ({member.member_type}{member.role ? ` · ${member.role}` : ''})</p>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateTeamAssignment}>
+                  <h3>New assignment</h3>
+                  <input type="text" placeholder="Task title" value={assignmentTitle} onChange={(event) => setAssignmentTitle(event.target.value)} />
+                  <input type="text" placeholder="Owner name" value={assignmentOwner} onChange={(event) => setAssignmentOwner(event.target.value)} />
+                  <select value={assignmentPriority} onChange={(event) => setAssignmentPriority(event.target.value)}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                  <button type="submit" disabled={teamBusy || !assignmentTitle.trim()}>Add assignment</button>
+                </form>
+
+                {teamAssignments.length > 0 && (
+                  <>
+                    <h3>Assignments</h3>
+                    {teamAssignments.slice(0, 6).map((assignment) => (
+                      <div className="agent-template-card" key={assignment.assignment_id}>
+                        <strong>{assignment.title}</strong>
+                        <p className="muted">{assignment.owner_name || 'unassigned'} · {assignment.priority} · {assignment.status}</p>
+                        {assignment.status !== 'done' && (
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleCompleteAssignment(assignment.assignment_id)} disabled={teamBusy}>Mark done</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateTeamSprint}>
+                  <h3>New sprint</h3>
+                  <input type="text" placeholder="Sprint name" value={sprintName} onChange={(event) => setSprintName(event.target.value)} />
+                  <button type="submit" disabled={teamBusy || !sprintName.trim()}>Create sprint</button>
+                </form>
+
+                {teamSprints.length > 0 && (
+                  <>
+                    <h3>Sprints</h3>
+                    {teamSprints.slice(0, 5).map((sprint) => (
+                      <div className="agent-template-card" key={sprint.sprint_id}>
+                        <strong>{sprint.name}</strong>
+                        <p className="muted">{sprint.status}</p>
+                        {sprint.status !== 'reviewed' && (
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleReviewSprint(sprint.sprint_id)} disabled={teamBusy}>Review</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local planning only — no external messages sent and no real project state is changed.</p>
               </div>
             )}
           </section>

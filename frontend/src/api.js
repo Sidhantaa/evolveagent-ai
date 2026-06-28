@@ -2054,3 +2054,36 @@ export function launchAssetsSaasProject(projectId) {
 export function createSaasFeedback(projectId, payload) {
   return postJson(`/api/saas-builder/projects/${projectId}/feedback`, payload)
 }
+export function getTeamManagerDashboard() {
+  return getJson('/api/team-manager/dashboard')
+}
+export function getTeamMembers() {
+  return getJson('/api/team-manager/members')
+}
+export function getTeamAssignments() {
+  return getJson('/api/team-manager/assignments')
+}
+export function getTeamStandups() {
+  return getJson('/api/team-manager/standups')
+}
+export function getTeamSprints() {
+  return getJson('/api/team-manager/sprints')
+}
+export function createTeamMember(payload) {
+  return postJson('/api/team-manager/members', payload)
+}
+export function createTeamAssignment(payload) {
+  return postJson('/api/team-manager/assignments', payload)
+}
+export function updateTeamAssignment(assignmentId, payload) {
+  return patchJson(`/api/team-manager/assignments/${assignmentId}`, payload)
+}
+export function createTeamStandup() {
+  return postJson('/api/team-manager/standups', {})
+}
+export function createTeamSprint(payload) {
+  return postJson('/api/team-manager/sprints', payload)
+}
+export function reviewTeamSprint(sprintId, payload) {
+  return postJson(`/api/team-manager/sprints/${sprintId}/review`, payload || {})
+}

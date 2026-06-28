@@ -130,6 +130,12 @@ class StorageService:
             "saas_architecture_plans.json",
             "saas_launch_assets.json",
             "saas_feedback_items.json",
+            "team_members.json",
+            "team_assignments.json",
+            "team_standups.json",
+            "team_sprints.json",
+            "team_reviews.json",
+            "team_manager_reports.json",
         ):
             self._ensure_file(filename)
 

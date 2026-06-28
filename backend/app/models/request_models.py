@@ -945,3 +945,53 @@ class SaaSFeedbackCreateRequest(BaseModel):
     detail: str = Field(default="", max_length=2000)
     linked_phase: str = Field(default="", max_length=60)
     status: str = Field(default="open", pattern="^(open|planned|resolved|wont_do)$")
+# v31.0 AI Team Lead / Manager Mode
+# ----------------------------------------------------------------------
+class TeamMemberCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    member_type: str = Field(default="human", pattern="^(human|ai_agent)$")
+    role: str = Field(default="", max_length=160)
+    skills: list[str] = Field(default_factory=list)
+
+
+class TeamMemberUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=160)
+    member_type: str | None = Field(default=None, pattern="^(human|ai_agent)$")
+    role: str | None = Field(default=None, max_length=160)
+    skills: list[str] | None = None
+    active: bool | None = None
+
+
+class TeamAssignmentCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    owner_id: str | None = Field(default=None, max_length=120)
+    owner_name: str = Field(default="", max_length=160)
+    priority: str = Field(default="medium", pattern="^(low|medium|high)$")
+    status: str = Field(default="todo", pattern="^(todo|in_progress|blocked|done|archived)$")
+    due_date: str = Field(default="", max_length=10)
+    blocked_reason: str = Field(default="", max_length=500)
+
+
+class TeamAssignmentUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    owner_id: str | None = Field(default=None, max_length=120)
+    owner_name: str | None = Field(default=None, max_length=160)
+    priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    status: str | None = Field(default=None, pattern="^(todo|in_progress|blocked|done|archived)$")
+    due_date: str | None = Field(default=None, max_length=10)
+    blocked_reason: str | None = Field(default=None, max_length=500)
+
+
+class TeamSprintCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    goals: list[str] = Field(default_factory=list)
+    tasks: list[str] = Field(default_factory=list)
+    owners: list[str] = Field(default_factory=list)
+    start_date: str = Field(default="", max_length=10)
+    end_date: str = Field(default="", max_length=10)
+
+
+class TeamSprintReviewRequest(BaseModel):
+    summary: str = Field(default="", max_length=2000)
+    carry_over: list[str] = Field(default_factory=list)
+    learnings: list[str] = Field(default_factory=list)

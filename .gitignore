@@ -127,6 +127,12 @@ backend/app/data/saas_roadmaps.json
 backend/app/data/saas_architecture_plans.json
 backend/app/data/saas_launch_assets.json
 backend/app/data/saas_feedback_items.json
+backend/app/data/team_members.json
+backend/app/data/team_assignments.json
+backend/app/data/team_standups.json
+backend/app/data/team_sprints.json
+backend/app/data/team_reviews.json
+backend/app/data/team_manager_reports.json
 backend/app/data/*.tmp
 *.log
 logs/
