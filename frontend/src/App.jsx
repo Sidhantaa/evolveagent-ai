@@ -1850,13 +1850,13 @@ function App() {
     setError('')
     try {
       await createAgentJob({
-        title: 'Test agent job',
+        title: 'Diagnostic health check',
         job_type: 'health_check',
         workspace_id: workspaceId,
-        payload: { source: 'developer_ui', note: 'Manual test job' },
+        payload: { source: 'developer_ui', note: 'Manual diagnostic check' },
       })
       await refreshAgentJobs(workspaceId)
-      setCopied('Test agent job created')
+      setCopied('Diagnostic job created')
       window.setTimeout(() => setCopied(''), 2000)
     } catch (err) {
       setError(err.message)
@@ -5477,14 +5477,14 @@ function App() {
               <div className="mission-panel">
                 <div className="agent-template-card">
                   <strong>Multi-Modal Agent · v21.0</strong>
-                  <span>Describe a screenshot, UI bug, diagram, or whiteboard to get a structured plan. Mock/local analysis only.</span>
+                  <span>Describe a screenshot, UI bug, diagram, or whiteboard to get a structured plan. Local, demo-safe analysis.</span>
                 </div>
                 {multimodalDashboard && (
                   <div className="analytics-mini-grid">
                     <div><span>Items</span><strong>{multimodalDashboard.total_items}</strong></div>
                     <div><span>Analyses</span><strong>{multimodalDashboard.total_analyses}</strong></div>
                     <div><span>Issues</span><strong>{multimodalDashboard.total_issues_found}</strong></div>
-                    <div><span>Mock</span><strong>{multimodalDashboard.mock_mode ? 'on' : 'off'}</strong></div>
+                    <div><span>Demo-safe</span><strong>{multimodalDashboard.mock_mode ? 'on' : 'off'}</strong></div>
                   </div>
                 )}
                 {multimodalError && <p className="error-text">{multimodalError}</p>}
@@ -5541,7 +5541,7 @@ function App() {
                   </div>
                 )}
 
-                <p className="muted">Mock mode — local heuristic analysis only; no paid vision API is called.</p>
+                <p className="muted">Local, demo-safe analysis — no external vision API is called.</p>
               </div>
             )}
           </section>
@@ -5635,7 +5635,7 @@ function App() {
               <div className="mission-panel">
                 <div className="agent-template-card">
                   <strong>Agent-to-Agent Network · v23.0</strong>
-                  <span>Local task contracts, mock handoffs, result verification, and audit logs. No real external agent calls.</span>
+                  <span>Local task contracts, demo-safe handoffs, result verification, and audit logs. No real external agent calls.</span>
                 </div>
                 {agentNetworkDashboard && (
                   <div className="analytics-mini-grid">
@@ -5700,7 +5700,7 @@ function App() {
                   </>
                 )}
 
-                <p className="muted">Local/mock protocol only — no real external agent is contacted; every action is audited.</p>
+                <p className="muted">Local, demo-safe protocol — no real external agent is contacted; every action is audited.</p>
               </div>
             )}
           </section>
@@ -5899,7 +5899,7 @@ function App() {
               <div className="mission-panel">
                 <div className="agent-template-card">
                   <strong>Personal Device Operator · v26.0</strong>
-                  <span>Plan phone/device actions from voice/text + mock screen text. Mock/planning-first — no real device control.</span>
+                  <span>Plan phone/device actions from voice/text + provided screen text. Demo-safe planning — no real device control.</span>
                 </div>
                 {deviceDashboard && (
                   <div className="analytics-mini-grid">
@@ -5939,7 +5939,7 @@ function App() {
                 <form className="stacked-form" onSubmit={handlePlanDevice}>
                   <h3>Plan actions</h3>
                   <input type="text" placeholder="Voice/text command" value={deviceCommand} onChange={(event) => setDeviceCommand(event.target.value)} />
-                  <textarea placeholder="Mock screen text (read-screen mode)" value={deviceScreenText} onChange={(event) => setDeviceScreenText(event.target.value)} rows={2} />
+                  <textarea placeholder="Screen text (read-screen mode)" value={deviceScreenText} onChange={(event) => setDeviceScreenText(event.target.value)} rows={2} />
                   <button type="submit" disabled={deviceBusy || !deviceSessionId || (!deviceCommand.trim() && !deviceScreenText.trim())}>Plan</button>
                 </form>
 
@@ -5971,7 +5971,7 @@ function App() {
                   </>
                 )}
 
-                <p className="muted">Mock/planning-first — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
+                <p className="muted">Demo-safe planning — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
               </div>
             )}
           </section>
@@ -6021,7 +6021,7 @@ function App() {
                     </select>
                     <div className="inline-actions">
                       <button type="button" onClick={handleExportDataset} disabled={trainingBusy || !trainingDatasetId}>Export approved (JSONL)</button>
-                      <button type="button" onClick={handleCreateTrainingRun} disabled={trainingBusy}>Mock run</button>
+                      <button type="button" onClick={handleCreateTrainingRun} disabled={trainingBusy}>Dry run</button>
                     </div>
                   </>
                 )}
@@ -6285,7 +6285,7 @@ function App() {
                 {agentJobsAvailable && (
                   <div className="inline-actions">
                     <button type="button" disabled={agentJobBusyId === 'create'} onClick={handleCreateTestAgentJob}>
-                      Create test job
+                      Run diagnostic job
                     </button>
                     <button type="button" disabled={agentJobBusyId === 'start-next'} onClick={handleStartNextAgentJob}>
                       Start next

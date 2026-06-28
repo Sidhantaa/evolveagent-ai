@@ -2871,3 +2871,91 @@ ul {
 .codex-status-passed { color: var(--color-accent-green); }
 .codex-status-failed { color: var(--color-danger); }
 .codex-status-needs-manual-review { color: #fbbf24; border-color: rgba(251, 191, 36, 0.35); }
+
+/* ----------------------------------------------------------------------
+   Demo-ready refinements (additive) — consistent forms, errors, and cards
+   across the workspace/business/automation/platform/operator panels.
+   ---------------------------------------------------------------------- */
+.stacked-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.stacked-form h3 {
+  margin: 0 0 var(--space-2xs);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.stacked-form input,
+.stacked-form select,
+.stacked-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.stacked-form textarea {
+  resize: vertical;
+  min-height: 56px;
+  line-height: var(--line-height-body);
+}
+
+.stacked-form input:focus,
+.stacked-form select:focus,
+.stacked-form textarea:focus {
+  outline: none;
+  border-color: var(--color-accent-cyan);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+.stacked-form button {
+  align-self: flex-start;
+}
+
+.error-text {
+  margin: var(--space-xs) 0;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  background: rgba(255, 99, 99, 0.08);
+  border: var(--border-width) solid rgba(255, 99, 99, 0.28);
+  border-radius: var(--radius-sm);
+}
+
+/* Gentle, professional hover lift for the panel cards used everywhere. */
+.agent-template-card {
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+.agent-template-card:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-panel);
+}
+
+/* Keep action rows tidy when they wrap on narrow/Developer Mode widths. */
+.inline-actions {
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+/* Active toggle state (voice mode, etc.) reads as the current selection. */
+.inline-actions button.active {
+  border-color: var(--color-accent-cyan);
+  color: var(--color-accent-cyan-soft);
+  box-shadow: 0 0 0 1px var(--color-glow-cyan);
+}
