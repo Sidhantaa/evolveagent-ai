@@ -224,6 +224,16 @@ import {
   createBusinessOperatorKpiSnapshot,
   createBusinessOperatorApproval,
   updateBusinessOperatorApproval,
+  getComplianceIntelDashboard,
+  getComplianceIntelPolicies,
+  getComplianceScans,
+  getComplianceContractReviews,
+  getComplianceChecklists,
+  createCompliancePolicy,
+  runComplianceScan,
+  reviewComplianceContract,
+  createComplianceChecklist,
+  createComplianceAuditPackage,
   getGoal,
   getGoals,
   getHistory,
@@ -806,6 +816,15 @@ function App() {
   const [bizOpsWorkflowType, setBizOpsWorkflowType] = useState('lead_pipeline')
   const [bizOpsApprovalTitle, setBizOpsApprovalTitle] = useState('')
   const [bizOpsApprovalKind, setBizOpsApprovalKind] = useState('external_send')
+  const [showComplianceIntelPanel, setShowComplianceIntelPanel] = useState(false)
+  const [complianceIntelDashboard, setComplianceIntelDashboard] = useState(null)
+  const [complianceScans, setComplianceScans] = useState([])
+  const [compIntelBusy, setCompIntelBusy] = useState(false)
+  const [complianceIntelError, setComplianceIntelError] = useState(null)
+  const [scanContent, setScanContent] = useState('')
+  const [contractContent, setContractContent] = useState('')
+  const [complianceArtifact, setComplianceArtifact] = useState(null)
+  const [checklistFramework, setChecklistFramework] = useState('hipaa')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -928,6 +947,7 @@ function App() {
     refreshSaasPanel()
     refreshTeamPanel()
     refreshBizOpsPanel()
+    refreshComplianceIntelPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2233,6 +2253,64 @@ function App() {
 
   async function handleDecideBizOpsApproval(approvalId, decision) {
     await runBizOpsAction(() => updateBusinessOperatorApproval(approvalId, decision))
+  }
+
+  async function refreshComplianceIntelPanel() {
+    const [dashboard, scans] = await Promise.all([
+      getComplianceIntelDashboard(),
+      getComplianceScans(),
+    ])
+    setComplianceIntelDashboard(dashboard)
+    setComplianceScans(scans?.scans || [])
+  }
+
+  async function runComplianceIntelAction(action) {
+    setCompIntelBusy(true)
+    setComplianceIntelError(null)
+    try {
+      const value = await action()
+      await refreshComplianceIntelPanel()
+      return value
+    } catch (error) {
+      setComplianceIntelError(error.message || 'Compliance action failed')
+      return null
+    } finally {
+      setCompIntelBusy(false)
+    }
+  }
+
+  async function handleRunComplianceScan(event) {
+    event.preventDefault()
+    if (!scanContent.trim()) return
+    const finding = await runComplianceIntelAction(() => runComplianceScan({ content: scanContent.trim(), label: 'manual scan' }))
+    if (finding) {
+      setComplianceArtifact({ kind: 'scan', data: finding })
+      setScanContent('')
+    }
+  }
+
+  async function handleReviewContract(event) {
+    event.preventDefault()
+    if (!contractContent.trim()) return
+    const review = await runComplianceIntelAction(() => reviewComplianceContract({ title: 'Contract', content: contractContent.trim() }))
+    if (review) {
+      setComplianceArtifact({ kind: 'contract', data: review })
+      setContractContent('')
+    }
+  }
+
+  async function handleCreateComplianceChecklist() {
+    const checklist = await runComplianceIntelAction(() => createComplianceChecklist({ framework: checklistFramework }))
+    if (checklist) setComplianceArtifact({ kind: 'checklist', data: checklist })
+  }
+
+  async function handleCreateAuditPackage() {
+    const pkg = await runComplianceIntelAction(() => createComplianceAuditPackage({ title: 'Audit package' }))
+    if (pkg) setComplianceArtifact({ kind: 'audit_package', data: pkg })
+  }
+
+  async function handleCreateCompliancePolicy() {
+    await runComplianceIntelAction(() => createCompliancePolicy({ name: 'New policy', category: 'general' }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -7155,6 +7233,86 @@ function App() {
                 )}
 
                 <p className="muted">Draft-only operations — approving records a decision but performs no real email send, payment, or external CRM action.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowComplianceIntelPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Compliance Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showComplianceIntelPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Legal / Compliance Intelligence · v34.0</strong>
+                  <span>Policies, sensitive-data scanning (PII/PHI/secrets), contract review, checklists, audit packages. Not legal advice.</span>
+                </div>
+                {complianceIntelDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Policies</span><strong>{complianceIntelDashboard.policy_count}</strong></div>
+                    <div><span>Scans</span><strong>{complianceIntelDashboard.scan_count}</strong></div>
+                    <div><span>High risk</span><strong>{complianceIntelDashboard.high_risk_findings}</strong></div>
+                    <div><span>PHI</span><strong>{complianceIntelDashboard.phi_findings}</strong></div>
+                    <div><span>Contracts</span><strong>{complianceIntelDashboard.contract_review_count}</strong></div>
+                    <div><span>Audits</span><strong>{complianceIntelDashboard.audit_package_count}</strong></div>
+                  </div>
+                )}
+                {complianceIntelError && <p className="error-text">{complianceIntelError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateCompliancePolicy} disabled={compIntelBusy}>New policy</button>
+                  <button type="button" onClick={handleCreateAuditPackage} disabled={compIntelBusy}>Audit package</button>
+                  <button type="button" onClick={() => refreshComplianceIntelPanel()} disabled={compIntelBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleRunComplianceScan}>
+                  <h3>Sensitive-data scan</h3>
+                  <textarea placeholder="Paste content to scan for PII / PHI / secrets" value={scanContent} onChange={(event) => setScanContent(event.target.value)} rows={2} />
+                  <button type="submit" disabled={compIntelBusy || !scanContent.trim()}>Scan</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleReviewContract}>
+                  <h3>Contract review</h3>
+                  <textarea placeholder="Paste contract text to flag risky clauses" value={contractContent} onChange={(event) => setContractContent(event.target.value)} rows={2} />
+                  <button type="submit" disabled={compIntelBusy || !contractContent.trim()}>Review</button>
+                </form>
+
+                <div className="inline-actions">
+                  <select value={checklistFramework} onChange={(event) => setChecklistFramework(event.target.value)}>
+                    <option value="hipaa">hipaa</option>
+                    <option value="gdpr">gdpr</option>
+                    <option value="soc2">soc2</option>
+                    <option value="general">general</option>
+                  </select>
+                  <button type="button" onClick={handleCreateComplianceChecklist} disabled={compIntelBusy}>Generate checklist</button>
+                </div>
+
+                {complianceArtifact && (
+                  <div className="agent-template-card">
+                    <strong>{complianceArtifact.kind}</strong>
+                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '160px', overflow: 'auto', margin: 0 }}>
+                      {JSON.stringify(complianceArtifact.data, null, 2).slice(0, 1200)}
+                    </pre>
+                  </div>
+                )}
+
+                {complianceScans.length > 0 && (
+                  <>
+                    <h3>Recent scans</h3>
+                    {complianceScans.slice(0, 5).map((scan) => (
+                      <p className="muted" key={scan.finding_id}>
+                        • {scan.label || 'scan'} · {scan.risk_level}{scan.phi_detected ? ' · PHI' : ''}{scan.secrets_detected ? ' · secrets' : ''}
+                      </p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Not legal advice — produces checklists, warnings, and audit material for human review.</p>
               </div>
             )}
           </section>

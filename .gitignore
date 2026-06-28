@@ -132,6 +132,12 @@ backend/app/data/business_approval_items.json
 backend/app/data/business_reports.json
 backend/app/data/business_kpi_snapshots.json
 backend/app/data/business_audit_records.json
+backend/app/data/compliance_intel_policies.json
+backend/app/data/compliance_scans.json
+backend/app/data/sensitive_data_findings.json
+backend/app/data/contract_reviews.json
+backend/app/data/compliance_checklists.json
+backend/app/data/audit_packages.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json
