@@ -61,6 +61,10 @@ from app.models.request_models import (
     TrainingExampleUpdateRequest,
     TrainingRunCreateRequest,
     TrainingComparisonRequest,
+    AvatarPersonaUpdateRequest,
+    AvatarVoiceSettingsUpdateRequest,
+    AvatarMeetingSessionRequest,
+    AvatarConsentRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -176,6 +180,7 @@ from app.services.self_healing_service import SelfHealingService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
 from app.services.training_lab_service import TrainingLabService
+from app.services.avatar_persona_service import AvatarPersonaService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -250,6 +255,7 @@ self_healing_service = SelfHealingService(storage, governance_service, safe_comm
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
+avatar_persona_service = AvatarPersonaService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2382,6 +2388,50 @@ def export_training_dataset(dataset_id: str) -> dict:
         return training_lab_service.export_dataset(dataset_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Dataset not found") from error
+
+
+# ----------------------------------------------------------------------
+# v28.0 Personal AI Avatar / Voice Twin (settings + shell; no impersonation/cloning)
+# ----------------------------------------------------------------------
+@router.get("/avatar/dashboard")
+def get_avatar_dashboard() -> dict:
+    return avatar_persona_service.dashboard()
+
+
+@router.get("/avatar/persona")
+def get_avatar_persona() -> dict:
+    return avatar_persona_service.get_persona()
+
+
+@router.patch("/avatar/persona")
+def update_avatar_persona(request: AvatarPersonaUpdateRequest) -> dict:
+    return avatar_persona_service.update_persona(request.model_dump(exclude_unset=True))
+
+
+@router.get("/avatar/voice-settings")
+def get_avatar_voice_settings() -> dict:
+    return avatar_persona_service.get_voice_settings()
+
+
+@router.patch("/avatar/voice-settings")
+def update_avatar_voice_settings(request: AvatarVoiceSettingsUpdateRequest) -> dict:
+    return avatar_persona_service.update_voice_settings(request.model_dump(exclude_unset=True))
+
+
+@router.post("/avatar/meeting-sessions")
+def create_avatar_meeting_session(request: AvatarMeetingSessionRequest) -> dict:
+    return avatar_persona_service.create_meeting_session(request.model_dump())
+
+
+@router.get("/avatar/meeting-sessions")
+def list_avatar_meeting_sessions() -> dict:
+    sessions = avatar_persona_service.list_meeting_sessions()
+    return {"meeting_sessions": sessions, "count": len(sessions)}
+
+
+@router.post("/avatar/consent")
+def create_avatar_consent(request: AvatarConsentRequest) -> dict:
+    return avatar_persona_service.create_consent(request.model_dump())
 
 
 @router.get("/governance")

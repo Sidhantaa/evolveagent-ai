@@ -110,6 +110,10 @@ class StorageService:
             "training_exports.json",
             "training_runs.json",
             "training_comparisons.json",
+            "avatar_personas.json",
+            "voice_response_settings.json",
+            "meeting_voice_sessions.json",
+            "persona_consent_records.json",
         ):
             self._ensure_file(filename)
 

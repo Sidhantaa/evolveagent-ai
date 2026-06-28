@@ -817,3 +817,29 @@ class TrainingComparisonRequest(BaseModel):
     metric: str = Field(default="win_rate", max_length=80)
     baseline_score: float = Field(default=0)
     candidate_score: float = Field(default=0)
+
+
+# ----------------------------------------------------------------------
+# v28.0 Personal AI Avatar / Voice Twin
+# ----------------------------------------------------------------------
+class AvatarPersonaUpdateRequest(BaseModel):
+    avatar_name: str | None = Field(default=None, max_length=80)
+    tone: str | None = Field(default=None, pattern="^(friendly|professional|concise|encouraging|neutral)$")
+    format: str | None = Field(default=None, pattern="^(bullets|paragraph|step_by_step|summary_first)$")
+    style: str | None = Field(default=None, max_length=200)
+
+
+class AvatarVoiceSettingsUpdateRequest(BaseModel):
+    voice_mode: str | None = Field(default=None, pattern="^(text_only|spoken_summary_ready|disabled)$")
+    spoken_summary_max_chars: int | None = Field(default=None, ge=100, le=2000)
+
+
+class AvatarMeetingSessionRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    context: str = Field(default="", max_length=4000)
+
+
+class AvatarConsentRequest(BaseModel):
+    scope: str = Field(default="persona_behavior", max_length=120)
+    granted: bool = Field(default=False)
+    note: str = Field(default="", max_length=1000)
