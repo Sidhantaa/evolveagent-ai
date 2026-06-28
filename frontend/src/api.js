@@ -1930,3 +1930,28 @@ export function createTrainingRun(payload) {
 export function createTrainingComparison(payload) {
   return postJson('/api/training-lab/comparisons', payload)
 }
+
+export function getAvatarDashboard() {
+  return getJson('/api/avatar/dashboard')
+}
+export function getAvatarPersona() {
+  return getJson('/api/avatar/persona')
+}
+export function updateAvatarPersona(payload) {
+  return patchJson('/api/avatar/persona', payload)
+}
+export function getAvatarVoiceSettings() {
+  return getJson('/api/avatar/voice-settings')
+}
+export function updateAvatarVoiceSettings(payload) {
+  return patchJson('/api/avatar/voice-settings', payload)
+}
+export function getAvatarMeetingSessions() {
+  return getJson('/api/avatar/meeting-sessions')
+}
+export function createAvatarMeetingSession(payload) {
+  return postJson('/api/avatar/meeting-sessions', payload)
+}
+export function createAvatarConsent(payload) {
+  return postJson('/api/avatar/consent', payload)
+}

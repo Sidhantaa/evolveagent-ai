@@ -107,6 +107,10 @@ backend/app/data/training_examples.json
 backend/app/data/training_exports.json
 backend/app/data/training_runs.json
 backend/app/data/training_comparisons.json
+backend/app/data/avatar_personas.json
+backend/app/data/voice_response_settings.json
+backend/app/data/meeting_voice_sessions.json
+backend/app/data/persona_consent_records.json
 backend/app/data/*.tmp
 *.log
 logs/

@@ -164,6 +164,14 @@ import {
   updateTrainingExample,
   exportTrainingDataset,
   createTrainingRun,
+  getAvatarDashboard,
+  getAvatarPersona,
+  updateAvatarPersona,
+  getAvatarVoiceSettings,
+  updateAvatarVoiceSettings,
+  getAvatarMeetingSessions,
+  createAvatarMeetingSession,
+  createAvatarConsent,
   getGoal,
   getGoals,
   getHistory,
@@ -671,6 +679,15 @@ function App() {
   const [datasetName, setDatasetName] = useState('')
   const [examplePrompt, setExamplePrompt] = useState('')
   const [exampleCompletion, setExampleCompletion] = useState('')
+  const [showAvatarPanel, setShowAvatarPanel] = useState(false)
+  const [avatarDashboard, setAvatarDashboard] = useState(null)
+  const [avatarMeetings, setAvatarMeetings] = useState([])
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState(null)
+  const [avatarName, setAvatarName] = useState('')
+  const [avatarTone, setAvatarTone] = useState('friendly')
+  const [avatarVoiceMode, setAvatarVoiceMode] = useState('text_only')
+  const [meetingTitle, setMeetingTitle] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -787,6 +804,7 @@ function App() {
     refreshCompanyBrainPanel()
     refreshDevicePanel()
     refreshTrainingPanel()
+    refreshAvatarPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1710,6 +1728,53 @@ function App() {
 
   async function handleCreateTrainingRun() {
     await runTrainingAction(() => createTrainingRun({ dataset_id: trainingDatasetId || null }))
+  }
+
+  async function refreshAvatarPanel() {
+    const [dashboard, meetings] = await Promise.all([
+      getAvatarDashboard(),
+      getAvatarMeetingSessions(),
+    ])
+    setAvatarDashboard(dashboard)
+    setAvatarMeetings(meetings?.meeting_sessions || [])
+    if (dashboard?.persona?.avatar_name && !avatarName) setAvatarName(dashboard.persona.avatar_name)
+    if (dashboard?.voice_settings?.voice_mode) setAvatarVoiceMode(dashboard.voice_settings.voice_mode)
+  }
+
+  async function runAvatarAction(action) {
+    setAvatarBusy(true)
+    setAvatarError(null)
+    try {
+      await action()
+      await refreshAvatarPanel()
+    } catch (error) {
+      setAvatarError(error.message || 'Avatar action failed')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  async function handleSavePersona(event) {
+    event.preventDefault()
+    await runAvatarAction(() => updateAvatarPersona({ avatar_name: avatarName.trim() || undefined, tone: avatarTone }))
+  }
+
+  async function handleSaveVoiceMode(mode) {
+    setAvatarVoiceMode(mode)
+    await runAvatarAction(() => updateAvatarVoiceSettings({ voice_mode: mode }))
+  }
+
+  async function handleCreateMeetingSession(event) {
+    event.preventDefault()
+    if (!meetingTitle.trim()) return
+    await runAvatarAction(async () => {
+      await createAvatarMeetingSession({ title: meetingTitle.trim() })
+      setMeetingTitle('')
+    })
+  }
+
+  async function handleGrantConsent() {
+    await runAvatarAction(() => createAvatarConsent({ scope: 'persona_behavior', granted: true }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5988,6 +6053,95 @@ function App() {
                 )}
 
                 <p className="muted">No auto-training — only approved + sanitized examples export; secrets and PII are redacted before inclusion.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowAvatarPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Avatar / Voice Twin
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAvatarPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Personal AI Avatar / Voice Twin · v28.0</strong>
+                  <span>Persona, voice-response, and meeting-assistant settings. The avatar is always an AI — no impersonation, no voice cloning.</span>
+                </div>
+                {avatarDashboard && (
+                  <div className="provider-card">
+                    <div><span>Avatar</span><strong>{avatarDashboard.persona?.avatar_name}</strong></div>
+                    <div><span>Tone</span><strong>{avatarDashboard.persona?.tone}</strong></div>
+                    <div><span>Voice</span><strong>{avatarDashboard.voice_settings?.voice_mode}</strong></div>
+                    <div><span>Consent</span><strong>{String(avatarDashboard.latest_consent_granted)}</strong></div>
+                  </div>
+                )}
+                {avatarError && <p className="error-text">{avatarError}</p>}
+
+                <form className="stacked-form" onSubmit={handleSavePersona}>
+                  <h3>Persona</h3>
+                  <input type="text" placeholder="Avatar name" value={avatarName} onChange={(event) => setAvatarName(event.target.value)} />
+                  <select value={avatarTone} onChange={(event) => setAvatarTone(event.target.value)}>
+                    <option value="friendly">friendly</option>
+                    <option value="professional">professional</option>
+                    <option value="concise">concise</option>
+                    <option value="encouraging">encouraging</option>
+                    <option value="neutral">neutral</option>
+                  </select>
+                  <button type="submit" disabled={avatarBusy}>Save persona</button>
+                </form>
+
+                <h3>Voice response mode</h3>
+                <div className="inline-actions">
+                  {['text_only', 'spoken_summary_ready', 'disabled'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleSaveVoiceMode(mode)}
+                      disabled={avatarBusy}
+                      className={avatarVoiceMode === mode ? 'active' : ''}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateMeetingSession}>
+                  <h3>Meeting assistant session</h3>
+                  <input type="text" placeholder="Meeting title" value={meetingTitle} onChange={(event) => setMeetingTitle(event.target.value)} />
+                  <button type="submit" disabled={avatarBusy || !meetingTitle.trim()}>Create session</button>
+                </form>
+
+                {avatarMeetings.length > 0 && (
+                  <>
+                    <h3>Recent meeting sessions</h3>
+                    {avatarMeetings.slice(0, 5).map((session) => (
+                      <div className="agent-template-card" key={session.meeting_session_id}>
+                        <strong>{session.title}</strong>
+                        <p className="muted">{session.status} · consent required</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGrantConsent} disabled={avatarBusy}>Record consent</button>
+                  <button type="button" onClick={() => refreshAvatarPanel()} disabled={avatarBusy}>Refresh</button>
+                </div>
+
+                {avatarDashboard?.safety_rules && (
+                  <>
+                    <h3>Safety</h3>
+                    {avatarDashboard.safety_rules.map((rule, index) => (
+                      <p className="muted" key={index}>• {rule}</p>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </section>
