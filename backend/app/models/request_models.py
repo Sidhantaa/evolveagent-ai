@@ -848,3 +848,56 @@ class AvatarConsentRequest(BaseModel):
 class AvatarImageRequest(BaseModel):
     description: str = Field(default="", max_length=600, description="Self-description for a stylized avatar (not a photo-real clone).")
     style: str = Field(default="illustrated", pattern="^(illustrated|cartoon|minimal|3d_stylized|pixel)$")
+
+
+# ----------------------------------------------------------------------
+# v29.0 Real-Time Life Operating System
+# ----------------------------------------------------------------------
+class LifeScheduleCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    date: str = Field(default="", max_length=10)
+    start_time: str = Field(default="", max_length=10)
+    end_time: str = Field(default="", max_length=10)
+    location: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=1000)
+    workspace_id: str | None = None
+
+
+class LifeTaskCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    due_date: str = Field(default="", max_length=10)
+    priority: str = Field(default="medium", pattern="^(low|medium|high)$")
+    importance: str = Field(default="medium", pattern="^(low|medium|high)$")
+    status: str = Field(default="todo", pattern="^(todo|in_progress|done|archived)$")
+    notes: str = Field(default="", max_length=1000)
+    workspace_id: str | None = None
+
+
+class LifeTaskUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    due_date: str | None = Field(default=None, max_length=10)
+    priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    importance: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    status: str | None = Field(default=None, pattern="^(todo|in_progress|done|archived)$")
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class LifeReminderCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    remind_on: str = Field(default="", max_length=10)
+    status: str = Field(default="open", pattern="^(open|done|snoozed)$")
+    notes: str = Field(default="", max_length=1000)
+    workspace_id: str | None = None
+
+
+class LifeDeadlineCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    kind: str = Field(default="other", pattern="^(school|work|personal|other)$")
+    due_date: str = Field(default="", max_length=10)
+    course_or_project: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=1000)
+    workspace_id: str | None = None
+
+
+class LifeDailyPlanRequest(BaseModel):
+    workspace_id: str | None = None

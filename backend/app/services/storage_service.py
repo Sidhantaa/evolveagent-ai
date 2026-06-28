@@ -114,6 +114,11 @@ class StorageService:
             "voice_response_settings.json",
             "meeting_voice_sessions.json",
             "persona_consent_records.json",
+            "life_schedule_items.json",
+            "life_tasks.json",
+            "life_reminders.json",
+            "life_deadlines.json",
+            "life_plans.json",
         ):
             self._ensure_file(filename)
 

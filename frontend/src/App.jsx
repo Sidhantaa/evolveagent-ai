@@ -173,6 +173,17 @@ import {
   createAvatarMeetingSession,
   createAvatarConsent,
   generateAvatarImage,
+  getLifeOsDashboard,
+  getLifeSchedule,
+  getLifeTasks,
+  getLifeReminders,
+  getLifeDeadlines,
+  createLifeScheduleItem,
+  createLifeTask,
+  updateLifeTask,
+  createLifeReminder,
+  createLifeDeadline,
+  createLifeDailyPlan,
   getGoal,
   getGoals,
   getHistory,
@@ -691,6 +702,24 @@ function App() {
   const [meetingTitle, setMeetingTitle] = useState('')
   const [avatarDescription, setAvatarDescription] = useState('')
   const [avatarStyle, setAvatarStyle] = useState('illustrated')
+  const [showLifePanel, setShowLifePanel] = useState(false)
+  const [lifeDashboard, setLifeDashboard] = useState(null)
+  const [lifeTasks, setLifeTasks] = useState([])
+  const [lifeReminders, setLifeReminders] = useState([])
+  const [lifeDeadlines, setLifeDeadlines] = useState([])
+  const [lifeBusy, setLifeBusy] = useState(false)
+  const [lifeError, setLifeError] = useState(null)
+  const [lifeTaskTitle, setLifeTaskTitle] = useState('')
+  const [lifeTaskPriority, setLifeTaskPriority] = useState('medium')
+  const [lifeTaskDue, setLifeTaskDue] = useState('')
+  const [lifeScheduleTitle, setLifeScheduleTitle] = useState('')
+  const [lifeScheduleDate, setLifeScheduleDate] = useState('')
+  const [lifeReminderTitle, setLifeReminderTitle] = useState('')
+  const [lifeReminderOn, setLifeReminderOn] = useState('')
+  const [lifeDeadlineTitle, setLifeDeadlineTitle] = useState('')
+  const [lifeDeadlineKind, setLifeDeadlineKind] = useState('school')
+  const [lifeDeadlineDue, setLifeDeadlineDue] = useState('')
+  const [lifeDailyPlan, setLifeDailyPlan] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -808,6 +837,7 @@ function App() {
     refreshDevicePanel()
     refreshTrainingPanel()
     refreshAvatarPanel()
+    refreshLifePanel(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1783,6 +1813,85 @@ function App() {
   async function handleGenerateAvatarImage(event) {
     event.preventDefault()
     await runAvatarAction(() => generateAvatarImage({ description: avatarDescription.trim(), style: avatarStyle }))
+  }
+
+  async function refreshLifePanel(nextWorkspaceId = workspaceId) {
+    const [dashboard, tasks, reminders, deadlines] = await Promise.all([
+      getLifeOsDashboard(nextWorkspaceId),
+      getLifeTasks(nextWorkspaceId),
+      getLifeReminders(nextWorkspaceId),
+      getLifeDeadlines(nextWorkspaceId),
+    ])
+    setLifeDashboard(dashboard)
+    setLifeTasks(tasks?.ranked || [])
+    setLifeReminders(reminders?.reminders || [])
+    setLifeDeadlines(deadlines?.deadlines || [])
+  }
+
+  async function runLifeAction(action) {
+    setLifeBusy(true)
+    setLifeError(null)
+    try {
+      const value = await action()
+      await refreshLifePanel(workspaceId)
+      return value
+    } catch (error) {
+      setLifeError(error.message || 'Life OS action failed')
+      return null
+    } finally {
+      setLifeBusy(false)
+    }
+  }
+
+  async function handleCreateLifeTask(event) {
+    event.preventDefault()
+    if (!lifeTaskTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeTask({ title: lifeTaskTitle.trim(), priority: lifeTaskPriority, due_date: lifeTaskDue.trim(), workspace_id: workspaceId })
+      setLifeTaskTitle('')
+      setLifeTaskPriority('medium')
+      setLifeTaskDue('')
+    })
+  }
+
+  async function handleCompleteLifeTask(taskId) {
+    await runLifeAction(() => updateLifeTask(taskId, { status: 'done' }))
+  }
+
+  async function handleCreateLifeSchedule(event) {
+    event.preventDefault()
+    if (!lifeScheduleTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeScheduleItem({ title: lifeScheduleTitle.trim(), date: lifeScheduleDate.trim(), workspace_id: workspaceId })
+      setLifeScheduleTitle('')
+      setLifeScheduleDate('')
+    })
+  }
+
+  async function handleCreateLifeReminder(event) {
+    event.preventDefault()
+    if (!lifeReminderTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeReminder({ title: lifeReminderTitle.trim(), remind_on: lifeReminderOn.trim(), workspace_id: workspaceId })
+      setLifeReminderTitle('')
+      setLifeReminderOn('')
+    })
+  }
+
+  async function handleCreateLifeDeadline(event) {
+    event.preventDefault()
+    if (!lifeDeadlineTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeDeadline({ title: lifeDeadlineTitle.trim(), kind: lifeDeadlineKind, due_date: lifeDeadlineDue.trim(), workspace_id: workspaceId })
+      setLifeDeadlineTitle('')
+      setLifeDeadlineKind('school')
+      setLifeDeadlineDue('')
+    })
+  }
+
+  async function handleGenerateLifeDailyPlan() {
+    const plan = await runLifeAction(() => createLifeDailyPlan(workspaceId))
+    if (plan) setLifeDailyPlan(plan)
   }
 
   async function refreshAppBuilderTemplates() {
@@ -6185,6 +6294,132 @@ function App() {
                     ))}
                   </>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowLifePanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Life OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showLifePanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Real-Time Life OS · v29.0</strong>
+                  <span>Plan your day from local schedule, tasks, reminders, and deadlines. No real calendar/email integration.</span>
+                </div>
+                {lifeDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Tasks</span><strong>{lifeDashboard.active_task_count}</strong></div>
+                    <div><span>Overdue</span><strong>{lifeDashboard.overdue_task_count}</strong></div>
+                    <div><span>Events</span><strong>{lifeDashboard.schedule_item_count}</strong></div>
+                    <div><span>Reminders</span><strong>{lifeDashboard.open_reminder_count}</strong></div>
+                    <div><span>Deadlines</span><strong>{lifeDashboard.upcoming_deadline_count}</strong></div>
+                    <div><span>Today</span><strong>{lifeDashboard.today}</strong></div>
+                  </div>
+                )}
+                {lifeError && <p className="error-text">{lifeError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGenerateLifeDailyPlan} disabled={lifeBusy}>Generate daily plan</button>
+                  <button type="button" onClick={() => refreshLifePanel(workspaceId)} disabled={lifeBusy}>Refresh</button>
+                </div>
+
+                {lifeDailyPlan && (
+                  <div className="agent-template-card">
+                    <strong>Daily plan · {lifeDailyPlan.date}</strong>
+                    <span>{lifeDailyPlan.summary}</span>
+                    <p className="muted">Focus: {lifeDailyPlan.focus_suggestion}</p>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateLifeTask}>
+                  <h3>New task</h3>
+                  <input type="text" placeholder="Task title" value={lifeTaskTitle} onChange={(event) => setLifeTaskTitle(event.target.value)} />
+                  <select value={lifeTaskPriority} onChange={(event) => setLifeTaskPriority(event.target.value)}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                  <input type="text" placeholder="Due date YYYY-MM-DD" value={lifeTaskDue} onChange={(event) => setLifeTaskDue(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeTaskTitle.trim()}>Add task</button>
+                </form>
+
+                {lifeTasks.length > 0 && (
+                  <>
+                    <h3>Top tasks (ranked)</h3>
+                    {lifeTasks.slice(0, 6).map((task) => (
+                      <div className="agent-template-card" key={task.task_id}>
+                        <strong>{task.title}</strong>
+                        <p className="muted">
+                          {task.priority} · score {task.priority_score}
+                          {task.overdue ? ' · overdue' : task.days_until_due != null ? ` · in ${task.days_until_due}d` : ''}
+                        </p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleCompleteLifeTask(task.task_id)} disabled={lifeBusy}>Mark done</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateLifeSchedule}>
+                  <h3>New schedule item</h3>
+                  <input type="text" placeholder="Event title" value={lifeScheduleTitle} onChange={(event) => setLifeScheduleTitle(event.target.value)} />
+                  <input type="text" placeholder="Date YYYY-MM-DD" value={lifeScheduleDate} onChange={(event) => setLifeScheduleDate(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeScheduleTitle.trim()}>Add event</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateLifeReminder}>
+                  <h3>New reminder</h3>
+                  <input type="text" placeholder="Reminder title" value={lifeReminderTitle} onChange={(event) => setLifeReminderTitle(event.target.value)} />
+                  <input type="text" placeholder="Remind on YYYY-MM-DD" value={lifeReminderOn} onChange={(event) => setLifeReminderOn(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeReminderTitle.trim()}>Add reminder</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateLifeDeadline}>
+                  <h3>New deadline</h3>
+                  <input type="text" placeholder="Deadline title" value={lifeDeadlineTitle} onChange={(event) => setLifeDeadlineTitle(event.target.value)} />
+                  <select value={lifeDeadlineKind} onChange={(event) => setLifeDeadlineKind(event.target.value)}>
+                    <option value="school">school</option>
+                    <option value="work">work</option>
+                    <option value="personal">personal</option>
+                    <option value="other">other</option>
+                  </select>
+                  <input type="text" placeholder="Due date YYYY-MM-DD" value={lifeDeadlineDue} onChange={(event) => setLifeDeadlineDue(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeDeadlineTitle.trim()}>Add deadline</button>
+                </form>
+
+                {lifeDeadlines.length > 0 && (
+                  <>
+                    <h3>Deadlines</h3>
+                    {lifeDeadlines.slice(0, 5).map((deadline) => (
+                      <div className="agent-template-card" key={deadline.deadline_id}>
+                        <strong>{deadline.title}</strong>
+                        <p className="muted">
+                          {deadline.kind} · {deadline.due_date || 'no date'}
+                          {deadline.days_until_due != null ? ` · in ${deadline.days_until_due}d` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {lifeReminders.length > 0 && (
+                  <>
+                    <h3>Reminders</h3>
+                    {lifeReminders.slice(0, 5).map((reminder) => (
+                      <p className="muted" key={reminder.reminder_id}>• {reminder.title} ({reminder.status}{reminder.remind_on ? ` · ${reminder.remind_on}` : ''})</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local planning only — nothing is synced to a real calendar or sent anywhere.</p>
               </div>
             )}
           </section>

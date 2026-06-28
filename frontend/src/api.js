@@ -1958,3 +1958,37 @@ export function createAvatarConsent(payload) {
 export function generateAvatarImage(payload) {
   return postJson('/api/avatar/persona/avatar-image', payload)
 }
+
+export function getLifeOsDashboard(workspaceId) {
+  return getJson(`/api/life-os/dashboard${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeSchedule(workspaceId) {
+  return getJson(`/api/life-os/schedule${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeTasks(workspaceId) {
+  return getJson(`/api/life-os/tasks${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeReminders(workspaceId) {
+  return getJson(`/api/life-os/reminders${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeDeadlines(workspaceId) {
+  return getJson(`/api/life-os/deadlines${query({ workspace_id: workspaceId })}`)
+}
+export function createLifeScheduleItem(payload) {
+  return postJson('/api/life-os/schedule', payload)
+}
+export function createLifeTask(payload) {
+  return postJson('/api/life-os/tasks', payload)
+}
+export function updateLifeTask(taskId, payload) {
+  return patchJson(`/api/life-os/tasks/${taskId}`, payload)
+}
+export function createLifeReminder(payload) {
+  return postJson('/api/life-os/reminders', payload)
+}
+export function createLifeDeadline(payload) {
+  return postJson('/api/life-os/deadlines', payload)
+}
+export function createLifeDailyPlan(workspaceId) {
+  return postJson('/api/life-os/daily-plan', { workspace_id: workspaceId })
+}
