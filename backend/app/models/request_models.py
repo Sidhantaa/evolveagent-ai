@@ -1020,3 +1020,40 @@ class BusinessApprovalCreateRequest(BaseModel):
 
 class BusinessApprovalDecisionRequest(BaseModel):
     decision: str = Field(..., pattern="^(approved|rejected)$")
+
+
+# ----------------------------------------------------------------------
+# v34.0 Legal / Compliance Intelligence Layer
+# ----------------------------------------------------------------------
+class CompliancePolicyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    category: str = Field(default="general", max_length=80)
+    rules: list[str] = Field(default_factory=list)
+    status: str = Field(default="draft", pattern="^(draft|active|archived)$")
+
+
+class CompliancePolicyUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=160)
+    category: str | None = Field(default=None, max_length=80)
+    rules: list[str] | None = None
+    status: str | None = Field(default=None, pattern="^(draft|active|archived)$")
+
+
+class ComplianceScanRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=20000)
+    label: str = Field(default="", max_length=160)
+
+
+class ComplianceContractReviewRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    content: str = Field(..., min_length=1, max_length=20000)
+
+
+class ComplianceChecklistRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    framework: str = Field(default="general", max_length=80)
+    items: list[str] = Field(default_factory=list)
+
+
+class ComplianceAuditPackageRequest(BaseModel):
+    title: str = Field(default="", max_length=200)

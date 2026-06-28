@@ -82,6 +82,12 @@ from app.models.request_models import (
     BusinessReportCreateRequest,
     BusinessApprovalCreateRequest,
     BusinessApprovalDecisionRequest,
+    CompliancePolicyCreateRequest,
+    CompliancePolicyUpdateRequest,
+    ComplianceScanRequest,
+    ComplianceContractReviewRequest,
+    ComplianceChecklistRequest,
+    ComplianceAuditPackageRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -208,6 +214,7 @@ from app.services.life_os_service import LifeOSService
 from app.services.universal_operator_service import UniversalOperatorService
 from app.services.saas_builder_service import SaaSBuilderService
 from app.services.business_operator_advanced_service import BusinessOperatorAdvancedService
+from app.services.compliance_intelligence_service import ComplianceIntelligenceService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -288,6 +295,7 @@ life_os_service = LifeOSService(storage, governance_service)
 universal_operator_service = UniversalOperatorService(storage, governance_service)
 saas_builder_service = SaaSBuilderService(storage, governance_service)
 business_operator_advanced_service = BusinessOperatorAdvancedService(storage, governance_service)
+compliance_intelligence_service = ComplianceIntelligenceService(storage, governance_service, SecretScanner())
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -2818,6 +2826,77 @@ def update_business_operator_approval(approval_id: str, request: BusinessApprova
         return business_operator_advanced_service.update_approval(approval_id, request.decision)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Approval not found") from error
+
+
+# ----------------------------------------------------------------------
+# v34.0 Legal / Compliance Intelligence Layer (not legal advice)
+# ----------------------------------------------------------------------
+@router.get("/compliance/dashboard")
+def get_compliance_intel_dashboard() -> dict:
+    return compliance_intelligence_service.dashboard()
+
+
+@router.get("/compliance/policies")
+def list_compliance_intel_policies() -> dict:
+    policies = compliance_intelligence_service.list_policies()
+    return {"policies": policies, "count": len(policies)}
+
+
+@router.post("/compliance/policies")
+def create_compliance_intel_policy(request: CompliancePolicyCreateRequest) -> dict:
+    return compliance_intelligence_service.create_policy(request.model_dump())
+
+
+@router.patch("/compliance/policies/{policy_id}")
+def update_compliance_intel_policy(policy_id: str, request: CompliancePolicyUpdateRequest) -> dict:
+    try:
+        return compliance_intelligence_service.update_policy(policy_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Policy not found") from error
+
+
+@router.post("/compliance/scan")
+def run_compliance_scan(request: ComplianceScanRequest) -> dict:
+    return compliance_intelligence_service.scan(request.content, request.label)
+
+
+@router.get("/compliance/scans")
+def list_compliance_scans() -> dict:
+    scans = compliance_intelligence_service.list_scans()
+    return {"scans": scans, "count": len(scans)}
+
+
+@router.post("/compliance/contracts/review")
+def review_compliance_contract(request: ComplianceContractReviewRequest) -> dict:
+    return compliance_intelligence_service.review_contract(request.model_dump())
+
+
+@router.get("/compliance/contracts/reviews")
+def list_compliance_contract_reviews() -> dict:
+    reviews = compliance_intelligence_service.list_contract_reviews()
+    return {"reviews": reviews, "count": len(reviews)}
+
+
+@router.post("/compliance/checklists")
+def create_compliance_checklist(request: ComplianceChecklistRequest) -> dict:
+    return compliance_intelligence_service.create_checklist(request.model_dump())
+
+
+@router.get("/compliance/checklists")
+def list_compliance_checklists() -> dict:
+    checklists = compliance_intelligence_service.list_checklists()
+    return {"checklists": checklists, "count": len(checklists)}
+
+
+@router.post("/compliance/audit-packages")
+def create_compliance_audit_package(request: ComplianceAuditPackageRequest | None = None) -> dict:
+    return compliance_intelligence_service.create_audit_package(request.model_dump() if request else {})
+
+
+@router.get("/compliance/audit-packages")
+def list_compliance_audit_packages() -> dict:
+    packages = compliance_intelligence_service.list_audit_packages()
+    return {"audit_packages": packages, "count": len(packages)}
 
 
 @router.get("/governance")

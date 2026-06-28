@@ -2121,3 +2121,37 @@ export function createBusinessOperatorApproval(payload) {
 export function updateBusinessOperatorApproval(approvalId, decision) {
   return patchJson(`/api/business-operator/approvals/${approvalId}`, { decision })
 }
+
+export function getComplianceIntelDashboard() {
+  return getJson('/api/compliance/dashboard')
+}
+export function getComplianceIntelPolicies() {
+  return getJson('/api/compliance/policies')
+}
+export function getComplianceScans() {
+  return getJson('/api/compliance/scans')
+}
+export function getComplianceContractReviews() {
+  return getJson('/api/compliance/contracts/reviews')
+}
+export function getComplianceChecklists() {
+  return getJson('/api/compliance/checklists')
+}
+export function getComplianceAuditPackages() {
+  return getJson('/api/compliance/audit-packages')
+}
+export function createCompliancePolicy(payload) {
+  return postJson('/api/compliance/policies', payload)
+}
+export function runComplianceScan(payload) {
+  return postJson('/api/compliance/scan', payload)
+}
+export function reviewComplianceContract(payload) {
+  return postJson('/api/compliance/contracts/review', payload)
+}
+export function createComplianceChecklist(payload) {
+  return postJson('/api/compliance/checklists', payload)
+}
+export function createComplianceAuditPackage(payload) {
+  return postJson('/api/compliance/audit-packages', payload || {})
+}
