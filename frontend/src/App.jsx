@@ -156,6 +156,14 @@ import {
   createDeviceOperatorSession,
   planDeviceOperatorSession,
   confirmDeviceOperatorAction,
+  getTrainingLabDashboard,
+  getTrainingDatasets,
+  getTrainingDataset,
+  createTrainingDataset,
+  addTrainingExample,
+  updateTrainingExample,
+  exportTrainingDataset,
+  createTrainingRun,
   getGoal,
   getGoals,
   getHistory,
@@ -652,6 +660,17 @@ function App() {
   const [deviceCommand, setDeviceCommand] = useState('')
   const [deviceScreenText, setDeviceScreenText] = useState('')
   const [devicePlannedActions, setDevicePlannedActions] = useState([])
+  const [showTrainingPanel, setShowTrainingPanel] = useState(false)
+  const [trainingDashboard, setTrainingDashboard] = useState(null)
+  const [trainingDatasets, setTrainingDatasets] = useState([])
+  const [trainingDatasetId, setTrainingDatasetId] = useState('')
+  const [trainingExamples, setTrainingExamples] = useState([])
+  const [trainingExport, setTrainingExport] = useState(null)
+  const [trainingBusy, setTrainingBusy] = useState(false)
+  const [trainingError, setTrainingError] = useState(null)
+  const [datasetName, setDatasetName] = useState('')
+  const [examplePrompt, setExamplePrompt] = useState('')
+  const [exampleCompletion, setExampleCompletion] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -767,6 +786,7 @@ function App() {
     refreshHealingPanel()
     refreshCompanyBrainPanel()
     refreshDevicePanel()
+    refreshTrainingPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1615,6 +1635,81 @@ function App() {
         current.map((item) => (item.action_id === actionId ? { ...item, status: updated.status } : item)),
       )
     })
+  }
+
+  async function refreshTrainingPanel() {
+    const [dashboard, datasets] = await Promise.all([
+      getTrainingLabDashboard(),
+      getTrainingDatasets(),
+    ])
+    setTrainingDashboard(dashboard)
+    setTrainingDatasets(datasets?.datasets || [])
+  }
+
+  async function loadTrainingExamples(datasetId) {
+    if (!datasetId) {
+      setTrainingExamples([])
+      return
+    }
+    const detail = await getTrainingDataset(datasetId)
+    setTrainingExamples(detail?.examples || [])
+  }
+
+  async function runTrainingAction(action) {
+    setTrainingBusy(true)
+    setTrainingError(null)
+    try {
+      const value = await action()
+      await refreshTrainingPanel()
+      if (trainingDatasetId) await loadTrainingExamples(trainingDatasetId)
+      return value
+    } catch (error) {
+      setTrainingError(error.message || 'Training lab action failed')
+      return null
+    } finally {
+      setTrainingBusy(false)
+    }
+  }
+
+  async function handleCreateDataset(event) {
+    event.preventDefault()
+    if (!datasetName.trim()) return
+    const dataset = await runTrainingAction(() => createTrainingDataset({ name: datasetName.trim() }))
+    if (dataset) {
+      setDatasetName('')
+      setTrainingDatasetId(dataset.dataset_id)
+      await loadTrainingExamples(dataset.dataset_id)
+    }
+  }
+
+  async function handleSelectTrainingDataset(datasetId) {
+    setTrainingDatasetId(datasetId)
+    setTrainingExport(null)
+    await loadTrainingExamples(datasetId)
+  }
+
+  async function handleAddExample(event) {
+    event.preventDefault()
+    if (!trainingDatasetId || !examplePrompt.trim()) return
+    await runTrainingAction(async () => {
+      await addTrainingExample(trainingDatasetId, { prompt: examplePrompt.trim(), completion: exampleCompletion.trim() })
+      setExamplePrompt('')
+      setExampleCompletion('')
+    })
+  }
+
+  async function handleSetExampleStatus(exampleId, status) {
+    await runTrainingAction(() => updateTrainingExample(exampleId, { status }))
+  }
+
+  async function handleExportDataset() {
+    if (!trainingDatasetId) return
+    const result = await runTrainingAction(() => exportTrainingDataset(trainingDatasetId))
+    if (result) setTrainingExport(result)
+  }
+
+  async function handleCreateTrainingRun() {
+    await runTrainingAction(() => createTrainingRun({ dataset_id: trainingDatasetId || null }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5804,6 +5899,95 @@ function App() {
                 )}
 
                 <p className="muted">Mock/planning-first — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowTrainingPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Training Lab
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showTrainingPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Private Training Lab · v27.0</strong>
+                  <span>Prepare approved, sanitized fine-tuning datasets. The app does not train the base model automatically.</span>
+                </div>
+                {trainingDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Datasets</span><strong>{trainingDashboard.total_datasets}</strong></div>
+                    <div><span>Examples</span><strong>{trainingDashboard.total_examples}</strong></div>
+                    <div><span>Approved</span><strong>{trainingDashboard.approved_examples}</strong></div>
+                    <div><span>Redacted</span><strong>{trainingDashboard.examples_with_redactions}</strong></div>
+                    <div><span>Exports</span><strong>{trainingDashboard.total_exports}</strong></div>
+                    <div><span>Runs</span><strong>{trainingDashboard.total_runs}</strong></div>
+                  </div>
+                )}
+                {trainingError && <p className="error-text">{trainingError}</p>}
+
+                <form className="stacked-form" onSubmit={handleCreateDataset}>
+                  <h3>New dataset</h3>
+                  <input type="text" placeholder="Dataset name" value={datasetName} onChange={(event) => setDatasetName(event.target.value)} />
+                  <button type="submit" disabled={trainingBusy || !datasetName.trim()}>Create</button>
+                </form>
+
+                {trainingDatasets.length > 0 && (
+                  <>
+                    <h3>Datasets</h3>
+                    <select value={trainingDatasetId} onChange={(event) => handleSelectTrainingDataset(event.target.value)}>
+                      <option value="">Select dataset…</option>
+                      {trainingDatasets.map((dataset) => (
+                        <option key={dataset.dataset_id} value={dataset.dataset_id}>{dataset.name}</option>
+                      ))}
+                    </select>
+                    <div className="inline-actions">
+                      <button type="button" onClick={handleExportDataset} disabled={trainingBusy || !trainingDatasetId}>Export approved (JSONL)</button>
+                      <button type="button" onClick={handleCreateTrainingRun} disabled={trainingBusy}>Mock run</button>
+                    </div>
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleAddExample}>
+                  <h3>Add example (auto-redacted)</h3>
+                  <textarea placeholder="Prompt" value={examplePrompt} onChange={(event) => setExamplePrompt(event.target.value)} rows={2} />
+                  <textarea placeholder="Completion" value={exampleCompletion} onChange={(event) => setExampleCompletion(event.target.value)} rows={2} />
+                  <button type="submit" disabled={trainingBusy || !trainingDatasetId || !examplePrompt.trim()}>Add example</button>
+                </form>
+
+                {trainingExamples.length > 0 && (
+                  <>
+                    <h3>Examples</h3>
+                    {trainingExamples.slice(0, 8).map((example) => (
+                      <div className="agent-template-card" key={example.example_id}>
+                        <strong>{example.status}</strong>
+                        <span>{example.prompt.slice(0, 120)}</span>
+                        {(example.redaction?.secrets_detected || example.redaction?.pii_detected) && (
+                          <p className="muted">Redacted: {[...(example.redaction.secret_types || []), ...(example.redaction.pii_types || [])].join(', ')}</p>
+                        )}
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleSetExampleStatus(example.example_id, 'approved')} disabled={trainingBusy}>Approve</button>
+                          <button type="button" onClick={() => handleSetExampleStatus(example.example_id, 'rejected')} disabled={trainingBusy}>Reject</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {trainingExport && (
+                  <div className="agent-template-card">
+                    <strong>Export · {trainingExport.approved_example_count} approved</strong>
+                    <p className="muted">Excluded non-approved: {trainingExport.excluded_non_approved}</p>
+                    <p className="muted">{trainingExport.safety_note}</p>
+                  </div>
+                )}
+
+                <p className="muted">No auto-training — only approved + sanitized examples export; secrets and PII are redacted before inclusion.</p>
               </div>
             )}
           </section>

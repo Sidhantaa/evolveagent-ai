@@ -102,6 +102,11 @@ backend/app/data/company_brain_strategy.json
 backend/app/data/device_operator_sessions.json
 backend/app/data/device_operator_actions.json
 backend/app/data/device_operator_audit.json
+backend/app/data/training_datasets.json
+backend/app/data/training_examples.json
+backend/app/data/training_exports.json
+backend/app/data/training_runs.json
+backend/app/data/training_comparisons.json
 backend/app/data/*.tmp
 *.log
 logs/

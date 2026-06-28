@@ -782,3 +782,38 @@ class DevicePlanRequest(BaseModel):
 class DeviceConfirmActionRequest(BaseModel):
     action_id: str = Field(..., min_length=1, max_length=120)
     approve: bool = Field(default=False)
+
+
+# ----------------------------------------------------------------------
+# v27.0 Private Training Lab
+# ----------------------------------------------------------------------
+class TrainingDatasetCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=2000)
+    purpose: str = Field(default="fine_tuning_preparation", max_length=200)
+
+
+class TrainingExampleCreateRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=20000)
+    completion: str = Field(default="", max_length=20000)
+    approved: bool = Field(default=False)
+
+
+class TrainingExampleUpdateRequest(BaseModel):
+    status: str | None = Field(default=None, pattern="^(pending|approved|rejected)$")
+    prompt: str | None = Field(default=None, max_length=20000)
+    completion: str | None = Field(default=None, max_length=20000)
+
+
+class TrainingRunCreateRequest(BaseModel):
+    dataset_id: str | None = Field(default=None, max_length=120)
+    base_model: str = Field(default="", max_length=120)
+    method: str = Field(default="lora", max_length=60)
+
+
+class TrainingComparisonRequest(BaseModel):
+    baseline_model: str = Field(default="", max_length=120)
+    candidate_model: str = Field(default="", max_length=120)
+    metric: str = Field(default="win_rate", max_length=80)
+    baseline_score: float = Field(default=0)
+    candidate_score: float = Field(default=0)

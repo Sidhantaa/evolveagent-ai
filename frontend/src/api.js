@@ -1902,3 +1902,31 @@ export function planDeviceOperatorSession(sessionId, payload) {
 export function confirmDeviceOperatorAction(sessionId, actionId, approve) {
   return postJson(`/api/device-operator/sessions/${sessionId}/confirm-action`, { action_id: actionId, approve })
 }
+
+export function getTrainingLabDashboard() {
+  return getJson('/api/training-lab/dashboard')
+}
+export function getTrainingDatasets() {
+  return getJson('/api/training-lab/datasets')
+}
+export function getTrainingDataset(datasetId) {
+  return getJson(`/api/training-lab/datasets/${datasetId}`)
+}
+export function createTrainingDataset(payload) {
+  return postJson('/api/training-lab/datasets', payload)
+}
+export function addTrainingExample(datasetId, payload) {
+  return postJson(`/api/training-lab/datasets/${datasetId}/examples`, payload)
+}
+export function updateTrainingExample(exampleId, payload) {
+  return patchJson(`/api/training-lab/examples/${exampleId}`, payload)
+}
+export function exportTrainingDataset(datasetId) {
+  return postJson(`/api/training-lab/datasets/${datasetId}/export`, {})
+}
+export function createTrainingRun(payload) {
+  return postJson('/api/training-lab/runs', payload)
+}
+export function createTrainingComparison(payload) {
+  return postJson('/api/training-lab/comparisons', payload)
+}
