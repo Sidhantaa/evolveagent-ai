@@ -99,6 +99,9 @@ backend/app/data/self_healing_repairs.json
 backend/app/data/company_brain_reports.json
 backend/app/data/company_brain_decisions.json
 backend/app/data/company_brain_strategy.json
+backend/app/data/device_operator_sessions.json
+backend/app/data/device_operator_actions.json
+backend/app/data/device_operator_audit.json
 backend/app/data/*.tmp
 *.log
 logs/

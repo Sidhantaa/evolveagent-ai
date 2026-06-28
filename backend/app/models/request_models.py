@@ -760,3 +760,25 @@ class CompanyDecisionRequest(BaseModel):
 
 class CompanyReportRequest(BaseModel):
     workspace_id: str | None = None
+
+
+# ----------------------------------------------------------------------
+# v26.0 Personal Device Operator / Phone Autopilot
+# ----------------------------------------------------------------------
+class DeviceSessionCreateRequest(BaseModel):
+    device_label: str = Field(default="", max_length=120)
+    permission_level: str = Field(
+        default="suggest_only",
+        pattern="^(suggest_only|read_screen_only|tap_type_with_confirmation|auto_safe_actions|blocked)$",
+    )
+    workspace_id: str | None = None
+
+
+class DevicePlanRequest(BaseModel):
+    command: str = Field(default="", max_length=2000)
+    screen_text: str = Field(default="", max_length=8000)
+
+
+class DeviceConfirmActionRequest(BaseModel):
+    action_id: str = Field(..., min_length=1, max_length=120)
+    approve: bool = Field(default=False)

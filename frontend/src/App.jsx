@@ -150,6 +150,12 @@ import {
   createCompanyBrainStrategy,
   createCompanyBrainDecision,
   createCompanyBrainReport,
+  getDeviceOperatorDashboard,
+  getDeviceOperatorSessions,
+  getDeviceOperatorAudit,
+  createDeviceOperatorSession,
+  planDeviceOperatorSession,
+  confirmDeviceOperatorAction,
   getGoal,
   getGoals,
   getHistory,
@@ -635,6 +641,17 @@ function App() {
   const [strategyTitle, setStrategyTitle] = useState('')
   const [decisionTitle, setDecisionTitle] = useState('')
   const [decisionImpact, setDecisionImpact] = useState('medium')
+  const [showDevicePanel, setShowDevicePanel] = useState(false)
+  const [deviceDashboard, setDeviceDashboard] = useState(null)
+  const [deviceSessions, setDeviceSessions] = useState([])
+  const [deviceAudit, setDeviceAudit] = useState([])
+  const [deviceBusy, setDeviceBusy] = useState(false)
+  const [deviceError, setDeviceError] = useState(null)
+  const [devicePermission, setDevicePermission] = useState('tap_type_with_confirmation')
+  const [deviceSessionId, setDeviceSessionId] = useState('')
+  const [deviceCommand, setDeviceCommand] = useState('')
+  const [deviceScreenText, setDeviceScreenText] = useState('')
+  const [devicePlannedActions, setDevicePlannedActions] = useState([])
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -749,6 +766,7 @@ function App() {
     refreshAgentNetworkPanel()
     refreshHealingPanel()
     refreshCompanyBrainPanel()
+    refreshDevicePanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1544,6 +1562,59 @@ function App() {
   async function handleGenerateCompanyReport() {
     const report = await runCompanyBrainAction(() => createCompanyBrainReport())
     if (report) setCompanyBrainReport(report)
+  }
+
+  async function refreshDevicePanel() {
+    const [dashboard, sessions, audit] = await Promise.all([
+      getDeviceOperatorDashboard(),
+      getDeviceOperatorSessions(),
+      getDeviceOperatorAudit(),
+    ])
+    setDeviceDashboard(dashboard)
+    setDeviceSessions(sessions?.sessions || [])
+    setDeviceAudit(audit?.audit || [])
+  }
+
+  async function runDeviceAction(action) {
+    setDeviceBusy(true)
+    setDeviceError(null)
+    try {
+      const value = await action()
+      await refreshDevicePanel()
+      return value
+    } catch (error) {
+      setDeviceError(error.message || 'Device operator action failed')
+      return null
+    } finally {
+      setDeviceBusy(false)
+    }
+  }
+
+  async function handleCreateDeviceSession() {
+    const session = await runDeviceAction(() => createDeviceOperatorSession({ permission_level: devicePermission }))
+    if (session) setDeviceSessionId(session.session_id)
+  }
+
+  async function handlePlanDevice(event) {
+    event.preventDefault()
+    if (!deviceSessionId || (!deviceCommand.trim() && !deviceScreenText.trim())) return
+    const plan = await runDeviceAction(() =>
+      planDeviceOperatorSession(deviceSessionId, { command: deviceCommand.trim(), screen_text: deviceScreenText.trim() }),
+    )
+    if (plan) {
+      setDevicePlannedActions(plan.planned_actions || [])
+      setDeviceCommand('')
+      setDeviceScreenText('')
+    }
+  }
+
+  async function handleConfirmDeviceAction(actionId, approve) {
+    await runDeviceAction(async () => {
+      const updated = await confirmDeviceOperatorAction(deviceSessionId, actionId, approve)
+      setDevicePlannedActions((current) =>
+        current.map((item) => (item.action_id === actionId ? { ...item, status: updated.status } : item)),
+      )
+    })
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5642,6 +5713,97 @@ function App() {
                 )}
 
                 <p className="muted">Aggregated from local data only — recommendations, not automated execution.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowDevicePanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Device Operator
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDevicePanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Personal Device Operator · v26.0</strong>
+                  <span>Plan phone/device actions from voice/text + mock screen text. Mock/planning-first — no real device control.</span>
+                </div>
+                {deviceDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Sessions</span><strong>{deviceDashboard.total_sessions}</strong></div>
+                    <div><span>Actions</span><strong>{deviceDashboard.total_actions}</strong></div>
+                    <div><span>Blocked</span><strong>{deviceDashboard.blocked_actions}</strong></div>
+                    <div><span>Awaiting</span><strong>{deviceDashboard.actions_awaiting_confirmation}</strong></div>
+                  </div>
+                )}
+                {deviceError && <p className="error-text">{deviceError}</p>}
+                <div className="inline-actions">
+                  <select value={devicePermission} onChange={(event) => setDevicePermission(event.target.value)}>
+                    <option value="suggest_only">suggest_only</option>
+                    <option value="read_screen_only">read_screen_only</option>
+                    <option value="tap_type_with_confirmation">tap_type_with_confirmation</option>
+                    <option value="auto_safe_actions">auto_safe_actions</option>
+                    <option value="blocked">blocked</option>
+                  </select>
+                  <button type="button" onClick={handleCreateDeviceSession} disabled={deviceBusy}>New session</button>
+                  <button type="button" onClick={() => refreshDevicePanel()} disabled={deviceBusy}>Refresh</button>
+                </div>
+
+                {deviceSessions.length > 0 && (
+                  <>
+                    <h3>Sessions</h3>
+                    <select value={deviceSessionId} onChange={(event) => setDeviceSessionId(event.target.value)}>
+                      <option value="">Select session…</option>
+                      {deviceSessions.map((session) => (
+                        <option key={session.session_id} value={session.session_id}>
+                          {session.device_label} · {session.permission_level}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handlePlanDevice}>
+                  <h3>Plan actions</h3>
+                  <input type="text" placeholder="Voice/text command" value={deviceCommand} onChange={(event) => setDeviceCommand(event.target.value)} />
+                  <textarea placeholder="Mock screen text (read-screen mode)" value={deviceScreenText} onChange={(event) => setDeviceScreenText(event.target.value)} rows={2} />
+                  <button type="submit" disabled={deviceBusy || !deviceSessionId || (!deviceCommand.trim() && !deviceScreenText.trim())}>Plan</button>
+                </form>
+
+                {devicePlannedActions.length > 0 && (
+                  <>
+                    <h3>Planned actions</h3>
+                    {devicePlannedActions.map((action) => (
+                      <div className="agent-template-card" key={action.action_id}>
+                        <strong>{action.action_type} · {action.risk_level} risk</strong>
+                        <span>{action.description}</span>
+                        <p className="muted">Status: {action.status}{action.blocked ? ' · blocked' : ''}</p>
+                        {action.requires_confirmation && !action.blocked && (
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleConfirmDeviceAction(action.action_id, true)} disabled={deviceBusy}>Confirm</button>
+                            <button type="button" onClick={() => handleConfirmDeviceAction(action.action_id, false)} disabled={deviceBusy}>Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {deviceAudit.length > 0 && (
+                  <>
+                    <h3>Audit</h3>
+                    {deviceAudit.slice(0, 6).map((entry) => (
+                      <p className="muted" key={entry.audit_id}>{entry.event_type}: {entry.detail}</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Mock/planning-first — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
               </div>
             )}
           </section>

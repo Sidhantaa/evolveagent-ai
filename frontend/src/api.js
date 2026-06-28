@@ -1883,3 +1883,22 @@ export function createCompanyBrainDecision(payload) {
 export function createCompanyBrainReport() {
   return postJson('/api/company-brain/reports', {})
 }
+
+export function getDeviceOperatorDashboard() {
+  return getJson('/api/device-operator/dashboard')
+}
+export function getDeviceOperatorSessions() {
+  return getJson('/api/device-operator/sessions')
+}
+export function getDeviceOperatorAudit() {
+  return getJson('/api/device-operator/audit')
+}
+export function createDeviceOperatorSession(payload) {
+  return postJson('/api/device-operator/sessions', payload)
+}
+export function planDeviceOperatorSession(sessionId, payload) {
+  return postJson(`/api/device-operator/sessions/${sessionId}/plan`, payload)
+}
+export function confirmDeviceOperatorAction(sessionId, actionId, approve) {
+  return postJson(`/api/device-operator/sessions/${sessionId}/confirm-action`, { action_id: actionId, approve })
+}

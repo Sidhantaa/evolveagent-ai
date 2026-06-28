@@ -102,6 +102,9 @@ class StorageService:
             "company_brain_reports.json",
             "company_brain_decisions.json",
             "company_brain_strategy.json",
+            "device_operator_sessions.json",
+            "device_operator_actions.json",
+            "device_operator_audit.json",
         ):
             self._ensure_file(filename)
 

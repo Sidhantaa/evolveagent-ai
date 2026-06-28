@@ -53,6 +53,9 @@ from app.models.request_models import (
     CompanyStrategyRequest,
     CompanyDecisionRequest,
     CompanyReportRequest,
+    DeviceSessionCreateRequest,
+    DevicePlanRequest,
+    DeviceConfirmActionRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -166,6 +169,7 @@ from app.services.industry_mode_service import IndustryModeService
 from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
 from app.services.company_brain_service import CompanyBrainService
+from app.services.device_operator_service import DeviceOperatorService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -238,6 +242,7 @@ industry_mode_service = IndustryModeService(storage, governance_service)
 agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
 company_brain_service = CompanyBrainService(storage, governance_service)
+device_operator_service = DeviceOperatorService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2247,6 +2252,55 @@ def create_company_brain_report(request: CompanyReportRequest | None = None) -> 
 def list_company_brain_reports() -> dict:
     reports = company_brain_service.list_reports()
     return {"reports": reports, "count": len(reports)}
+
+
+# ----------------------------------------------------------------------
+# v26.0 Personal Device Operator / Phone Autopilot (mock, planning-first)
+# ----------------------------------------------------------------------
+@router.get("/device-operator/dashboard")
+def get_device_operator_dashboard() -> dict:
+    return device_operator_service.dashboard()
+
+
+@router.get("/device-operator/audit")
+def get_device_operator_audit() -> dict:
+    audit = device_operator_service.audit_log()
+    return {"audit": audit, "count": len(audit)}
+
+
+@router.get("/device-operator/sessions")
+def list_device_operator_sessions() -> dict:
+    sessions = device_operator_service.list_sessions()
+    return {"sessions": sessions, "count": len(sessions)}
+
+
+@router.post("/device-operator/sessions")
+def create_device_operator_session(request: DeviceSessionCreateRequest) -> dict:
+    return device_operator_service.create_session(request.model_dump())
+
+
+@router.get("/device-operator/sessions/{session_id}")
+def get_device_operator_session(session_id: str) -> dict:
+    session = device_operator_service.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+@router.post("/device-operator/sessions/{session_id}/plan")
+def plan_device_operator_session(session_id: str, request: DevicePlanRequest) -> dict:
+    try:
+        return device_operator_service.plan(session_id, request.command, request.screen_text)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Session not found") from error
+
+
+@router.post("/device-operator/sessions/{session_id}/confirm-action")
+def confirm_device_operator_action(session_id: str, request: DeviceConfirmActionRequest) -> dict:
+    try:
+        return device_operator_service.confirm_action(session_id, request.action_id, request.approve)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Action not found") from error
 
 
 @router.get("/governance")
