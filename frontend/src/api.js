@@ -2177,3 +2177,46 @@ export function voteExecutiveBoardSession(sessionId, payload) {
 export function reportExecutiveBoardSession(sessionId) {
   return postJson(`/api/executive-board/sessions/${sessionId}/report`, {})
 }
+
+export function getInnovationDashboard() {
+  return getJson('/api/innovation-lab/dashboard')
+}
+export function getInnovationResearch() {
+  return getJson('/api/innovation-lab/research')
+}
+export function getInnovationCompetitors() {
+  return getJson('/api/innovation-lab/competitors')
+}
+export function getInnovationTrends() {
+  return getJson('/api/innovation-lab/trends')
+}
+export function getInnovationIdeas() {
+  return getJson('/api/innovation-lab/ideas')
+}
+export function getInnovationExperiments() {
+  return getJson('/api/innovation-lab/experiments')
+}
+export function getInnovationPrototypes() {
+  return getJson('/api/innovation-lab/prototypes')
+}
+export function createInnovationResearch(payload) {
+  return postJson('/api/innovation-lab/research', payload)
+}
+export function createInnovationCompetitor(payload) {
+  return postJson('/api/innovation-lab/competitors', payload)
+}
+export function createInnovationTrend(payload) {
+  return postJson('/api/innovation-lab/trends', payload)
+}
+export function createInnovationIdea(payload) {
+  return postJson('/api/innovation-lab/ideas', payload)
+}
+export function createInnovationExperiment(payload) {
+  return postJson('/api/innovation-lab/experiments', payload)
+}
+export function createInnovationPrototype(payload) {
+  return postJson('/api/innovation-lab/prototypes', payload)
+}
+export function createInnovationReport(payload) {
+  return postJson('/api/innovation-lab/reports', payload || {})
+}

@@ -142,6 +142,13 @@ backend/app/data/executive_board_sessions.json
 backend/app/data/executive_board_votes.json
 backend/app/data/executive_board_reports.json
 backend/app/data/executive_board_recommendations.json
+backend/app/data/innovation_research_items.json
+backend/app/data/innovation_competitors.json
+backend/app/data/innovation_trends.json
+backend/app/data/innovation_ideas.json
+backend/app/data/innovation_experiments.json
+backend/app/data/innovation_prototypes.json
+backend/app/data/innovation_reports.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

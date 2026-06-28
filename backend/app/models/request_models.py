@@ -1075,3 +1075,57 @@ class ExecutiveBoardVoteRequest(BaseModel):
     )
     vote: str = Field(default="abstain", pattern="^(approve|reject|abstain)$")
     rationale: str = Field(default="", max_length=1000)
+
+
+# ----------------------------------------------------------------------
+# v36.0 Autonomous Research + Innovation Lab
+# ----------------------------------------------------------------------
+class InnovationResearchRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    source: str = Field(default="", max_length=300)
+    credibility: str = Field(default="medium", pattern="^(low|medium|high)$")
+    notes: str = Field(default="", max_length=4000)
+    tags: list[str] = Field(default_factory=list)
+
+
+class InnovationCompetitorRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(default="", max_length=120)
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
+    notes: str = Field(default="", max_length=2000)
+
+
+class InnovationTrendRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    direction: str = Field(default="rising", pattern="^(rising|flat|declining)$")
+    evidence_notes: list[str] = Field(default_factory=list)
+    confidence: str = Field(default="medium", pattern="^(low|medium|high)$")
+
+
+class InnovationIdeaRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    impact: int = Field(default=3, ge=1, le=5)
+    feasibility: int = Field(default=3, ge=1, le=5)
+    novelty: int = Field(default=3, ge=1, le=5)
+    risk: int = Field(default=3, ge=1, le=5)
+    tags: list[str] = Field(default_factory=list)
+
+
+class InnovationExperimentRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    hypothesis: str = Field(default="", max_length=2000)
+    method: str = Field(default="", max_length=2000)
+    success_metrics: list[str] = Field(default_factory=list)
+
+
+class InnovationPrototypeRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    phases: list[str] = Field(default_factory=list)
+    features: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+
+
+class InnovationReportRequest(BaseModel):
+    title: str = Field(default="", max_length=200)

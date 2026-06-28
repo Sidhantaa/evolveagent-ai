@@ -241,6 +241,18 @@ import {
   reviewExecutiveBoardSession,
   voteExecutiveBoardSession,
   reportExecutiveBoardSession,
+  getInnovationDashboard,
+  getInnovationResearch,
+  getInnovationCompetitors,
+  getInnovationTrends,
+  getInnovationIdeas,
+  createInnovationResearch,
+  createInnovationCompetitor,
+  createInnovationTrend,
+  createInnovationIdea,
+  createInnovationExperiment,
+  createInnovationPrototype,
+  createInnovationReport,
   getGoal,
   getGoals,
   getHistory,
@@ -842,6 +854,15 @@ function App() {
   const [boardDecision, setBoardDecision] = useState('')
   const [boardVoteRole, setBoardVoteRole] = useState('CEO')
   const [boardVoteValue, setBoardVoteValue] = useState('approve')
+  const [showInnovationPanel, setShowInnovationPanel] = useState(false)
+  const [innovationDashboard, setInnovationDashboard] = useState(null)
+  const [innovationResearch, setInnovationResearch] = useState([])
+  const [innovationIdeas, setInnovationIdeas] = useState([])
+  const [innovationBusy, setInnovationBusy] = useState(false)
+  const [innovationError, setInnovationError] = useState(null)
+  const [researchTitle, setResearchTitle] = useState('')
+  const [ideaTitle, setIdeaTitle] = useState('')
+  const [ideaImpact, setIdeaImpact] = useState(3)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -966,6 +987,7 @@ function App() {
     refreshBizOpsPanel()
     refreshComplianceIntelPanel()
     refreshBoardPanel()
+    refreshInnovationPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2381,6 +2403,53 @@ function App() {
     if (!boardSessionId) return
     const report = await runBoardAction(() => reportExecutiveBoardSession(boardSessionId))
     if (report) setBoardArtifact({ kind: 'report', data: report })
+  }
+
+  async function refreshInnovationPanel() {
+    const [dashboard, research, ideas] = await Promise.all([
+      getInnovationDashboard(),
+      getInnovationResearch(),
+      getInnovationIdeas(),
+    ])
+    setInnovationDashboard(dashboard)
+    setInnovationResearch(research?.research || [])
+    setInnovationIdeas(ideas?.ideas || [])
+  }
+
+  async function runInnovationAction(action) {
+    setInnovationBusy(true)
+    setInnovationError(null)
+    try {
+      await action()
+      await refreshInnovationPanel()
+    } catch (error) {
+      setInnovationError(error.message || 'Innovation lab action failed')
+    } finally {
+      setInnovationBusy(false)
+    }
+  }
+
+  async function handleCreateResearch(event) {
+    event.preventDefault()
+    if (!researchTitle.trim()) return
+    await runInnovationAction(async () => {
+      await createInnovationResearch({ title: researchTitle.trim() })
+      setResearchTitle('')
+    })
+  }
+
+  async function handleCreateIdea(event) {
+    event.preventDefault()
+    if (!ideaTitle.trim()) return
+    await runInnovationAction(async () => {
+      await createInnovationIdea({ title: ideaTitle.trim(), impact: Number(ideaImpact) })
+      setIdeaTitle('')
+      setIdeaImpact(3)
+    })
+  }
+
+  async function handleCreateInnovationReport() {
+    await runInnovationAction(() => createInnovationReport({ title: 'Innovation report' }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -7458,6 +7527,79 @@ function App() {
                 )}
 
                 <p className="muted">Advisory only — the board reviews and recommends from multiple perspectives; it does not execute any action.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowInnovationPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Innovation Lab
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showInnovationPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Autonomous Research + Innovation Lab · v36.0</strong>
+                  <span>Track research, competitors, trends, scored ideas, experiments, and prototype plans. Local/manual research only.</span>
+                </div>
+                {innovationDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Research</span><strong>{innovationDashboard.research_count}</strong></div>
+                    <div><span>Competitors</span><strong>{innovationDashboard.competitor_count}</strong></div>
+                    <div><span>Trends</span><strong>{innovationDashboard.trend_count}</strong></div>
+                    <div><span>Ideas</span><strong>{innovationDashboard.idea_count}</strong></div>
+                    <div><span>Experiments</span><strong>{innovationDashboard.experiment_count}</strong></div>
+                    <div><span>Prototypes</span><strong>{innovationDashboard.prototype_count}</strong></div>
+                  </div>
+                )}
+                {innovationError && <p className="error-text">{innovationError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateInnovationReport} disabled={innovationBusy}>Generate report</button>
+                  <button type="button" onClick={() => refreshInnovationPanel()} disabled={innovationBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateResearch}>
+                  <h3>Add research item</h3>
+                  <input type="text" placeholder="Research title" value={researchTitle} onChange={(event) => setResearchTitle(event.target.value)} />
+                  <button type="submit" disabled={innovationBusy || !researchTitle.trim()}>Add research</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateIdea}>
+                  <h3>Score an idea</h3>
+                  <input type="text" placeholder="Idea title" value={ideaTitle} onChange={(event) => setIdeaTitle(event.target.value)} />
+                  <select value={ideaImpact} onChange={(event) => setIdeaImpact(event.target.value)}>
+                    {[1, 2, 3, 4, 5].map((n) => (<option key={n} value={n}>impact {n}</option>))}
+                  </select>
+                  <button type="submit" disabled={innovationBusy || !ideaTitle.trim()}>Add idea</button>
+                </form>
+
+                {innovationIdeas.length > 0 && (
+                  <>
+                    <h3>Top ideas</h3>
+                    {innovationIdeas.slice(0, 6).map((idea) => (
+                      <div className="agent-template-card" key={idea.idea_id}>
+                        <strong>{idea.title}</strong>
+                        <p className="muted">score {idea.composite_score} · impact {idea.impact} · risk {idea.risk}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {innovationResearch.length > 0 && (
+                  <>
+                    <h3>Research</h3>
+                    {innovationResearch.slice(0, 5).map((item) => (
+                      <p className="muted" key={item.research_id}>• {item.title} ({item.credibility})</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local/manual research only — no web browsing or external scraping.</p>
               </div>
             )}
           </section>

@@ -90,6 +90,13 @@ from app.models.request_models import (
     ComplianceAuditPackageRequest,
     ExecutiveBoardSessionCreateRequest,
     ExecutiveBoardVoteRequest,
+    InnovationResearchRequest,
+    InnovationCompetitorRequest,
+    InnovationTrendRequest,
+    InnovationIdeaRequest,
+    InnovationExperimentRequest,
+    InnovationPrototypeRequest,
+    InnovationReportRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -218,6 +225,7 @@ from app.services.saas_builder_service import SaaSBuilderService
 from app.services.business_operator_advanced_service import BusinessOperatorAdvancedService
 from app.services.compliance_intelligence_service import ComplianceIntelligenceService
 from app.services.executive_board_service import ExecutiveBoardService
+from app.services.innovation_lab_service import InnovationLabService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -300,6 +308,7 @@ saas_builder_service = SaaSBuilderService(storage, governance_service)
 business_operator_advanced_service = BusinessOperatorAdvancedService(storage, governance_service)
 compliance_intelligence_service = ComplianceIntelligenceService(storage, governance_service, SecretScanner())
 executive_board_service = ExecutiveBoardService(storage, governance_service)
+innovation_lab_service = InnovationLabService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -2964,6 +2973,91 @@ def report_executive_board_session(session_id: str) -> dict:
         return executive_board_service.create_report(session_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Session not found") from error
+
+
+# ----------------------------------------------------------------------
+# v36.0 Autonomous Research + Innovation Lab (local/manual research only)
+# ----------------------------------------------------------------------
+@router.get("/innovation-lab/dashboard")
+def get_innovation_lab_dashboard() -> dict:
+    return innovation_lab_service.dashboard()
+
+
+@router.get("/innovation-lab/research")
+def list_innovation_research() -> dict:
+    items = innovation_lab_service.list_research()
+    return {"research": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/research")
+def create_innovation_research(request: InnovationResearchRequest) -> dict:
+    return innovation_lab_service.create_research(request.model_dump())
+
+
+@router.get("/innovation-lab/competitors")
+def list_innovation_competitors() -> dict:
+    items = innovation_lab_service.list_competitors()
+    return {"competitors": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/competitors")
+def create_innovation_competitor(request: InnovationCompetitorRequest) -> dict:
+    return innovation_lab_service.create_competitor(request.model_dump())
+
+
+@router.get("/innovation-lab/trends")
+def list_innovation_trends() -> dict:
+    items = innovation_lab_service.list_trends()
+    return {"trends": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/trends")
+def create_innovation_trend(request: InnovationTrendRequest) -> dict:
+    return innovation_lab_service.create_trend(request.model_dump())
+
+
+@router.get("/innovation-lab/ideas")
+def list_innovation_ideas() -> dict:
+    items = innovation_lab_service.list_ideas()
+    return {"ideas": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/ideas")
+def create_innovation_idea(request: InnovationIdeaRequest) -> dict:
+    return innovation_lab_service.create_idea(request.model_dump())
+
+
+@router.get("/innovation-lab/experiments")
+def list_innovation_experiments() -> dict:
+    items = innovation_lab_service.list_experiments()
+    return {"experiments": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/experiments")
+def create_innovation_experiment(request: InnovationExperimentRequest) -> dict:
+    return innovation_lab_service.create_experiment(request.model_dump())
+
+
+@router.get("/innovation-lab/prototypes")
+def list_innovation_prototypes() -> dict:
+    items = innovation_lab_service.list_prototypes()
+    return {"prototypes": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/prototypes")
+def create_innovation_prototype(request: InnovationPrototypeRequest) -> dict:
+    return innovation_lab_service.create_prototype(request.model_dump())
+
+
+@router.get("/innovation-lab/reports")
+def list_innovation_reports() -> dict:
+    items = innovation_lab_service.list_reports()
+    return {"reports": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/reports")
+def create_innovation_report(request: InnovationReportRequest | None = None) -> dict:
+    return innovation_lab_service.create_report(request.model_dump() if request else {})
 
 
 @router.get("/governance")
