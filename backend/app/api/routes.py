@@ -78,6 +78,10 @@ from app.models.request_models import (
     UniversalHandoffCreateRequest,
     SaaSProjectCreateRequest,
     SaaSFeedbackCreateRequest,
+    BusinessWorkflowCreateRequest,
+    BusinessReportCreateRequest,
+    BusinessApprovalCreateRequest,
+    BusinessApprovalDecisionRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -203,6 +207,7 @@ from app.services.avatar_persona_service import AvatarPersonaService
 from app.services.life_os_service import LifeOSService
 from app.services.universal_operator_service import UniversalOperatorService
 from app.services.saas_builder_service import SaaSBuilderService
+from app.services.business_operator_advanced_service import BusinessOperatorAdvancedService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -282,6 +287,7 @@ avatar_persona_service = AvatarPersonaService(storage, governance_service, image
 life_os_service = LifeOSService(storage, governance_service)
 universal_operator_service = UniversalOperatorService(storage, governance_service)
 saas_builder_service = SaaSBuilderService(storage, governance_service)
+business_operator_advanced_service = BusinessOperatorAdvancedService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -2746,6 +2752,72 @@ def create_team_sprint_review(sprint_id: str, request: TeamSprintReviewRequest |
         return team_manager_service.create_review(sprint_id, payload)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Sprint not found") from error
+
+
+# ----------------------------------------------------------------------
+# v33.0 AI Business Operator Advanced (extends v18; draft-only)
+# ----------------------------------------------------------------------
+@router.get("/business-operator/dashboard")
+def get_business_operator_dashboard() -> dict:
+    return business_operator_advanced_service.dashboard()
+
+
+@router.get("/business-operator/audit")
+def get_business_operator_audit() -> dict:
+    audit = business_operator_advanced_service.audit_log()
+    return {"audit": audit, "count": len(audit)}
+
+
+@router.get("/business-operator/workflows")
+def list_business_operator_workflows() -> dict:
+    workflows = business_operator_advanced_service.list_workflows()
+    return {"workflows": workflows, "count": len(workflows)}
+
+
+@router.post("/business-operator/workflows")
+def create_business_operator_workflow(request: BusinessWorkflowCreateRequest) -> dict:
+    return business_operator_advanced_service.create_workflow(request.model_dump())
+
+
+@router.get("/business-operator/reports")
+def list_business_operator_reports() -> dict:
+    reports = business_operator_advanced_service.list_reports()
+    return {"reports": reports, "count": len(reports)}
+
+
+@router.post("/business-operator/reports")
+def create_business_operator_report(request: BusinessReportCreateRequest | None = None) -> dict:
+    return business_operator_advanced_service.create_report(request.model_dump() if request else {})
+
+
+@router.get("/business-operator/kpi-snapshots")
+def list_business_operator_kpi_snapshots() -> dict:
+    snapshots = business_operator_advanced_service.list_kpi_snapshots()
+    return {"kpi_snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/business-operator/kpi-snapshots")
+def create_business_operator_kpi_snapshot() -> dict:
+    return business_operator_advanced_service.create_kpi_snapshot()
+
+
+@router.get("/business-operator/approvals")
+def list_business_operator_approvals() -> dict:
+    approvals = business_operator_advanced_service.list_approvals()
+    return {"approvals": approvals, "count": len(approvals)}
+
+
+@router.post("/business-operator/approvals")
+def create_business_operator_approval(request: BusinessApprovalCreateRequest) -> dict:
+    return business_operator_advanced_service.create_approval(request.model_dump())
+
+
+@router.patch("/business-operator/approvals/{approval_id}")
+def update_business_operator_approval(approval_id: str, request: BusinessApprovalDecisionRequest) -> dict:
+    try:
+        return business_operator_advanced_service.update_approval(approval_id, request.decision)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Approval not found") from error
 
 
 @router.get("/governance")

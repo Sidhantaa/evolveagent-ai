@@ -2087,3 +2087,37 @@ export function createTeamSprint(payload) {
 export function reviewTeamSprint(sprintId, payload) {
   return postJson(`/api/team-manager/sprints/${sprintId}/review`, payload || {})
 }
+
+export function getBusinessOperatorDashboard() {
+  return getJson('/api/business-operator/dashboard')
+}
+export function getBusinessOperatorWorkflows() {
+  return getJson('/api/business-operator/workflows')
+}
+export function getBusinessOperatorReports() {
+  return getJson('/api/business-operator/reports')
+}
+export function getBusinessOperatorKpiSnapshots() {
+  return getJson('/api/business-operator/kpi-snapshots')
+}
+export function getBusinessOperatorApprovals() {
+  return getJson('/api/business-operator/approvals')
+}
+export function getBusinessOperatorAudit() {
+  return getJson('/api/business-operator/audit')
+}
+export function createBusinessOperatorWorkflow(payload) {
+  return postJson('/api/business-operator/workflows', payload)
+}
+export function createBusinessOperatorReport(payload) {
+  return postJson('/api/business-operator/reports', payload || {})
+}
+export function createBusinessOperatorKpiSnapshot() {
+  return postJson('/api/business-operator/kpi-snapshots', {})
+}
+export function createBusinessOperatorApproval(payload) {
+  return postJson('/api/business-operator/approvals', payload)
+}
+export function updateBusinessOperatorApproval(approvalId, decision) {
+  return patchJson(`/api/business-operator/approvals/${approvalId}`, { decision })
+}

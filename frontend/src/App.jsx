@@ -214,6 +214,16 @@ import {
   createTeamStandup,
   createTeamSprint,
   reviewTeamSprint,
+  getBusinessOperatorDashboard,
+  getBusinessOperatorWorkflows,
+  getBusinessOperatorReports,
+  getBusinessOperatorApprovals,
+  getBusinessOperatorAudit,
+  createBusinessOperatorWorkflow,
+  createBusinessOperatorReport,
+  createBusinessOperatorKpiSnapshot,
+  createBusinessOperatorApproval,
+  updateBusinessOperatorApproval,
   getGoal,
   getGoals,
   getHistory,
@@ -787,6 +797,15 @@ function App() {
   const [assignmentOwner, setAssignmentOwner] = useState('')
   const [assignmentPriority, setAssignmentPriority] = useState('medium')
   const [sprintName, setSprintName] = useState('')
+  const [showBizOpsPanel, setShowBizOpsPanel] = useState(false)
+  const [bizOpsDashboard, setBizOpsDashboard] = useState(null)
+  const [bizOpsWorkflows, setBizOpsWorkflows] = useState([])
+  const [bizOpsApprovals, setBizOpsApprovals] = useState([])
+  const [bizOpsBusy, setBizOpsBusy] = useState(false)
+  const [bizOpsError, setBizOpsError] = useState(null)
+  const [bizOpsWorkflowType, setBizOpsWorkflowType] = useState('lead_pipeline')
+  const [bizOpsApprovalTitle, setBizOpsApprovalTitle] = useState('')
+  const [bizOpsApprovalKind, setBizOpsApprovalKind] = useState('external_send')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -908,6 +927,7 @@ function App() {
     refreshUniversalPanel()
     refreshSaasPanel()
     refreshTeamPanel()
+    refreshBizOpsPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2163,6 +2183,56 @@ function App() {
       setSaasFeedbackType('feature')
       await loadSaasFeedback(saasProjectId)
     })
+  }
+
+  async function refreshBizOpsPanel() {
+    const [dashboard, workflows, approvals] = await Promise.all([
+      getBusinessOperatorDashboard(),
+      getBusinessOperatorWorkflows(),
+      getBusinessOperatorApprovals(),
+    ])
+    setBizOpsDashboard(dashboard)
+    setBizOpsWorkflows(workflows?.workflows || [])
+    setBizOpsApprovals(approvals?.approvals || [])
+  }
+
+  async function runBizOpsAction(action) {
+    setBizOpsBusy(true)
+    setBizOpsError(null)
+    try {
+      await action()
+      await refreshBizOpsPanel()
+    } catch (error) {
+      setBizOpsError(error.message || 'Business operator action failed')
+    } finally {
+      setBizOpsBusy(false)
+    }
+  }
+
+  async function handleCreateBizOpsWorkflow() {
+    await runBizOpsAction(() => createBusinessOperatorWorkflow({ workflow_type: bizOpsWorkflowType }))
+  }
+
+  async function handleCreateBizOpsReport() {
+    await runBizOpsAction(() => createBusinessOperatorReport({ title: 'Operations report' }))
+  }
+
+  async function handleCreateBizOpsKpiSnapshot() {
+    await runBizOpsAction(() => createBusinessOperatorKpiSnapshot())
+  }
+
+  async function handleCreateBizOpsApproval(event) {
+    event.preventDefault()
+    if (!bizOpsApprovalTitle.trim()) return
+    await runBizOpsAction(async () => {
+      await createBusinessOperatorApproval({ title: bizOpsApprovalTitle.trim(), kind: bizOpsApprovalKind })
+      setBizOpsApprovalTitle('')
+      setBizOpsApprovalKind('external_send')
+    })
+  }
+
+  async function handleDecideBizOpsApproval(approvalId, decision) {
+    await runBizOpsAction(() => updateBusinessOperatorApproval(approvalId, decision))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -6993,6 +7063,98 @@ function App() {
                 )}
 
                 <p className="muted">Plans and drafts only — no deploy, no payments, no account creation; nothing is built without the existing approval flow.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowBizOpsPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Business Operator Advanced
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showBizOpsPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Business Operator Advanced · v33.0</strong>
+                  <span>Operations workflows, reporting, KPI snapshots, approvals, and audit. Draft-only — no real send, payment, or CRM sync.</span>
+                </div>
+                {bizOpsDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Workflows</span><strong>{bizOpsDashboard.total_workflows}</strong></div>
+                    <div><span>Approvals</span><strong>{bizOpsDashboard.pending_approvals}</strong></div>
+                    <div><span>Reports</span><strong>{bizOpsDashboard.total_reports}</strong></div>
+                    <div><span>KPI snaps</span><strong>{bizOpsDashboard.total_kpi_snapshots}</strong></div>
+                    <div><span>Leads</span><strong>{bizOpsDashboard.kpis?.total_leads}</strong></div>
+                    <div><span>Conv %</span><strong>{bizOpsDashboard.kpis?.conversion_rate}</strong></div>
+                  </div>
+                )}
+                {bizOpsError && <p className="error-text">{bizOpsError}</p>}
+                <div className="inline-actions">
+                  <select value={bizOpsWorkflowType} onChange={(event) => setBizOpsWorkflowType(event.target.value)}>
+                    <option value="lead_pipeline">lead_pipeline</option>
+                    <option value="support_triage">support_triage</option>
+                    <option value="invoice_processing">invoice_processing</option>
+                    <option value="custom">custom</option>
+                  </select>
+                  <button type="button" onClick={handleCreateBizOpsWorkflow} disabled={bizOpsBusy}>New workflow</button>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateBizOpsReport} disabled={bizOpsBusy}>Generate report</button>
+                  <button type="button" onClick={handleCreateBizOpsKpiSnapshot} disabled={bizOpsBusy}>KPI snapshot</button>
+                  <button type="button" onClick={() => refreshBizOpsPanel()} disabled={bizOpsBusy}>Refresh</button>
+                </div>
+
+                {bizOpsWorkflows.length > 0 && (
+                  <>
+                    <h3>Workflows</h3>
+                    {bizOpsWorkflows.slice(0, 6).map((workflow) => (
+                      <div className="agent-template-card" key={workflow.workflow_id}>
+                        <strong>{workflow.title}</strong>
+                        <p className="muted">{workflow.workflow_type} · {workflow.status}</p>
+                        {(workflow.next_steps || []).map((step, index) => (
+                          <p className="muted" key={index}>→ {step}</p>
+                        ))}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateBizOpsApproval}>
+                  <h3>Request approval (risky/external action)</h3>
+                  <input type="text" placeholder="Title" value={bizOpsApprovalTitle} onChange={(event) => setBizOpsApprovalTitle(event.target.value)} />
+                  <select value={bizOpsApprovalKind} onChange={(event) => setBizOpsApprovalKind(event.target.value)}>
+                    <option value="external_send">external_send</option>
+                    <option value="payment">payment</option>
+                    <option value="high_risk">high_risk</option>
+                    <option value="data_share">data_share</option>
+                  </select>
+                  <button type="submit" disabled={bizOpsBusy || !bizOpsApprovalTitle.trim()}>Request approval</button>
+                </form>
+
+                {bizOpsApprovals.length > 0 && (
+                  <>
+                    <h3>Approvals</h3>
+                    {bizOpsApprovals.slice(0, 6).map((approval) => (
+                      <div className="agent-template-card" key={approval.approval_id}>
+                        <strong>{approval.title}</strong>
+                        <p className="muted">{approval.kind} · {approval.status}</p>
+                        {approval.status === 'pending' && (
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleDecideBizOpsApproval(approval.approval_id, 'approved')} disabled={bizOpsBusy}>Approve</button>
+                            <button type="button" onClick={() => handleDecideBizOpsApproval(approval.approval_id, 'rejected')} disabled={bizOpsBusy}>Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Draft-only operations — approving records a decision but performs no real email send, payment, or external CRM action.</p>
               </div>
             )}
           </section>

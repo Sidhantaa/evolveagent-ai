@@ -995,3 +995,28 @@ class TeamSprintReviewRequest(BaseModel):
     summary: str = Field(default="", max_length=2000)
     carry_over: list[str] = Field(default_factory=list)
     learnings: list[str] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
+# v33.0 AI Business Operator Advanced
+# ----------------------------------------------------------------------
+class BusinessWorkflowCreateRequest(BaseModel):
+    workflow_type: str = Field(default="custom", pattern="^(lead_pipeline|support_triage|invoice_processing|custom)$")
+    title: str = Field(default="", max_length=200)
+    context: str = Field(default="", max_length=2000)
+    status: str = Field(default="queued", pattern="^(queued|in_review|completed|blocked)$")
+
+
+class BusinessReportCreateRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    period: str = Field(default="current", max_length=40)
+
+
+class BusinessApprovalCreateRequest(BaseModel):
+    kind: str = Field(default="high_risk", pattern="^(external_send|payment|high_risk|data_share)$")
+    title: str = Field(..., min_length=1, max_length=200)
+    detail: str = Field(default="", max_length=2000)
+
+
+class BusinessApprovalDecisionRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approved|rejected)$")

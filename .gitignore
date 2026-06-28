@@ -127,6 +127,11 @@ backend/app/data/saas_roadmaps.json
 backend/app/data/saas_architecture_plans.json
 backend/app/data/saas_launch_assets.json
 backend/app/data/saas_feedback_items.json
+backend/app/data/business_workflows.json
+backend/app/data/business_approval_items.json
+backend/app/data/business_reports.json
+backend/app/data/business_kpi_snapshots.json
+backend/app/data/business_audit_records.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json
