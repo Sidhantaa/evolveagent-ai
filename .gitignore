@@ -166,6 +166,10 @@ backend/app/data/companion_sessions.json
 backend/app/data/wake_mode_settings.json
 backend/app/data/companion_readiness_checks.json
 backend/app/data/companion_audit.json
+backend/app/data/operating_layer_snapshots.json
+backend/app/data/operating_layer_capabilities.json
+backend/app/data/operating_layer_recommendations.json
+backend/app/data/operating_layer_audit.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

@@ -2313,3 +2313,25 @@ export function createCompanionReadinessCheck(payload) {
 export function createCompanionSession(payload) {
   return postJson('/api/hardware-companion/sessions', payload)
 }
+
+export function getOperatingLayerDashboard() {
+  return getJson('/api/operating-layer/dashboard')
+}
+export function getOperatingLayerCapabilities() {
+  return getJson('/api/operating-layer/capabilities')
+}
+export function getOperatingLayerSnapshots() {
+  return getJson('/api/operating-layer/snapshots')
+}
+export function getOperatingLayerRecommendations() {
+  return getJson('/api/operating-layer/recommendations')
+}
+export function createOperatingLayerSnapshot() {
+  return postJson('/api/operating-layer/snapshots', {})
+}
+export function createOperatingLayerRecommendations() {
+  return postJson('/api/operating-layer/recommendations', {})
+}
+export function createOperatingLayerReport() {
+  return postJson('/api/operating-layer/report', {})
+}

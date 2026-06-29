@@ -280,6 +280,11 @@ import {
   updateCompanionSettings,
   createCompanionReadinessCheck,
   createCompanionSession,
+  getOperatingLayerDashboard,
+  getOperatingLayerRecommendations,
+  createOperatingLayerSnapshot,
+  createOperatingLayerRecommendations,
+  createOperatingLayerReport,
   getGoal,
   getGoals,
   getHistory,
@@ -916,6 +921,11 @@ function App() {
   const [companionDeviceName, setCompanionDeviceName] = useState('')
   const [companionMode, setCompanionMode] = useState('disabled')
   const [companionReadiness, setCompanionReadiness] = useState(null)
+  const [showOperatingLayerPanel, setShowOperatingLayerPanel] = useState(false)
+  const [operatingLayerDashboard, setOperatingLayerDashboard] = useState(null)
+  const [operatingLayerArtifact, setOperatingLayerArtifact] = useState(null)
+  const [operatingLayerBusy, setOperatingLayerBusy] = useState(false)
+  const [operatingLayerError, setOperatingLayerError] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -1044,6 +1054,7 @@ function App() {
     refreshSimWorldPanel()
     refreshOrgOsPanel()
     refreshCompanionPanel()
+    refreshOperatingLayerPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2654,6 +2665,41 @@ function App() {
 
   async function handleCreateCompanionSession() {
     await runCompanionAction(() => createCompanionSession({ title: 'Companion session' }))
+  }
+
+  async function refreshOperatingLayerPanel() {
+    const dashboard = await getOperatingLayerDashboard()
+    setOperatingLayerDashboard(dashboard)
+  }
+
+  async function runOperatingLayerAction(action) {
+    setOperatingLayerBusy(true)
+    setOperatingLayerError(null)
+    try {
+      const value = await action()
+      await refreshOperatingLayerPanel()
+      return value
+    } catch (error) {
+      setOperatingLayerError(error.message || 'Operating layer action failed')
+      return null
+    } finally {
+      setOperatingLayerBusy(false)
+    }
+  }
+
+  async function handleOperatingLayerSnapshot() {
+    const snapshot = await runOperatingLayerAction(() => createOperatingLayerSnapshot())
+    if (snapshot) setOperatingLayerArtifact({ kind: 'snapshot', data: snapshot })
+  }
+
+  async function handleOperatingLayerRecommendations() {
+    const rec = await runOperatingLayerAction(() => createOperatingLayerRecommendations())
+    if (rec) setOperatingLayerArtifact({ kind: 'recommendations', data: rec })
+  }
+
+  async function handleOperatingLayerReport() {
+    const report = await runOperatingLayerAction(() => createOperatingLayerReport())
+    if (report) setOperatingLayerArtifact({ kind: 'report', data: report })
   }
 
   async function refreshAppBuilderTemplates() {
@@ -8031,6 +8077,67 @@ function App() {
                       <p className="muted" key={index}>• {rule}</p>
                     ))}
                   </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOperatingLayerPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                EvolveAgent Operating Layer
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOperatingLayerPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>EvolveAgent Operating Layer · v40.0</strong>
+                  <span>A governed orchestration dashboard across personal, project, business, agent, simulation, organization, and companion systems.</span>
+                </div>
+                {operatingLayerDashboard && (
+                  <>
+                    <div className="analytics-mini-grid">
+                      <div><span>Capabilities</span><strong>{operatingLayerDashboard.active_capability_groups}/{operatingLayerDashboard.total_capability_groups}</strong></div>
+                      <div><span>Snapshots</span><strong>{operatingLayerDashboard.snapshot_count}</strong></div>
+                      <div><span>Recs</span><strong>{operatingLayerDashboard.recommendation_count}</strong></div>
+                    </div>
+                    <h3>Capability map</h3>
+                    {(operatingLayerDashboard.capability_groups || []).map((group) => (
+                      <p className="muted" key={group.group}>{group.active ? '✓' : '○'} {group.group} — {group.label}</p>
+                    ))}
+                  </>
+                )}
+                {operatingLayerError && <p className="error-text">{operatingLayerError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleOperatingLayerSnapshot} disabled={operatingLayerBusy}>Readiness snapshot</button>
+                  <button type="button" onClick={handleOperatingLayerRecommendations} disabled={operatingLayerBusy}>Recommendations</button>
+                  <button type="button" onClick={handleOperatingLayerReport} disabled={operatingLayerBusy}>Final report</button>
+                </div>
+
+                {operatingLayerArtifact && (
+                  <div className="agent-template-card">
+                    <strong>{operatingLayerArtifact.kind}</strong>
+                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto', margin: 0 }}>
+                      {JSON.stringify(operatingLayerArtifact.data, null, 2).slice(0, 1400)}
+                    </pre>
+                  </div>
+                )}
+
+                {operatingLayerDashboard?.safety_boundaries && (
+                  <>
+                    <h3>Safety boundaries</h3>
+                    {operatingLayerDashboard.safety_boundaries.map((rule, index) => (
+                      <p className="muted" key={index}>• {rule}</p>
+                    ))}
+                  </>
+                )}
+
+                {operatingLayerDashboard?.disclaimer && (
+                  <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
               </div>
             )}

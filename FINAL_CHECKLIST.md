@@ -1,6 +1,18 @@
-# EvolveAgent AI — Final Checklist (current completed: v21.0 Multi-Modal Real-World Agent)
+# EvolveAgent AI — Final Checklist (current completed: v40.0 EvolveAgent Operating Layer)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
+
+## v36–v40 checklist
+
+- [x] **v36 — Innovation Lab:** research/competitors/trends/ideas/experiments/prototypes/reports; local-only; governance-logged.
+- [x] **v37 — Simulation World:** worlds/personas/scenarios/run/compare/reports; deterministic mock; no real-world actions.
+- [x] **v38 — Organization OS:** orgs/members/roles/permissions/workspace-links/activity; local records only, **no production auth**.
+- [x] **v39 — Hardware Companion:** devices/settings/readiness/sessions; **no mic recording, no wake-word, no hardware access**.
+- [x] **v40 — Operating Layer:** capability map / snapshots / recommendations / report / audit; **disclaimer visible (not AGI)**; safety boundaries surfaced.
+- [x] Backend tests green and frontend build green after each version.
+- [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40) and verified on `main` before marking Linear Done.
+
+> **Not AGI.** Governed orchestration layer only. Roadmap after v40 is future-only.
 
 ## Current Roadmap Status
 

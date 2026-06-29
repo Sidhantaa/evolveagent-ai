@@ -1,4 +1,14 @@
-# EvolveAgent AI — Project Summary (current completed: v21.0 Multi-Modal Real-World Agent)
+# EvolveAgent AI — Project Summary (current completed: v40.0 EvolveAgent Operating Layer)
+
+## v36–v40 Summary
+
+- **v36 — Autonomous Research + Innovation Lab:** local research, competitors, trends, scored ideas, experiment/prototype plans, innovation reports (no web browsing/scraping).
+- **v37 — AI Simulation World:** safe local sandbox for decisions/personas/scenarios with deterministic mock scoring, comparison, reports (no real-world actions).
+- **v38 — Multi-User Organization OS:** local organizations, members, roles, permissions, workspace links, activity — **local records only, no production auth**.
+- **v39 — AI Hardware / Always-On Companion:** device-readiness and session-planning layer — **no mic recording, no wake-word, no hardware access**; explicit user activation required.
+- **v40 — EvolveAgent Operating Layer:** governed orchestration dashboard across v15–v39 — capability map, readiness snapshots, cross-system recommendations, safety boundaries, final report.
+
+> **Not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. **Roadmap after v40 is future-only** (provider expansion, streaming, vector/RAG, deployment) and outside the current local-first, mock/planning-first scope.
 
 ## Final Platform Positioning
 

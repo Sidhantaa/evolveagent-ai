@@ -1,10 +1,22 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v21.0 — Multi-Modal Real-World Agent &nbsp;•&nbsp; **Current work:** v22.0 — Industry Workflow Modes &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v40.0 — EvolveAgent Operating Layer &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
+
+### v36–v40 (latest milestones)
+
+- **v36 — Autonomous Research + Innovation Lab:** local research items, competitors, trends, scored ideas, experiment/prototype plans, and innovation reports (no web browsing/scraping).
+- **v37 — AI Simulation World:** safe local sandbox to model decisions, personas, and scenarios with deterministic mock scoring, comparison, and reports (no real-world actions).
+- **v38 — Multi-User Organization OS:** local organizations, member profiles, roles, permission profiles, workspace links, and activity — **local records only, no production auth**.
+- **v39 — AI Hardware / Always-On Companion:** device-readiness and session-planning layer — **no mic recording, no wake-word listener, no hardware access**; always requires explicit user activation.
+- **v40 — EvolveAgent Operating Layer:** a governed orchestration dashboard summarizing the capability map across v15–v39, with readiness snapshots, cross-system recommendations, safety boundaries, and a final report.
+
+> **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
+>
+> **Roadmap after v40 (future-only / not built):** real provider expansions, streaming, vector/RAG retrieval, and deployment remain future work outside the current local-first, mock/planning-first scope.
 
 > **Documentation:** [Architecture](docs/ARCHITECTURE.md) · [Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md) · [Case Study](docs/CASE_STUDY.md) · [Interview Guide](docs/INTERVIEW_EXPLANATION.md) · [Resume Bullets](docs/RESUME_BULLETS.md) · [Screenshots Guide](screenshots/README.md) · [Demo Guide](DEMO.md) · [Final Checklist](FINAL_CHECKLIST.md)
 
@@ -16,7 +28,7 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The latest completed roadmap checkpoint is **v21.0 — Multi-Modal Real-World Agent**. The current active branch is **v22.0 — Industry Workflow Modes**, which is adding industry-specific workflow modes on top of the completed OS platform.
+The latest completed roadmap checkpoint is **v25.0 — AI Company Brain**. The current active work is **v26.0 — Personal Device Operator / Phone Autopilot**, which is adding a governed, permission-first foundation for phone/device-style command planning without unrestricted device automation.
 
 Completed milestones after the v15.0 OS release:
 
@@ -26,6 +38,10 @@ Completed milestones after the v15.0 OS release:
 - **v19.0 — AI Chief of Staff** — daily/weekly planning, priority ranking, reminders, progress summaries, and next-action recommendations.
 - **v20.0 — Autonomous Business Simulator** — decision, cost, time, risk, and business-impact simulations for comparing plans before execution.
 - **v21.0 — Multi-Modal Real-World Agent** — screenshot/image/diagram-style inputs, UI bug analysis, visual workflow interpretation, and real-world input summarization through the governed agent stack.
+- **v22.0 — Industry Workflow Modes** — specialized workflow profiles for pharmacy, healthcare admin, construction, business, student, software, legal, and finance-style tasks.
+- **v23.0 — Agent-to-Agent Network** — agent communication protocol, external handoffs, task contracts, result verification, and cross-system audit logs.
+- **v24.0 — Self-Healing Project System** — build/test failure monitoring, dependency and route issue detection, frontend error analysis, repair task generation, and safe repair planning.
+- **v25.0 — AI Company Brain** — company-level dashboard, strategy and operations memory, business workflow suite, enterprise audit/compliance center, and executive mode.
 
 The v15.0 checkpoint introduced **EvolveAgent OS**, a platform-readiness layer added on top of the existing system. It is additive and safe — no feature was removed, no hosting/auth/payments were added. EvolveAgent OS adds:
 
@@ -1031,11 +1047,7 @@ Automation safety rules:
 
 ## Future Improvements
 
-- Complete and merge **v22.0 — Industry Workflow Modes**
-- v23.0 — Agent-to-Agent Network
-- v24.0 — Self-Healing Project System
-- v25.0 — AI Company Brain
-- v26.0 — Personal Device Operator / Phone Autopilot
+- Complete and merge **v26.0 — Personal Device Operator / Phone Autopilot**
 - v27.0 — Real Fine-Tuning + Private Training Lab
 - v28.0 — Personal AI Avatar / Voice Twin
 - v29.0 — Real-Time Life Operating System
@@ -1044,10 +1056,10 @@ Automation safety rules:
 
 ## Project Status
 
-- **Status:** v21.0 completed and merged; v22.0 in progress
+- **Status:** v25.0 completed and merged; v26.0 in progress
 - **Platform release:** EvolveAgent OS
-- **Backend tests:** passing on completed release branches
-- **Frontend build:** passing on completed release branches
+- **Backend tests:** 311 passing on the merged v25 main verification
+- **Frontend build:** passing on the merged v25 main verification
 - See [`FINAL_CHECKLIST.md`](FINAL_CHECKLIST.md) for the full release-readiness checklist and known limitations.
 
 ## Resume Bullets

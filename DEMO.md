@@ -1,6 +1,10 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI** — now positioned as **EvolveAgent OS**, with completed roadmap coverage through **v21.0 — Multi-Modal Real-World Agent** and active work on **v22.0 — Industry Workflow Modes**.
+Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI** — now positioned as **EvolveAgent OS**, with completed roadmap coverage through **v40.0 — EvolveAgent Operating Layer**.
+
+> **v36–v40 demo add-ons (Developer Mode panels):** Innovation Lab (research/ideas/experiments), Simulation World (deterministic mock scenarios), Organization OS (local orgs/members/roles — no auth), Hardware Companion (device readiness — no mic/wake-word/hardware access), and the EvolveAgent Operating Layer (capability map + readiness snapshot + recommendations + final report).
+>
+> **Talking point:** *This is not AGI — the operating layer is a governed orchestration dashboard across existing agents, workflows, tools, memory, simulations, and dashboards. Risky actions stay behind human approval.*
 
 > **EvolveAgent OS** is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
