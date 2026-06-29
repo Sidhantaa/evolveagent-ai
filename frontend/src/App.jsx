@@ -272,6 +272,14 @@ import {
   updateOrgOsMember,
   createOrgOsRole,
   createOrgOsWorkspaceLink,
+  getCompanionDashboard,
+  getCompanionDevices,
+  getCompanionSettings,
+  getCompanionReadinessChecks,
+  createCompanionDevice,
+  updateCompanionSettings,
+  createCompanionReadinessCheck,
+  createCompanionSession,
   getGoal,
   getGoals,
   getHistory,
@@ -900,6 +908,14 @@ function App() {
   const [orgName, setOrgName] = useState('')
   const [orgMemberName, setOrgMemberName] = useState('')
   const [orgMemberRole, setOrgMemberRole] = useState('contributor')
+  const [showCompanionPanel, setShowCompanionPanel] = useState(false)
+  const [companionDashboard, setCompanionDashboard] = useState(null)
+  const [companionDevices, setCompanionDevices] = useState([])
+  const [companionBusy, setCompanionBusy] = useState(false)
+  const [companionError, setCompanionError] = useState(null)
+  const [companionDeviceName, setCompanionDeviceName] = useState('')
+  const [companionMode, setCompanionMode] = useState('disabled')
+  const [companionReadiness, setCompanionReadiness] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -1027,6 +1043,7 @@ function App() {
     refreshInnovationPanel()
     refreshSimWorldPanel()
     refreshOrgOsPanel()
+    refreshCompanionPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2588,6 +2605,55 @@ function App() {
 
   async function handleSetMemberRole(memberId, role) {
     await runOrgOsAction(() => updateOrgOsMember(memberId, { role }))
+  }
+
+  async function refreshCompanionPanel() {
+    const [dashboard, devices, settings] = await Promise.all([
+      getCompanionDashboard(),
+      getCompanionDevices(),
+      getCompanionSettings(),
+    ])
+    setCompanionDashboard(dashboard)
+    setCompanionDevices(devices?.devices || [])
+    if (settings?.companion_mode) setCompanionMode(settings.companion_mode)
+  }
+
+  async function runCompanionAction(action) {
+    setCompanionBusy(true)
+    setCompanionError(null)
+    try {
+      const value = await action()
+      await refreshCompanionPanel()
+      return value
+    } catch (error) {
+      setCompanionError(error.message || 'Companion action failed')
+      return null
+    } finally {
+      setCompanionBusy(false)
+    }
+  }
+
+  async function handleCreateCompanionDevice(event) {
+    event.preventDefault()
+    if (!companionDeviceName.trim()) return
+    await runCompanionAction(async () => {
+      await createCompanionDevice({ name: companionDeviceName.trim(), has_mic: true, has_speaker: true, local_processing: true })
+      setCompanionDeviceName('')
+    })
+  }
+
+  async function handleSetCompanionMode(mode) {
+    setCompanionMode(mode)
+    await runCompanionAction(() => updateCompanionSettings({ companion_mode: mode }))
+  }
+
+  async function handleCompanionReadiness(deviceId) {
+    const check = await runCompanionAction(() => createCompanionReadinessCheck({ device_id: deviceId }))
+    if (check) setCompanionReadiness(check)
+  }
+
+  async function handleCreateCompanionSession() {
+    await runCompanionAction(() => createCompanionSession({ title: 'Companion session' }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -7885,6 +7951,87 @@ function App() {
                 )}
 
                 <p className="muted">Local organization records only — no production authentication or real user login.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCompanionPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Hardware Companion
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCompanionPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>AI Hardware / Always-On Companion · v39.0</strong>
+                  <span>Device readiness, companion-mode settings, and session planning. No mic recording, no wake-word, no hardware access.</span>
+                </div>
+                {companionDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Devices</span><strong>{companionDashboard.device_count}</strong></div>
+                    <div><span>Sessions</span><strong>{companionDashboard.session_count}</strong></div>
+                    <div><span>Mode</span><strong>{companionDashboard.companion_mode}</strong></div>
+                    <div><span>Listening</span><strong>{String(companionDashboard.background_listening)}</strong></div>
+                  </div>
+                )}
+                {companionError && <p className="error-text">{companionError}</p>}
+
+                <h3>Companion mode</h3>
+                <div className="inline-actions">
+                  {['disabled', 'push_to_talk_ready', 'local_only_ready'].map((mode) => (
+                    <button key={mode} type="button" onClick={() => handleSetCompanionMode(mode)} disabled={companionBusy} className={companionMode === mode ? 'active' : ''}>
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateCompanionSession} disabled={companionBusy}>New session</button>
+                  <button type="button" onClick={() => refreshCompanionPanel()} disabled={companionBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateCompanionDevice}>
+                  <h3>Register device profile</h3>
+                  <input type="text" placeholder="Device name" value={companionDeviceName} onChange={(event) => setCompanionDeviceName(event.target.value)} />
+                  <button type="submit" disabled={companionBusy || !companionDeviceName.trim()}>Register device</button>
+                </form>
+
+                {companionDevices.length > 0 && (
+                  <>
+                    <h3>Devices</h3>
+                    {companionDevices.slice(0, 6).map((device) => (
+                      <div className="agent-template-card" key={device.device_id}>
+                        <strong>{device.name}</strong>
+                        <p className="muted">{device.device_type} · mic {String(device.has_mic)} · local {String(device.local_processing)}</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleCompanionReadiness(device.device_id)} disabled={companionBusy}>Readiness check</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {companionReadiness && (
+                  <div className="agent-template-card">
+                    <strong>Readiness · {companionReadiness.readiness} ({companionReadiness.ready_count}/{companionReadiness.total})</strong>
+                    {(companionReadiness.checklist || []).map((c, index) => (
+                      <p className="muted" key={index}>{c.ready ? '✓' : '○'} {c.item}</p>
+                    ))}
+                  </div>
+                )}
+
+                {companionDashboard?.safety_rules && (
+                  <>
+                    <h3>Safety</h3>
+                    {companionDashboard.safety_rules.map((rule, index) => (
+                      <p className="muted" key={index}>• {rule}</p>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </section>

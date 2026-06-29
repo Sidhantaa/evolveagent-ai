@@ -161,6 +161,11 @@ backend/app/data/organization_roles.json
 backend/app/data/organization_permissions.json
 backend/app/data/organization_workspaces.json
 backend/app/data/organization_activity.json
+backend/app/data/hardware_devices.json
+backend/app/data/companion_sessions.json
+backend/app/data/wake_mode_settings.json
+backend/app/data/companion_readiness_checks.json
+backend/app/data/companion_audit.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

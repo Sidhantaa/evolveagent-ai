@@ -2285,3 +2285,31 @@ export function createOrgOsRole(payload) {
 export function createOrgOsWorkspaceLink(payload) {
   return postJson('/api/organization-os/workspace-links', payload)
 }
+
+export function getCompanionDashboard() {
+  return getJson('/api/hardware-companion/dashboard')
+}
+export function getCompanionDevices() {
+  return getJson('/api/hardware-companion/devices')
+}
+export function getCompanionSettings() {
+  return getJson('/api/hardware-companion/settings')
+}
+export function getCompanionReadinessChecks() {
+  return getJson('/api/hardware-companion/readiness-checks')
+}
+export function getCompanionSessions() {
+  return getJson('/api/hardware-companion/sessions')
+}
+export function createCompanionDevice(payload) {
+  return postJson('/api/hardware-companion/devices', payload)
+}
+export function updateCompanionSettings(payload) {
+  return patchJson('/api/hardware-companion/settings', payload)
+}
+export function createCompanionReadinessCheck(payload) {
+  return postJson('/api/hardware-companion/readiness-checks', payload || {})
+}
+export function createCompanionSession(payload) {
+  return postJson('/api/hardware-companion/sessions', payload)
+}

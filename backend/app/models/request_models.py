@@ -1192,3 +1192,36 @@ class OrganizationWorkspaceLinkRequest(BaseModel):
     organization_id: str | None = Field(default=None, max_length=120)
     workspace_id: str | None = Field(default=None, max_length=120)
     workspace_name: str = Field(default="", max_length=160)
+
+
+# ----------------------------------------------------------------------
+# v39.0 AI Hardware / Always-On Companion (readiness/planning only)
+# ----------------------------------------------------------------------
+class HardwareDeviceCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    device_type: str = Field(default="other", pattern="^(phone|laptop|desktop|speaker|wearable|other)$")
+    has_mic: bool = Field(default=False)
+    has_speaker: bool = Field(default=False)
+    local_processing: bool = Field(default=False)
+
+
+class HardwareDeviceUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=160)
+    device_type: str | None = Field(default=None, pattern="^(phone|laptop|desktop|speaker|wearable|other)$")
+    has_mic: bool | None = None
+    has_speaker: bool | None = None
+    local_processing: bool | None = None
+
+
+class CompanionSettingsUpdateRequest(BaseModel):
+    companion_mode: str | None = Field(default=None, pattern="^(disabled|push_to_talk_ready|local_only_ready)$")
+
+
+class CompanionReadinessCheckRequest(BaseModel):
+    device_id: str | None = Field(default=None, max_length=120)
+
+
+class CompanionSessionCreateRequest(BaseModel):
+    device_id: str | None = Field(default=None, max_length=120)
+    title: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=4000)
