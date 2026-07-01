@@ -1,4 +1,8 @@
-# EvolveAgent AI — Project Summary (current completed: v42.0 MCP Execution Adapter)
+# EvolveAgent AI — Project Summary (current completed: v43.0 MCP Read-Only Adapter)
+
+## v43 — MCP Read-Only Adapter
+
+Turns the v42 mock executor into a **real, opt-in, read-only** executor for a small allow-list of safe actions (`git_current_branch`, `git_list_branches`, `fs_list_directory`, `fs_file_metadata`). Real execution runs only when **all** of: the `MCP_REAL_READONLY` env opt-in is set, the connector is enabled, the request is approved, and the action is allow-listed — otherwise it falls back to the v42 mock. The adapter is **standard-library only: no shell/subprocess, no network, no writes/deletes, no secrets, and it never returns file contents**. Every real path is sandboxed to the repo root with traversal + absolute-path blocking and a sensitive-name denylist (`.env`, keys, `.ssh`, `.git/config`, …). This follows the project's established "real opt-in with mock fallback" pattern; with the opt-in off (default), behaviour is identical to v42.
 
 ## v42 — MCP Execution Adapter
 

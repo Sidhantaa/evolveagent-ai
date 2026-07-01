@@ -6,11 +6,14 @@ from uuid import uuid4
 from app.models.response_models import GovernanceEvent
 from app.services.governance_service import GovernanceService
 from app.services.mcp_connector_service import MCPConnectorService
+from app.services.mcp_readonly_adapter import MCPReadOnlyAdapter
 from app.services.storage_service import StorageService
 
-# Hard guarantee for this version: execution is ALWAYS simulated. There is no
-# code path that opens a real MCP server, makes a network call, runs a shell
-# command, touches the filesystem, or controls a device. Results are mock.
+# Default execution mode is ALWAYS mock. Real execution is only ever performed by
+# the opt-in, sandboxed, read-only adapter (v43) for an allow-listed set of
+# actions; otherwise every run falls back to this simulated mode. No code path
+# runs a shell command, makes a network call, writes/deletes files, or returns
+# secrets.
 EXECUTION_MODE = "mock"
 
 REQUEST_STATUSES = ["pending_approval", "approved", "rejected", "executed", "blocked"]
@@ -35,10 +38,18 @@ class MCPExecutionService:
     requests_file = "mcp_execution_requests.json"
     results_file = "mcp_execution_results.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, connector_service: MCPConnectorService):
+    def __init__(
+        self,
+        storage: StorageService,
+        governance_service: GovernanceService,
+        connector_service: MCPConnectorService,
+        readonly_adapter: MCPReadOnlyAdapter | None = None,
+    ):
         self.storage = storage
         self.governance = governance_service
         self.connectors = connector_service
+        # v43: opt-in, sandboxed, read-only real adapter (mock fallback by default).
+        self.readonly_adapter = readonly_adapter or MCPReadOnlyAdapter()
 
     # ------------------------------------------------------------------
     # Helpers
@@ -194,26 +205,45 @@ class MCPExecutionService:
             self._log("mcp_execution_blocked", f"Blocked run of {request_id}: connector disabled/not enabled.", request.get("risk_level", "high"), blocked=True, approved=False)
             return self.get_request(request_id)
 
-        # Mock adapter — execution is always simulated in this version.
-        result = {
-            "result_id": str(uuid4()),
-            "request_id": request_id,
-            "connector_id": request["connector_id"],
-            "action_name": request["action_name"],
-            "execution_mode": EXECUTION_MODE,
-            "success": True,
-            "output": self._mock_output(connector, request["action_name"]),
-            "secrets_used": False,
-            "real_call_made": False,
-            "note": "Simulated execution — no real MCP server, network call, shell command, or device action was performed.",
-            "created_at": self._now(),
-        }
+        # v43: try the opt-in, sandboxed, read-only real adapter first; if it
+        # declines (opt-in off or action not allow-listed), fall back to mock.
+        adapter_result = self.readonly_adapter.try_execute(connector, request["action_name"], {})
+        if adapter_result is not None:
+            result = {
+                "result_id": str(uuid4()),
+                "request_id": request_id,
+                "connector_id": request["connector_id"],
+                "action_name": request["action_name"],
+                "execution_mode": adapter_result.get("execution_mode", "real_read_only"),
+                "success": adapter_result.get("success", False),
+                "output": adapter_result.get("output", {}),
+                "secrets_used": False,
+                "real_call_made": adapter_result.get("real_call_made", True),
+                "note": adapter_result.get("note", "Real read-only execution (sandboxed, stdlib only)."),
+                "created_at": self._now(),
+            }
+            run_mode = result["execution_mode"]
+        else:
+            result = {
+                "result_id": str(uuid4()),
+                "request_id": request_id,
+                "connector_id": request["connector_id"],
+                "action_name": request["action_name"],
+                "execution_mode": EXECUTION_MODE,
+                "success": True,
+                "output": self._mock_output(connector, request["action_name"]),
+                "secrets_used": False,
+                "real_call_made": False,
+                "note": "Simulated execution — no real MCP server, network call, shell command, or device action was performed.",
+                "created_at": self._now(),
+            }
+            run_mode = EXECUTION_MODE
         self.storage.append(self.results_file, result)
         request["status"] = "executed"
         request["result_id"] = result["result_id"]
         request["updated_at"] = self._now()
         self.storage.write_list(self.requests_file, requests)
-        self._log("mcp_execution_run", f"Ran (mock) execution {request_id} for action '{request['action_name']}'.", request.get("risk_level", "medium"), blocked=False, approved=True)
+        self._log("mcp_execution_run", f"Ran ({run_mode}) execution {request_id} for action '{request['action_name']}'.", request.get("risk_level", "medium"), blocked=False, approved=True)
         return self.get_request(request_id)
 
     def _mock_output(self, connector: dict, action_name: str) -> dict:
@@ -227,12 +257,17 @@ class MCPExecutionService:
     def list_results(self, limit: int = 50) -> list[dict]:
         return list(reversed(self.storage.read_list(self.results_file)[-limit:]))
 
+    def adapter_status(self) -> dict:
+        """v43: expose the read-only adapter's opt-in state, allow-list, and sandbox."""
+        return self.readonly_adapter.status()
+
     # ------------------------------------------------------------------
     # Summary + analytics
     # ------------------------------------------------------------------
     def summarize(self) -> dict:
         requests = self._requests()
         by_status = {status: sum(1 for r in requests if r.get("status") == status) for status in REQUEST_STATUSES}
+        real_readonly_enabled = self.readonly_adapter.enabled()
         return {
             "total_requests": len(requests),
             "by_status": by_status,
@@ -240,9 +275,13 @@ class MCPExecutionService:
             "executed": by_status.get("executed", 0),
             "blocked": by_status.get("blocked", 0),
             "execution_mode": EXECUTION_MODE,
+            "real_readonly_enabled": real_readonly_enabled,
+            "real_readonly_actions": list(self.readonly_adapter.status()["allowed_actions"]),
             "recent_requests": self.list_requests(limit=10),
             "safety_summary": {
-                "real_execution_enabled": False,
+                # Only the opt-in, sandboxed, read-only adapter can ever run for real.
+                "real_execution_enabled": real_readonly_enabled,
+                "real_execution_readonly_only": True,
                 "secrets_used": False,
                 "shell_used": False,
                 "network_calls_made": False,
@@ -252,10 +291,13 @@ class MCPExecutionService:
 
     def analytics_summary(self) -> dict:
         requests = self._requests()
+        results = self.storage.read_list(self.results_file)
         return {
             "mcp_execution_requests": len(requests),
             "mcp_executions_run": sum(1 for r in requests if r.get("status") == "executed"),
             "mcp_executions_pending": sum(1 for r in requests if r.get("status") == "pending_approval"),
             "mcp_executions_blocked": sum(1 for r in requests if r.get("status") == "blocked"),
+            "mcp_executions_real_readonly": sum(1 for r in results if r.get("execution_mode") == "real_read_only"),
             "mcp_execution_mode": EXECUTION_MODE,
+            "mcp_real_readonly_enabled": self.readonly_adapter.enabled(),
         }

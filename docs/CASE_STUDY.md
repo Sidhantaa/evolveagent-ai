@@ -160,3 +160,9 @@ The EvolveAgent MCP Connector Hub prepares and governs tool connections through 
 ## v42 — MCP Execution Adapter
 
 Where v41 prepared and governed tool connections, v42 adds the execution loop that keeps them safe in practice. A request → approve → run → record flow reuses the v41 planning rules to validate each request, auto-approves only read-only low-risk actions, and holds everything else for explicit human approval. Approved requests run through a mock executor: execution is always simulated, so there is no real MCP server, network call, shell command, or device action, and no secrets are used. Run-time re-validation blocks any request whose connector has since been disabled, and every step is governance-logged. This demonstrates a realistic, auditable path toward live tool execution while staying local-first, approval-gated, and mock-by-default.
+
+---
+
+## v43 — MCP Read-Only Adapter
+
+v41 registered connectors, v42 added the approve/run loop, and v43 makes the run actually do something — safely. The MCP Read-Only Adapter is the project's first real tool execution: an opt-in, sandboxed, read-only path for a small allow-list of git and filesystem actions. It uses the standard library only (no shell, network, writes, or secrets), never returns file contents, and is sandboxed to the repo root with traversal and denylist protection. Real execution requires an explicit env opt-in on top of connector-enabled and human approval; otherwise it falls back to the v42 mock. This demonstrates a realistic, auditable path from planning to live tool execution while staying inside the platform's safety contract.

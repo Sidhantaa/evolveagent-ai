@@ -2367,6 +2367,9 @@ export function planMcpConnectorAction(connectorId, actionName, payload) {
 export function getMcpExecutionSummary() {
   return getJson('/api/mcp/executions/summary')
 }
+export function getMcpAdapterStatus() {
+  return getJson('/api/mcp/adapter/status')
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

@@ -295,6 +295,7 @@ import {
   checkMcpConnector,
   planMcpConnectorAction,
   getMcpExecutionSummary,
+  getMcpAdapterStatus,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -953,6 +954,7 @@ function App() {
   const [mcpCheckResult, setMcpCheckResult] = useState(null)
   const [mcpPlanResult, setMcpPlanResult] = useState(null)
   const [mcpExecSummary, setMcpExecSummary] = useState(null)
+  const [mcpAdapterStatus, setMcpAdapterStatus] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -2741,12 +2743,14 @@ function App() {
     setMcpSummary(summary)
     setMcpConnectors(connectors?.connectors || [])
     setMcpTemplates(templates?.templates || [])
-    const [execSummary, executions] = await Promise.all([
+    const [execSummary, executions, adapterStatus] = await Promise.all([
       getMcpExecutionSummary(),
       getMcpExecutions(),
+      getMcpAdapterStatus(),
     ])
     setMcpExecSummary(execSummary)
     setMcpExecutions(executions?.requests || [])
+    setMcpAdapterStatus(adapterStatus)
   }
 
   async function runMcpAction(action) {
@@ -8349,12 +8353,21 @@ function App() {
                   </div>
                 )}
 
-                {/* v42 — MCP Execution Adapter (approval-gated, mock-by-default) */}
-                <h3>Executions (v42 · mock-by-default)</h3>
+                {/* v42 — MCP Execution Adapter (approval-gated) · v43 — Read-Only Adapter (opt-in) */}
+                <h3>Executions (v42/v43 · mock-by-default)</h3>
                 {mcpExecSummary && (
                   <p className="muted">
                     mode: {mcpExecSummary.execution_mode} · requests: {mcpExecSummary.total_requests} · pending: {mcpExecSummary.pending_approval} · executed: {mcpExecSummary.executed} · blocked: {mcpExecSummary.blocked}
                   </p>
+                )}
+                {mcpAdapterStatus && (
+                  <div className="agent-template-card">
+                    <strong>Read-only adapter (v43) · {mcpAdapterStatus.real_readonly_enabled ? 'REAL opt-in ON' : 'mock (opt-in off)'}</strong>
+                    <p className="muted">allow-list: {(mcpAdapterStatus.allowed_actions || []).join(', ')}</p>
+                    <p className="muted">sandbox: {mcpAdapterStatus.sandbox_root}</p>
+                    <p className="muted">shell: {String(mcpAdapterStatus.capabilities?.shell)} · network: {String(mcpAdapterStatus.capabilities?.network)} · writes: {String(mcpAdapterStatus.capabilities?.writes)} · returns secrets: {String(mcpAdapterStatus.capabilities?.returns_secrets)}</p>
+                    <p className="muted">Set <code>{mcpAdapterStatus.opt_in_env}</code> to enable real read-only execution for allow-listed actions (still approval-gated).</p>
+                  </div>
                 )}
                 <form className="stacked-form" onSubmit={handleRequestMcpExecution}>
                   <input type="text" placeholder="action to execute (selected connector)" value={mcpExecActionName} onChange={(event) => setMcpExecActionName(event.target.value)} />

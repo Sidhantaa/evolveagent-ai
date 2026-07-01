@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v42.0 — MCP Execution Adapter &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v43.0 — MCP Read-Only Adapter &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
 
@@ -15,6 +15,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v40 — EvolveAgent Operating Layer:** a governed orchestration dashboard summarizing the capability map across v15–v39, with readiness snapshots, cross-system recommendations, safety boundaries, and a final report.
 - **v41 — MCP Connector Hub:** a local connector registry for MCP-style tools (GitHub, Linear, Filesystem, Git, Context7, Playwright, Slack, Notion, Desktop Commander). The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs — **no real MCP execution by default, no secrets exposed, no unrestricted shell, no full desktop control**. High-risk connectors (Filesystem, Playwright, Desktop Commander) stay approval-required or disabled by default; status checks report only whether required env keys are set (true/false), never their values.
 - **v42 — MCP Execution Adapter:** a governed *request → approve → run → record* loop on top of v41. It reuses the connector planning rules to validate every request (blocked/allow-list/risk), auto-approves read-only low-risk actions, holds everything else for explicit human approval, and runs approved requests through a **mock executor** — **execution is always simulated (`EXECUTION_MODE = "mock"`); no real MCP server, network call, shell command, or device action is performed, and no secrets are used**. Every step is governance-logged.
+- **v43 — MCP Read-Only Adapter:** turns the v42 mock executor into a **real, opt-in, read-only** executor for a small allow-list of safe actions (`git_current_branch`, `git_list_branches`, `fs_list_directory`, `fs_file_metadata`). Real execution happens only when the `MCP_REAL_READONLY` env opt-in is set **and** the connector is enabled **and** the request is approved **and** the action is allow-listed; otherwise it falls back to mock. It is **standard-library only — no shell, no network, no writes/deletes, no secrets, and never returns file contents** — sandboxed to the repo root with traversal + absolute-path blocking and a sensitive-name denylist. This mirrors the project's "real opt-in with mock fallback" pattern (v9/v10).
 
 > **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
 >

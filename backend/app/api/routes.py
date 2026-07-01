@@ -3429,6 +3429,12 @@ def get_mcp_execution_summary() -> dict:
     return mcp_execution_service.summarize()
 
 
+# v43.0 MCP Read-Only Adapter — opt-in, sandboxed, read-only real execution status.
+@router.get("/mcp/adapter/status")
+def get_mcp_adapter_status() -> dict:
+    return mcp_execution_service.adapter_status()
+
+
 @router.get("/mcp/executions")
 def list_mcp_executions(connector_id: str | None = Query(default=None)) -> dict:
     requests = mcp_execution_service.list_requests(connector_id)

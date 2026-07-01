@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **44** service test modules
 - **444** passing backend tests
 - single-file React UI (~**10,000** lines)
-- **42** implementation versions
+- **43** implementation versions
 
 ## Architecture Pattern
 
@@ -334,6 +334,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/executions`, `/api/mcp/connectors/{id}/execute`.
 - **Safety boundary:** Execution is always simulated (`EXECUTION_MODE = "mock"`) — **no real MCP server, network call, shell command, or device action, and no secrets used or returned**. Write actions always require explicit approval; blocked/disabled connectors never execute.
 
+### v43 — MCP Read-Only Adapter
+- **Purpose:** Add a real, opt-in, read-only execution path to the v42 loop — the project's first genuinely real tool execution, kept strictly safe.
+- **How it operates:** A sandboxed adapter (`mcp_readonly_adapter.py`) that the execution service consults during `run_execution`. It executes for real **only when all hold**: env opt-in `MCP_REAL_READONLY` is set, the connector is enabled, the request is approved, and the action is on the allow-list (`git_current_branch`, `git_list_branches`, `fs_list_directory`, `fs_file_metadata`). Git actions read `.git/HEAD` and `refs/heads` as plain files (no subprocess); filesystem actions return directory listings / file metadata (names and sizes only, never contents). Anything else falls back to the v42 mock. `GET /api/mcp/adapter/status` exposes the opt-in state, allow-list, and sandbox root.
+- **Main API route groups:** `/api/mcp/adapter/status` (plus the v42 execution routes).
+- **Safety boundary:** **Standard-library only — no shell/subprocess, no network, no writes/deletes, no secrets, and never returns file contents.** Sandboxed to the repo root with traversal + absolute-path blocking and a sensitive-name denylist (`.env`, keys, `.ssh`, `.git/config`, …); dotfiles and sensitive names are hidden from listings. Opt-in defaults off, so default behaviour is identical to v42 (mock).
+
 ---
 
 ## Summary Table
@@ -382,3 +388,4 @@ From v15 onward every version follows the governed architecture above: a service
 | v40 | EvolveAgent Operating Layer | `/api/operating-layer` | Capability map/snapshots/recs/report | Not AGI — governed orchestration |
 | v41 | MCP Connector Hub | `/api/mcp` | Connector registry/templates/dry checks/action planning | No real MCP exec; no secrets; no shell; no desktop control |
 | v42 | MCP Execution Adapter | `/api/mcp/executions` | Approval-gated request→approve→run→record loop | Mock executor only; no real exec/network/shell; no secrets |
+| v43 | MCP Read-Only Adapter | `/api/mcp/adapter/status` | Opt-in real read-only exec (git/fs), mock fallback | Stdlib only; no shell/network/writes/secrets; sandboxed; opt-in |
