@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v43.0 MCP Read-Only Adapter)
+# EvolveAgent AI — Final Checklist (current completed: v44.0 MCP Approvals Inbox)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -12,8 +12,9 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v41 — MCP Connector Hub:** connector registry / 9 default templates / risk levels / read-only vs approval-required modes / env-key readiness (booleans only) / dry status checks / action planning / governance + connector-event logs; **no real MCP execution, no secrets exposed, no unrestricted shell, no full desktop control**; high-risk connectors approval-required or disabled by default.
 - [x] **v42 — MCP Execution Adapter:** request → approve → run → record loop / reuses v41 planning for validation / read-only low-risk auto-approved / writes require approval / **mock executor only (`EXECUTION_MODE = "mock"`, no real MCP/network/shell/device, no secrets)** / run-time re-validation / governance-logged / analytics.
 - [x] **v43 — MCP Read-Only Adapter:** opt-in (`MCP_REAL_READONLY`) real read-only executor / allow-list (git_current_branch, git_list_branches, fs_list_directory, fs_file_metadata) / **stdlib only — no shell/network/writes/secrets, never returns file contents** / sandboxed to repo root with traversal + denylist / mock fallback when opt-in off / approval-gated / governance-logged; v42 mock behaviour unchanged by default.
+- [x] **v44 — MCP Approvals Inbox:** unified prioritized queue of pending MCP approvals / enriched with connector name + risk + age / sorted high-risk & oldest first / risk filter / approve+reject **delegate to the governed execution service** (no new execution power) / analytics / MCP Hub panel section.
 - [x] Backend tests green and frontend build green after each version.
-- [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43) and verified on `main` before marking Linear Done.
+- [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
 > **Not AGI.** Governed orchestration layer only. Roadmap after v40 is future-only.
 

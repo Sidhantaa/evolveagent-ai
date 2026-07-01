@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **44** service test modules
 - **444** passing backend tests
 - single-file React UI (~**10,000** lines)
-- **43** implementation versions
+- **44** implementation versions
 
 ## Architecture Pattern
 
@@ -340,6 +340,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/adapter/status` (plus the v42 execution routes).
 - **Safety boundary:** **Standard-library only — no shell/subprocess, no network, no writes/deletes, no secrets, and never returns file contents.** Sandboxed to the repo root with traversal + absolute-path blocking and a sensitive-name denylist (`.env`, keys, `.ssh`, `.git/config`, …); dotfiles and sensitive names are hidden from listings. Opt-in defaults off, so default behaviour is identical to v42 (mock).
 
+### v44 — MCP Approvals Inbox
+- **Purpose:** A single, prioritized place to review and act on everything on the MCP surface awaiting human approval.
+- **How it operates:** Aggregates the v42 execution requests in `pending_approval` status, enriches each with connector name, risk level, and age, and sorts them **high-risk first, then oldest first** (with a risk-level filter). Approve/reject **delegate to `MCPExecutionService`** (which does the governance logging and status transitions), so the inbox holds no independent execution power. Derives entirely from existing execution state — no new storage.
+- **Main API route groups:** `/api/mcp/inbox` (+ `/summary`, `/{item_id}/approve`, `/{item_id}/reject`).
+- **Safety boundary:** Read/triage + delegated decisions only — it can approve or reject an existing pending request but adds no new action, execution, or bypass; all decisions flow through the governed execution service and are logged.
+
 ---
 
 ## Summary Table
@@ -389,3 +395,4 @@ From v15 onward every version follows the governed architecture above: a service
 | v41 | MCP Connector Hub | `/api/mcp` | Connector registry/templates/dry checks/action planning | No real MCP exec; no secrets; no shell; no desktop control |
 | v42 | MCP Execution Adapter | `/api/mcp/executions` | Approval-gated request→approve→run→record loop | Mock executor only; no real exec/network/shell; no secrets |
 | v43 | MCP Read-Only Adapter | `/api/mcp/adapter/status` | Opt-in real read-only exec (git/fs), mock fallback | Stdlib only; no shell/network/writes/secrets; sandboxed; opt-in |
+| v44 | MCP Approvals Inbox | `/api/mcp/inbox` | Prioritized queue of pending approvals; approve/reject | Triage + delegated decisions only; no new execution power |

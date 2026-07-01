@@ -166,3 +166,9 @@ Where v41 prepared and governed tool connections, v42 adds the execution loop th
 ## v43 — MCP Read-Only Adapter
 
 v41 registered connectors, v42 added the approve/run loop, and v43 makes the run actually do something — safely. The MCP Read-Only Adapter is the project's first real tool execution: an opt-in, sandboxed, read-only path for a small allow-list of git and filesystem actions. It uses the standard library only (no shell, network, writes, or secrets), never returns file contents, and is sandboxed to the repo root with traversal and denylist protection. Real execution requires an explicit env opt-in on top of connector-enabled and human approval; otherwise it falls back to the v42 mock. This demonstrates a realistic, auditable path from planning to live tool execution while staying inside the platform's safety contract.
+
+---
+
+## v44 — MCP Approvals Inbox
+
+With a real execution path in place (v43), the natural governance need is a single place to review what is waiting on a human. The MCP Approvals Inbox aggregates all pending MCP execution requests into one prioritized queue — enriched with connector name, risk level, and age, and sorted so high-risk and oldest items surface first. Approving or rejecting delegates to the governed execution service, so the inbox never bypasses the existing controls; it simply makes triage fast and auditable. It demonstrates a common real-world governance pattern (an approvals queue) built on top of the existing governed primitives rather than around them.

@@ -1,4 +1,8 @@
-# EvolveAgent AI — Project Summary (current completed: v43.0 MCP Read-Only Adapter)
+# EvolveAgent AI — Project Summary (current completed: v44.0 MCP Approvals Inbox)
+
+## v44 — MCP Approvals Inbox
+
+A unified, prioritized queue of everything on the MCP surface awaiting human approval — today the v42 execution requests in `pending_approval`. Each item is enriched with connector name, risk level, and age, and sorted **high-risk / oldest first** so a reviewer can triage. Approve/reject **delegate to the governed execution service** (which performs the governance logging), so the inbox adds no new execution power — only aggregation, prioritization, and a single place to act. Exposed at `/api/mcp/inbox` (+ `/summary`, `/{item_id}/approve`, `/{item_id}/reject`), surfaced in analytics, and shown as an "Approvals Inbox" section in the MCP Hub panel.
 
 ## v43 — MCP Read-Only Adapter
 

@@ -296,6 +296,10 @@ import {
   planMcpConnectorAction,
   getMcpExecutionSummary,
   getMcpAdapterStatus,
+  getMcpInbox,
+  getMcpInboxSummary,
+  approveMcpInboxItem,
+  rejectMcpInboxItem,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -955,6 +959,8 @@ function App() {
   const [mcpPlanResult, setMcpPlanResult] = useState(null)
   const [mcpExecSummary, setMcpExecSummary] = useState(null)
   const [mcpAdapterStatus, setMcpAdapterStatus] = useState(null)
+  const [mcpInbox, setMcpInbox] = useState([])
+  const [mcpInboxSummary, setMcpInboxSummary] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -2751,6 +2757,20 @@ function App() {
     setMcpExecSummary(execSummary)
     setMcpExecutions(executions?.requests || [])
     setMcpAdapterStatus(adapterStatus)
+    const [inbox, inboxSummary] = await Promise.all([
+      getMcpInbox(),
+      getMcpInboxSummary(),
+    ])
+    setMcpInbox(inbox?.items || [])
+    setMcpInboxSummary(inboxSummary)
+  }
+
+  async function handleApproveInboxItem(itemId) {
+    await runMcpAction(() => approveMcpInboxItem(itemId))
+  }
+
+  async function handleRejectInboxItem(itemId) {
+    await runMcpAction(() => rejectMcpInboxItem(itemId))
   }
 
   async function runMcpAction(action) {
@@ -8352,6 +8372,28 @@ function App() {
                     )}
                   </div>
                 )}
+
+                {/* v44 — MCP Approvals Inbox (prioritized queue of pending approvals) */}
+                <h3>Approvals Inbox (v44)</h3>
+                {mcpInboxSummary && (
+                  <p className="muted">
+                    pending: {mcpInboxSummary.pending_count} · high-risk: {mcpInboxSummary.high_risk_pending} · oldest: {mcpInboxSummary.oldest_pending_seconds}s
+                  </p>
+                )}
+                {mcpInbox.length === 0 && <p className="muted">No pending approvals. 🎉</p>}
+                {mcpInbox.slice(0, 6).map((item) => (
+                  <div className="agent-template-card" key={item.item_id}>
+                    <strong>{item.action_name}</strong>
+                    <p className="muted">
+                      {item.connector_name} · <span className={`risk-badge risk-${item.risk_level}`}>{item.risk_level} risk</span> · {item.age_seconds}s old
+                    </p>
+                    <p className="muted">{item.recommended_action}</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleApproveInboxItem(item.item_id)} disabled={mcpBusy}>Approve</button>
+                      <button type="button" onClick={() => handleRejectInboxItem(item.item_id)} disabled={mcpBusy}>Reject</button>
+                    </div>
+                  </div>
+                ))}
 
                 {/* v42 — MCP Execution Adapter (approval-gated) · v43 — Read-Only Adapter (opt-in) */}
                 <h3>Executions (v42/v43 · mock-by-default)</h3>

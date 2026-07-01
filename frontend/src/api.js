@@ -2370,6 +2370,18 @@ export function getMcpExecutionSummary() {
 export function getMcpAdapterStatus() {
   return getJson('/api/mcp/adapter/status')
 }
+export function getMcpInbox(riskLevel) {
+  return getJson(riskLevel ? `/api/mcp/inbox?risk_level=${riskLevel}` : '/api/mcp/inbox')
+}
+export function getMcpInboxSummary() {
+  return getJson('/api/mcp/inbox/summary')
+}
+export function approveMcpInboxItem(itemId) {
+  return postJson(`/api/mcp/inbox/${itemId}/approve`, {})
+}
+export function rejectMcpInboxItem(itemId) {
+  return postJson(`/api/mcp/inbox/${itemId}/reject`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

@@ -251,6 +251,7 @@ from app.services.hardware_companion_service import HardwareCompanionService
 from app.services.operating_layer_service import OperatingLayerService
 from app.services.mcp_connector_service import MCPConnectorService
 from app.services.mcp_execution_service import MCPExecutionService
+from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -340,6 +341,7 @@ hardware_companion_service = HardwareCompanionService(storage, governance_servic
 operating_layer_service = OperatingLayerService(storage, governance_service)
 mcp_connector_service = MCPConnectorService(storage, governance_service)
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
+mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1593,6 +1595,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **agent_department_service.analytics_summary(),
         **mcp_connector_service.analytics_summary(),
         **mcp_execution_service.analytics_summary(),
+        **mcp_approvals_inbox_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3433,6 +3436,40 @@ def get_mcp_execution_summary() -> dict:
 @router.get("/mcp/adapter/status")
 def get_mcp_adapter_status() -> dict:
     return mcp_execution_service.adapter_status()
+
+
+# ----------------------------------------------------------------------
+# v44.0 MCP Approvals Inbox — unified, prioritized queue of pending approvals.
+# ----------------------------------------------------------------------
+@router.get("/mcp/inbox/summary")
+def get_mcp_inbox_summary() -> dict:
+    return mcp_approvals_inbox_service.summary()
+
+
+@router.get("/mcp/inbox")
+def get_mcp_inbox(risk_level: str | None = Query(default=None)) -> dict:
+    items = mcp_approvals_inbox_service.list_inbox(risk_level)
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/mcp/inbox/{item_id}/approve")
+def approve_mcp_inbox_item(item_id: str) -> dict:
+    try:
+        return mcp_approvals_inbox_service.approve(item_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+@router.post("/mcp/inbox/{item_id}/reject")
+def reject_mcp_inbox_item(item_id: str) -> dict:
+    try:
+        return mcp_approvals_inbox_service.reject(item_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
 
 
 @router.get("/mcp/executions")
