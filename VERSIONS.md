@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **52** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **53** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v53 — Playbook Library
+- **Purpose:** Save and re-run governed multi-step action sequences without executing anything.
+- **How it operates:** `PlaybookLibraryService` stores playbooks of steps (plan / note / approval_required). Running a playbook is planning-first: plan steps are drafted (mock), note steps are informational, and approval_required steps are held for explicit human approval — the run records a per-step outcome and never executes. Creation and runs are governance-logged.
+- **Main API route groups:** `/api/playbooks` (+ `/{id}/run`, `/runs`, `/summary`).
+- **Safety boundary:** Planning-first — nothing is executed; risky steps always require approval.
+
 ### v52 — Evaluation Harness 2.0
 - **Purpose:** Repeatable, regression-aware quality evaluation for agent behavior.
 - **How it operates:** `EvalHarnessService` stores suites of cases (prompt, reference answer, expected keywords). Running a suite scores each case deterministically by expected-keyword coverage over its reference answer — no real LLM call — producing a scorecard with per-case scores, pass counts, and a delta vs the previous run for regression detection. Suite creation and runs are governance-logged.
@@ -465,4 +471,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v50 | Cost & Usage Ledger | `/api/usage-ledger` | Usage estimates + per-workspace budgets | Estimates only; no billing/charge/payment |
 | v51 | Local Retrieval Layer | `/api/retrieval` | Local chunking + keyword retrieval with citations | Local-first; no external vector DB or network |
 | v52 | Evaluation Harness 2.0 | `/api/eval-harness` | Repeatable suites/scorecards + regression tracking | Deterministic, mock-safe; no real LLM call |
+| v53 | Playbook Library | `/api/playbooks` | Reusable multi-step playbooks, run planning-first | Nothing executed; risky steps require approval |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

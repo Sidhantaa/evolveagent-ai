@@ -327,6 +327,10 @@ import {
   getEvalSuites,
   createEvalSuite,
   runEvalSuite,
+  getPlaybooksSummary,
+  getPlaybooks,
+  createPlaybook,
+  runPlaybook,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1023,6 +1027,11 @@ function App() {
   const [evalSuites, setEvalSuites] = useState([])
   const [evalBusy, setEvalBusy] = useState(false)
   const [evalRun, setEvalRun] = useState(null)
+  const [showPlaybooks, setShowPlaybooks] = useState(false)
+  const [playbooksSummary, setPlaybooksSummary] = useState(null)
+  const [playbooks, setPlaybooks] = useState([])
+  const [playbookBusy, setPlaybookBusy] = useState(false)
+  const [playbookRun, setPlaybookRun] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1160,6 +1169,7 @@ function App() {
     refreshUsageLedger()
     refreshRetrieval()
     refreshEvalHarness()
+    refreshPlaybooks()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2835,6 +2845,39 @@ function App() {
     const [summary, suites] = await Promise.all([getEvalSummary(), getEvalSuites()])
     setEvalSummary(summary)
     setEvalSuites(suites?.suites || [])
+  }
+
+  async function refreshPlaybooks() {
+    const [summary, list] = await Promise.all([getPlaybooksSummary(), getPlaybooks()])
+    setPlaybooksSummary(summary)
+    setPlaybooks(list?.playbooks || [])
+  }
+
+  async function runPlaybookAction(action) {
+    setPlaybookBusy(true)
+    try {
+      const value = await action()
+      await refreshPlaybooks()
+      return value
+    } finally {
+      setPlaybookBusy(false)
+    }
+  }
+
+  async function handleCreateSamplePlaybook() {
+    await runPlaybookAction(() => createPlaybook({
+      name: 'Sample release playbook',
+      steps: [
+        { title: 'Draft changelog', step_type: 'plan', detail: 'Summarize changes.' },
+        { title: 'Notify reviewers', step_type: 'note', detail: 'Ping the team.' },
+        { title: 'Publish release', step_type: 'approval_required', detail: 'Risky — needs approval.' },
+      ],
+    }))
+  }
+
+  async function handleRunPlaybook(playbookId) {
+    const run = await runPlaybookAction(() => runPlaybook(playbookId))
+    if (run) setPlaybookRun(run)
   }
 
   async function runEvalAction(action) {
@@ -8527,6 +8570,51 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowPlaybooks((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Playbook Library
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showPlaybooks && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Playbook Library · v53.0</strong>
+                  <span>Reusable multi-step playbooks. Runs are planning-first — steps are planned or held for approval; nothing is executed.</span>
+                </div>
+                {playbooksSummary && (
+                  <p className="muted">playbooks: {playbooksSummary.playbook_count} · runs: {playbooksSummary.run_count}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateSamplePlaybook} disabled={playbookBusy}>New sample playbook</button>
+                  <button type="button" onClick={() => refreshPlaybooks()} disabled={playbookBusy}>Refresh</button>
+                </div>
+                {playbooks.slice(0, 6).map((pb) => (
+                  <div className="agent-template-card" key={pb.playbook_id}>
+                    <strong>{pb.name}</strong>
+                    <p className="muted">{pb.step_count} step(s)</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRunPlaybook(pb.playbook_id)} disabled={playbookBusy}>Run (planning)</button>
+                    </div>
+                  </div>
+                ))}
+                {playbookRun && (
+                  <div className="agent-template-card">
+                    <strong>Run · {playbookRun.planned_count} planned · {playbookRun.approval_required_count} need approval</strong>
+                    {(playbookRun.steps || []).map((step) => (
+                      <p className="muted" key={step.step_index}>{step.status === 'approval_required' ? '⏸️' : step.status === 'planned' ? '📝' : 'ℹ️'} {step.title} — {step.status}</p>
+                    ))}
+                  </div>
+                )}
+                <p className="muted">Planning-first — nothing is executed; risky steps require approval.</p>
               </div>
             )}
           </section>

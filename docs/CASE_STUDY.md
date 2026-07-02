@@ -222,3 +222,9 @@ Grounding answers in your own documents usually implies an external vector datab
 ## v52 — Evaluation Harness 2.0
 
 Quality needs to be measured repeatably, not judged once. The Evaluation Harness turns evaluation into versioned suites and scorecards with regression tracking, using deterministic, mock-safe scoring so results are stable across runs and machines. It extends the early evaluation-lab work into a reproducible quality gate consistent with the platforms local-first, mock-first design.
+
+---
+
+## v53 — Playbook Library
+
+Repeatable workflows are valuable, but only if they stay safe. The Playbook Library lets users capture multi-step sequences and re-run them planning-first — planning the safe steps and holding risky ones for approval, with nothing executed. It packages the platforms governed, mock-first philosophy into reusable, shareable workflows.

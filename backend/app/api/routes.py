@@ -128,6 +128,7 @@ from app.models.request_models import (
     RetrievalIndexRequest,
     RetrievalQueryRequest,
     EvalSuiteCreateRequest,
+    PlaybookCreateRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -272,6 +273,7 @@ from app.services.health_monitor_service import HealthMonitorService
 from app.services.usage_ledger_service import UsageLedgerService
 from app.services.local_retrieval_service import LocalRetrievalService
 from app.services.eval_harness_service import EvalHarnessService
+from app.services.playbook_library_service import PlaybookLibraryService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -370,6 +372,7 @@ health_monitor_service = HealthMonitorService(storage, governance_service)
 usage_ledger_service = UsageLedgerService(storage, governance_service)
 local_retrieval_service = LocalRetrievalService(storage, governance_service)
 eval_harness_service = EvalHarnessService(storage, governance_service)
+playbook_library_service = PlaybookLibraryService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1632,6 +1635,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **usage_ledger_service.analytics_summary(),
         **local_retrieval_service.analytics_summary(),
         **eval_harness_service.analytics_summary(),
+        **playbook_library_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3822,6 +3826,39 @@ def list_eval_runs(suite_id: str | None = Query(default=None)) -> dict:
 @router.get("/eval-harness/suites/{suite_id}/regression")
 def get_eval_regression(suite_id: str) -> dict:
     return eval_harness_service.regression(suite_id)
+
+
+# ----------------------------------------------------------------------
+# v53.0 Playbook Library — reusable multi-step playbooks (planning-first).
+# ----------------------------------------------------------------------
+@router.get("/playbooks/summary")
+def get_playbooks_summary() -> dict:
+    return playbook_library_service.summary()
+
+
+@router.get("/playbooks")
+def list_playbooks() -> dict:
+    playbooks = playbook_library_service.list_playbooks()
+    return {"playbooks": playbooks, "count": len(playbooks)}
+
+
+@router.post("/playbooks")
+def create_playbook(request: PlaybookCreateRequest) -> dict:
+    return playbook_library_service.create_playbook(request.model_dump())
+
+
+@router.post("/playbooks/{playbook_id}/run")
+def run_playbook(playbook_id: str) -> dict:
+    try:
+        return playbook_library_service.run_playbook(playbook_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Playbook not found") from error
+
+
+@router.get("/playbooks/runs")
+def list_playbook_runs(playbook_id: str | None = Query(default=None)) -> dict:
+    runs = playbook_library_service.list_runs(playbook_id)
+    return {"runs": runs, "count": len(runs)}
 
 
 @router.get("/governance")
