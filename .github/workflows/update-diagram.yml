@@ -73,12 +73,20 @@ jobs:
           }
           EOF
 
+      - name: Write puppeteer config
+        run: |
+          cat > puppeteer-config.json << 'EOF'
+          {
+            "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+          }
+          EOF
+
       - name: Create docs folder
         run: mkdir -p docs
 
       - name: Render diagram
         run: |
-          mmdc -i diagram.mmd -o docs/architecture.png -c config.json -b white --width 2400
+          mmdc -i diagram.mmd -o docs/architecture.png -c config.json -b white --width 2400 --puppeteerConfigFile puppeteer-config.json
 
       - name: Commit updated diagram
         run: |
