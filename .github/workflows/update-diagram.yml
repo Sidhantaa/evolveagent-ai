@@ -1,1 +1,89 @@
+name: Update Architecture Diagram
 
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render-diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Extract Mermaid diagram from README
+        run: |
+          python3 - <<'EOF'
+          import re
+          with open('README.md', 'r') as f:
+              content = f.read()
+          match = re.search(r'```mermaid\n(.*?)```', content, re.DOTALL)
+          if match:
+              with open('diagram.mmd', 'w') as f:
+                  f.write(match.group(1))
+              print("Extracted successfully")
+          else:
+              print("No diagram found")
+              exit(1)
+          EOF
+
+      - name: Write mermaid config
+        run: |
+          cat > config.json << 'EOF'
+          {
+            "theme": "base",
+            "themeVariables": {
+              "primaryColor": "#EEEDFE",
+              "primaryBorderColor": "#534AB7",
+              "primaryTextColor": "#26215C",
+              "secondaryColor": "#E1F5EE",
+              "secondaryBorderColor": "#0F6E56",
+              "secondaryTextColor": "#04342C",
+              "tertiaryColor": "#FAEEDA",
+              "tertiaryBorderColor": "#854F0B",
+              "tertiaryTextColor": "#412402",
+              "lineColor": "#5F5E5A",
+              "fontSize": "14px",
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif",
+              "edgeLabelBackground": "#F1EFE8",
+              "clusterBkg": "#F8F7FF",
+              "clusterBorder": "#AFA9EC"
+            },
+            "flowchart": {
+              "padding": 20,
+              "nodeSpacing": 50,
+              "rankSpacing": 70,
+              "curve": "basis"
+            }
+          }
+          EOF
+
+      - name: Create docs folder
+        run: mkdir -p docs
+
+      - name: Render diagram
+        run: |
+          mmdc -i diagram.mmd -o docs/architecture.png -c config.json -b white --width 2400
+
+      - name: Commit updated diagram
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture.png
+          git diff --staged --quiet || git commit -m "Auto-update architecture diagram"
+          git push
