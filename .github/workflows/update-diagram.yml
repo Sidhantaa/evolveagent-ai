@@ -1,0 +1,54 @@
+name: Update Architecture Diagram
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'README.md'
+
+permissions:
+  contents: write
+
+jobs:
+  render-diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Extract Mermaid diagram from README
+        run: |
+          python3 - <<'EOF'
+          import re
+          with open('README.md', 'r') as f:
+              content = f.read()
+          match = re.search(r'```mermaid\n(.*?)```', content, re.DOTALL)
+          if match:
+              with open('diagram.mmd', 'w') as f:
+                  f.write(match.group(1))
+              print("Diagram extracted successfully")
+          else:
+              print("No mermaid diagram found")
+              exit(1)
+          EOF
+
+      - name: Render diagram as PNG
+        run: |
+          mmdc -i diagram.mmd -o docs/architecture.png -t neutral -b white --width 2400
+
+      - name: Commit updated diagram
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture.png
+          git diff --staged --quiet || git commit -m "Auto-update architecture diagram"
+          git push
