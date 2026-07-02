@@ -323,6 +323,10 @@ import {
   getRetrievalSummary,
   indexRetrievalDocument,
   queryRetrieval,
+  getEvalSummary,
+  getEvalSuites,
+  createEvalSuite,
+  runEvalSuite,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1014,6 +1018,11 @@ function App() {
   const [retrievalDocText, setRetrievalDocText] = useState('')
   const [retrievalQuery, setRetrievalQuery] = useState('')
   const [retrievalResults, setRetrievalResults] = useState([])
+  const [showEvalHarness, setShowEvalHarness] = useState(false)
+  const [evalSummary, setEvalSummary] = useState(null)
+  const [evalSuites, setEvalSuites] = useState([])
+  const [evalBusy, setEvalBusy] = useState(false)
+  const [evalRun, setEvalRun] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1150,6 +1159,7 @@ function App() {
     refreshHealthMonitor()
     refreshUsageLedger()
     refreshRetrieval()
+    refreshEvalHarness()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2819,6 +2829,38 @@ function App() {
   async function refreshRetrieval() {
     const summary = await getRetrievalSummary(workspaceId)
     setRetrievalSummary(summary)
+  }
+
+  async function refreshEvalHarness() {
+    const [summary, suites] = await Promise.all([getEvalSummary(), getEvalSuites()])
+    setEvalSummary(summary)
+    setEvalSuites(suites?.suites || [])
+  }
+
+  async function runEvalAction(action) {
+    setEvalBusy(true)
+    try {
+      const value = await action()
+      await refreshEvalHarness()
+      return value
+    } finally {
+      setEvalBusy(false)
+    }
+  }
+
+  async function handleCreateSampleEvalSuite() {
+    await runEvalAction(() => createEvalSuite({
+      name: 'Sample quality suite',
+      cases: [
+        { prompt: 'Explain governance', reference_answer: 'Governance logs every action and blocks risky ones.', expected_keywords: ['governance', 'logs', 'blocks'] },
+        { prompt: 'Explain memory', reference_answer: 'Memory is scored and retrieved locally.', expected_keywords: ['memory', 'local', 'scored'] },
+      ],
+    }))
+  }
+
+  async function handleRunEvalSuite(suiteId) {
+    const run = await runEvalAction(() => runEvalSuite(suiteId))
+    if (run) setEvalRun(run)
   }
 
   async function runRetrievalAction(action) {
@@ -8485,6 +8527,49 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowEvalHarness((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Evaluation Harness
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showEvalHarness && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Evaluation Harness 2.0 · v52.0</strong>
+                  <span>Repeatable eval suites + scorecards with regression tracking. Deterministic, mock-safe — no real LLM call.</span>
+                </div>
+                {evalSummary && (
+                  <p className="muted">suites: {evalSummary.suite_count} · runs: {evalSummary.run_count} · latest score: {evalSummary.latest_score ?? '—'} · regressions: {evalSummary.regressed_runs}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateSampleEvalSuite} disabled={evalBusy}>New sample suite</button>
+                  <button type="button" onClick={() => refreshEvalHarness()} disabled={evalBusy}>Refresh</button>
+                </div>
+                {evalSuites.slice(0, 6).map((suite) => (
+                  <div className="agent-template-card" key={suite.suite_id}>
+                    <strong>{suite.name}</strong>
+                    <p className="muted">{suite.case_count} case(s)</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRunEvalSuite(suite.suite_id)} disabled={evalBusy}>Run</button>
+                    </div>
+                  </div>
+                ))}
+                {evalRun && (
+                  <div className="agent-template-card">
+                    <strong>Run · score {evalRun.score} · {evalRun.pass_count}/{evalRun.case_count} passed{evalRun.regressed ? ' · ⚠️ REGRESSED' : ''}</strong>
+                    <p className="muted">delta vs previous: {evalRun.delta ?? '—'}</p>
+                  </div>
+                )}
+                <p className="muted">Deterministic, mock-safe scoring — scores are stable and regressions detectable across runs.</p>
               </div>
             )}
           </section>

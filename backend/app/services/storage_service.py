@@ -185,6 +185,8 @@ class StorageService:
             "usage_budgets.json",
             "retrieval_documents.json",
             "retrieval_queries.json",
+            "eval_suites.json",
+            "eval_runs.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

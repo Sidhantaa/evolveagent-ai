@@ -2455,6 +2455,18 @@ export function indexRetrievalDocument(payload) {
 export function queryRetrieval(payload) {
   return postJson('/api/retrieval/query', payload)
 }
+export function getEvalSummary() {
+  return getJson('/api/eval-harness/summary')
+}
+export function getEvalSuites() {
+  return getJson('/api/eval-harness/suites')
+}
+export function createEvalSuite(payload) {
+  return postJson('/api/eval-harness/suites', payload)
+}
+export function runEvalSuite(suiteId) {
+  return postJson(`/api/eval-harness/suites/${suiteId}/run`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

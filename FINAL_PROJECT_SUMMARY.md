@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v51.0 Local Retrieval Layer · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v52.0 Evaluation Harness 2.0 · v45.1 MCP Hub UI)
+
+## v52 — Evaluation Harness 2.0
+
+Turns ad-hoc evaluation into repeatable suites and scorecards with regression tracking. A suite holds cases (prompt, reference answer, expected keywords); running it is deterministic and mock-safe — each case is scored by expected-keyword coverage over its reference answer, with no real LLM call — so scores are stable and regressions detectable across runs. Exposed at `/api/eval-harness` (suites, run, runs, regression, summary), in analytics, and as an Evaluation Harness Developer-Mode panel. Suite creation and runs are governance-logged.
+
+## v51 — Local Retrieval Layer
 
 ## v51 — Local Retrieval Layer
 

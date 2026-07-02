@@ -182,6 +182,8 @@ backend/app/data/usage_ledger_entries.json
 backend/app/data/usage_budgets.json
 backend/app/data/retrieval_documents.json
 backend/app/data/retrieval_queries.json
+backend/app/data/eval_suites.json
+backend/app/data/eval_runs.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

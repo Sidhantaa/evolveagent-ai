@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **51** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **52** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v52 — Evaluation Harness 2.0
+- **Purpose:** Repeatable, regression-aware quality evaluation for agent behavior.
+- **How it operates:** `EvalHarnessService` stores suites of cases (prompt, reference answer, expected keywords). Running a suite scores each case deterministically by expected-keyword coverage over its reference answer — no real LLM call — producing a scorecard with per-case scores, pass counts, and a delta vs the previous run for regression detection. Suite creation and runs are governance-logged.
+- **Main API route groups:** `/api/eval-harness` (+ `/suites`, `/suites/{id}/run`, `/runs`, `/suites/{id}/regression`, `/summary`).
+- **Safety boundary:** Deterministic and mock-safe — no real LLM/provider call; scores are stable and reproducible.
+
 ### v51 — Local Retrieval Layer
 - **Purpose:** Ground answers in workspace documents using purely local retrieval.
 - **How it operates:** `LocalRetrievalService` chunks indexed documents on sentence boundaries, tokenizes each chunk (stopword-filtered), and answers queries by keyword-overlap scoring — returning the top chunks with a citation and matched terms. Standard library only; queries are workspace-scoped. Indexing and queries are governance-logged.
@@ -458,4 +464,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v49 | Health & Readiness Monitor | `/api/health-monitor` | Read-only scored health dashboard + snapshots | Read-only aggregation; no actions taken |
 | v50 | Cost & Usage Ledger | `/api/usage-ledger` | Usage estimates + per-workspace budgets | Estimates only; no billing/charge/payment |
 | v51 | Local Retrieval Layer | `/api/retrieval` | Local chunking + keyword retrieval with citations | Local-first; no external vector DB or network |
+| v52 | Evaluation Harness 2.0 | `/api/eval-harness` | Repeatable suites/scorecards + regression tracking | Deterministic, mock-safe; no real LLM call |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

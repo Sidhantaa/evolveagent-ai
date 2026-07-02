@@ -1368,3 +1368,17 @@ class RetrievalQueryRequest(BaseModel):
     workspace_id: str | None = Field(default=None, max_length=120)
     query: str = Field(..., min_length=1, max_length=2000)
     top_k: int = Field(default=3, ge=1, le=10)
+
+
+# ----------------------------------------------------------------------
+# v52.0 Evaluation Harness 2.0
+# ----------------------------------------------------------------------
+class EvalCaseModel(BaseModel):
+    prompt: str = Field(default="", max_length=2000)
+    reference_answer: str = Field(default="", max_length=4000)
+    expected_keywords: list[str] = Field(default_factory=list)
+
+
+class EvalSuiteCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    cases: list[EvalCaseModel] = Field(default_factory=list)

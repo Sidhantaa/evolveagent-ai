@@ -216,3 +216,9 @@ Cost visibility matters even in a mock-first system. The Cost & Usage Ledger rec
 ## v51 — Local Retrieval Layer
 
 Grounding answers in your own documents usually implies an external vector database. v51 shows it can stay local-first: it chunks documents, scores keyword overlap, and returns cited passages entirely on the local machine — no external service, no network. It extends the early memory-intelligence work into a lightweight, governed retrieval layer consistent with the platforms local-first contract.
+
+---
+
+## v52 — Evaluation Harness 2.0
+
+Quality needs to be measured repeatably, not judged once. The Evaluation Harness turns evaluation into versioned suites and scorecards with regression tracking, using deterministic, mock-safe scoring so results are stable across runs and machines. It extends the early evaluation-lab work into a reproducible quality gate consistent with the platforms local-first, mock-first design.
