@@ -311,6 +311,10 @@ import {
   getMcpSecretsSummary,
   registerMcpSecret,
   rotateMcpSecret,
+  getApprovalsCenter,
+  getApprovalsCenterSummary,
+  approveCenterItem,
+  rejectCenterItem,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -984,6 +988,11 @@ function App() {
   const [mcpSecrets, setMcpSecrets] = useState([])
   const [mcpSecretsSummary, setMcpSecretsSummary] = useState(null)
   const [mcpSecretKey, setMcpSecretKey] = useState('')
+  const [showApprovalsCenter, setShowApprovalsCenter] = useState(false)
+  const [approvalsCenter, setApprovalsCenter] = useState([])
+  const [approvalsCenterSummary, setApprovalsCenterSummary] = useState(null)
+  const [acBusy, setAcBusy] = useState(false)
+  const [acError, setAcError] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1116,6 +1125,7 @@ function App() {
     refreshCompanionPanel()
     refreshOperatingLayerPanel()
     refreshMcpPanel()
+    refreshApprovalsCenter()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2761,6 +2771,36 @@ function App() {
   async function handleOperatingLayerReport() {
     const report = await runOperatingLayerAction(() => createOperatingLayerReport())
     if (report) setOperatingLayerArtifact({ kind: 'report', data: report })
+  }
+
+  async function refreshApprovalsCenter() {
+    const [items, summary] = await Promise.all([
+      getApprovalsCenter(),
+      getApprovalsCenterSummary(),
+    ])
+    setApprovalsCenter(items?.items || [])
+    setApprovalsCenterSummary(summary)
+  }
+
+  async function runAcAction(action) {
+    setAcBusy(true)
+    setAcError(null)
+    try {
+      await action()
+      await refreshApprovalsCenter()
+    } catch (error) {
+      setAcError(error.message || 'Approvals action failed')
+    } finally {
+      setAcBusy(false)
+    }
+  }
+
+  async function handleApproveCenter(source, itemId) {
+    await runAcAction(() => approveCenterItem(source, itemId))
+  }
+
+  async function handleRejectCenter(source, itemId) {
+    await runAcAction(() => rejectCenterItem(source, itemId))
   }
 
   async function refreshMcpPanel() {
@@ -8346,6 +8386,52 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowApprovalsCenter((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Approvals Center
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showApprovalsCenter && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Unified Approvals Center · v48.0</strong>
+                  <span>One prioritized queue across all approval sources (MCP executions + business-operator). Approve/reject delegates to the owning governed service.</span>
+                </div>
+                {approvalsCenterSummary && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Pending</span><strong>{approvalsCenterSummary.pending_count}</strong></div>
+                    <div><span>High risk</span><strong>{approvalsCenterSummary.high_risk_pending}</strong></div>
+                    <div><span>MCP</span><strong>{approvalsCenterSummary.by_source?.mcp_execution}</strong></div>
+                    <div><span>Business</span><strong>{approvalsCenterSummary.by_source?.business_operator}</strong></div>
+                  </div>
+                )}
+                {acError && <p className="error-text">{acError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshApprovalsCenter()} disabled={acBusy}>Refresh</button>
+                </div>
+                {approvalsCenter.length === 0 && <p className="muted">No pending approvals across any source. 🎉</p>}
+                {approvalsCenter.slice(0, 8).map((item) => (
+                  <div className="agent-template-card" key={`${item.source}:${item.item_id}`}>
+                    <strong>{item.title}</strong>
+                    <p className="muted">
+                      {item.source} · <span className={`risk-badge risk-${item.risk_level}`}>{item.risk_level} risk</span> · {item.age_seconds}s old
+                    </p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleApproveCenter(item.source, item.item_id)} disabled={acBusy}>Approve</button>
+                      <button type="button" onClick={() => handleRejectCenter(item.source, item.item_id)} disabled={acBusy}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">Triage + delegated decisions only — each decision routes to its owning governed service and is logged there.</p>
               </div>
             )}
           </section>

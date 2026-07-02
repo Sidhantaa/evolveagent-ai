@@ -122,6 +122,7 @@ from app.models.request_models import (
     MCPReplayRequest,
     MCPSecretRefCreateRequest,
     MCPSecretRefUpdateRequest,
+    ApprovalDecisionRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -261,6 +262,7 @@ from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
 from app.services.mcp_audit_service import MCPAuditService
 from app.services.mcp_secret_registry_service import MCPSecretRegistryService
+from app.services.unified_approvals_service import UnifiedApprovalsService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -354,6 +356,7 @@ mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_con
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
 mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
 mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_service)
+unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1611,6 +1614,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_policy_service.analytics_summary(),
         **mcp_audit_service.analytics_summary(),
         **mcp_secret_registry_service.analytics_summary(),
+        **unified_approvals_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3651,6 +3655,41 @@ def reject_mcp_execution(request_id: str) -> dict:
 def run_mcp_execution(request_id: str) -> dict:
     try:
         return mcp_execution_service.run_execution(request_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v48.0 Unified Approvals Center — one queue across all approval sources.
+# (Distinct /approvals-center prefix to avoid the pre-existing /approvals workflow.)
+# ----------------------------------------------------------------------
+@router.get("/approvals-center/summary")
+def get_approvals_center_summary() -> dict:
+    return unified_approvals_service.summary()
+
+
+@router.get("/approvals-center")
+def list_approvals_center(source: str | None = Query(default=None)) -> dict:
+    items = unified_approvals_service.list_pending(source)
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/approvals-center/approve")
+def approve_approvals_center(request: ApprovalDecisionRequest) -> dict:
+    try:
+        return unified_approvals_service.approve(request.source, request.item_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+@router.post("/approvals-center/reject")
+def reject_approvals_center(request: ApprovalDecisionRequest) -> dict:
+    try:
+        return unified_approvals_service.reject(request.source, request.item_id)
     except ValueError as error:
         detail = str(error)
         status = 404 if "not found" in detail.lower() else 409

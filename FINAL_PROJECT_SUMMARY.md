@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v47.0 Secret Reference Registry · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v48.0 Unified Approvals Center · v45.1 MCP Hub UI)
+
+## v48 — Unified Approvals Center
+
+Generalizes the v44 MCP approvals inbox across all approval sources — today the MCP execution requests (v42) and the business-operator approval items (v33) — into one prioritized queue (high-risk / oldest first, with a source filter). Approve/reject **delegate to the owning governed service** (which performs the state transition and governance logging), so the center adds no new execution power. Exposed at `/api/approvals-center` (distinct from the pre-existing `/approvals` workflow), surfaced in analytics, and shown as its own "Approvals Center" Developer-Mode panel.
+
+## v47 — Secret Reference Registry
 
 ## v47 — Secret Reference Registry
 

@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **47** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **48** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v48 — Unified Approvals Center
+- **Purpose:** One prioritized place to review and act on everything awaiting human approval, across every source.
+- **How it operates:** `UnifiedApprovalsService` aggregates pending MCP execution requests (v42) and business-operator approval items (v33), normalizes each with a source/title/risk/age, and sorts high-risk then oldest first (with a source filter). Approve/reject delegate to the owning service (`MCPExecutionService` / `BusinessOperatorAdvancedService`), which do the logging.
+- **Main API route groups:** `/api/approvals-center` (+ `/summary`, `/approve`, `/reject`) — a distinct prefix from the pre-existing `/approvals` workflow.
+- **Safety boundary:** Triage + delegated decisions only; no new execution power, no bypass; each decision flows through its owning governed service.
+
 ### v47 — Secret Reference Registry
 - **Purpose:** Know which secrets each connection needs and whether they are ready — without ever touching the values.
 - **How it operates:** `MCPSecretRegistryService` stores references (key name, label, owner, category, optional connector slug, rotation interval). Readiness is computed from `os.environ` as a boolean; a rotation-due flag is derived from `rotation_days` + `last_rotated_at`. Registration, update, and rotate are governance-logged.
@@ -430,4 +436,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v45.1 | MCP Hub UI | (frontend) | Tabbed MCP Hub panel + risk badges | Presentation only; no behavior change |
 | v46 | MCP Audit & Replay | `/api/mcp/audit` | Read-only timeline + export + dry replay | No real execution; read-only; stored replay artifact only |
 | v47 | Secret Reference Registry | `/api/mcp/secrets` | Key-reference catalog + readiness + rotation | References only; never stores/returns secret values |
+| v48 | Unified Approvals Center | `/api/approvals-center` | One prioritized queue across all approval sources | Triage + delegated decisions only; no new execution power |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

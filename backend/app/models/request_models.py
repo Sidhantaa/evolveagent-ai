@@ -1329,3 +1329,11 @@ class MCPSecretRefUpdateRequest(BaseModel):
     owner: str | None = Field(default=None, max_length=120)
     category: str | None = Field(default=None, pattern="^(api_key|token|webhook|database|other)$")
     rotation_days: int | None = Field(default=None, ge=0, le=3650)
+
+
+# ----------------------------------------------------------------------
+# v48.0 Unified Approvals Center
+# ----------------------------------------------------------------------
+class ApprovalDecisionRequest(BaseModel):
+    source: str = Field(..., pattern="^(mcp_execution|business_operator)$")
+    item_id: str = Field(..., min_length=1, max_length=120)

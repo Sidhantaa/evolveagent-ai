@@ -192,3 +192,9 @@ Governance is only as good as its audit trail. v46 aggregates the whole MCP surf
 ## v47 — Secret Reference Registry
 
 Managing integrations means tracking secrets without ever touching them. The Secret Reference Registry catalogs which env keys each connector needs, whether they are set, and when they should be rotated — recording only the key name and a readiness boolean. It demonstrates a security-conscious pattern: know your secret surface and rotation posture while guaranteeing values are never stored, logged, or returned. It extends the MCP arc from planning and execution into operational hygiene, all within the local-first, governed contract.
+
+---
+
+## v48 — Unified Approvals Center
+
+Approvals were scattered across subsystems, so v48 unifies them. It aggregates every pending approval — MCP executions and business-operator items today — into one prioritized queue and routes each decision back to the service that owns it. This is the classic inbox pattern generalized across a platform, built on top of existing governed primitives without adding any new execution authority.

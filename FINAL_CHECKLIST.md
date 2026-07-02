@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v47.0 Secret Reference Registry · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v48.0 Unified Approvals Center · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -17,6 +17,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v45.1 — MCP Hub UI:** MCP Hub panel reorganized into internal tabs (Connectors/Policies/Approvals/Executions/Audit) with live counts + styled risk badges; frontend-only, no behavior change.
 - [x] **v46 — MCP Audit & Replay:** read-only unified timeline (connector events + executions + MCP governance) / filters / markdown+JSON export / **dry replay** re-derives a request's plan today without executing / stored replay record + governance-logged / analytics / MCP Hub Audit tab.
 - [x] **v47 — Secret Reference Registry:** catalog of required secret/env keys / readiness (set/unset booleans) / owner + category + rotation reminders / **never stores/reads/logs/returns secret values** / register + update + rotate / governance-logged / analytics / MCP Hub Secrets tab.
+- [x] **v48 — Unified Approvals Center:** aggregates MCP-execution + business-operator pending approvals into one prioritized queue / source filter / high-risk & oldest first / approve+reject **delegate to owning service** (no new execution power) / `/api/approvals-center` (distinct from existing `/approvals`) / analytics / own Developer-Mode panel.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

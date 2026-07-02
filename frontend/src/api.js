@@ -2416,6 +2416,18 @@ export function registerMcpSecret(payload) {
 export function rotateMcpSecret(refId) {
   return postJson(`/api/mcp/secrets/${refId}/rotate`, {})
 }
+export function getApprovalsCenter(source) {
+  return getJson(source ? `/api/approvals-center?source=${source}` : '/api/approvals-center')
+}
+export function getApprovalsCenterSummary() {
+  return getJson('/api/approvals-center/summary')
+}
+export function approveCenterItem(source, itemId) {
+  return postJson('/api/approvals-center/approve', { source, item_id: itemId })
+}
+export function rejectCenterItem(source, itemId) {
+  return postJson('/api/approvals-center/reject', { source, item_id: itemId })
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }
