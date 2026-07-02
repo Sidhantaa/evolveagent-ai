@@ -127,6 +127,7 @@ from app.models.request_models import (
     UsageBudgetRequest,
     RetrievalIndexRequest,
     RetrievalQueryRequest,
+    EvalSuiteCreateRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -270,6 +271,7 @@ from app.services.unified_approvals_service import UnifiedApprovalsService
 from app.services.health_monitor_service import HealthMonitorService
 from app.services.usage_ledger_service import UsageLedgerService
 from app.services.local_retrieval_service import LocalRetrievalService
+from app.services.eval_harness_service import EvalHarnessService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -367,6 +369,7 @@ unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, busin
 health_monitor_service = HealthMonitorService(storage, governance_service)
 usage_ledger_service = UsageLedgerService(storage, governance_service)
 local_retrieval_service = LocalRetrievalService(storage, governance_service)
+eval_harness_service = EvalHarnessService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1628,6 +1631,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **health_monitor_service.analytics_summary(),
         **usage_ledger_service.analytics_summary(),
         **local_retrieval_service.analytics_summary(),
+        **eval_harness_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3780,6 +3784,44 @@ def index_retrieval_document(request: RetrievalIndexRequest) -> dict:
 @router.post("/retrieval/query")
 def query_retrieval(request: RetrievalQueryRequest) -> dict:
     return local_retrieval_service.query(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v52.0 Evaluation Harness 2.0 — repeatable suites + scorecards + regression.
+# ----------------------------------------------------------------------
+@router.get("/eval-harness/summary")
+def get_eval_harness_summary() -> dict:
+    return eval_harness_service.summary()
+
+
+@router.get("/eval-harness/suites")
+def list_eval_suites() -> dict:
+    suites = eval_harness_service.list_suites()
+    return {"suites": suites, "count": len(suites)}
+
+
+@router.post("/eval-harness/suites")
+def create_eval_suite(request: EvalSuiteCreateRequest) -> dict:
+    return eval_harness_service.create_suite(request.model_dump())
+
+
+@router.post("/eval-harness/suites/{suite_id}/run")
+def run_eval_suite(suite_id: str) -> dict:
+    try:
+        return eval_harness_service.run_suite(suite_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Suite not found") from error
+
+
+@router.get("/eval-harness/runs")
+def list_eval_runs(suite_id: str | None = Query(default=None)) -> dict:
+    runs = eval_harness_service.list_runs(suite_id)
+    return {"runs": runs, "count": len(runs)}
+
+
+@router.get("/eval-harness/suites/{suite_id}/regression")
+def get_eval_regression(suite_id: str) -> dict:
+    return eval_harness_service.regression(suite_id)
 
 
 @router.get("/governance")

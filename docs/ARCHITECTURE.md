@@ -206,3 +206,7 @@ The Cost & Usage Ledger (`backend/app/services/usage_ledger_service.py`, routes 
 ## v51 — Local Retrieval Layer
 
 The Local Retrieval Layer (`backend/app/services/local_retrieval_service.py`, routes under `/api/retrieval`) deepens the v6 memory work. It chunks indexed workspace documents on sentence boundaries, tokenizes each chunk with stopword filtering, and answers queries by keyword-overlap scoring — returning the top chunks with a citation and matched terms, scoped to the workspace. It uses the standard library only, with no external vector database and no network. Indexing and queries are governance-logged.
+
+## v52 — Evaluation Harness 2.0
+
+The Evaluation Harness (`backend/app/services/eval_harness_service.py`, routes under `/api/eval-harness`) makes quality evaluation repeatable. Suites hold cases (prompt, reference answer, expected keywords); running a suite scores each case deterministically by expected-keyword coverage over its reference answer, with no real LLM call, and records a scorecard with a delta versus the previous run for regression detection. This keeps scores stable and reproducible in CI-like conditions.
