@@ -722,7 +722,7 @@ The Analytics panel shows:
 - feedback buttons
 - copy/regenerate/view details/delete
 
-**Developer Mode**
+**Developer Mode**  
 
 - task type and confidence
 - agents used
