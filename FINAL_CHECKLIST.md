@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v52.0 Evaluation Harness 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v53.0 Playbook Library · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -22,6 +22,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v50 — Cost & Usage Ledger:** usage estimate entries (mock/real) / per-workspace budgets / under/near/over status + warnings / by-capability breakdown / governance-logged / analytics / Cost & Usage panel; **estimates only, no billing/charge/payment**.
 - [x] **v51 — Local Retrieval Layer:** local chunking of workspace docs / keyword-overlap query scoring / citations + matched terms / workspace isolation / **stdlib only — no external vector DB, no network** / governance-logged / analytics / Local Retrieval panel.
 - [x] **v52 — Evaluation Harness 2.0:** repeatable eval suites + scorecards / **deterministic mock-safe scoring (no real LLM)** / per-case matched-keyword scores / pass counts / **regression tracking across runs** / governance-logged / analytics / Evaluation Harness panel.
+- [x] **v53 — Playbook Library:** reusable multi-step playbooks (plan/note/approval_required steps) / **planning-first runs — nothing executed** / risky steps held for approval / per-step outcome records / governance-logged / analytics / Playbook Library panel.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

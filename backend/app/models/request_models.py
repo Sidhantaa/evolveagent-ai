@@ -1382,3 +1382,18 @@ class EvalCaseModel(BaseModel):
 class EvalSuiteCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=160)
     cases: list[EvalCaseModel] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
+# v53.0 Playbook Library
+# ----------------------------------------------------------------------
+class PlaybookStepModel(BaseModel):
+    title: str = Field(default="", max_length=200)
+    step_type: str = Field(default="plan", pattern="^(plan|note|approval_required)$")
+    detail: str = Field(default="", max_length=2000)
+
+
+class PlaybookCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=1000)
+    steps: list[PlaybookStepModel] = Field(default_factory=list)

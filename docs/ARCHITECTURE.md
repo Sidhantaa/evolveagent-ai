@@ -210,3 +210,7 @@ The Local Retrieval Layer (`backend/app/services/local_retrieval_service.py`, ro
 ## v52 — Evaluation Harness 2.0
 
 The Evaluation Harness (`backend/app/services/eval_harness_service.py`, routes under `/api/eval-harness`) makes quality evaluation repeatable. Suites hold cases (prompt, reference answer, expected keywords); running a suite scores each case deterministically by expected-keyword coverage over its reference answer, with no real LLM call, and records a scorecard with a delta versus the previous run for regression detection. This keeps scores stable and reproducible in CI-like conditions.
+
+## v53 — Playbook Library
+
+The Playbook Library (`backend/app/services/playbook_library_service.py`, routes under `/api/playbooks`) lets users save reusable multi-step playbooks and re-run them planning-first. Steps are typed as plan, note, or approval_required; a run drafts plan steps (mock), records notes, and holds risky steps for explicit approval, never executing anything. Each run captures a per-step outcome, and creation and runs are governance-logged.

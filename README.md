@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v52.0 — Evaluation Harness 2.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v53.0 — Playbook Library &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -28,6 +28,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v50 — Cost & Usage Ledger:** a local ledger of API **usage estimates** (mock/real) with **per-workspace budgets** and near/over threshold warnings (extends v11 cost visibility). Costs are estimates from illustrative rates at `/api/usage-ledger` — **no billing, charging, or payment** is performed.
 - **v51 — Local Retrieval Layer:** deepens v6 memory with **local chunking + keyword retrieval** over workspace documents, returning best-matching chunks with citations at `/api/retrieval`. Standard-library only — **no external vector database and no network**.
 - **v52 — Evaluation Harness 2.0:** repeatable eval **suites + scorecards** with **regression tracking** across runs. Scoring is **deterministic and mock-safe** (expected-keyword coverage over reference answers — no real LLM call), so scores are stable and regressions detectable. At `/api/eval-harness`.
+- **v53 — Playbook Library:** reusable, governed multi-step **playbooks** users save and re-run. Runs are **planning-first** — each step is planned, informational, or (for risky steps) **held for approval** — **nothing is executed**. At `/api/playbooks`.
 
 > **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
 >

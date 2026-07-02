@@ -2467,6 +2467,18 @@ export function createEvalSuite(payload) {
 export function runEvalSuite(suiteId) {
   return postJson(`/api/eval-harness/suites/${suiteId}/run`, {})
 }
+export function getPlaybooksSummary() {
+  return getJson('/api/playbooks/summary')
+}
+export function getPlaybooks() {
+  return getJson('/api/playbooks')
+}
+export function createPlaybook(payload) {
+  return postJson('/api/playbooks', payload)
+}
+export function runPlaybook(playbookId) {
+  return postJson(`/api/playbooks/${playbookId}/run`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

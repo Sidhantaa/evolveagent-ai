@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v52.0 Evaluation Harness 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v53.0 Playbook Library · v45.1 MCP Hub UI)
+
+## v53 — Playbook Library
+
+Reusable, governed multi-step playbooks — saved sequences of planned actions users can re-run. Running a playbook is planning-first: each step is drafted, informational, or (for risky steps) held for explicit approval — nothing is executed. A run produces a per-step outcome record. Exposed at `/api/playbooks` (create, run, runs, summary), in analytics, and as a Playbook Library Developer-Mode panel. Playbook creation and runs are governance-logged.
+
+## v52 — Evaluation Harness 2.0
 
 ## v52 — Evaluation Harness 2.0
 
