@@ -35,26 +35,24 @@ jobs:
           if match:
               with open('diagram.mmd', 'w') as f:
                   f.write(match.group(1))
-              print("Diagram extracted successfully")
-          else:
-              print("No mermaid diagram found")
-              exit(1)
           EOF
 
-      - name: Create custom theme config
+      - name: Render diagram
         run: |
-          cat > mermaid-config.json << 'EOF'
-          {
-            "theme": "base",
-            "themeVariables": {
-              "primaryColor": "#E8E4FC",
-              "primaryBorderColor": "#7C6FE0",
-              "primaryTextColor": "#1a1a2e",
-              "secondaryColor": "#E1F5EE",
-              "secondaryBorderColor": "#3DBFA0",
-              "tertiaryColor": "#FEF3E2",
-              "tertiaryBorderColor": "#F0A500",
-              "lineColor": "#6B7280",
-              "fontSize": "16px",
-              "fontFamily": "ui-sans-serif, system-ui, sans-serif",
-              "edgeLabelBackground":
+          mmdc -i diagram.mmd -o docs/architecture.png -t base -b '#ffffff' --width 2400 \
+          --cssFile /dev/stdin << 'CSSEOF'
+          .node rect { fill: #E8E4FC; stroke: #7C6FE0; stroke-width: 2px; }
+          .node circle { fill: #E1F5EE; stroke: #3DBFA0; stroke-width: 2px; }
+          .node polygon { fill: #FEF3E2; stroke: #F0A500; stroke-width: 2px; }
+          .edgePath path { stroke: #6B7280; stroke-width: 1.5px; }
+          .edgeLabel { background-color: #F9FAFB; }
+          .label { font-family: ui-sans-serif, system-ui, sans-serif; }
+          CSSEOF
+
+      - name: Commit updated diagram
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture.png
+          git diff --staged --quiet || git commit -m "Auto-update architecture diagram"
+          git push
