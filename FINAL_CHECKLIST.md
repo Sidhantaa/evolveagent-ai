@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v49.0 Health & Readiness Monitor · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v50.0 Cost & Usage Ledger · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -19,6 +19,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v47 — Secret Reference Registry:** catalog of required secret/env keys / readiness (set/unset booleans) / owner + category + rotation reminders / **never stores/reads/logs/returns secret values** / register + update + rotate / governance-logged / analytics / MCP Hub Secrets tab.
 - [x] **v48 — Unified Approvals Center:** aggregates MCP-execution + business-operator pending approvals into one prioritized queue / source filter / high-risk & oldest first / approve+reject **delegate to owning service** (no new execution power) / `/api/approvals-center` (distinct from existing `/approvals`) / analytics / own Developer-Mode panel.
 - [x] **v49 — Health & Readiness Monitor:** read-only scored dashboard (governance/approvals-backlog/secret-readiness/connectors/policies) / per-check ok/warn/critical + overall score + recommendations / persisted snapshots / governance-logged / analytics / Health & Readiness panel; **no actions taken**.
+- [x] **v50 — Cost & Usage Ledger:** usage estimate entries (mock/real) / per-workspace budgets / under/near/over status + warnings / by-capability breakdown / governance-logged / analytics / Cost & Usage panel; **estimates only, no billing/charge/payment**.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

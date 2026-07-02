@@ -317,6 +317,9 @@ import {
   rejectCenterItem,
   getHealthMonitorDashboard,
   createHealthSnapshot,
+  getUsageLedgerSummary,
+  recordUsageEntry,
+  setUsageBudget,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -998,6 +1001,10 @@ function App() {
   const [showHealthMonitor, setShowHealthMonitor] = useState(false)
   const [healthDashboard, setHealthDashboard] = useState(null)
   const [healthBusy, setHealthBusy] = useState(false)
+  const [showUsageLedger, setShowUsageLedger] = useState(false)
+  const [usageSummary, setUsageSummary] = useState(null)
+  const [usageBusy, setUsageBusy] = useState(false)
+  const [usageBudgetInput, setUsageBudgetInput] = useState('')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1132,6 +1139,7 @@ function App() {
     refreshMcpPanel()
     refreshApprovalsCenter()
     refreshHealthMonitor()
+    refreshUsageLedger()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2791,6 +2799,34 @@ function App() {
   async function refreshHealthMonitor() {
     const dashboard = await getHealthMonitorDashboard()
     setHealthDashboard(dashboard)
+  }
+
+  async function refreshUsageLedger() {
+    const summary = await getUsageLedgerSummary(workspaceId)
+    setUsageSummary(summary)
+  }
+
+  async function runUsageAction(action) {
+    setUsageBusy(true)
+    try {
+      await action()
+      await refreshUsageLedger()
+    } finally {
+      setUsageBusy(false)
+    }
+  }
+
+  async function handleSetUsageBudget(event) {
+    event.preventDefault()
+    if (!usageBudgetInput.trim()) return
+    await runUsageAction(async () => {
+      await setUsageBudget({ workspace_id: workspaceId, monthly_limit: Number(usageBudgetInput) })
+      setUsageBudgetInput('')
+    })
+  }
+
+  async function handleRecordSampleUsage() {
+    await runUsageAction(() => recordUsageEntry({ workspace_id: workspaceId, capability: 'text', units: 1000 }))
   }
 
   async function handleCreateHealthSnapshot() {
@@ -8407,6 +8443,49 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowUsageLedger((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Cost & Usage Ledger
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showUsageLedger && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Cost & Usage Ledger · v50.0</strong>
+                  <span>Local usage estimates + per-workspace budget for this workspace. Estimates only — no billing or charge.</span>
+                </div>
+                {usageSummary && (
+                  <>
+                    <div className="analytics-mini-grid">
+                      <div><span>Entries</span><strong>{usageSummary.entry_count}</strong></div>
+                      <div><span>Est. cost</span><strong>${usageSummary.total_estimated_cost}</strong></div>
+                      <div><span>Budget</span><strong>${usageSummary.monthly_limit}</strong></div>
+                      <div><span>Status</span><strong>{usageSummary.budget_status}</strong></div>
+                    </div>
+                    {usageSummary.warning && <p className="error-text">{usageSummary.warning}</p>}
+                    {Object.entries(usageSummary.by_capability || {}).map(([cap, cost]) => (
+                      <p className="muted" key={cap}>{cap}: ${cost}</p>
+                    ))}
+                  </>
+                )}
+                <form className="stacked-form" onSubmit={handleSetUsageBudget}>
+                  <input type="number" step="0.01" placeholder="monthly budget ($)" value={usageBudgetInput} onChange={(event) => setUsageBudgetInput(event.target.value)} />
+                  <button type="submit" disabled={usageBusy || !usageBudgetInput.trim()}>Set budget</button>
+                </form>
+                <div className="inline-actions">
+                  <button type="button" onClick={handleRecordSampleUsage} disabled={usageBusy}>Record sample usage</button>
+                  <button type="button" onClick={() => refreshUsageLedger()} disabled={usageBusy}>Refresh</button>
+                </div>
+                <p className="muted">Estimates only — extends v11 cost visibility; no billing, charging, or payment is performed.</p>
               </div>
             )}
           </section>

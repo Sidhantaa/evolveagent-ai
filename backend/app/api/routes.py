@@ -123,6 +123,8 @@ from app.models.request_models import (
     MCPSecretRefCreateRequest,
     MCPSecretRefUpdateRequest,
     ApprovalDecisionRequest,
+    UsageRecordRequest,
+    UsageBudgetRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -264,6 +266,7 @@ from app.services.mcp_audit_service import MCPAuditService
 from app.services.mcp_secret_registry_service import MCPSecretRegistryService
 from app.services.unified_approvals_service import UnifiedApprovalsService
 from app.services.health_monitor_service import HealthMonitorService
+from app.services.usage_ledger_service import UsageLedgerService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -359,6 +362,7 @@ mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_s
 mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_service)
 unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
 health_monitor_service = HealthMonitorService(storage, governance_service)
+usage_ledger_service = UsageLedgerService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1618,6 +1622,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_secret_registry_service.analytics_summary(),
         **unified_approvals_service.analytics_summary(),
         **health_monitor_service.analytics_summary(),
+        **usage_ledger_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3716,6 +3721,36 @@ def list_health_snapshots() -> dict:
 @router.post("/health-monitor/snapshots")
 def create_health_snapshot() -> dict:
     return health_monitor_service.create_snapshot()
+
+
+# ----------------------------------------------------------------------
+# v50.0 Cost & Usage Ledger — usage estimates + budgets (no billing).
+# ----------------------------------------------------------------------
+@router.get("/usage-ledger/summary")
+def get_usage_ledger_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    return usage_ledger_service.summary(workspace_id)
+
+
+@router.get("/usage-ledger/entries")
+def list_usage_entries(workspace_id: str | None = Query(default=None)) -> dict:
+    entries = usage_ledger_service.list_entries(workspace_id)
+    return {"entries": entries, "count": len(entries)}
+
+
+@router.post("/usage-ledger/entries")
+def record_usage_entry(request: UsageRecordRequest) -> dict:
+    return usage_ledger_service.record_usage(request.model_dump())
+
+
+@router.get("/usage-ledger/budgets")
+def list_usage_budgets() -> dict:
+    budgets = usage_ledger_service.list_budgets()
+    return {"budgets": budgets, "count": len(budgets)}
+
+
+@router.post("/usage-ledger/budgets")
+def set_usage_budget(request: UsageBudgetRequest) -> dict:
+    return usage_ledger_service.set_budget(request.model_dump())
 
 
 @router.get("/governance")

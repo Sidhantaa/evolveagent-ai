@@ -181,6 +181,8 @@ class StorageService:
             "mcp_replay_records.json",
             "mcp_secret_refs.json",
             "health_snapshots.json",
+            "usage_ledger_entries.json",
+            "usage_budgets.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

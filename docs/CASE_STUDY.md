@@ -204,3 +204,9 @@ Approvals were scattered across subsystems, so v48 unifies them. It aggregates e
 ## v49 — Health & Readiness Monitor
 
 As the platform grew, a single readiness view became valuable. The Health & Readiness Monitor scores governance, approvals backlog, secret readiness, connectors, and policy posture into one dashboard with actionable recommendations — entirely read-only, derived from existing local state. It demonstrates observability layered on top of the governed primitives without introducing any new authority.
+
+---
+
+## v50 — Cost & Usage Ledger
+
+Cost visibility matters even in a mock-first system. The Cost & Usage Ledger records usage estimates per capability and workspace, tracks budgets, and warns as usage approaches or exceeds them — all as estimates, with no billing or payment. It extends the early v11 cost-control work into a first-class, governed ledger.

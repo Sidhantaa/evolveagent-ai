@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v49.0 Health & Readiness Monitor · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v50.0 Cost & Usage Ledger · v45.1 MCP Hub UI)
+
+## v50 — Cost & Usage Ledger
+
+A local ledger of API usage estimates (mock or real) with per-workspace budgets and near/over threshold warnings, extending v11 cost visibility. Costs are estimates derived from illustrative per-unit rates; nothing is billed, charged, or sent. Exposed at `/api/usage-ledger` (entries + budgets + summary), in analytics, and as a Cost & Usage Ledger Developer-Mode panel. Recording usage and setting budgets are governance-logged.
+
+## v49 — Health & Readiness Monitor
 
 ## v49 — Health & Readiness Monitor
 

@@ -1337,3 +1337,19 @@ class MCPSecretRefUpdateRequest(BaseModel):
 class ApprovalDecisionRequest(BaseModel):
     source: str = Field(..., pattern="^(mcp_execution|business_operator)$")
     item_id: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v50.0 Cost & Usage Ledger (estimates only — no billing)
+# ----------------------------------------------------------------------
+class UsageRecordRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    capability: str = Field(default="other", pattern="^(text|image|transcription|mcp|other)$")
+    units: float = Field(default=1.0, ge=0)
+    estimated_cost: float | None = Field(default=None, ge=0)
+    mode: str = Field(default="mock", pattern="^(mock|real)$")
+
+
+class UsageBudgetRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    monthly_limit: float = Field(..., ge=0)

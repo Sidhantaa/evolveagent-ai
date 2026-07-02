@@ -198,3 +198,7 @@ The Unified Approvals Center (`backend/app/services/unified_approvals_service.py
 ## v49 — Health & Readiness Monitor
 
 The Health & Readiness Monitor (`backend/app/services/health_monitor_service.py`, routes under `/api/health-monitor`) aggregates read-only health signals from local state — governance blocked ratio, approvals backlog, secret-key readiness, MCP connectors, and policy posture — into per-check statuses and an overall score with recommendations. It performs no actions; the only write is a governance-logged health snapshot.
+
+## v50 — Cost & Usage Ledger
+
+The Cost & Usage Ledger (`backend/app/services/usage_ledger_service.py`, routes under `/api/usage-ledger`) records API usage estimates and per-workspace budgets, extending the v11 cost-control visibility. Costs are estimates derived from illustrative per-unit rates (or supplied explicitly); the service computes an under/near/over budget status with warnings. Nothing is billed, charged, or sent — it is visibility and planning only. Recording usage and setting budgets are governance-logged.

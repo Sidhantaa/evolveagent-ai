@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **49** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **50** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v50 — Cost & Usage Ledger
+- **Purpose:** Track API usage estimates and budgets per workspace — visibility only, never billing.
+- **How it operates:** `UsageLedgerService` records usage entries (capability, units, estimated cost derived from illustrative rates when not supplied), stores per-workspace budgets, and computes an under/near/over status with warnings and a by-capability breakdown. Recording and budget changes are governance-logged.
+- **Main API route groups:** `/api/usage-ledger` (+ `/summary`, `/entries`, `/budgets`).
+- **Safety boundary:** Estimates and planning only — extends v11 cost visibility; no billing, charging, or payment is performed.
+
 ### v49 — Health & Readiness Monitor
 - **Purpose:** One scored, read-only view of platform health and readiness.
 - **How it operates:** `HealthMonitorService` derives checks from local collections — governance blocked ratio, approvals backlog, secret-key readiness, MCP connectors, and policy posture — each with an ok/warn/critical/info status, rolled into an overall score and recommendations. Snapshots are persisted and governance-logged.
@@ -444,4 +450,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v47 | Secret Reference Registry | `/api/mcp/secrets` | Key-reference catalog + readiness + rotation | References only; never stores/returns secret values |
 | v48 | Unified Approvals Center | `/api/approvals-center` | One prioritized queue across all approval sources | Triage + delegated decisions only; no new execution power |
 | v49 | Health & Readiness Monitor | `/api/health-monitor` | Read-only scored health dashboard + snapshots | Read-only aggregation; no actions taken |
+| v50 | Cost & Usage Ledger | `/api/usage-ledger` | Usage estimates + per-workspace budgets | Estimates only; no billing/charge/payment |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
