@@ -1,4 +1,6 @@
-# EvolveAgent AI — Project Summary (current completed: v44.0 MCP Approvals Inbox)
+# EvolveAgent AI — Project Summary (current completed: v44.0 MCP Approvals Inbox · v44.5 Portfolio & Demo Pack)
+
+> **Current state (through v44 + v44.5 consolidation):** EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability. **Scale:** 44 implementation versions · 85 backend services · ~480 API routes · 48 test modules · **494 passing backend tests** · ~10,200-line React UI. See [`docs/PORTFOLIO_PACK.md`](docs/PORTFOLIO_PACK.md), [`VERSIONS.md`](VERSIONS.md), and [`docs/RELEASE_NOTES_v44.md`](docs/RELEASE_NOTES_v44.md). v44.5 is a documentation/presentation pass only — no behavior change.
 
 ## v44 — MCP Approvals Inbox
 

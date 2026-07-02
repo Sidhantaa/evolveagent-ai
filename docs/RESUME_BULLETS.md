@@ -2,11 +2,17 @@
 
 Accurate, portfolio-ready wording for resumes, LinkedIn, and applications. Pick the version that fits the space you have.
 
+> **Current scale (through v44):** 44 versions · 85 backend services · ~480 API routes · 48 test modules · **494 passing backend tests** · ~10,200-line React UI. Use these figures (older bullets below may cite the v15 "222 tests" milestone).
+
+## Current headline bullet (recommended)
+
+> Designed and built **EvolveAgent AI**, a local-first multi-agent AI operating system (FastAPI + React) spanning **44 iterative versions**, **85 services**, **~480 API routes**, and **494 passing tests** — with a governed architecture (per-action audit logging, approval gates, opt-in real providers with mock fallback) and a four-version MCP tool-connection layer that safely advances from planning to sandboxed, read-only execution.
+
 ---
 
 ## One-Line Project Description
 
-EvolveAgent AI — a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
+EvolveAgent AI — a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
 ---
 

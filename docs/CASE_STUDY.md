@@ -2,6 +2,8 @@
 
 A portfolio case study of EvolveAgent AI — what it is, why it was built, how it works, and what was learned.
 
+> **Current state (through v44 + v44.5 consolidation):** the project has grown well beyond the v15 milestone described in the narrative below. It now spans **44 implementation versions**, **85 backend services**, **~480 API routes**, **48 test modules**, and **494 passing backend tests**, with a ~10,200-line React UI — including the v41–v44 MCP arc (connector hub → execution adapter → read-only adapter → approvals inbox). Historical figures in the prose below (e.g. "222 tests", "v15.0") reflect the milestone at the time of writing. See [`PORTFOLIO_PACK.md`](PORTFOLIO_PACK.md) and [`../VERSIONS.md`](../VERSIONS.md) for the current picture.
+
 ---
 
 ## 1. Overview

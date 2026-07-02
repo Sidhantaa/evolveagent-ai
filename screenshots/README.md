@@ -1,6 +1,40 @@
 # Screenshots
 
-This folder holds final screenshots for submission, GitHub, and portfolio use. Actual image files are optional — this guide is the recommended capture checklist. **Only the guide is committed unless real screenshots already exist.**
+This folder holds final screenshots for submission, GitHub, and portfolio use. Actual image files are optional — this guide is the recommended capture checklist. **Only the guide is committed unless real screenshots already exist. Do not create fake screenshots.**
+
+## Prioritized Portfolio Pack (v44.5) — capture these 12 first
+
+Capture in this order; these tell the story fastest for a portfolio or demo.
+
+| # | Screen | File name | How to reach it |
+|---|--------|-----------|-----------------|
+| 1 | Chat home / Simple Mode | `01-simple-mode.png` | Open the app (Simple Mode); prompt `Explain how EvolveAgent AI works.` |
+| 2 | Developer Mode workflow trace | `02-developer-mode.png` | Toggle Developer Mode; run the same prompt; show the workflow trace |
+| 3 | Governance panel | `03-governance.png` | Developer Mode → governance / approval audit |
+| 4 | Memory Intelligence panel | `04-memory.png` | Open the Memory / Project Brain panel |
+| 5 | Project Manager | `05-project-manager.png` | Open the Project Manager panel |
+| 6 | Portfolio Mode | `06-portfolio-mode.png` | Open the Portfolio panel |
+| 7 | Operating Layer (v40) | `07-operating-layer.png` | Developer Mode → EvolveAgent Operating Layer panel |
+| 8 | MCP Hub (v41) | `08-mcp-hub.png` | Developer Mode → MCP Hub panel (connectors + executions + inbox) |
+| 9 | Master tuning / approvals | `09-master-tuning.png` | Developer Mode → Approvals / MCP Approvals Inbox (v44) |
+| 10 | Executive Board (v35) | `10-executive-board.png` | Developer Mode → Executive Board panel |
+| 11 | Simulation World (v37) | `11-simulation-world.png` | Developer Mode → Simulation World panel |
+| 12 | Innovation Lab (v36) | `12-innovation-lab.png` | Developer Mode → Innovation Lab panel |
+
+### Capture instructions
+
+- **Run the backend** (`cd backend && ./venv/bin/uvicorn app.main:app --port 8000`).
+- **Run the frontend** (`cd frontend && npm run dev -- --host 127.0.0.1 --port 5173`).
+- Open the app locally at `http://127.0.0.1:5173`.
+- **Seed or use demo data** if available — see `docs/DEMO_DATA_CHECKLIST.md` (otherwise create a couple of records live during capture).
+- Use a **consistent browser width** across all shots.
+- **Hide secrets** — no API keys, no `.env`, no private/personal data.
+- Keep mock mode on (`LLM_MODE=mock`, `IMAGE_MODE=mock`, `TRANSCRIPTION_MODE=mock`) for clean, cost-free captures.
+
+The detailed 20-shot checklist below remains available for a fuller set.
+
+---
+
 
 ## How to Capture
 

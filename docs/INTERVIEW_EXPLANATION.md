@@ -2,6 +2,8 @@
 
 Ready-to-use explanations at multiple lengths, plus answers to the questions interviewers actually ask. Key framing to keep consistent: **it does not retrain the base LLM**; it improves orchestration, routing, prompts, workflows, memory, and evaluation; **automation is governed and approval-based.**
 
+> **Current scale (through v44):** 44 implementation versions · 85 backend services · ~480 API routes · 48 test modules · **494 passing backend tests** · ~10,200-line React UI. The most recent work is the v41–v44 MCP arc (connector hub → execution adapter → opt-in sandboxed read-only adapter → approvals inbox). Some numbers in the answers below (e.g. "222 tests") reflect the v15 milestone at the time of writing — quote the current figures above in interviews. It is **not AGI** — a governed orchestration layer.
+
 ---
 
 ## 30-Second Explanation

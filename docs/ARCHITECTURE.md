@@ -1,6 +1,8 @@
 # EvolveAgent AI — Architecture
 
-EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
+EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
+
+> **Current scale (through v44):** 44 implementation versions · 85 backend services · ~480 API routes · 48 test modules · 494 passing backend tests · ~10,200-line React UI.
 
 This document collects the system's architecture diagrams. All diagrams use Mermaid and render directly in GitHub markdown.
 

@@ -14,12 +14,12 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 
 ## Project Scale
 
-- **81** backend services
-- **~456** API routes
-- **44** service test modules
-- **444** passing backend tests
-- single-file React UI (~**10,000** lines)
-- **44** implementation versions
+- **85** backend services
+- **~480** API routes
+- **48** service test modules
+- **494** passing backend tests
+- single-file React UI (~**10,200** lines)
+- **44** implementation versions (+ the v44.5 consolidation pass)
 
 ## Architecture Pattern
 
@@ -346,6 +346,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/inbox` (+ `/summary`, `/{item_id}/approve`, `/{item_id}/reject`).
 - **Safety boundary:** Read/triage + delegated decisions only — it can approve or reject an existing pending request but adds no new action, execution, or bypass; all decisions flow through the governed execution service and are logged.
 
+### v44.5 — Portfolio & Demo Pack
+- **Purpose:** A consolidation and presentation pass to make the repo portfolio- and demo-ready before the v45–v55 arc.
+- **How it operates:** Documentation only — synced scale numbers and the canonical one-line description across the docs; added a portfolio pack (`docs/PORTFOLIO_PACK.md`), a refreshed screenshot guide, a 5–7 minute demo script, `docs/RELEASE_NOTES_v44.md`, and `docs/DEMO_DATA_CHECKLIST.md`.
+- **Main API route groups:** none — **no new execution surface**; no backend/frontend behavior change.
+- **Safety boundary:** Unchanged. No code, no runtime data, no secrets — presentation and documentation only.
+
 ---
 
 ## Summary Table
@@ -396,3 +402,4 @@ From v15 onward every version follows the governed architecture above: a service
 | v42 | MCP Execution Adapter | `/api/mcp/executions` | Approval-gated request→approve→run→record loop | Mock executor only; no real exec/network/shell; no secrets |
 | v43 | MCP Read-Only Adapter | `/api/mcp/adapter/status` | Opt-in real read-only exec (git/fs), mock fallback | Stdlib only; no shell/network/writes/secrets; sandboxed; opt-in |
 | v44 | MCP Approvals Inbox | `/api/mcp/inbox` | Prioritized queue of pending approvals; approve/reject | Triage + delegated decisions only; no new execution power |
+| v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

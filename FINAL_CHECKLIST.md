@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v44.0 MCP Approvals Inbox)
+# EvolveAgent AI — Final Checklist (current completed: v44.0 MCP Approvals Inbox · v44.5 Portfolio & Demo Pack)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -15,6 +15,20 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v44 — MCP Approvals Inbox:** unified prioritized queue of pending MCP approvals / enriched with connector name + risk + age / sorted high-risk & oldest first / risk filter / approve+reject **delegate to the governed execution service** (no new execution power) / analytics / MCP Hub panel section.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
+
+## v44.5 — Portfolio & Demo Pack (consolidation)
+
+- [x] Docs synced to real scale (44 versions · 85 services · ~480 routes · 48 test modules · 494 tests · ~10,200-line UI).
+- [x] Portfolio pack created (`docs/PORTFOLIO_PACK.md`).
+- [x] Screenshot guide refreshed with prioritized 12-shot pack (`screenshots/README.md`).
+- [x] Demo script refreshed to a 5–7 minute, 9-scene flow (`docs/DEMO_VIDEO_SCRIPT.md`).
+- [x] Release notes created (`docs/RELEASE_NOTES_v44.md`).
+- [x] Demo-data checklist created (`docs/DEMO_DATA_CHECKLIST.md`).
+- [x] `VERSIONS.md` includes a v44.5 entry + table row.
+- [x] Backend tests pass (494) and frontend build passes.
+- [x] No secrets committed.
+- [x] No runtime data committed (`backend/app/data/*.json` remains git-ignored).
+- [x] No backend/frontend behavior change — documentation only.
 
 > **Not AGI.** Governed orchestration layer only. Roadmap after v40 is future-only.
 
