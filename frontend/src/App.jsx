@@ -304,6 +304,13 @@ import {
   getMcpPolicySummary,
   createMcpPolicy,
   updateMcpPolicy,
+  getMcpAudit,
+  getMcpAuditSummary,
+  replayMcpRequest,
+  getMcpSecrets,
+  getMcpSecretsSummary,
+  registerMcpSecret,
+  rotateMcpSecret,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -970,6 +977,13 @@ function App() {
   const [mcpPolicySlug, setMcpPolicySlug] = useState('*')
   const [mcpPolicyAction, setMcpPolicyAction] = useState('*')
   const [mcpTab, setMcpTab] = useState('connectors')
+  const [mcpAudit, setMcpAudit] = useState([])
+  const [mcpAuditSummary, setMcpAuditSummary] = useState(null)
+  const [mcpReplayId, setMcpReplayId] = useState('')
+  const [mcpReplayResult, setMcpReplayResult] = useState(null)
+  const [mcpSecrets, setMcpSecrets] = useState([])
+  const [mcpSecretsSummary, setMcpSecretsSummary] = useState(null)
+  const [mcpSecretKey, setMcpSecretKey] = useState('')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -2774,6 +2788,38 @@ function App() {
     setMcpInboxSummary(inboxSummary)
     const policies = await getMcpPolicies()
     setMcpPolicies(policies?.policies || [])
+    const [audit, auditSummary] = await Promise.all([
+      getMcpAudit(),
+      getMcpAuditSummary(),
+    ])
+    setMcpAudit(audit?.events || [])
+    setMcpAuditSummary(auditSummary)
+    const [secrets, secretsSummary] = await Promise.all([
+      getMcpSecrets(),
+      getMcpSecretsSummary(),
+    ])
+    setMcpSecrets(secrets?.refs || [])
+    setMcpSecretsSummary(secretsSummary)
+  }
+
+  async function handleRegisterMcpSecret(event) {
+    event.preventDefault()
+    if (!mcpSecretKey.trim()) return
+    await runMcpAction(async () => {
+      await registerMcpSecret({ key_name: mcpSecretKey.trim() })
+      setMcpSecretKey('')
+    })
+  }
+
+  async function handleRotateMcpSecret(refId) {
+    await runMcpAction(() => rotateMcpSecret(refId))
+  }
+
+  async function handleReplayMcpRequest(event) {
+    event.preventDefault()
+    if (!mcpReplayId.trim()) return
+    const result = await runMcpAction(() => replayMcpRequest(mcpReplayId.trim()))
+    if (result) setMcpReplayResult(result)
   }
 
   async function handleApproveInboxItem(itemId) {
@@ -8346,6 +8392,8 @@ function App() {
                     { id: 'policies', label: `Policies${mcpPolicies.length ? ` (${mcpPolicies.length})` : ''}` },
                     { id: 'approvals', label: `Approvals${mcpInboxSummary?.pending_count ? ` (${mcpInboxSummary.pending_count})` : ''}` },
                     { id: 'executions', label: 'Executions' },
+                    { id: 'audit', label: 'Audit' },
+                    { id: 'secrets', label: `Secrets${mcpSecretsSummary?.total_refs ? ` (${mcpSecretsSummary.total_refs})` : ''}` },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -8516,6 +8564,63 @@ function App() {
                 {mcpExecSummary?.safety_summary && (
                   <p className="muted">execution: real={String(mcpExecSummary.safety_summary.real_execution_enabled)} · shell={String(mcpExecSummary.safety_summary.shell_used)} · network={String(mcpExecSummary.safety_summary.network_calls_made)} · writes need approval={String(mcpExecSummary.safety_summary.write_actions_require_approval)}</p>
                 )}
+                </>
+                )}
+
+                {mcpTab === 'audit' && (
+                <>
+                {/* v46 — MCP Audit & Replay (read-only timeline + dry replay) */}
+                <h3>Audit timeline (v46)</h3>
+                {mcpAuditSummary && (
+                  <p className="muted">events: {mcpAuditSummary.total_events} · blocked: {mcpAuditSummary.blocked_events} · replays: {mcpAuditSummary.replay_count}</p>
+                )}
+                <div className="inline-actions">
+                  <a href={`${API_BASE}/api/mcp/audit/export?format=markdown`} target="_blank" rel="noreferrer"><button type="button">Export .md</button></a>
+                  <a href={`${API_BASE}/api/mcp/audit/export?format=json`} target="_blank" rel="noreferrer"><button type="button">Export .json</button></a>
+                  <button type="button" onClick={() => refreshMcpPanel()} disabled={mcpBusy}>Refresh</button>
+                </div>
+                {mcpAudit.slice(0, 12).map((event, index) => (
+                  <p className="muted" key={index}>
+                    <code>{(event.created_at || '').slice(11, 19)}</code> · {event.source}/{event.event_type}{event.blocked ? ' · blocked' : ''} — {event.message}
+                  </p>
+                ))}
+                <form className="stacked-form" onSubmit={handleReplayMcpRequest}>
+                  <h3>Replay a request (read-only)</h3>
+                  <input type="text" placeholder="execution request_id" value={mcpReplayId} onChange={(event) => setMcpReplayId(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpReplayId.trim()}>Replay (dry)</button>
+                </form>
+                {mcpReplayResult && (
+                  <div className="agent-template-card">
+                    <strong>Replay · would be allowed: {String(mcpReplayResult.would_be_allowed)}{mcpReplayResult.changed ? ' · CHANGED' : ''}</strong>
+                    <p className="muted">{mcpReplayResult.note}</p>
+                  </div>
+                )}
+                </>
+                )}
+
+                {mcpTab === 'secrets' && (
+                <>
+                {/* v47 — Secret Reference Registry (key names + readiness only; never values) */}
+                <h3>Secret references (v47)</h3>
+                <p className="muted">Catalog of required secret/env keys and readiness. Values are never stored, logged, or shown — only the key name and whether it is set.</p>
+                {mcpSecretsSummary && (
+                  <p className="muted">refs: {mcpSecretsSummary.total_refs} · set: {mcpSecretsSummary.set_count} · unset: {mcpSecretsSummary.unset_count} · rotation due: {mcpSecretsSummary.rotation_due_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleRegisterMcpSecret}>
+                  <input type="text" placeholder="env key name (e.g. GITHUB_TOKEN)" value={mcpSecretKey} onChange={(event) => setMcpSecretKey(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpSecretKey.trim()}>Register reference</button>
+                </form>
+                {mcpSecrets.slice(0, 8).map((ref) => (
+                  <div className="agent-template-card" key={ref.ref_id}>
+                    <strong>{ref.key_name}</strong>
+                    <p className="muted">
+                      {ref.category} · <span className={`risk-badge ${ref.is_set ? 'risk-low' : 'risk-high'}`}>{ref.is_set ? 'set' : 'not set'}</span>{ref.rotation_due ? ' · ⚠️ rotation due' : ''}{ref.owner ? ` · ${ref.owner}` : ''}
+                    </p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRotateMcpSecret(ref.ref_id)} disabled={mcpBusy}>Mark rotated</button>
+                    </div>
+                  </div>
+                ))}
                 </>
                 )}
 

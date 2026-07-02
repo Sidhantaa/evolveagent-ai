@@ -2394,6 +2394,28 @@ export function createMcpPolicy(payload) {
 export function updateMcpPolicy(policyId, payload) {
   return patchJson(`/api/mcp/policies/${policyId}`, payload)
 }
+export function getMcpAudit(params) {
+  const qs = new URLSearchParams(params || {}).toString()
+  return getJson(qs ? `/api/mcp/audit?${qs}` : '/api/mcp/audit')
+}
+export function getMcpAuditSummary() {
+  return getJson('/api/mcp/audit/summary')
+}
+export function replayMcpRequest(requestId) {
+  return postJson('/api/mcp/audit/replay', { request_id: requestId })
+}
+export function getMcpSecrets() {
+  return getJson('/api/mcp/secrets')
+}
+export function getMcpSecretsSummary() {
+  return getJson('/api/mcp/secrets/summary')
+}
+export function registerMcpSecret(payload) {
+  return postJson('/api/mcp/secrets', payload)
+}
+export function rotateMcpSecret(refId) {
+  return postJson(`/api/mcp/secrets/${refId}/rotate`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

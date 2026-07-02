@@ -18,8 +18,8 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **~480** API routes
 - **48** service test modules
 - **494** passing backend tests
-- single-file React UI (~**10,200** lines)
-- **45** implementation versions (+ the v44.5 consolidation pass)
+- single-file React UI (~**10,300** lines)
+- **47** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -352,6 +352,24 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/policies` (+ `/summary`, `/evaluate`, `/{policy_id}`).
 - **Safety boundary:** **Tighten-only** — policies can only add blocks, never grant access (no "allow" effect exists). Local records; evaluated before planning; denials governance-logged.
 
+### v46 — MCP Audit & Replay
+- **Purpose:** A read-only, auditable view of the MCP surface plus a safe dry replay.
+- **How it operates:** `MCPAuditService` builds a unified timeline from connector events, execution requests/results, and MCP-tagged governance events (filter by connector / event type / since), and exports it as markdown or JSON. **Replay** re-derives what a past execution request would do today via `plan_connector_action` (dry) — it never executes, stores a replay record, and logs a governance event.
+- **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
+- **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
+
+### v47 — Secret Reference Registry
+- **Purpose:** Know which secrets each connection needs and whether they are ready — without ever touching the values.
+- **How it operates:** `MCPSecretRegistryService` stores references (key name, label, owner, category, optional connector slug, rotation interval). Readiness is computed from `os.environ` as a boolean; a rotation-due flag is derived from `rotation_days` + `last_rotated_at`. Registration, update, and rotate are governance-logged.
+- **Main API route groups:** `/api/mcp/secrets` (+ `/summary`, `/{ref_id}`, `/{ref_id}/rotate`).
+- **Safety boundary:** References only — it never stores, reads, logs, or returns a secret value; a defensive presenter strips any `value` field and exposes only key name + `is_set` boolean.
+
+### v45.1 — MCP Hub UI
+- **Purpose:** Make the multi-version MCP Hub panel usable.
+- **How it operates:** Reorganized the panel into internal tabs (Connectors · Policies · Approvals · Executions · Audit) with live counts, and added CSS for the tab bar and risk badges. Frontend-only.
+- **Main API route groups:** none.
+- **Safety boundary:** Presentation only; no behavior change.
+
 ### v44.5 — Portfolio & Demo Pack
 - **Purpose:** A consolidation and presentation pass to make the repo portfolio- and demo-ready before the v45–v55 arc.
 - **How it operates:** Documentation only — synced scale numbers and the canonical one-line description across the docs; added a portfolio pack (`docs/PORTFOLIO_PACK.md`), a refreshed screenshot guide, a 5–7 minute demo script, `docs/RELEASE_NOTES_v44.md`, and `docs/DEMO_DATA_CHECKLIST.md`.
@@ -409,4 +427,7 @@ From v15 onward every version follows the governed architecture above: a service
 | v43 | MCP Read-Only Adapter | `/api/mcp/adapter/status` | Opt-in real read-only exec (git/fs), mock fallback | Stdlib only; no shell/network/writes/secrets; sandboxed; opt-in |
 | v44 | MCP Approvals Inbox | `/api/mcp/inbox` | Prioritized queue of pending approvals; approve/reject | Triage + delegated decisions only; no new execution power |
 | v45 | MCP Policy Engine | `/api/mcp/policies` | Deny-only policies evaluated before planning | Tighten-only; never grants access; governance-logged |
+| v45.1 | MCP Hub UI | (frontend) | Tabbed MCP Hub panel + risk badges | Presentation only; no behavior change |
+| v46 | MCP Audit & Replay | `/api/mcp/audit` | Read-only timeline + export + dry replay | No real execution; read-only; stored replay artifact only |
+| v47 | Secret Reference Registry | `/api/mcp/secrets` | Key-reference catalog + readiness + rotation | References only; never stores/returns secret values |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

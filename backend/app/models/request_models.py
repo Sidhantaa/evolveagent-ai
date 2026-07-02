@@ -1303,3 +1303,29 @@ class MCPPolicyUpdateRequest(BaseModel):
 class MCPPolicyEvaluateRequest(BaseModel):
     connector_id: str = Field(..., min_length=1, max_length=120)
     action_name: str = Field(..., min_length=1, max_length=80)
+
+
+# ----------------------------------------------------------------------
+# v46.0 MCP Audit & Replay
+# ----------------------------------------------------------------------
+class MCPReplayRequest(BaseModel):
+    request_id: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v47.0 Secret Reference Registry (references only — never values)
+# ----------------------------------------------------------------------
+class MCPSecretRefCreateRequest(BaseModel):
+    key_name: str = Field(..., min_length=1, max_length=120)
+    label: str = Field(default="", max_length=160)
+    owner: str = Field(default="", max_length=120)
+    category: str = Field(default="api_key", pattern="^(api_key|token|webhook|database|other)$")
+    connector_slug: str = Field(default="", max_length=60)
+    rotation_days: int = Field(default=0, ge=0, le=3650)
+
+
+class MCPSecretRefUpdateRequest(BaseModel):
+    label: str | None = Field(default=None, max_length=160)
+    owner: str | None = Field(default=None, max_length=120)
+    category: str | None = Field(default=None, pattern="^(api_key|token|webhook|database|other)$")
+    rotation_days: int | None = Field(default=None, ge=0, le=3650)
