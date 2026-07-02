@@ -199,6 +199,8 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 
 ## Architecture
 
+![Architecture Diagram](docs/architecture.png)
+
 ```mermaid
 flowchart TD
     U[User] --> UI[React Chat UI]
@@ -208,8 +210,7 @@ flowchart TD
     WorkspaceMemory --> Session[Create or Load Chat Session]
     Session --> Master[Master Orchestrator Agent]
     Master --> Kernel[Kernel Service]
-    Kernel --> Detect[Task Type Detection]
-
+    Kernel --> Detect{Task Type Detection}
     Detect -->|Text Task| TextFlow[Text Agent Workflow]
     Detect -->|Files Attached| FileFlow[File Upload and Document Analysis]
     Detect -->|Image Request| ImageFlow[Mock Image Agent Workflow]
@@ -217,11 +218,9 @@ flowchart TD
     Detect -->|Recording Summary| RecordingFlow[Recording Intelligence Workflow]
     Detect -->|Goal Planning| GoalFlow[Mission Control Goal Planner]
     Detect -->|Tool Needed| ToolFlow[Tool Router and Plugin Registry]
-
     FileFlow --> Extract[Extract Text and Metadata]
     Extract --> FileAgent[File Analysis Agent]
     FileAgent --> TextFlow
-
     TextFlow --> Router[LLM Router]
     Router --> Consensus[Deep Mode Consensus: OpenAI / Claude / Gemini / Mistral / Mock]
     Consensus --> Research[Research Agent]
@@ -234,18 +233,15 @@ flowchart TD
     Judge --> AgentEval[Per-Agent Evaluation]
     AgentEval --> Evolution[Evolution Agent]
     Evolution --> Analytics[Analytics Storage]
-
     ImageFlow --> Prompt[Prompt Builder]
     Prompt --> Safety[Safety Rewrite]
     Safety --> MockImage[Mock Image Provider]
     MockImage --> Judge
-
     AutoFlow --> Scanner[Project Scanner Agent]
     Scanner --> Planner[Implementation Planner Agent]
     Planner --> Approval[Human Approval Gate]
     Approval --> SafeTools[Safe File Editor and Command Runner]
     SafeTools --> Analytics
-
     RecordingFlow --> RecUpload[Recording Upload]
     RecUpload --> Transcribe[Mock or OpenAI Transcription]
     Transcribe --> RecAgent[Recording Analysis Agent]
@@ -257,11 +253,10 @@ flowchart TD
     ToolFlow --> ToolRegistry[Tool Registry]
     ToolRegistry --> ToolTrace[Developer Tool Trace]
     ToolTrace --> TextFlow
-
     Analytics --> Memory[Memory Agent and JSON Storage]
     Memory --> WorkspaceStore[Workspace Memory and Project Context]
     WorkspaceStore --> Learning[Adaptive Learning Engine]
-    Memory --> Learning[Adaptive Learning Engine]
+    Memory --> Learning
     Learning --> PromptVersions[Prompt Versions and Workflow Strategy]
     Learning --> PromptRegistry[System Prompt Registry]
     PromptRegistry --> AgentJobs[Agent Jobs Scheduler]
@@ -269,6 +264,28 @@ flowchart TD
     Response --> UI
     UI --> Feedback[Human Feedback]
     Feedback --> Analytics
+
+    classDef core fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.5px
+    classDef agent fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.5px
+    classDef storage fill:#E6F1FB,stroke:#185FA5,color:#042C53,stroke-width:1.5px
+    classDef eval fill:#FAEEDA,stroke:#854F0B,color:#412402,stroke-width:1.5px
+    classDef govern fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.5px
+    classDef record fill:#FBEAF0,stroke:#993556,color:#4B1528,stroke-width:1.5px
+    classDef goal fill:#EAF3DE,stroke:#3B6D11,color:#173404,stroke-width:1.5px
+    classDef external fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.5px
+
+    class U,UI,API,Workspace,WorkspaceMemory,Session,Master,Kernel external
+    class Detect eval
+    class TextFlow,Router,Consensus,Research,Logic,Risk,Strategy,Writing agent
+    class FileFlow,Extract,FileAgent agent
+    class RecordingFlow,RecUpload,Transcribe,RecAgent record
+    class GoalFlow,GoalPlanner,GoalStore,MissionUI goal
+    class ToolFlow,ToolRegistry,ToolTrace external
+    class ImageFlow,Prompt,Safety,MockImage eval
+    class AutoFlow,Scanner,Planner,Approval,SafeTools govern
+    class Judge,AgentEval,Evolution eval
+    class Analytics,Memory,WorkspaceStore,Learning,PromptVersions,PromptRegistry,AgentJobs storage
+    class Response,Feedback external
 ```
 
 ## Full Workflow
