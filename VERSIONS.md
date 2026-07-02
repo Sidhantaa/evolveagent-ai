@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,200** lines)
-- **44** implementation versions (+ the v44.5 consolidation pass)
+- **45** implementation versions (+ the v44.5 consolidation pass)
 
 ## Architecture Pattern
 
@@ -346,6 +346,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/inbox` (+ `/summary`, `/{item_id}/approve`, `/{item_id}/reject`).
 - **Safety boundary:** Read/triage + delegated decisions only — it can approve or reject an existing pending request but adds no new action, execution, or bypass; all decisions flow through the governed execution service and are logged.
 
+### v45 — MCP Policy Engine
+- **Purpose:** Declarative, tighten-only guardrails over which connector actions may even be planned.
+- **How it operates:** **Deny** policies (the only effect) match on connector slug / action / risk level — each supporting a `*` wildcard — plus an optional `except_actions` carve-out (e.g. "deny all Filesystem actions except `fs_list_directory`"). The engine is injected into `MCPConnectorService.plan_connector_action` and evaluated *first*: a match returns a blocked plan and a governance-logged denial; a non-match falls through to the existing v41 checks. With no policies (default), behavior is identical to v44. CRUD + `evaluate` at `/api/mcp/policies`.
+- **Main API route groups:** `/api/mcp/policies` (+ `/summary`, `/evaluate`, `/{policy_id}`).
+- **Safety boundary:** **Tighten-only** — policies can only add blocks, never grant access (no "allow" effect exists). Local records; evaluated before planning; denials governance-logged.
+
 ### v44.5 — Portfolio & Demo Pack
 - **Purpose:** A consolidation and presentation pass to make the repo portfolio- and demo-ready before the v45–v55 arc.
 - **How it operates:** Documentation only — synced scale numbers and the canonical one-line description across the docs; added a portfolio pack (`docs/PORTFOLIO_PACK.md`), a refreshed screenshot guide, a 5–7 minute demo script, `docs/RELEASE_NOTES_v44.md`, and `docs/DEMO_DATA_CHECKLIST.md`.
@@ -402,4 +408,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v42 | MCP Execution Adapter | `/api/mcp/executions` | Approval-gated request→approve→run→record loop | Mock executor only; no real exec/network/shell; no secrets |
 | v43 | MCP Read-Only Adapter | `/api/mcp/adapter/status` | Opt-in real read-only exec (git/fs), mock fallback | Stdlib only; no shell/network/writes/secrets; sandboxed; opt-in |
 | v44 | MCP Approvals Inbox | `/api/mcp/inbox` | Prioritized queue of pending approvals; approve/reject | Triage + delegated decisions only; no new execution power |
+| v45 | MCP Policy Engine | `/api/mcp/policies` | Deny-only policies evaluated before planning | Tighten-only; never grants access; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

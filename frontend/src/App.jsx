@@ -300,6 +300,10 @@ import {
   getMcpInboxSummary,
   approveMcpInboxItem,
   rejectMcpInboxItem,
+  getMcpPolicies,
+  getMcpPolicySummary,
+  createMcpPolicy,
+  updateMcpPolicy,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -961,6 +965,10 @@ function App() {
   const [mcpAdapterStatus, setMcpAdapterStatus] = useState(null)
   const [mcpInbox, setMcpInbox] = useState([])
   const [mcpInboxSummary, setMcpInboxSummary] = useState(null)
+  const [mcpPolicies, setMcpPolicies] = useState([])
+  const [mcpPolicyName, setMcpPolicyName] = useState('')
+  const [mcpPolicySlug, setMcpPolicySlug] = useState('*')
+  const [mcpPolicyAction, setMcpPolicyAction] = useState('*')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -2763,6 +2771,8 @@ function App() {
     ])
     setMcpInbox(inbox?.items || [])
     setMcpInboxSummary(inboxSummary)
+    const policies = await getMcpPolicies()
+    setMcpPolicies(policies?.policies || [])
   }
 
   async function handleApproveInboxItem(itemId) {
@@ -2771,6 +2781,25 @@ function App() {
 
   async function handleRejectInboxItem(itemId) {
     await runMcpAction(() => rejectMcpInboxItem(itemId))
+  }
+
+  async function handleCreateMcpPolicy(event) {
+    event.preventDefault()
+    if (!mcpPolicyName.trim()) return
+    await runMcpAction(async () => {
+      await createMcpPolicy({
+        name: mcpPolicyName.trim(),
+        connector_slug: mcpPolicySlug.trim() || '*',
+        action: mcpPolicyAction.trim() || '*',
+      })
+      setMcpPolicyName('')
+      setMcpPolicySlug('*')
+      setMcpPolicyAction('*')
+    })
+  }
+
+  async function handleToggleMcpPolicy(policyId, enabled) {
+    await runMcpAction(() => updateMcpPolicy(policyId, { enabled }))
   }
 
   async function runMcpAction(action) {
@@ -8372,6 +8401,25 @@ function App() {
                     )}
                   </div>
                 )}
+
+                {/* v45 — MCP Policy Engine (tighten-only deny rules) */}
+                <h3>Policies (v45 · deny-only)</h3>
+                <p className="muted">Tighten-only rules evaluated before planning. They can only add blocks, never grant access.</p>
+                <form className="stacked-form" onSubmit={handleCreateMcpPolicy}>
+                  <input type="text" placeholder="Policy name" value={mcpPolicyName} onChange={(event) => setMcpPolicyName(event.target.value)} />
+                  <input type="text" placeholder="connector slug (or *)" value={mcpPolicySlug} onChange={(event) => setMcpPolicySlug(event.target.value)} />
+                  <input type="text" placeholder="action (or *)" value={mcpPolicyAction} onChange={(event) => setMcpPolicyAction(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpPolicyName.trim()}>Add deny policy</button>
+                </form>
+                {mcpPolicies.slice(0, 6).map((policy) => (
+                  <div className="agent-template-card" key={policy.policy_id}>
+                    <strong>{policy.name}</strong>
+                    <p className="muted">deny {policy.connector_slug}/{policy.action}/{policy.risk_level}{policy.except_actions?.length ? ` · except ${policy.except_actions.join(', ')}` : ''} · {policy.enabled ? 'enabled' : 'disabled'}</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleToggleMcpPolicy(policy.policy_id, !policy.enabled)} disabled={mcpBusy}>{policy.enabled ? 'Disable' : 'Enable'}</button>
+                    </div>
+                  </div>
+                ))}
 
                 {/* v44 — MCP Approvals Inbox (prioritized queue of pending approvals) */}
                 <h3>Approvals Inbox (v44)</h3>

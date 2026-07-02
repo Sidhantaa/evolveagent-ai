@@ -174,3 +174,9 @@ v41 registered connectors, v42 added the approve/run loop, and v43 makes the run
 ## v44 — MCP Approvals Inbox
 
 With a real execution path in place (v43), the natural governance need is a single place to review what is waiting on a human. The MCP Approvals Inbox aggregates all pending MCP execution requests into one prioritized queue — enriched with connector name, risk level, and age, and sorted so high-risk and oldest items surface first. Approving or rejecting delegates to the governed execution service, so the inbox never bypasses the existing controls; it simply makes triage fast and auditable. It demonstrates a common real-world governance pattern (an approvals queue) built on top of the existing governed primitives rather than around them.
+
+---
+
+## v45 — MCP Policy Engine
+
+After building a real (but sandboxed) execution path and an approvals inbox, the next governance need is declarative control over what may even be attempted. The MCP Policy Engine lets an operator write deny rules — by connector, action, or risk level, with wildcards and carve-outs — that are evaluated before connector planning. It is deliberately tighten-only: there is no allow effect, so a policy can only add a block, never grant new access. This is a common real-world guardrail pattern (deny-by-policy) layered on top of the existing governed primitives without changing default behavior.

@@ -2382,6 +2382,18 @@ export function approveMcpInboxItem(itemId) {
 export function rejectMcpInboxItem(itemId) {
   return postJson(`/api/mcp/inbox/${itemId}/reject`, {})
 }
+export function getMcpPolicies() {
+  return getJson('/api/mcp/policies')
+}
+export function getMcpPolicySummary() {
+  return getJson('/api/mcp/policies/summary')
+}
+export function createMcpPolicy(payload) {
+  return postJson('/api/mcp/policies', payload)
+}
+export function updateMcpPolicy(policyId, payload) {
+  return patchJson(`/api/mcp/policies/${policyId}`, payload)
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

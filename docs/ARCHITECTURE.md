@@ -176,3 +176,9 @@ The adapter executes for real only when every condition holds: the `MCP_REAL_REA
 The MCP Approvals Inbox (`backend/app/services/mcp_approvals_inbox_service.py`, routes under `/api/mcp/inbox`) aggregates every MCP item awaiting human approval into one prioritized queue. It reads the v42 execution requests in `pending_approval` status, enriches each with the connector name (via the connector service), risk level, and age, and sorts them high-risk first then oldest first, with an optional risk-level filter.
 
 Approve and reject delegate to `MCPExecutionService.approve_execution` / `reject_execution`, which perform the status transition and governance logging. The inbox therefore holds no independent execution power — it is a read/triage layer plus delegated decisions. It adds no new storage (it derives from existing execution state) and contributes pending-count and high-risk metrics to the analytics summary.
+
+## v45 — MCP Policy Engine
+
+The MCP Policy Engine (`backend/app/services/mcp_policy_service.py`, routes under `/api/mcp/policies`) adds declarative, tighten-only guardrails over the MCP surface. Policies are deny rules (the only effect) that match on connector slug, action, and risk level — each supporting a `*` wildcard — plus an optional `except_actions` carve-out.
+
+The engine is injected into `MCPConnectorService.plan_connector_action` (optional dependency; `None` by default) and evaluated before any other check: a match returns a blocked plan with a governance-logged denial, and a non-match falls through to the existing v41 rules. Because planning gates execution, a denial also blocks v42 execution. Crucially it is tighten-only — there is no allow effect, so policies can only add blocks and never widen access; with no policies defined the system behaves exactly as it did at v44.

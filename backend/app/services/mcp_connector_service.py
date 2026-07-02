@@ -170,9 +170,12 @@ class MCPConnectorService:
     connectors_file = "mcp_connectors.json"
     events_file = "mcp_connector_events.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, policy_service=None):
         self.storage = storage
         self.governance = governance_service
+        # v45: optional tighten-only policy engine, evaluated before planning checks.
+        # When None (default), behaviour is unchanged.
+        self.policy_service = policy_service
 
     # ------------------------------------------------------------------
     # Helpers
@@ -433,6 +436,13 @@ class MCPConnectorService:
         risk_level = connector.get("risk_level", "medium")
         blocked_actions = [a.lower() for a in connector.get("blocked_actions", [])]
         allowed_actions = connector.get("allowed_actions", [])
+
+        # 0) v45 tighten-only policy engine — deny before any other check. Policies can
+        #    only add blocks; when none match (or no engine is wired), planning is unchanged.
+        if self.policy_service is not None:
+            decision = self.policy_service.evaluate_and_log(connector, action)
+            if not decision.get("allowed", True):
+                return self._blocked_plan(connector_id, action, risk_level, decision.get("reason", "Blocked by policy."))
 
         # 1) Disabled-mode connectors plan nothing.
         if connector.get("mode") == "disabled":

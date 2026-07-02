@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v44.0 MCP Approvals Inbox · v44.5 Portfolio & Demo Pack)
+# EvolveAgent AI — Final Checklist (current completed: v45.0 MCP Policy Engine · v44.5 Portfolio & Demo Pack)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -13,6 +13,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v42 — MCP Execution Adapter:** request → approve → run → record loop / reuses v41 planning for validation / read-only low-risk auto-approved / writes require approval / **mock executor only (`EXECUTION_MODE = "mock"`, no real MCP/network/shell/device, no secrets)** / run-time re-validation / governance-logged / analytics.
 - [x] **v43 — MCP Read-Only Adapter:** opt-in (`MCP_REAL_READONLY`) real read-only executor / allow-list (git_current_branch, git_list_branches, fs_list_directory, fs_file_metadata) / **stdlib only — no shell/network/writes/secrets, never returns file contents** / sandboxed to repo root with traversal + denylist / mock fallback when opt-in off / approval-gated / governance-logged; v42 mock behaviour unchanged by default.
 - [x] **v44 — MCP Approvals Inbox:** unified prioritized queue of pending MCP approvals / enriched with connector name + risk + age / sorted high-risk & oldest first / risk filter / approve+reject **delegate to the governed execution service** (no new execution power) / analytics / MCP Hub panel section.
+- [x] **v45 — MCP Policy Engine:** declarative **deny-only** policies evaluated before planning / match connector slug + action + risk with `*` wildcards + `except_actions` carve-out / **tighten-only (never grants access)** / wired into plan_connector_action / no-policy default is unchanged behavior / CRUD + evaluate + summary / governance-logged / analytics / MCP Hub Policies section.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

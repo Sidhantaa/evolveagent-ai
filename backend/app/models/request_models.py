@@ -1275,3 +1275,31 @@ class MCPExecuteRequest(BaseModel):
     action_name: str = Field(..., min_length=1, max_length=80)
     payload: dict = Field(default_factory=dict)
     workspace_id: str | None = Field(default=None, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v45.0 MCP Policy Engine (tighten-only deny rules)
+# ----------------------------------------------------------------------
+class MCPPolicyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=400)
+    connector_slug: str = Field(default="*", max_length=60)
+    action: str = Field(default="*", max_length=80)
+    risk_level: str = Field(default="*", pattern="^(\\*|low|medium|high)$")
+    except_actions: list[str] = Field(default_factory=list)
+    enabled: bool = Field(default=True)
+
+
+class MCPPolicyUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=400)
+    connector_slug: str | None = Field(default=None, max_length=60)
+    action: str | None = Field(default=None, max_length=80)
+    risk_level: str | None = Field(default=None, pattern="^(\\*|low|medium|high)$")
+    except_actions: list[str] | None = None
+    enabled: bool | None = None
+
+
+class MCPPolicyEvaluateRequest(BaseModel):
+    connector_id: str = Field(..., min_length=1, max_length=120)
+    action_name: str = Field(..., min_length=1, max_length=80)

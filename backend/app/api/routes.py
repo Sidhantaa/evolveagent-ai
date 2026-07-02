@@ -116,6 +116,9 @@ from app.models.request_models import (
     MCPConnectorUpdateRequest,
     MCPPlanActionRequest,
     MCPExecuteRequest,
+    MCPPolicyCreateRequest,
+    MCPPolicyUpdateRequest,
+    MCPPolicyEvaluateRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -250,6 +253,7 @@ from app.services.organization_os_service import OrganizationOSService
 from app.services.hardware_companion_service import HardwareCompanionService
 from app.services.operating_layer_service import OperatingLayerService
 from app.services.mcp_connector_service import MCPConnectorService
+from app.services.mcp_policy_service import MCPPolicyService
 from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
 from app.services.team_manager_service import TeamManagerService
@@ -339,7 +343,8 @@ simulation_world_service = SimulationWorldService(storage, governance_service)
 organization_os_service = OrganizationOSService(storage, governance_service)
 hardware_companion_service = HardwareCompanionService(storage, governance_service)
 operating_layer_service = OperatingLayerService(storage, governance_service)
-mcp_connector_service = MCPConnectorService(storage, governance_service)
+mcp_policy_service = MCPPolicyService(storage, governance_service)
+mcp_connector_service = MCPConnectorService(storage, governance_service, policy_service=mcp_policy_service)
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
 team_manager_service = TeamManagerService(storage, governance_service)
@@ -1596,6 +1601,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_connector_service.analytics_summary(),
         **mcp_execution_service.analytics_summary(),
         **mcp_approvals_inbox_service.analytics_summary(),
+        **mcp_policy_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3470,6 +3476,49 @@ def reject_mcp_inbox_item(item_id: str) -> dict:
         detail = str(error)
         status = 404 if "not found" in detail.lower() else 409
         raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v45.0 MCP Policy Engine — tighten-only deny rules evaluated before planning.
+# ----------------------------------------------------------------------
+@router.get("/mcp/policies/summary")
+def get_mcp_policies_summary() -> dict:
+    return mcp_policy_service.summarize()
+
+
+@router.get("/mcp/policies")
+def list_mcp_policies() -> dict:
+    policies = mcp_policy_service.list_policies()
+    return {"policies": policies, "count": len(policies)}
+
+
+@router.post("/mcp/policies")
+def create_mcp_policy(request: MCPPolicyCreateRequest) -> dict:
+    return mcp_policy_service.create_policy(request.model_dump())
+
+
+@router.post("/mcp/policies/evaluate")
+def evaluate_mcp_policy(request: MCPPolicyEvaluateRequest) -> dict:
+    connector = mcp_connector_service.get_connector(request.connector_id)
+    if connector is None:
+        raise HTTPException(status_code=404, detail="Connector not found")
+    return mcp_policy_service.evaluate(connector, request.action_name)
+
+
+@router.get("/mcp/policies/{policy_id}")
+def get_mcp_policy(policy_id: str) -> dict:
+    policy = mcp_policy_service.get_policy(policy_id)
+    if policy is None:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    return policy
+
+
+@router.patch("/mcp/policies/{policy_id}")
+def update_mcp_policy(policy_id: str, request: MCPPolicyUpdateRequest) -> dict:
+    try:
+        return mcp_policy_service.update_policy(policy_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Policy not found") from error
 
 
 @router.get("/mcp/executions")

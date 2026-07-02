@@ -177,6 +177,7 @@ class StorageService:
             "mcp_connector_events.json",
             "mcp_execution_requests.json",
             "mcp_execution_results.json",
+            "mcp_policies.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",
