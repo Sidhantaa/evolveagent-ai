@@ -186,3 +186,7 @@ The engine is injected into `MCPConnectorService.plan_connector_action` (optiona
 ## v46 — MCP Audit & Replay
 
 The MCP Audit & Replay service (`backend/app/services/mcp_audit_service.py`, routes under `/api/mcp/audit`) provides a read-only unified timeline across connector events (v41), execution requests/results (v42/v43), and MCP-tagged governance events, with filtering and markdown/JSON export. Its replay endpoint re-derives what a past execution request would do today via `plan_connector_action` (dry) — it never executes, records a stored replay artifact, and logs a governance event. Paired with the v45.1 frontend pass that reorganized the MCP Hub into internal tabs (Connectors/Policies/Approvals/Executions/Audit).
+
+## v47 — Secret Reference Registry
+
+The Secret Reference Registry (`backend/app/services/mcp_secret_registry_service.py`, routes under `/api/mcp/secrets`) is a local catalog of the secret/env keys the MCP connectors and other integrations require. It stores the key name, an owner/label/category, and an optional rotation interval — never the value. Readiness is computed from `os.environ` as a boolean, and a rotation-due flag is derived from the interval and last-rotated timestamp. A defensive presenter strips any value field, so the API and UI only ever expose the key name and an is_set boolean. Registration, update, and rotation are governance-logged, and a Secrets tab surfaces it in the MCP Hub.

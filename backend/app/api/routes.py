@@ -120,6 +120,8 @@ from app.models.request_models import (
     MCPPolicyUpdateRequest,
     MCPPolicyEvaluateRequest,
     MCPReplayRequest,
+    MCPSecretRefCreateRequest,
+    MCPSecretRefUpdateRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -258,6 +260,7 @@ from app.services.mcp_policy_service import MCPPolicyService
 from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
 from app.services.mcp_audit_service import MCPAuditService
+from app.services.mcp_secret_registry_service import MCPSecretRegistryService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -350,6 +353,7 @@ mcp_connector_service = MCPConnectorService(storage, governance_service, policy_
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
 mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
+mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1606,6 +1610,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_approvals_inbox_service.analytics_summary(),
         **mcp_policy_service.analytics_summary(),
         **mcp_audit_service.analytics_summary(),
+        **mcp_secret_registry_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3518,6 +3523,41 @@ def replay_mcp_request(request: MCPReplayRequest) -> dict:
         return mcp_audit_service.replay(request.request_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v47.0 Secret Reference Registry — key names + readiness only; never values.
+# ----------------------------------------------------------------------
+@router.get("/mcp/secrets/summary")
+def get_mcp_secrets_summary() -> dict:
+    return mcp_secret_registry_service.summary()
+
+
+@router.get("/mcp/secrets")
+def list_mcp_secrets() -> dict:
+    refs = mcp_secret_registry_service.list_refs()
+    return {"refs": refs, "count": len(refs)}
+
+
+@router.post("/mcp/secrets")
+def register_mcp_secret(request: MCPSecretRefCreateRequest) -> dict:
+    return mcp_secret_registry_service.register_ref(request.model_dump())
+
+
+@router.patch("/mcp/secrets/{ref_id}")
+def update_mcp_secret(ref_id: str, request: MCPSecretRefUpdateRequest) -> dict:
+    try:
+        return mcp_secret_registry_service.update_ref(ref_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Secret reference not found") from error
+
+
+@router.post("/mcp/secrets/{ref_id}/rotate")
+def rotate_mcp_secret(ref_id: str) -> dict:
+    try:
+        return mcp_secret_registry_service.mark_rotated(ref_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Secret reference not found") from error
 
 
 # ----------------------------------------------------------------------

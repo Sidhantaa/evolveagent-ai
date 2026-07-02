@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v46.0 MCP Audit & Replay · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v47.0 Secret Reference Registry · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -16,6 +16,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v45 — MCP Policy Engine:** declarative **deny-only** policies evaluated before planning / match connector slug + action + risk with `*` wildcards + `except_actions` carve-out / **tighten-only (never grants access)** / wired into plan_connector_action / no-policy default is unchanged behavior / CRUD + evaluate + summary / governance-logged / analytics / MCP Hub Policies section.
 - [x] **v45.1 — MCP Hub UI:** MCP Hub panel reorganized into internal tabs (Connectors/Policies/Approvals/Executions/Audit) with live counts + styled risk badges; frontend-only, no behavior change.
 - [x] **v46 — MCP Audit & Replay:** read-only unified timeline (connector events + executions + MCP governance) / filters / markdown+JSON export / **dry replay** re-derives a request's plan today without executing / stored replay record + governance-logged / analytics / MCP Hub Audit tab.
+- [x] **v47 — Secret Reference Registry:** catalog of required secret/env keys / readiness (set/unset booleans) / owner + category + rotation reminders / **never stores/reads/logs/returns secret values** / register + update + rotate / governance-logged / analytics / MCP Hub Secrets tab.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

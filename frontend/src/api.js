@@ -2404,6 +2404,18 @@ export function getMcpAuditSummary() {
 export function replayMcpRequest(requestId) {
   return postJson('/api/mcp/audit/replay', { request_id: requestId })
 }
+export function getMcpSecrets() {
+  return getJson('/api/mcp/secrets')
+}
+export function getMcpSecretsSummary() {
+  return getJson('/api/mcp/secrets/summary')
+}
+export function registerMcpSecret(payload) {
+  return postJson('/api/mcp/secrets', payload)
+}
+export function rotateMcpSecret(refId) {
+  return postJson(`/api/mcp/secrets/${refId}/rotate`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

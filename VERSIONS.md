@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **46** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **47** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v47 — Secret Reference Registry
+- **Purpose:** Know which secrets each connection needs and whether they are ready — without ever touching the values.
+- **How it operates:** `MCPSecretRegistryService` stores references (key name, label, owner, category, optional connector slug, rotation interval). Readiness is computed from `os.environ` as a boolean; a rotation-due flag is derived from `rotation_days` + `last_rotated_at`. Registration, update, and rotate are governance-logged.
+- **Main API route groups:** `/api/mcp/secrets` (+ `/summary`, `/{ref_id}`, `/{ref_id}/rotate`).
+- **Safety boundary:** References only — it never stores, reads, logs, or returns a secret value; a defensive presenter strips any `value` field and exposes only key name + `is_set` boolean.
+
 ### v45.1 — MCP Hub UI
 - **Purpose:** Make the multi-version MCP Hub panel usable.
 - **How it operates:** Reorganized the panel into internal tabs (Connectors · Policies · Approvals · Executions · Audit) with live counts, and added CSS for the tab bar and risk badges. Frontend-only.
@@ -423,4 +429,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v45 | MCP Policy Engine | `/api/mcp/policies` | Deny-only policies evaluated before planning | Tighten-only; never grants access; governance-logged |
 | v45.1 | MCP Hub UI | (frontend) | Tabbed MCP Hub panel + risk badges | Presentation only; no behavior change |
 | v46 | MCP Audit & Replay | `/api/mcp/audit` | Read-only timeline + export + dry replay | No real execution; read-only; stored replay artifact only |
+| v47 | Secret Reference Registry | `/api/mcp/secrets` | Key-reference catalog + readiness + rotation | References only; never stores/returns secret values |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

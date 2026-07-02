@@ -186,3 +186,9 @@ After building a real (but sandboxed) execution path and an approvals inbox, the
 ## v46 — MCP Audit & Replay
 
 Governance is only as good as its audit trail. v46 aggregates the whole MCP surface — connector events, executions, and MCP governance — into one read-only timeline with export, and adds a dry replay that shows how a past request would be evaluated under todays connectors and policies without executing anything. Combined with the v45.1 UI pass (tabbed MCP Hub), the MCP arc now reads as a coherent, inspectable governance story from registration through audit.
+
+---
+
+## v47 — Secret Reference Registry
+
+Managing integrations means tracking secrets without ever touching them. The Secret Reference Registry catalogs which env keys each connector needs, whether they are set, and when they should be rotated — recording only the key name and a readiness boolean. It demonstrates a security-conscious pattern: know your secret surface and rotation posture while guaranteeing values are never stored, logged, or returned. It extends the MCP arc from planning and execution into operational hygiene, all within the local-first, governed contract.

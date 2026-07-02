@@ -1,10 +1,12 @@
-# EvolveAgent AI — Project Summary (current completed: v46.0 MCP Audit & Replay · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v47.0 Secret Reference Registry · v45.1 MCP Hub UI)
+
+## v47 — Secret Reference Registry
+
+A local catalog of which secret/env keys the MCP connectors need — with readiness (is the env var set? true/false), owner, category, and rotation reminders. It records only the key **name**; it never stores, reads, logs, or returns a secret value (readiness is derived from `os.environ` as a boolean). CRUD + rotate at `/api/mcp/secrets`, analytics fields, and a Secrets tab in the MCP Hub panel. Registration and rotation are governance-logged.
 
 ## v46 — MCP Audit & Replay
 
 A read-only unified audit timeline across the MCP surface — connector events (v41), execution requests/results (v42/v43), and MCP-tagged governance events — with filtering and markdown/JSON export at `/api/mcp/audit`. It also adds a **dry replay**: re-deriving what a past execution request would do today via the connector planning layer, **without executing anything** (the only write is a stored replay record; replays are governance-logged). Surfaced as an "Audit" tab in the MCP Hub panel. Paired with **v45.1**, a frontend-only pass that reorganized the MCP Hub into internal tabs with risk badges.
-
-## v45 — MCP Policy Engine
 
 ## v45 — MCP Policy Engine
 

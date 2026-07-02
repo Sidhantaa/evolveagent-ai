@@ -307,6 +307,10 @@ import {
   getMcpAudit,
   getMcpAuditSummary,
   replayMcpRequest,
+  getMcpSecrets,
+  getMcpSecretsSummary,
+  registerMcpSecret,
+  rotateMcpSecret,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -977,6 +981,9 @@ function App() {
   const [mcpAuditSummary, setMcpAuditSummary] = useState(null)
   const [mcpReplayId, setMcpReplayId] = useState('')
   const [mcpReplayResult, setMcpReplayResult] = useState(null)
+  const [mcpSecrets, setMcpSecrets] = useState([])
+  const [mcpSecretsSummary, setMcpSecretsSummary] = useState(null)
+  const [mcpSecretKey, setMcpSecretKey] = useState('')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -2787,6 +2794,25 @@ function App() {
     ])
     setMcpAudit(audit?.events || [])
     setMcpAuditSummary(auditSummary)
+    const [secrets, secretsSummary] = await Promise.all([
+      getMcpSecrets(),
+      getMcpSecretsSummary(),
+    ])
+    setMcpSecrets(secrets?.refs || [])
+    setMcpSecretsSummary(secretsSummary)
+  }
+
+  async function handleRegisterMcpSecret(event) {
+    event.preventDefault()
+    if (!mcpSecretKey.trim()) return
+    await runMcpAction(async () => {
+      await registerMcpSecret({ key_name: mcpSecretKey.trim() })
+      setMcpSecretKey('')
+    })
+  }
+
+  async function handleRotateMcpSecret(refId) {
+    await runMcpAction(() => rotateMcpSecret(refId))
   }
 
   async function handleReplayMcpRequest(event) {
@@ -8367,6 +8393,7 @@ function App() {
                     { id: 'approvals', label: `Approvals${mcpInboxSummary?.pending_count ? ` (${mcpInboxSummary.pending_count})` : ''}` },
                     { id: 'executions', label: 'Executions' },
                     { id: 'audit', label: 'Audit' },
+                    { id: 'secrets', label: `Secrets${mcpSecretsSummary?.total_refs ? ` (${mcpSecretsSummary.total_refs})` : ''}` },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -8568,6 +8595,32 @@ function App() {
                     <p className="muted">{mcpReplayResult.note}</p>
                   </div>
                 )}
+                </>
+                )}
+
+                {mcpTab === 'secrets' && (
+                <>
+                {/* v47 — Secret Reference Registry (key names + readiness only; never values) */}
+                <h3>Secret references (v47)</h3>
+                <p className="muted">Catalog of required secret/env keys and readiness. Values are never stored, logged, or shown — only the key name and whether it is set.</p>
+                {mcpSecretsSummary && (
+                  <p className="muted">refs: {mcpSecretsSummary.total_refs} · set: {mcpSecretsSummary.set_count} · unset: {mcpSecretsSummary.unset_count} · rotation due: {mcpSecretsSummary.rotation_due_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleRegisterMcpSecret}>
+                  <input type="text" placeholder="env key name (e.g. GITHUB_TOKEN)" value={mcpSecretKey} onChange={(event) => setMcpSecretKey(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpSecretKey.trim()}>Register reference</button>
+                </form>
+                {mcpSecrets.slice(0, 8).map((ref) => (
+                  <div className="agent-template-card" key={ref.ref_id}>
+                    <strong>{ref.key_name}</strong>
+                    <p className="muted">
+                      {ref.category} · <span className={`risk-badge ${ref.is_set ? 'risk-low' : 'risk-high'}`}>{ref.is_set ? 'set' : 'not set'}</span>{ref.rotation_due ? ' · ⚠️ rotation due' : ''}{ref.owner ? ` · ${ref.owner}` : ''}
+                    </p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRotateMcpSecret(ref.ref_id)} disabled={mcpBusy}>Mark rotated</button>
+                    </div>
+                  </div>
+                ))}
                 </>
                 )}
 
