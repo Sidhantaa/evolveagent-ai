@@ -183,6 +183,8 @@ class StorageService:
             "health_snapshots.json",
             "usage_ledger_entries.json",
             "usage_budgets.json",
+            "retrieval_documents.json",
+            "retrieval_queries.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

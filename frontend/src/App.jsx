@@ -320,6 +320,9 @@ import {
   getUsageLedgerSummary,
   recordUsageEntry,
   setUsageBudget,
+  getRetrievalSummary,
+  indexRetrievalDocument,
+  queryRetrieval,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1005,6 +1008,12 @@ function App() {
   const [usageSummary, setUsageSummary] = useState(null)
   const [usageBusy, setUsageBusy] = useState(false)
   const [usageBudgetInput, setUsageBudgetInput] = useState('')
+  const [showRetrieval, setShowRetrieval] = useState(false)
+  const [retrievalSummary, setRetrievalSummary] = useState(null)
+  const [retrievalBusy, setRetrievalBusy] = useState(false)
+  const [retrievalDocText, setRetrievalDocText] = useState('')
+  const [retrievalQuery, setRetrievalQuery] = useState('')
+  const [retrievalResults, setRetrievalResults] = useState([])
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1140,6 +1149,7 @@ function App() {
     refreshApprovalsCenter()
     refreshHealthMonitor()
     refreshUsageLedger()
+    refreshRetrieval()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2804,6 +2814,38 @@ function App() {
   async function refreshUsageLedger() {
     const summary = await getUsageLedgerSummary(workspaceId)
     setUsageSummary(summary)
+  }
+
+  async function refreshRetrieval() {
+    const summary = await getRetrievalSummary(workspaceId)
+    setRetrievalSummary(summary)
+  }
+
+  async function runRetrievalAction(action) {
+    setRetrievalBusy(true)
+    try {
+      const value = await action()
+      await refreshRetrieval()
+      return value
+    } finally {
+      setRetrievalBusy(false)
+    }
+  }
+
+  async function handleIndexRetrievalDoc(event) {
+    event.preventDefault()
+    if (!retrievalDocText.trim()) return
+    await runRetrievalAction(async () => {
+      await indexRetrievalDocument({ workspace_id: workspaceId, title: 'Note', content: retrievalDocText.trim() })
+      setRetrievalDocText('')
+    })
+  }
+
+  async function handleQueryRetrieval(event) {
+    event.preventDefault()
+    if (!retrievalQuery.trim()) return
+    const result = await runRetrievalAction(() => queryRetrieval({ workspace_id: workspaceId, query: retrievalQuery.trim() }))
+    if (result) setRetrievalResults(result.results || [])
   }
 
   async function runUsageAction(action) {
@@ -8443,6 +8485,45 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowRetrieval((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Local Retrieval
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showRetrieval && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Local Retrieval Layer · v51.0</strong>
+                  <span>Index workspace notes and query them with local keyword retrieval + citations. No external vector DB, no network.</span>
+                </div>
+                {retrievalSummary && (
+                  <p className="muted">documents: {retrievalSummary.document_count} · chunks: {retrievalSummary.chunk_count} · queries: {retrievalSummary.query_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleIndexRetrievalDoc}>
+                  <textarea placeholder="Paste a note/document to index for this workspace" value={retrievalDocText} onChange={(event) => setRetrievalDocText(event.target.value)} rows={2} />
+                  <button type="submit" disabled={retrievalBusy || !retrievalDocText.trim()}>Index document</button>
+                </form>
+                <form className="stacked-form" onSubmit={handleQueryRetrieval}>
+                  <input type="text" placeholder="Query (keyword retrieval)" value={retrievalQuery} onChange={(event) => setRetrievalQuery(event.target.value)} />
+                  <button type="submit" disabled={retrievalBusy || !retrievalQuery.trim()}>Query</button>
+                </form>
+                {retrievalResults.map((result, index) => (
+                  <div className="agent-template-card" key={index}>
+                    <strong>{result.citation} · score {result.score}</strong>
+                    <p className="muted">{result.text?.slice(0, 240)}</p>
+                    <p className="muted">matched: {(result.matched_terms || []).join(', ')}</p>
+                  </div>
+                ))}
+                <p className="muted">Local-first retrieval — chunks and scores computed locally; no external vector database or network call.</p>
               </div>
             )}
           </section>

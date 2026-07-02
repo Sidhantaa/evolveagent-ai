@@ -2446,6 +2446,15 @@ export function recordUsageEntry(payload) {
 export function setUsageBudget(payload) {
   return postJson('/api/usage-ledger/budgets', payload)
 }
+export function getRetrievalSummary(workspaceId) {
+  return getJson(workspaceId ? `/api/retrieval/summary?workspace_id=${workspaceId}` : '/api/retrieval/summary')
+}
+export function indexRetrievalDocument(payload) {
+  return postJson('/api/retrieval/documents', payload)
+}
+export function queryRetrieval(payload) {
+  return postJson('/api/retrieval/query', payload)
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

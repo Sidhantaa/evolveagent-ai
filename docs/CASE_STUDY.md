@@ -210,3 +210,9 @@ As the platform grew, a single readiness view became valuable. The Health & Read
 ## v50 — Cost & Usage Ledger
 
 Cost visibility matters even in a mock-first system. The Cost & Usage Ledger records usage estimates per capability and workspace, tracks budgets, and warns as usage approaches or exceeds them — all as estimates, with no billing or payment. It extends the early v11 cost-control work into a first-class, governed ledger.
+
+---
+
+## v51 — Local Retrieval Layer
+
+Grounding answers in your own documents usually implies an external vector database. v51 shows it can stay local-first: it chunks documents, scores keyword overlap, and returns cited passages entirely on the local machine — no external service, no network. It extends the early memory-intelligence work into a lightweight, governed retrieval layer consistent with the platforms local-first contract.

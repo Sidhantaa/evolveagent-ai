@@ -1353,3 +1353,18 @@ class UsageRecordRequest(BaseModel):
 class UsageBudgetRequest(BaseModel):
     workspace_id: str | None = Field(default=None, max_length=120)
     monthly_limit: float = Field(..., ge=0)
+
+
+# ----------------------------------------------------------------------
+# v51.0 Local Retrieval Layer (local-only)
+# ----------------------------------------------------------------------
+class RetrievalIndexRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    title: str = Field(default="", max_length=200)
+    content: str = Field(..., min_length=1, max_length=40000)
+
+
+class RetrievalQueryRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    query: str = Field(..., min_length=1, max_length=2000)
+    top_k: int = Field(default=3, ge=1, le=10)

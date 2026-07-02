@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v50.0 Cost & Usage Ledger · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v51.0 Local Retrieval Layer · v45.1 MCP Hub UI)
+
+## v51 — Local Retrieval Layer
+
+Deepens the v6 memory work: it chunks workspace documents locally and answers queries by keyword-overlap scoring, returning the best-matching chunks with a source citation. Standard-library only — no external vector database and no network — mirroring the project's local-first stance. Exposed at `/api/retrieval` (index documents, query, summary), in analytics, and as a Local Retrieval Developer-Mode panel. Indexing and queries are governance-logged.
+
+## v50 — Cost & Usage Ledger
 
 ## v50 — Cost & Usage Ledger
 

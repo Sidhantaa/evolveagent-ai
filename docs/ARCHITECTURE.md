@@ -202,3 +202,7 @@ The Health & Readiness Monitor (`backend/app/services/health_monitor_service.py`
 ## v50 — Cost & Usage Ledger
 
 The Cost & Usage Ledger (`backend/app/services/usage_ledger_service.py`, routes under `/api/usage-ledger`) records API usage estimates and per-workspace budgets, extending the v11 cost-control visibility. Costs are estimates derived from illustrative per-unit rates (or supplied explicitly); the service computes an under/near/over budget status with warnings. Nothing is billed, charged, or sent — it is visibility and planning only. Recording usage and setting budgets are governance-logged.
+
+## v51 — Local Retrieval Layer
+
+The Local Retrieval Layer (`backend/app/services/local_retrieval_service.py`, routes under `/api/retrieval`) deepens the v6 memory work. It chunks indexed workspace documents on sentence boundaries, tokenizes each chunk with stopword filtering, and answers queries by keyword-overlap scoring — returning the top chunks with a citation and matched terms, scoped to the workspace. It uses the standard library only, with no external vector database and no network. Indexing and queries are governance-logged.

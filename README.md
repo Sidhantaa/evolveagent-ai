@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v50.0 — Cost & Usage Ledger &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v51.0 — Local Retrieval Layer &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -26,6 +26,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v48 — Unified Approvals Center:** generalizes the v44 MCP inbox across **all** approval sources (MCP executions + v33 business-operator) into one prioritized queue (high-risk / oldest first, with a source filter). Approve/reject **delegate to the owning governed service** at `/api/approvals-center` — no new execution power, only aggregation and routing.
 - **v49 — Health & Readiness Monitor:** a **read-only scored health dashboard** aggregating governance (blocked ratio), approvals backlog, secret-key readiness, MCP connectors, and policy posture into per-check statuses (ok/warn/critical) + an overall score + recommendations, with persisted snapshots at `/api/health-monitor`. No actions taken.
 - **v50 — Cost & Usage Ledger:** a local ledger of API **usage estimates** (mock/real) with **per-workspace budgets** and near/over threshold warnings (extends v11 cost visibility). Costs are estimates from illustrative rates at `/api/usage-ledger` — **no billing, charging, or payment** is performed.
+- **v51 — Local Retrieval Layer:** deepens v6 memory with **local chunking + keyword retrieval** over workspace documents, returning best-matching chunks with citations at `/api/retrieval`. Standard-library only — **no external vector database and no network**.
 
 > **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
 >

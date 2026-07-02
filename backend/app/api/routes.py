@@ -125,6 +125,8 @@ from app.models.request_models import (
     ApprovalDecisionRequest,
     UsageRecordRequest,
     UsageBudgetRequest,
+    RetrievalIndexRequest,
+    RetrievalQueryRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -267,6 +269,7 @@ from app.services.mcp_secret_registry_service import MCPSecretRegistryService
 from app.services.unified_approvals_service import UnifiedApprovalsService
 from app.services.health_monitor_service import HealthMonitorService
 from app.services.usage_ledger_service import UsageLedgerService
+from app.services.local_retrieval_service import LocalRetrievalService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -363,6 +366,7 @@ mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_servi
 unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
 health_monitor_service = HealthMonitorService(storage, governance_service)
 usage_ledger_service = UsageLedgerService(storage, governance_service)
+local_retrieval_service = LocalRetrievalService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1623,6 +1627,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **unified_approvals_service.analytics_summary(),
         **health_monitor_service.analytics_summary(),
         **usage_ledger_service.analytics_summary(),
+        **local_retrieval_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3751,6 +3756,30 @@ def list_usage_budgets() -> dict:
 @router.post("/usage-ledger/budgets")
 def set_usage_budget(request: UsageBudgetRequest) -> dict:
     return usage_ledger_service.set_budget(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v51.0 Local Retrieval Layer — local chunking + keyword retrieval.
+# ----------------------------------------------------------------------
+@router.get("/retrieval/summary")
+def get_retrieval_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    return local_retrieval_service.summary(workspace_id)
+
+
+@router.get("/retrieval/documents")
+def list_retrieval_documents(workspace_id: str | None = Query(default=None)) -> dict:
+    docs = local_retrieval_service.list_documents(workspace_id)
+    return {"documents": docs, "count": len(docs)}
+
+
+@router.post("/retrieval/documents")
+def index_retrieval_document(request: RetrievalIndexRequest) -> dict:
+    return local_retrieval_service.index_document(request.model_dump())
+
+
+@router.post("/retrieval/query")
+def query_retrieval(request: RetrievalQueryRequest) -> dict:
+    return local_retrieval_service.query(request.model_dump())
 
 
 @router.get("/governance")
