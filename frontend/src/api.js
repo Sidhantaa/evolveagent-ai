@@ -2428,6 +2428,12 @@ export function approveCenterItem(source, itemId) {
 export function rejectCenterItem(source, itemId) {
   return postJson('/api/approvals-center/reject', { source, item_id: itemId })
 }
+export function getHealthMonitorDashboard() {
+  return getJson('/api/health-monitor/dashboard')
+}
+export function createHealthSnapshot() {
+  return postJson('/api/health-monitor/snapshots', {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

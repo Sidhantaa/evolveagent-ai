@@ -198,3 +198,9 @@ Managing integrations means tracking secrets without ever touching them. The Sec
 ## v48 — Unified Approvals Center
 
 Approvals were scattered across subsystems, so v48 unifies them. It aggregates every pending approval — MCP executions and business-operator items today — into one prioritized queue and routes each decision back to the service that owns it. This is the classic inbox pattern generalized across a platform, built on top of existing governed primitives without adding any new execution authority.
+
+---
+
+## v49 — Health & Readiness Monitor
+
+As the platform grew, a single readiness view became valuable. The Health & Readiness Monitor scores governance, approvals backlog, secret readiness, connectors, and policy posture into one dashboard with actionable recommendations — entirely read-only, derived from existing local state. It demonstrates observability layered on top of the governed primitives without introducing any new authority.

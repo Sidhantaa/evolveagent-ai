@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v48.0 — Unified Approvals Center &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v49.0 — Health & Readiness Monitor &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -24,6 +24,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v46 — MCP Audit & Replay:** a **read-only unified audit timeline** across connector events, executions, and MCP governance — with filtering and markdown/JSON export — plus a **dry replay** that re-derives what a past execution request *would* do today (via the planning layer) **without executing anything**. The only write is a stored replay record; replays are governance-logged.
 - **v47 — Secret Reference Registry:** a local catalog of *which* secret/env keys connectors need — with readiness (is the env var set? true/false), owner, category, and rotation reminders. It records **only the key name**; it never stores, reads, logs, or returns the secret value. Governance-logged.
 - **v48 — Unified Approvals Center:** generalizes the v44 MCP inbox across **all** approval sources (MCP executions + v33 business-operator) into one prioritized queue (high-risk / oldest first, with a source filter). Approve/reject **delegate to the owning governed service** at `/api/approvals-center` — no new execution power, only aggregation and routing.
+- **v49 — Health & Readiness Monitor:** a **read-only scored health dashboard** aggregating governance (blocked ratio), approvals backlog, secret-key readiness, MCP connectors, and policy posture into per-check statuses (ok/warn/critical) + an overall score + recommendations, with persisted snapshots at `/api/health-monitor`. No actions taken.
 
 > **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
 >

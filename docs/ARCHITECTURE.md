@@ -194,3 +194,7 @@ The Secret Reference Registry (`backend/app/services/mcp_secret_registry_service
 ## v48 — Unified Approvals Center
 
 The Unified Approvals Center (`backend/app/services/unified_approvals_service.py`, routes under `/api/approvals-center`) generalizes the v44 MCP inbox across every approval source. It aggregates pending MCP execution requests and business-operator approval items into one normalized, prioritized queue (high-risk then oldest first, with a source filter). Approve and reject delegate to the owning service, which performs the state transition and governance logging, so the center holds no independent execution power. It uses a distinct /approvals-center prefix to avoid colliding with the pre-existing /approvals workflow.
+
+## v49 — Health & Readiness Monitor
+
+The Health & Readiness Monitor (`backend/app/services/health_monitor_service.py`, routes under `/api/health-monitor`) aggregates read-only health signals from local state — governance blocked ratio, approvals backlog, secret-key readiness, MCP connectors, and policy posture — into per-check statuses and an overall score with recommendations. It performs no actions; the only write is a governance-logged health snapshot.

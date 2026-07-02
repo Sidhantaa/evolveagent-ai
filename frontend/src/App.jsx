@@ -315,6 +315,8 @@ import {
   getApprovalsCenterSummary,
   approveCenterItem,
   rejectCenterItem,
+  getHealthMonitorDashboard,
+  createHealthSnapshot,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -993,6 +995,9 @@ function App() {
   const [approvalsCenterSummary, setApprovalsCenterSummary] = useState(null)
   const [acBusy, setAcBusy] = useState(false)
   const [acError, setAcError] = useState(null)
+  const [showHealthMonitor, setShowHealthMonitor] = useState(false)
+  const [healthDashboard, setHealthDashboard] = useState(null)
+  const [healthBusy, setHealthBusy] = useState(false)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1126,6 +1131,7 @@ function App() {
     refreshOperatingLayerPanel()
     refreshMcpPanel()
     refreshApprovalsCenter()
+    refreshHealthMonitor()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2780,6 +2786,21 @@ function App() {
     ])
     setApprovalsCenter(items?.items || [])
     setApprovalsCenterSummary(summary)
+  }
+
+  async function refreshHealthMonitor() {
+    const dashboard = await getHealthMonitorDashboard()
+    setHealthDashboard(dashboard)
+  }
+
+  async function handleCreateHealthSnapshot() {
+    setHealthBusy(true)
+    try {
+      await createHealthSnapshot()
+      await refreshHealthMonitor()
+    } finally {
+      setHealthBusy(false)
+    }
   }
 
   async function runAcAction(action) {
@@ -8386,6 +8407,46 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowHealthMonitor((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Health & Readiness
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showHealthMonitor && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Health & Readiness Monitor · v49.0</strong>
+                  <span>Read-only scored health across governance, approvals backlog, secret readiness, connectors, and policies.</span>
+                </div>
+                {healthDashboard && (
+                  <>
+                    <div className="agent-template-card">
+                      <strong>Health score: {healthDashboard.health_score} · <span className={`risk-badge ${healthDashboard.status === 'healthy' ? 'risk-low' : healthDashboard.status === 'degraded' ? 'risk-medium' : 'risk-high'}`}>{healthDashboard.status}</span></strong>
+                    </div>
+                    {(healthDashboard.checks || []).map((check) => (
+                      <p className="muted" key={check.name}>
+                        <span className={`risk-badge ${check.status === 'ok' || check.status === 'info' ? 'risk-low' : check.status === 'warn' ? 'risk-medium' : 'risk-high'}`}>{check.status}</span> {check.name} — {check.detail}
+                      </p>
+                    ))}
+                    {(healthDashboard.recommendations || []).map((rec, index) => (
+                      <p className="muted" key={index}>• {rec}</p>
+                    ))}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateHealthSnapshot} disabled={healthBusy}>Snapshot</button>
+                  <button type="button" onClick={() => refreshHealthMonitor()} disabled={healthBusy}>Refresh</button>
+                </div>
+                <p className="muted">Read-only aggregation — no actions are taken.</p>
               </div>
             )}
           </section>

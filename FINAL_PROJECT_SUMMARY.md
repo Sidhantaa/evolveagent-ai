@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v48.0 Unified Approvals Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v49.0 Health & Readiness Monitor · v45.1 MCP Hub UI)
+
+## v49 — Health & Readiness Monitor
+
+A read-only aggregation of platform health signals derived from local state — governance blocked ratio, approvals backlog (MCP + business), secret-key readiness, MCP connectors, and policy posture — scored into one health dashboard with per-check status (ok/warn/critical/info), an overall score, and recommendations. It performs no actions; it only reads existing collections and can persist a governance-logged health snapshot. Exposed at `/api/health-monitor`, in analytics, and as a Health & Readiness Developer-Mode panel.
+
+## v48 — Unified Approvals Center
 
 ## v48 — Unified Approvals Center
 

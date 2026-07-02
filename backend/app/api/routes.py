@@ -263,6 +263,7 @@ from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
 from app.services.mcp_audit_service import MCPAuditService
 from app.services.mcp_secret_registry_service import MCPSecretRegistryService
 from app.services.unified_approvals_service import UnifiedApprovalsService
+from app.services.health_monitor_service import HealthMonitorService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -357,6 +358,7 @@ mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mc
 mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
 mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_service)
 unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
+health_monitor_service = HealthMonitorService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1615,6 +1617,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_audit_service.analytics_summary(),
         **mcp_secret_registry_service.analytics_summary(),
         **unified_approvals_service.analytics_summary(),
+        **health_monitor_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3694,6 +3697,25 @@ def reject_approvals_center(request: ApprovalDecisionRequest) -> dict:
         detail = str(error)
         status = 404 if "not found" in detail.lower() else 409
         raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v49.0 Health & Readiness Monitor — read-only scored health dashboard.
+# ----------------------------------------------------------------------
+@router.get("/health-monitor/dashboard")
+def get_health_monitor_dashboard() -> dict:
+    return health_monitor_service.dashboard()
+
+
+@router.get("/health-monitor/snapshots")
+def list_health_snapshots() -> dict:
+    snapshots = health_monitor_service.list_snapshots()
+    return {"snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/health-monitor/snapshots")
+def create_health_snapshot() -> dict:
+    return health_monitor_service.create_snapshot()
 
 
 @router.get("/governance")
