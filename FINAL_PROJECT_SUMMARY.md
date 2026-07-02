@@ -1,4 +1,28 @@
-# EvolveAgent AI — Project Summary (current completed: v47.0 Secret Reference Registry · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v51.0 Local Retrieval Layer · v45.1 MCP Hub UI)
+
+## v51 — Local Retrieval Layer
+
+Deepens the v6 memory work: it chunks workspace documents locally and answers queries by keyword-overlap scoring, returning the best-matching chunks with a source citation. Standard-library only — no external vector database and no network — mirroring the project's local-first stance. Exposed at `/api/retrieval` (index documents, query, summary), in analytics, and as a Local Retrieval Developer-Mode panel. Indexing and queries are governance-logged.
+
+## v50 — Cost & Usage Ledger
+
+## v50 — Cost & Usage Ledger
+
+A local ledger of API usage estimates (mock or real) with per-workspace budgets and near/over threshold warnings, extending v11 cost visibility. Costs are estimates derived from illustrative per-unit rates; nothing is billed, charged, or sent. Exposed at `/api/usage-ledger` (entries + budgets + summary), in analytics, and as a Cost & Usage Ledger Developer-Mode panel. Recording usage and setting budgets are governance-logged.
+
+## v49 — Health & Readiness Monitor
+
+## v49 — Health & Readiness Monitor
+
+A read-only aggregation of platform health signals derived from local state — governance blocked ratio, approvals backlog (MCP + business), secret-key readiness, MCP connectors, and policy posture — scored into one health dashboard with per-check status (ok/warn/critical/info), an overall score, and recommendations. It performs no actions; it only reads existing collections and can persist a governance-logged health snapshot. Exposed at `/api/health-monitor`, in analytics, and as a Health & Readiness Developer-Mode panel.
+
+## v48 — Unified Approvals Center
+
+## v48 — Unified Approvals Center
+
+Generalizes the v44 MCP approvals inbox across all approval sources — today the MCP execution requests (v42) and the business-operator approval items (v33) — into one prioritized queue (high-risk / oldest first, with a source filter). Approve/reject **delegate to the owning governed service** (which performs the state transition and governance logging), so the center adds no new execution power. Exposed at `/api/approvals-center` (distinct from the pre-existing `/approvals` workflow), surfaced in analytics, and shown as its own "Approvals Center" Developer-Mode panel.
+
+## v47 — Secret Reference Registry
 
 ## v47 — Secret Reference Registry
 

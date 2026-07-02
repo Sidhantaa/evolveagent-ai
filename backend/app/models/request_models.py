@@ -1329,3 +1329,42 @@ class MCPSecretRefUpdateRequest(BaseModel):
     owner: str | None = Field(default=None, max_length=120)
     category: str | None = Field(default=None, pattern="^(api_key|token|webhook|database|other)$")
     rotation_days: int | None = Field(default=None, ge=0, le=3650)
+
+
+# ----------------------------------------------------------------------
+# v48.0 Unified Approvals Center
+# ----------------------------------------------------------------------
+class ApprovalDecisionRequest(BaseModel):
+    source: str = Field(..., pattern="^(mcp_execution|business_operator)$")
+    item_id: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v50.0 Cost & Usage Ledger (estimates only — no billing)
+# ----------------------------------------------------------------------
+class UsageRecordRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    capability: str = Field(default="other", pattern="^(text|image|transcription|mcp|other)$")
+    units: float = Field(default=1.0, ge=0)
+    estimated_cost: float | None = Field(default=None, ge=0)
+    mode: str = Field(default="mock", pattern="^(mock|real)$")
+
+
+class UsageBudgetRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    monthly_limit: float = Field(..., ge=0)
+
+
+# ----------------------------------------------------------------------
+# v51.0 Local Retrieval Layer (local-only)
+# ----------------------------------------------------------------------
+class RetrievalIndexRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    title: str = Field(default="", max_length=200)
+    content: str = Field(..., min_length=1, max_length=40000)
+
+
+class RetrievalQueryRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    query: str = Field(..., min_length=1, max_length=2000)
+    top_k: int = Field(default=3, ge=1, le=10)

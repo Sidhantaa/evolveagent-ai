@@ -192,3 +192,27 @@ Governance is only as good as its audit trail. v46 aggregates the whole MCP surf
 ## v47 — Secret Reference Registry
 
 Managing integrations means tracking secrets without ever touching them. The Secret Reference Registry catalogs which env keys each connector needs, whether they are set, and when they should be rotated — recording only the key name and a readiness boolean. It demonstrates a security-conscious pattern: know your secret surface and rotation posture while guaranteeing values are never stored, logged, or returned. It extends the MCP arc from planning and execution into operational hygiene, all within the local-first, governed contract.
+
+---
+
+## v48 — Unified Approvals Center
+
+Approvals were scattered across subsystems, so v48 unifies them. It aggregates every pending approval — MCP executions and business-operator items today — into one prioritized queue and routes each decision back to the service that owns it. This is the classic inbox pattern generalized across a platform, built on top of existing governed primitives without adding any new execution authority.
+
+---
+
+## v49 — Health & Readiness Monitor
+
+As the platform grew, a single readiness view became valuable. The Health & Readiness Monitor scores governance, approvals backlog, secret readiness, connectors, and policy posture into one dashboard with actionable recommendations — entirely read-only, derived from existing local state. It demonstrates observability layered on top of the governed primitives without introducing any new authority.
+
+---
+
+## v50 — Cost & Usage Ledger
+
+Cost visibility matters even in a mock-first system. The Cost & Usage Ledger records usage estimates per capability and workspace, tracks budgets, and warns as usage approaches or exceeds them — all as estimates, with no billing or payment. It extends the early v11 cost-control work into a first-class, governed ledger.
+
+---
+
+## v51 — Local Retrieval Layer
+
+Grounding answers in your own documents usually implies an external vector database. v51 shows it can stay local-first: it chunks documents, scores keyword overlap, and returns cited passages entirely on the local machine — no external service, no network. It extends the early memory-intelligence work into a lightweight, governed retrieval layer consistent with the platforms local-first contract.

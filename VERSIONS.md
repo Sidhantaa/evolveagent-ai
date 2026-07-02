@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **47** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **51** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,30 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v51 — Local Retrieval Layer
+- **Purpose:** Ground answers in workspace documents using purely local retrieval.
+- **How it operates:** `LocalRetrievalService` chunks indexed documents on sentence boundaries, tokenizes each chunk (stopword-filtered), and answers queries by keyword-overlap scoring — returning the top chunks with a citation and matched terms. Standard library only; queries are workspace-scoped. Indexing and queries are governance-logged.
+- **Main API route groups:** `/api/retrieval` (+ `/documents`, `/query`, `/summary`).
+- **Safety boundary:** Local-first — no external vector database, no network; chunks and scores are computed locally.
+
+### v50 — Cost & Usage Ledger
+- **Purpose:** Track API usage estimates and budgets per workspace — visibility only, never billing.
+- **How it operates:** `UsageLedgerService` records usage entries (capability, units, estimated cost derived from illustrative rates when not supplied), stores per-workspace budgets, and computes an under/near/over status with warnings and a by-capability breakdown. Recording and budget changes are governance-logged.
+- **Main API route groups:** `/api/usage-ledger` (+ `/summary`, `/entries`, `/budgets`).
+- **Safety boundary:** Estimates and planning only — extends v11 cost visibility; no billing, charging, or payment is performed.
+
+### v49 — Health & Readiness Monitor
+- **Purpose:** One scored, read-only view of platform health and readiness.
+- **How it operates:** `HealthMonitorService` derives checks from local collections — governance blocked ratio, approvals backlog, secret-key readiness, MCP connectors, and policy posture — each with an ok/warn/critical/info status, rolled into an overall score and recommendations. Snapshots are persisted and governance-logged.
+- **Main API route groups:** `/api/health-monitor` (+ `/dashboard`, `/snapshots`).
+- **Safety boundary:** Read-only aggregation; performs no actions, changes no state except a stored snapshot.
+
+### v48 — Unified Approvals Center
+- **Purpose:** One prioritized place to review and act on everything awaiting human approval, across every source.
+- **How it operates:** `UnifiedApprovalsService` aggregates pending MCP execution requests (v42) and business-operator approval items (v33), normalizes each with a source/title/risk/age, and sorts high-risk then oldest first (with a source filter). Approve/reject delegate to the owning service (`MCPExecutionService` / `BusinessOperatorAdvancedService`), which do the logging.
+- **Main API route groups:** `/api/approvals-center` (+ `/summary`, `/approve`, `/reject`) — a distinct prefix from the pre-existing `/approvals` workflow.
+- **Safety boundary:** Triage + delegated decisions only; no new execution power, no bypass; each decision flows through its owning governed service.
+
 ### v47 — Secret Reference Registry
 - **Purpose:** Know which secrets each connection needs and whether they are ready — without ever touching the values.
 - **How it operates:** `MCPSecretRegistryService` stores references (key name, label, owner, category, optional connector slug, rotation interval). Readiness is computed from `os.environ` as a boolean; a rotation-due flag is derived from `rotation_days` + `last_rotated_at`. Registration, update, and rotate are governance-logged.
@@ -430,4 +454,8 @@ From v15 onward every version follows the governed architecture above: a service
 | v45.1 | MCP Hub UI | (frontend) | Tabbed MCP Hub panel + risk badges | Presentation only; no behavior change |
 | v46 | MCP Audit & Replay | `/api/mcp/audit` | Read-only timeline + export + dry replay | No real execution; read-only; stored replay artifact only |
 | v47 | Secret Reference Registry | `/api/mcp/secrets` | Key-reference catalog + readiness + rotation | References only; never stores/returns secret values |
+| v48 | Unified Approvals Center | `/api/approvals-center` | One prioritized queue across all approval sources | Triage + delegated decisions only; no new execution power |
+| v49 | Health & Readiness Monitor | `/api/health-monitor` | Read-only scored health dashboard + snapshots | Read-only aggregation; no actions taken |
+| v50 | Cost & Usage Ledger | `/api/usage-ledger` | Usage estimates + per-workspace budgets | Estimates only; no billing/charge/payment |
+| v51 | Local Retrieval Layer | `/api/retrieval` | Local chunking + keyword retrieval with citations | Local-first; no external vector DB or network |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

@@ -2416,6 +2416,45 @@ export function registerMcpSecret(payload) {
 export function rotateMcpSecret(refId) {
   return postJson(`/api/mcp/secrets/${refId}/rotate`, {})
 }
+export function getApprovalsCenter(source) {
+  return getJson(source ? `/api/approvals-center?source=${source}` : '/api/approvals-center')
+}
+export function getApprovalsCenterSummary() {
+  return getJson('/api/approvals-center/summary')
+}
+export function approveCenterItem(source, itemId) {
+  return postJson('/api/approvals-center/approve', { source, item_id: itemId })
+}
+export function rejectCenterItem(source, itemId) {
+  return postJson('/api/approvals-center/reject', { source, item_id: itemId })
+}
+export function getHealthMonitorDashboard() {
+  return getJson('/api/health-monitor/dashboard')
+}
+export function createHealthSnapshot() {
+  return postJson('/api/health-monitor/snapshots', {})
+}
+export function getUsageLedgerSummary(workspaceId) {
+  return getJson(workspaceId ? `/api/usage-ledger/summary?workspace_id=${workspaceId}` : '/api/usage-ledger/summary')
+}
+export function getUsageEntries(workspaceId) {
+  return getJson(workspaceId ? `/api/usage-ledger/entries?workspace_id=${workspaceId}` : '/api/usage-ledger/entries')
+}
+export function recordUsageEntry(payload) {
+  return postJson('/api/usage-ledger/entries', payload)
+}
+export function setUsageBudget(payload) {
+  return postJson('/api/usage-ledger/budgets', payload)
+}
+export function getRetrievalSummary(workspaceId) {
+  return getJson(workspaceId ? `/api/retrieval/summary?workspace_id=${workspaceId}` : '/api/retrieval/summary')
+}
+export function indexRetrievalDocument(payload) {
+  return postJson('/api/retrieval/documents', payload)
+}
+export function queryRetrieval(payload) {
+  return postJson('/api/retrieval/query', payload)
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }
