@@ -199,8 +199,6 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 
 ## Architecture
 
-![Architecture Diagram](docs/architecture.png)
-
 ```mermaid
 flowchart TD
     U[User] --> UI[React Chat UI]
