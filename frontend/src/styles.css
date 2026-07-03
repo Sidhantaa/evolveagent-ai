@@ -1597,22 +1597,65 @@ h2 {
   50% { opacity: 0.45; }
 }
 
-.mcp-suggestions-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+/* Perplexity-style Sources + Follow-ups panel */
+.ask-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px 14px;
   margin: 0 12px 6px;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.22);
   border-radius: 12px;
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(99, 102, 241, 0.05);
 }
 
-.mcp-suggest-label {
+.ask-block {
+  display: grid;
+  gap: 6px;
+}
+
+.ask-block-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+}
+
+.ask-sources,
+.ask-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ask-source-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.75));
+}
+
+.ask-followup-chip {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.ask-followup-chip:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.24);
+}
+
+.ask-followup-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .mcp-suggest-chip {

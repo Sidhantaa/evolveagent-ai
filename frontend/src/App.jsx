@@ -661,6 +661,8 @@ function App() {
   const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [mcpSuggestions, setMcpSuggestions] = useState([])
+  const [askSources, setAskSources] = useState([])
+  const [askFollowups, setAskFollowups] = useState([])
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -4306,6 +4308,11 @@ function App() {
   async function submitMessage(text = input) {
     const prompt = text.trim()
     if (!prompt || loading) return
+    // `mcp:` / `/mcp` command prefix routes into the MCP hub instead of the full workflow.
+    if (/^\/?mcp:/i.test(prompt) || /^\/mcp\b/i.test(prompt)) {
+      await handleMcpCommand(prompt)
+      return
+    }
     const processedFiles = attachedFiles.filter((file) => file.status === 'processed')
     const processedRecordings = attachedRecordings.filter((recording) => recording.status === 'processed')
 
@@ -4347,9 +4354,10 @@ function App() {
       setMessages((current) => [...current, assistantMessage])
       setSessionId(data.session_id)
       setSelectedRunId(assistantMessage.id)
-      // Voice Ask Console: speak the answer aloud + suggest the MCP(s) this task needs.
+      // Voice Ask Console: speak the answer aloud + Perplexity-style sources/follow-ups + MCP suggestions.
       speak(assistantMessage.content)
-      refreshMcpSuggestions(prompt)
+      refreshAskSources(prompt)
+      refreshMcpSuggestions(prompt).then((suggestions) => buildFollowups(prompt, suggestions))
       await refreshHistory()
       await refreshChats()
       await refreshProviderStatus()
@@ -4514,9 +4522,55 @@ function App() {
     try {
       const result = await suggestMcp(prompt.trim())
       setMcpSuggestions(result?.suggestions || [])
+      return result?.suggestions || []
     } catch {
       setMcpSuggestions([])
+      return []
     }
+  }
+
+  // Perplexity-style sources: ground the answer in indexed workspace docs (local retrieval, v51).
+  async function refreshAskSources(prompt) {
+    if (!prompt || !prompt.trim()) {
+      setAskSources([])
+      return
+    }
+    try {
+      const result = await queryRetrieval({ workspace_id: workspaceId, query: prompt.trim(), top_k: 4 })
+      setAskSources(result?.results || [])
+    } catch {
+      setAskSources([])
+    }
+  }
+
+  // Build clickable follow-up questions from the task + suggested tools.
+  function buildFollowups(prompt, suggestions) {
+    const followups = []
+    for (const s of (suggestions || []).slice(0, 2)) {
+      followups.push(s.missing_keys.length > 0 ? `How do I set ${s.missing_keys[0]} for ${s.name}?` : `Connect ${s.name}`)
+    }
+    followups.push('Explain this in more detail', 'What are the risks and approvals involved?')
+    setAskFollowups(followups.slice(0, 5))
+  }
+
+  // `mcp:` / `/mcp` command prefix → route straight into the MCP hub (suggest + open panel).
+  async function handleMcpCommand(rawPrompt) {
+    const task = rawPrompt.replace(/^\/?mcp:?\s*/i, '').trim() || rawPrompt
+    const userMessage = { id: crypto.randomUUID(), role: 'user', content: rawPrompt }
+    setInput('')
+    const suggestions = await refreshMcpSuggestions(task)
+    setShowMcpPanel(true)
+    const lines = suggestions.length
+      ? suggestions.map((s) => `• ${s.name} — ${s.recommended_action}`).join('\n')
+      : 'No specific MCP connector matched that task.'
+    const answer = `MCP command routed to the Connector Hub.\n\n${lines}\n\nOpen Developer Mode → MCP Hub to register/enable and manage keys. (Key values are never shown — only whether each required key is set.)`
+    setMessages((current) => [
+      ...current,
+      userMessage,
+      { id: crypto.randomUUID(), role: 'assistant', content: answer, mcp_command: true },
+    ])
+    buildFollowups(task, suggestions)
+    speak('Opened the MCP connector hub with tool suggestions for your task.')
   }
 
   function focusComposer() {
@@ -10111,17 +10165,47 @@ function App() {
           )}
         </section>
 
-        {mcpSuggestions.length > 0 && (
-          <section className="mcp-suggestions-bar">
-            <span className="mcp-suggest-label">🔌 Tools this task may need:</span>
-            {mcpSuggestions.map((s) => (
-              <span key={s.slug} className={`mcp-suggest-chip ${s.keys_ready ? 'ready' : 'needs-key'}`} title={s.recommended_action}>
-                {s.name}
-                {s.missing_keys.length > 0
-                  ? ` · needs ${s.missing_keys.join(', ')} ✗`
-                  : s.already_enabled ? ' · enabled ✓' : ' · key ready ✓'}
-              </span>
-            ))}
+        {(askSources.length > 0 || askFollowups.length > 0 || mcpSuggestions.length > 0) && (
+          <section className="ask-panel">
+            {askSources.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">Sources</span>
+                <div className="ask-sources">
+                  {askSources.map((src, index) => (
+                    <span key={index} className="ask-source-chip" title={src.text?.slice(0, 200)}>
+                      [{index + 1}] {src.citation}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {mcpSuggestions.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">🔌 Tools this task may need</span>
+                <div className="ask-sources">
+                  {mcpSuggestions.map((s) => (
+                    <span key={s.slug} className={`mcp-suggest-chip ${s.keys_ready ? 'ready' : 'needs-key'}`} title={s.recommended_action}>
+                      {s.name}
+                      {s.missing_keys.length > 0
+                        ? ` · needs ${s.missing_keys.join(', ')} ✗`
+                        : s.already_enabled ? ' · enabled ✓' : ' · key ready ✓'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {askFollowups.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">Follow-ups</span>
+                <div className="ask-followups">
+                  {askFollowups.map((q, index) => (
+                    <button key={index} type="button" className="ask-followup-chip" onClick={() => submitMessage(q)} disabled={loading}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         )}
 
