@@ -133,6 +133,7 @@ from app.models.request_models import (
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
     ScheduledTaskToggleRequest,
+    DataImportRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -282,6 +283,7 @@ from app.services.operating_layer_v2_service import OperatingLayerV2Service
 from app.services.notifications_center_service import NotificationsCenterService
 from app.services.workspace_templates_service import WorkspaceTemplatesService
 from app.services.scheduled_tasks_service import ScheduledTasksService
+from app.services.data_export_service import DataExportService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -385,6 +387,7 @@ operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service
 notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
 workspace_templates_service = WorkspaceTemplatesService(storage, governance_service, workspace_service)
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
+data_export_service = DataExportService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1652,6 +1655,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **notifications_center_service.analytics_summary(),
         **workspace_templates_service.analytics_summary(),
         **scheduled_tasks_service.analytics_summary(),
+        **data_export_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4006,6 +4010,27 @@ def trigger_scheduled_task(task_id: str) -> dict:
         detail = str(error)
         status = 404 if "not found" in detail.lower() else 409
         raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v59.0 Data Export & Backup — local bundle export/import (non-destructive).
+# ----------------------------------------------------------------------
+@router.get("/data-export/summary")
+def get_data_export_summary() -> dict:
+    return data_export_service.summary()
+
+
+@router.post("/data-export/bundle")
+def export_data_bundle() -> dict:
+    return data_export_service.export_bundle()
+
+
+@router.post("/data-export/import")
+def import_data_bundle(request: DataImportRequest) -> dict:
+    try:
+        return data_export_service.import_bundle(request.bundle)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @router.get("/governance")

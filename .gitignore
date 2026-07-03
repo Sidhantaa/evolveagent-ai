@@ -191,6 +191,7 @@ backend/app/data/notifications.json
 backend/app/data/workspace_templates.json
 backend/app/data/scheduled_tasks.json
 backend/app/data/scheduled_task_runs.json
+backend/app/data/data_export_log.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

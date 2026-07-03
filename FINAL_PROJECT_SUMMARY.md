@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v58.0 Scheduled Tasks · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v59.0 Data Export & Backup · v45.1 MCP Hub UI)
+
+## v59 — Data Export & Backup
+
+Exports a curated set of local content collections into a single JSON bundle the user can download, and imports a bundle back in. Import is non-destructive — it merges by appending items whose id is not already present, never overwriting or deleting. Everything is local (no external upload); secret values, governance logs, and analytics are excluded. Exposed at `/api/data-export` (bundle, import, summary), in analytics, and as a Data Export Developer-Mode panel with in-browser download. Exports and imports are governance-logged.
+
+## v58 — Scheduled Tasks
 
 ## v58 — Scheduled Tasks
 

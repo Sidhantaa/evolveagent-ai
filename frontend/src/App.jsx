@@ -347,6 +347,9 @@ import {
   createScheduledTask,
   toggleScheduledTask,
   triggerScheduledTask,
+  getDataExportSummary,
+  exportDataBundle,
+  importDataBundle,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1067,6 +1070,11 @@ function App() {
   const [scheduledBusy, setScheduledBusy] = useState(false)
   const [scheduledName, setScheduledName] = useState('')
   const [scheduledSchedule, setScheduledSchedule] = useState('daily')
+  const [showDataExport, setShowDataExport] = useState(false)
+  const [dataExportSummary, setDataExportSummary] = useState(null)
+  const [dataExportBusy, setDataExportBusy] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1209,6 +1217,7 @@ function App() {
     refreshNotifications()
     refreshWsTemplates()
     refreshScheduled()
+    refreshDataExport()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2907,6 +2916,47 @@ function App() {
     const [summary, list] = await Promise.all([getScheduledTasksSummary(), getScheduledTasks()])
     setScheduledSummary(summary)
     setScheduledTasks(list?.tasks || [])
+  }
+
+  async function refreshDataExport() {
+    const summary = await getDataExportSummary()
+    setDataExportSummary(summary)
+  }
+
+  async function handleExportDownload() {
+    setDataExportBusy(true)
+    try {
+      const bundle = await exportDataBundle()
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `evolveagent-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      await refreshDataExport()
+    } finally {
+      setDataExportBusy(false)
+    }
+  }
+
+  async function handleImportBundle(event) {
+    event.preventDefault()
+    if (!importText.trim()) return
+    setDataExportBusy(true)
+    try {
+      const bundle = JSON.parse(importText)
+      const result = await importDataBundle(bundle)
+      setImportResult(result)
+      setImportText('')
+      await refreshDataExport()
+    } catch (err) {
+      setImportResult({ error: err.message })
+    } finally {
+      setDataExportBusy(false)
+    }
   }
 
   async function runScheduledAction(action) {
@@ -8721,6 +8771,45 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowDataExport((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Data Export & Backup
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDataExport && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Data Export & Backup · v59.0</strong>
+                  <span>Download a local JSON bundle of your content collections, or import one. Local only — no external upload. Import is non-destructive (merge).</span>
+                </div>
+                {dataExportSummary && (
+                  <p className="muted">collections: {dataExportSummary.exportable_collections} · items: {dataExportSummary.total_current_items} · exports: {dataExportSummary.export_events} · imports: {dataExportSummary.import_events}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleExportDownload} disabled={dataExportBusy}>Download backup (.json)</button>
+                  <button type="button" onClick={() => refreshDataExport()} disabled={dataExportBusy}>Refresh</button>
+                </div>
+                <form className="stacked-form" onSubmit={handleImportBundle}>
+                  <h3>Import a bundle</h3>
+                  <textarea placeholder="Paste a backup bundle JSON to merge (non-destructive)" value={importText} onChange={(event) => setImportText(event.target.value)} rows={2} />
+                  <button type="submit" disabled={dataExportBusy || !importText.trim()}>Import (merge)</button>
+                </form>
+                {importResult && (
+                  <div className="agent-template-card">
+                    <strong>{importResult.error ? 'Import failed' : `Imported ${importResult.total_imported} new item(s)`}</strong>
+                    <p className="muted">{importResult.error || importResult.note}</p>
+                  </div>
+                )}
+                <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
               </div>
             )}
           </section>

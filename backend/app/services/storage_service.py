@@ -194,6 +194,7 @@ class StorageService:
             "workspace_templates.json",
             "scheduled_tasks.json",
             "scheduled_task_runs.json",
+            "data_export_log.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

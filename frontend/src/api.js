@@ -2527,6 +2527,15 @@ export function toggleScheduledTask(taskId, enabled) {
 export function triggerScheduledTask(taskId) {
   return postJson(`/api/scheduled-tasks/${taskId}/trigger`, {})
 }
+export function getDataExportSummary() {
+  return getJson('/api/data-export/summary')
+}
+export function exportDataBundle() {
+  return postJson('/api/data-export/bundle', {})
+}
+export function importDataBundle(bundle) {
+  return postJson('/api/data-export/import', { bundle })
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

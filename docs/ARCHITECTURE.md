@@ -230,3 +230,7 @@ The Workspace Templates service (`backend/app/services/workspace_templates_servi
 ## v58 — Scheduled Tasks
 
 The Scheduled Tasks service (`backend/app/services/scheduled_tasks_service.py`, routes under `/api/scheduled-tasks`) is a local registry of scheduled tasks. It runs no background scheduler and never executes anything on a timer. A task records a schedule (manual/hourly/daily/weekly) and an action; triggering performs a planning-first mock run (plan / note / hold-for-approval), and due_tasks is purely informational. Creation and triggers are governance-logged.
+
+## v59 — Data Export & Backup
+
+The Data Export service (`backend/app/services/data_export_service.py`, routes under `/api/data-export`) exports a curated allow-list of local content collections into one JSON bundle for download, and imports a bundle back non-destructively — appending only items whose id is not already present, never overwriting or deleting. Secret values, governance logs, and analytics are excluded, and everything is local with no external upload. Exports and imports are governance-logged.
