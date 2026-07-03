@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v56.0 Notifications & Alerts Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v57.0 Workspace Templates & Cloning · v45.1 MCP Hub UI)
+
+## v57 — Workspace Templates & Cloning
+
+Define reusable workspace templates (name, description, tags, preset of local settings) and instantiate them to spin up a new local workspace preconfigured from the template. Local structure only — no production provisioning, no auth. Exposed at `/api/workspace-templates` (create, list, instantiate, summary), in analytics, and as a Workspace Templates Developer-Mode panel. Template creation and instantiation are governance-logged.
+
+## v56 — Notifications & Alerts Center
 
 ## v56 — Notifications & Alerts Center
 

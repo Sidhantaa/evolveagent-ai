@@ -240,3 +240,9 @@ After a long arc of governance and observability features, v55 refreshes the cap
 ## v56 — Notifications & Alerts Center
 
 A governed system needs to surface what needs attention. The Notifications & Alerts Center digests governance blocks, health issues, and approvals backlog into an in-app feed the user can acknowledge - with no external delivery. It keeps the alerting fully local and governed, consistent with the platforms no-real-sending contract.
+
+---
+
+## v57 — Workspace Templates & Cloning
+
+Spinning up consistent, preconfigured workspaces is a common need. The Workspace Templates feature lets users capture a preset once and clone it into new local workspaces on demand, incrementing usage counts and logging each action. It stays local-first with no production provisioning or auth, consistent with the platforms contract.

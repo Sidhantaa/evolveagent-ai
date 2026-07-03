@@ -2500,6 +2500,18 @@ export function generateNotifications() {
 export function acknowledgeNotification(notifId) {
   return postJson(`/api/notifications/${notifId}/ack`, {})
 }
+export function getWorkspaceTemplates() {
+  return getJson('/api/workspace-templates')
+}
+export function getWorkspaceTemplatesSummary() {
+  return getJson('/api/workspace-templates/summary')
+}
+export function createWorkspaceTemplate(payload) {
+  return postJson('/api/workspace-templates', payload)
+}
+export function instantiateWorkspaceTemplate(templateId, payload) {
+  return postJson(`/api/workspace-templates/${templateId}/instantiate`, payload || {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

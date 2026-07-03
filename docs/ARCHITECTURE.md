@@ -222,3 +222,7 @@ The Operating Layer 2.0 (`backend/app/services/operating_layer_v2_service.py`, r
 ## v56 — Notifications & Alerts Center
 
 The Notifications & Alerts Center (`backend/app/services/notifications_center_service.py`, routes under `/api/notifications`) turns platform signals — blocked governance actions, degraded health, and pending-approval backlog — into an in-app notifications feed. Generation is idempotent per signal signature, users acknowledge to clear, and nothing is sent externally (no email, SMS, or push). Generation and acknowledgement are governance-logged.
+
+## v57 — Workspace Templates & Cloning
+
+The Workspace Templates service (`backend/app/services/workspace_templates_service.py`, routes under `/api/workspace-templates`) lets users define reusable workspace presets (name, description, tags, and a preset of local settings) and instantiate them. Instantiation reuses the existing WorkspaceService to create a real local workspace preconfigured from the template. It is local structure only, with no production provisioning or authentication, and both creation and instantiation are governance-logged.

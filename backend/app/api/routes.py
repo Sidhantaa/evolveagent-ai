@@ -129,6 +129,8 @@ from app.models.request_models import (
     RetrievalQueryRequest,
     EvalSuiteCreateRequest,
     PlaybookCreateRequest,
+    WorkspaceTemplateCreateRequest,
+    WorkspaceTemplateInstantiateRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -276,6 +278,7 @@ from app.services.eval_harness_service import EvalHarnessService
 from app.services.playbook_library_service import PlaybookLibraryService
 from app.services.operating_layer_v2_service import OperatingLayerV2Service
 from app.services.notifications_center_service import NotificationsCenterService
+from app.services.workspace_templates_service import WorkspaceTemplatesService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -377,6 +380,7 @@ eval_harness_service = EvalHarnessService(storage, governance_service)
 playbook_library_service = PlaybookLibraryService(storage, governance_service)
 operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
 notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
+workspace_templates_service = WorkspaceTemplatesService(storage, governance_service, workspace_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1642,6 +1646,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **playbook_library_service.analytics_summary(),
         **operating_layer_v2_service.analytics_summary(),
         **notifications_center_service.analytics_summary(),
+        **workspace_templates_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3926,6 +3931,33 @@ def acknowledge_notification(notif_id: str) -> dict:
         return notifications_center_service.acknowledge(notif_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Notification not found") from error
+
+
+# ----------------------------------------------------------------------
+# v57.0 Workspace Templates & Cloning — local templates + instantiate.
+# ----------------------------------------------------------------------
+@router.get("/workspace-templates/summary")
+def get_workspace_templates_summary() -> dict:
+    return workspace_templates_service.summary()
+
+
+@router.get("/workspace-templates")
+def list_workspace_templates() -> dict:
+    templates = workspace_templates_service.list_templates()
+    return {"templates": templates, "count": len(templates)}
+
+
+@router.post("/workspace-templates")
+def create_workspace_template(request: WorkspaceTemplateCreateRequest) -> dict:
+    return workspace_templates_service.create_template(request.model_dump())
+
+
+@router.post("/workspace-templates/{template_id}/instantiate")
+def instantiate_workspace_template(template_id: str, request: WorkspaceTemplateInstantiateRequest | None = None) -> dict:
+    try:
+        return workspace_templates_service.instantiate(template_id, request.model_dump() if request else {})
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Template not found") from error
 
 
 @router.get("/governance")

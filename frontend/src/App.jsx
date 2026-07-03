@@ -338,6 +338,10 @@ import {
   getNotifications,
   generateNotifications,
   acknowledgeNotification,
+  getWorkspaceTemplates,
+  getWorkspaceTemplatesSummary,
+  createWorkspaceTemplate,
+  instantiateWorkspaceTemplate,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1047,6 +1051,11 @@ function App() {
   const [notificationsSummary, setNotificationsSummary] = useState(null)
   const [notifications, setNotifications] = useState([])
   const [notifBusy, setNotifBusy] = useState(false)
+  const [showWsTemplates, setShowWsTemplates] = useState(false)
+  const [wsTemplates, setWsTemplates] = useState([])
+  const [wsTemplatesSummary, setWsTemplatesSummary] = useState(null)
+  const [wsTemplateBusy, setWsTemplateBusy] = useState(false)
+  const [wsTemplateName, setWsTemplateName] = useState('')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1187,6 +1196,7 @@ function App() {
     refreshPlaybooks()
     refreshOpLayer2()
     refreshNotifications()
+    refreshWsTemplates()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2873,6 +2883,36 @@ function App() {
   async function refreshOpLayer2() {
     const dashboard = await getOperatingLayerV2Dashboard()
     setOpLayer2(dashboard)
+  }
+
+  async function refreshWsTemplates() {
+    const [summary, list] = await Promise.all([getWorkspaceTemplatesSummary(), getWorkspaceTemplates()])
+    setWsTemplatesSummary(summary)
+    setWsTemplates(list?.templates || [])
+  }
+
+  async function runWsTemplateAction(action) {
+    setWsTemplateBusy(true)
+    try {
+      await action()
+      await refreshWsTemplates()
+    } finally {
+      setWsTemplateBusy(false)
+    }
+  }
+
+  async function handleCreateWsTemplate(event) {
+    event.preventDefault()
+    if (!wsTemplateName.trim()) return
+    await runWsTemplateAction(async () => {
+      await createWorkspaceTemplate({ name: wsTemplateName.trim(), default_tags: [], preset: {} })
+      setWsTemplateName('')
+    })
+  }
+
+  async function handleInstantiateWsTemplate(templateId) {
+    await runWsTemplateAction(() => instantiateWorkspaceTemplate(templateId, {}))
+    await refreshWorkspaces?.()
   }
 
   async function refreshNotifications() {
@@ -8636,6 +8676,43 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowWsTemplates((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Workspace Templates
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWsTemplates && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Workspace Templates & Cloning · v57.0</strong>
+                  <span>Define reusable workspace presets and instantiate them into new local workspaces. Local records only — no production provisioning or auth.</span>
+                </div>
+                {wsTemplatesSummary && (
+                  <p className="muted">templates: {wsTemplatesSummary.template_count} · instantiations: {wsTemplatesSummary.total_instantiations}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleCreateWsTemplate}>
+                  <input type="text" placeholder="Template name (e.g. Engineering workspace)" value={wsTemplateName} onChange={(event) => setWsTemplateName(event.target.value)} />
+                  <button type="submit" disabled={wsTemplateBusy || !wsTemplateName.trim()}>Create template</button>
+                </form>
+                {wsTemplates.slice(0, 6).map((t) => (
+                  <div className="agent-template-card" key={t.template_id}>
+                    <strong>{t.name}</strong>
+                    <p className="muted">{t.default_tags?.join(', ') || 'no tags'} · used {t.instantiation_count || 0}×</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleInstantiateWsTemplate(t.template_id)} disabled={wsTemplateBusy}>Create workspace from this</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">Local workspace templates and clones only — no production provisioning or authentication.</p>
               </div>
             )}
           </section>
