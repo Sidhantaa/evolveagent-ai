@@ -214,3 +214,7 @@ The Evaluation Harness (`backend/app/services/eval_harness_service.py`, routes u
 ## v53 — Playbook Library
 
 The Playbook Library (`backend/app/services/playbook_library_service.py`, routes under `/api/playbooks`) lets users save reusable multi-step playbooks and re-run them planning-first. Steps are typed as plan, note, or approval_required; a run drafts plan steps (mock), records notes, and holds risky steps for explicit approval, never executing anything. Each run captures a per-step outcome, and creation and runs are governance-logged.
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+The Operating Layer 2.0 (`backend/app/services/operating_layer_v2_service.py`, routes under `/api/operating-layer-2`) refreshes the v40 capstone to cover the v41-v53 additions. It builds an expanded 19-group capability map and a readiness & governance scorecard across four graded dimensions — capability coverage, governance blocked ratio, health (from the v49 monitor), and approvals backlog — with snapshots and a final report. It reads existing local state only, carries the not-AGI disclaimer, and leaves the original v40 layer untouched via a distinct route prefix.

@@ -274,6 +274,7 @@ from app.services.usage_ledger_service import UsageLedgerService
 from app.services.local_retrieval_service import LocalRetrievalService
 from app.services.eval_harness_service import EvalHarnessService
 from app.services.playbook_library_service import PlaybookLibraryService
+from app.services.operating_layer_v2_service import OperatingLayerV2Service
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -373,6 +374,7 @@ usage_ledger_service = UsageLedgerService(storage, governance_service)
 local_retrieval_service = LocalRetrievalService(storage, governance_service)
 eval_harness_service = EvalHarnessService(storage, governance_service)
 playbook_library_service = PlaybookLibraryService(storage, governance_service)
+operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1636,6 +1638,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **local_retrieval_service.analytics_summary(),
         **eval_harness_service.analytics_summary(),
         **playbook_library_service.analytics_summary(),
+        **operating_layer_v2_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3859,6 +3862,40 @@ def run_playbook(playbook_id: str) -> dict:
 def list_playbook_runs(playbook_id: str | None = Query(default=None)) -> dict:
     runs = playbook_library_service.list_runs(playbook_id)
     return {"runs": runs, "count": len(runs)}
+
+
+# ----------------------------------------------------------------------
+# v55.0 EvolveAgent Operating Layer 2.0 — expanded capability map + scorecard.
+# ----------------------------------------------------------------------
+@router.get("/operating-layer-2/dashboard")
+def get_operating_layer_v2_dashboard() -> dict:
+    return operating_layer_v2_service.dashboard()
+
+
+@router.get("/operating-layer-2/capabilities")
+def get_operating_layer_v2_capabilities() -> dict:
+    return operating_layer_v2_service.capabilities()
+
+
+@router.get("/operating-layer-2/scorecard")
+def get_operating_layer_v2_scorecard() -> dict:
+    return operating_layer_v2_service.scorecard()
+
+
+@router.get("/operating-layer-2/snapshots")
+def list_operating_layer_v2_snapshots() -> dict:
+    snapshots = operating_layer_v2_service.list_snapshots()
+    return {"snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/operating-layer-2/snapshots")
+def create_operating_layer_v2_snapshot() -> dict:
+    return operating_layer_v2_service.create_snapshot()
+
+
+@router.post("/operating-layer-2/report")
+def create_operating_layer_v2_report() -> dict:
+    return operating_layer_v2_service.create_report()
 
 
 @router.get("/governance")

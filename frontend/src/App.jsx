@@ -331,6 +331,9 @@ import {
   getPlaybooks,
   createPlaybook,
   runPlaybook,
+  getOperatingLayerV2Dashboard,
+  createOperatingLayerV2Snapshot,
+  createOperatingLayerV2Report,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1032,6 +1035,10 @@ function App() {
   const [playbooks, setPlaybooks] = useState([])
   const [playbookBusy, setPlaybookBusy] = useState(false)
   const [playbookRun, setPlaybookRun] = useState(null)
+  const [showOpLayer2, setShowOpLayer2] = useState(false)
+  const [opLayer2, setOpLayer2] = useState(null)
+  const [opLayer2Busy, setOpLayer2Busy] = useState(false)
+  const [opLayer2Report, setOpLayer2Report] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1170,6 +1177,7 @@ function App() {
     refreshRetrieval()
     refreshEvalHarness()
     refreshPlaybooks()
+    refreshOpLayer2()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2851,6 +2859,31 @@ function App() {
     const [summary, list] = await Promise.all([getPlaybooksSummary(), getPlaybooks()])
     setPlaybooksSummary(summary)
     setPlaybooks(list?.playbooks || [])
+  }
+
+  async function refreshOpLayer2() {
+    const dashboard = await getOperatingLayerV2Dashboard()
+    setOpLayer2(dashboard)
+  }
+
+  async function runOpLayer2Action(action) {
+    setOpLayer2Busy(true)
+    try {
+      const value = await action()
+      await refreshOpLayer2()
+      return value
+    } finally {
+      setOpLayer2Busy(false)
+    }
+  }
+
+  async function handleOpLayer2Snapshot() {
+    await runOpLayer2Action(() => createOperatingLayerV2Snapshot())
+  }
+
+  async function handleOpLayer2Report() {
+    const report = await runOpLayer2Action(() => createOperatingLayerV2Report())
+    if (report) setOpLayer2Report(report)
   }
 
   async function runPlaybookAction(action) {
@@ -8570,6 +8603,51 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOpLayer2((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Operating Layer 2.0
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOpLayer2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>EvolveAgent Operating Layer 2.0 · v55.0</strong>
+                  <span>Expanded capability map across v41–v53 + a platform readiness & governance scorecard.</span>
+                </div>
+                {opLayer2 && (
+                  <>
+                    <div className="agent-template-card">
+                      <strong>Overall: {opLayer2.overall_score}/100 · grade {opLayer2.overall_grade} · coverage {opLayer2.coverage_pct}%</strong>
+                    </div>
+                    {(opLayer2.dimensions || []).map((dim) => (
+                      <p className="muted" key={dim.name}>
+                        <span className={`risk-badge ${dim.grade === 'A' || dim.grade === 'B' ? 'risk-low' : dim.grade === 'C' ? 'risk-medium' : 'risk-high'}`}>{dim.grade}</span> {dim.name} — {dim.score}
+                      </p>
+                    ))}
+                    <p className="muted">capabilities active: {opLayer2.active_capability_groups}/{opLayer2.total_capability_groups}</p>
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleOpLayer2Snapshot} disabled={opLayer2Busy}>Snapshot</button>
+                  <button type="button" onClick={handleOpLayer2Report} disabled={opLayer2Busy}>Final report</button>
+                  <button type="button" onClick={() => refreshOpLayer2()} disabled={opLayer2Busy}>Refresh</button>
+                </div>
+                {opLayer2Report && (
+                  <div className="agent-template-card">
+                    <strong>{opLayer2Report.headline}</strong>
+                    <p className="muted">{opLayer2Report.disclaimer}</p>
+                  </div>
+                )}
+                {opLayer2?.disclaimer && <p className="muted"><strong>Disclaimer:</strong> {opLayer2.disclaimer}</p>}
               </div>
             )}
           </section>
