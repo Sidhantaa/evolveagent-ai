@@ -252,3 +252,9 @@ Spinning up consistent, preconfigured workspaces is a common need. The Workspace
 ## v58 — Scheduled Tasks
 
 Scheduling usually implies a background daemon, but that would break the platforms no-real-execution contract. v58 keeps it planning-first: a local registry where triggering a task produces a planned or approval-held mock run and nothing runs automatically on a timer. It captures the intent of scheduling while staying fully governed and local.
+
+---
+
+## v59 — Data Export & Backup
+
+A local-first system should let you take your data with you. v59 exports a curated bundle of content collections for download and imports it back with a non-destructive merge, so restoring never clobbers existing data. It excludes secrets, governance logs, and analytics, and never uploads anything - portability that stays within the platforms local-first, safe contract.

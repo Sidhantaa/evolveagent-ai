@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **57** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
+- **58** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v59 — Data Export & Backup
+- **Purpose:** Portable local backup of your content, with safe restore.
+- **How it operates:** `DataExportService` reads a curated allow-list of content collections into one JSON bundle for download. Import merges the bundle back in non-destructively — appending only items whose id is not already present, never overwriting or deleting. Secret values, governance logs, and analytics are excluded. Exports and imports are governance-logged.
+- **Main API route groups:** `/api/data-export` (+ `/bundle`, `/import`, `/summary`).
+- **Safety boundary:** Local only — no external upload; import is non-destructive (merge, never overwrite/delete); no secrets in the bundle.
+
 ### v58 — Scheduled Tasks
 - **Purpose:** Register recurring tasks without any real background execution.
 - **How it operates:** `ScheduledTasksService` stores tasks (schedule + action type). There is no daemon and nothing runs on a timer; triggering a task performs a planning-first mock run (plan / note / hold-for-approval) and records the outcome. `due_tasks` computes which tasks would be due, purely informationally. Creation and triggers are governance-logged.
@@ -500,4 +506,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v56 | Notifications & Alerts Center | `/api/notifications` | Local digest of platform alerts; acknowledge | In-app only; no email/SMS/push |
 | v57 | Workspace Templates & Cloning | `/api/workspace-templates` | Reusable workspace presets + instantiate | Local records only; no production provisioning/auth |
 | v58 | Scheduled Tasks | `/api/scheduled-tasks` | Local scheduled-task registry; planning-first triggers | No daemon/timer execution; risky steps need approval |
+| v59 | Data Export & Backup | `/api/data-export` | Local JSON bundle export + non-destructive import | Local only; no upload; merge-only; no secrets in bundle |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

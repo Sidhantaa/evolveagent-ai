@@ -1426,3 +1426,10 @@ class ScheduledTaskCreateRequest(BaseModel):
 
 class ScheduledTaskToggleRequest(BaseModel):
     enabled: bool
+
+
+# ----------------------------------------------------------------------
+# v59.0 Data Export & Backup
+# ----------------------------------------------------------------------
+class DataImportRequest(BaseModel):
+    bundle: dict = Field(default_factory=dict)
