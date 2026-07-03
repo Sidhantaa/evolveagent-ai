@@ -1303,3 +1303,97 @@ class MCPPolicyUpdateRequest(BaseModel):
 class MCPPolicyEvaluateRequest(BaseModel):
     connector_id: str = Field(..., min_length=1, max_length=120)
     action_name: str = Field(..., min_length=1, max_length=80)
+
+
+# ----------------------------------------------------------------------
+# v46.0 MCP Audit & Replay
+# ----------------------------------------------------------------------
+class MCPReplayRequest(BaseModel):
+    request_id: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v47.0 Secret Reference Registry (references only — never values)
+# ----------------------------------------------------------------------
+class MCPSecretRefCreateRequest(BaseModel):
+    key_name: str = Field(..., min_length=1, max_length=120)
+    label: str = Field(default="", max_length=160)
+    owner: str = Field(default="", max_length=120)
+    category: str = Field(default="api_key", pattern="^(api_key|token|webhook|database|other)$")
+    connector_slug: str = Field(default="", max_length=60)
+    rotation_days: int = Field(default=0, ge=0, le=3650)
+
+
+class MCPSecretRefUpdateRequest(BaseModel):
+    label: str | None = Field(default=None, max_length=160)
+    owner: str | None = Field(default=None, max_length=120)
+    category: str | None = Field(default=None, pattern="^(api_key|token|webhook|database|other)$")
+    rotation_days: int | None = Field(default=None, ge=0, le=3650)
+
+
+# ----------------------------------------------------------------------
+# v48.0 Unified Approvals Center
+# ----------------------------------------------------------------------
+class ApprovalDecisionRequest(BaseModel):
+    source: str = Field(..., pattern="^(mcp_execution|business_operator)$")
+    item_id: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v50.0 Cost & Usage Ledger (estimates only — no billing)
+# ----------------------------------------------------------------------
+class UsageRecordRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    capability: str = Field(default="other", pattern="^(text|image|transcription|mcp|other)$")
+    units: float = Field(default=1.0, ge=0)
+    estimated_cost: float | None = Field(default=None, ge=0)
+    mode: str = Field(default="mock", pattern="^(mock|real)$")
+
+
+class UsageBudgetRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    monthly_limit: float = Field(..., ge=0)
+
+
+# ----------------------------------------------------------------------
+# v51.0 Local Retrieval Layer (local-only)
+# ----------------------------------------------------------------------
+class RetrievalIndexRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    title: str = Field(default="", max_length=200)
+    content: str = Field(..., min_length=1, max_length=40000)
+
+
+class RetrievalQueryRequest(BaseModel):
+    workspace_id: str | None = Field(default=None, max_length=120)
+    query: str = Field(..., min_length=1, max_length=2000)
+    top_k: int = Field(default=3, ge=1, le=10)
+
+
+# ----------------------------------------------------------------------
+# v52.0 Evaluation Harness 2.0
+# ----------------------------------------------------------------------
+class EvalCaseModel(BaseModel):
+    prompt: str = Field(default="", max_length=2000)
+    reference_answer: str = Field(default="", max_length=4000)
+    expected_keywords: list[str] = Field(default_factory=list)
+
+
+class EvalSuiteCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    cases: list[EvalCaseModel] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
+# v53.0 Playbook Library
+# ----------------------------------------------------------------------
+class PlaybookStepModel(BaseModel):
+    title: str = Field(default="", max_length=200)
+    step_type: str = Field(default="plan", pattern="^(plan|note|approval_required)$")
+    detail: str = Field(default="", max_length=2000)
+
+
+class PlaybookCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=1000)
+    steps: list[PlaybookStepModel] = Field(default_factory=list)

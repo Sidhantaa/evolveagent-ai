@@ -182,3 +182,43 @@ Approve and reject delegate to `MCPExecutionService.approve_execution` / `reject
 The MCP Policy Engine (`backend/app/services/mcp_policy_service.py`, routes under `/api/mcp/policies`) adds declarative, tighten-only guardrails over the MCP surface. Policies are deny rules (the only effect) that match on connector slug, action, and risk level — each supporting a `*` wildcard — plus an optional `except_actions` carve-out.
 
 The engine is injected into `MCPConnectorService.plan_connector_action` (optional dependency; `None` by default) and evaluated before any other check: a match returns a blocked plan with a governance-logged denial, and a non-match falls through to the existing v41 rules. Because planning gates execution, a denial also blocks v42 execution. Crucially it is tighten-only — there is no allow effect, so policies can only add blocks and never widen access; with no policies defined the system behaves exactly as it did at v44.
+
+## v46 — MCP Audit & Replay
+
+The MCP Audit & Replay service (`backend/app/services/mcp_audit_service.py`, routes under `/api/mcp/audit`) provides a read-only unified timeline across connector events (v41), execution requests/results (v42/v43), and MCP-tagged governance events, with filtering and markdown/JSON export. Its replay endpoint re-derives what a past execution request would do today via `plan_connector_action` (dry) — it never executes, records a stored replay artifact, and logs a governance event. Paired with the v45.1 frontend pass that reorganized the MCP Hub into internal tabs (Connectors/Policies/Approvals/Executions/Audit).
+
+## v47 — Secret Reference Registry
+
+The Secret Reference Registry (`backend/app/services/mcp_secret_registry_service.py`, routes under `/api/mcp/secrets`) is a local catalog of the secret/env keys the MCP connectors and other integrations require. It stores the key name, an owner/label/category, and an optional rotation interval — never the value. Readiness is computed from `os.environ` as a boolean, and a rotation-due flag is derived from the interval and last-rotated timestamp. A defensive presenter strips any value field, so the API and UI only ever expose the key name and an is_set boolean. Registration, update, and rotation are governance-logged, and a Secrets tab surfaces it in the MCP Hub.
+
+## v48 — Unified Approvals Center
+
+The Unified Approvals Center (`backend/app/services/unified_approvals_service.py`, routes under `/api/approvals-center`) generalizes the v44 MCP inbox across every approval source. It aggregates pending MCP execution requests and business-operator approval items into one normalized, prioritized queue (high-risk then oldest first, with a source filter). Approve and reject delegate to the owning service, which performs the state transition and governance logging, so the center holds no independent execution power. It uses a distinct /approvals-center prefix to avoid colliding with the pre-existing /approvals workflow.
+
+## v49 — Health & Readiness Monitor
+
+The Health & Readiness Monitor (`backend/app/services/health_monitor_service.py`, routes under `/api/health-monitor`) aggregates read-only health signals from local state — governance blocked ratio, approvals backlog, secret-key readiness, MCP connectors, and policy posture — into per-check statuses and an overall score with recommendations. It performs no actions; the only write is a governance-logged health snapshot.
+
+## v50 — Cost & Usage Ledger
+
+The Cost & Usage Ledger (`backend/app/services/usage_ledger_service.py`, routes under `/api/usage-ledger`) records API usage estimates and per-workspace budgets, extending the v11 cost-control visibility. Costs are estimates derived from illustrative per-unit rates (or supplied explicitly); the service computes an under/near/over budget status with warnings. Nothing is billed, charged, or sent — it is visibility and planning only. Recording usage and setting budgets are governance-logged.
+
+## v51 — Local Retrieval Layer
+
+The Local Retrieval Layer (`backend/app/services/local_retrieval_service.py`, routes under `/api/retrieval`) deepens the v6 memory work. It chunks indexed workspace documents on sentence boundaries, tokenizes each chunk with stopword filtering, and answers queries by keyword-overlap scoring — returning the top chunks with a citation and matched terms, scoped to the workspace. It uses the standard library only, with no external vector database and no network. Indexing and queries are governance-logged.
+
+## v52 — Evaluation Harness 2.0
+
+The Evaluation Harness (`backend/app/services/eval_harness_service.py`, routes under `/api/eval-harness`) makes quality evaluation repeatable. Suites hold cases (prompt, reference answer, expected keywords); running a suite scores each case deterministically by expected-keyword coverage over its reference answer, with no real LLM call, and records a scorecard with a delta versus the previous run for regression detection. This keeps scores stable and reproducible in CI-like conditions.
+
+## v53 — Playbook Library
+
+The Playbook Library (`backend/app/services/playbook_library_service.py`, routes under `/api/playbooks`) lets users save reusable multi-step playbooks and re-run them planning-first. Steps are typed as plan, note, or approval_required; a run drafts plan steps (mock), records notes, and holds risky steps for explicit approval, never executing anything. Each run captures a per-step outcome, and creation and runs are governance-logged.
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+The Operating Layer 2.0 (`backend/app/services/operating_layer_v2_service.py`, routes under `/api/operating-layer-2`) refreshes the v40 capstone to cover the v41-v53 additions. It builds an expanded 19-group capability map and a readiness & governance scorecard across four graded dimensions — capability coverage, governance blocked ratio, health (from the v49 monitor), and approvals backlog — with snapshots and a final report. It reads existing local state only, carries the not-AGI disclaimer, and leaves the original v40 layer untouched via a distinct route prefix.
+
+## v56 — Notifications & Alerts Center
+
+The Notifications & Alerts Center (`backend/app/services/notifications_center_service.py`, routes under `/api/notifications`) turns platform signals — blocked governance actions, degraded health, and pending-approval backlog — into an in-app notifications feed. Generation is idempotent per signal signature, users acknowledge to clear, and nothing is sent externally (no email, SMS, or push). Generation and acknowledgement are governance-logged.

@@ -119,6 +119,16 @@ from app.models.request_models import (
     MCPPolicyCreateRequest,
     MCPPolicyUpdateRequest,
     MCPPolicyEvaluateRequest,
+    MCPReplayRequest,
+    MCPSecretRefCreateRequest,
+    MCPSecretRefUpdateRequest,
+    ApprovalDecisionRequest,
+    UsageRecordRequest,
+    UsageBudgetRequest,
+    RetrievalIndexRequest,
+    RetrievalQueryRequest,
+    EvalSuiteCreateRequest,
+    PlaybookCreateRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -256,6 +266,16 @@ from app.services.mcp_connector_service import MCPConnectorService
 from app.services.mcp_policy_service import MCPPolicyService
 from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
+from app.services.mcp_audit_service import MCPAuditService
+from app.services.mcp_secret_registry_service import MCPSecretRegistryService
+from app.services.unified_approvals_service import UnifiedApprovalsService
+from app.services.health_monitor_service import HealthMonitorService
+from app.services.usage_ledger_service import UsageLedgerService
+from app.services.local_retrieval_service import LocalRetrievalService
+from app.services.eval_harness_service import EvalHarnessService
+from app.services.playbook_library_service import PlaybookLibraryService
+from app.services.operating_layer_v2_service import OperatingLayerV2Service
+from app.services.notifications_center_service import NotificationsCenterService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -347,6 +367,16 @@ mcp_policy_service = MCPPolicyService(storage, governance_service)
 mcp_connector_service = MCPConnectorService(storage, governance_service, policy_service=mcp_policy_service)
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
+mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
+mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_service)
+unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
+health_monitor_service = HealthMonitorService(storage, governance_service)
+usage_ledger_service = UsageLedgerService(storage, governance_service)
+local_retrieval_service = LocalRetrievalService(storage, governance_service)
+eval_harness_service = EvalHarnessService(storage, governance_service)
+playbook_library_service = PlaybookLibraryService(storage, governance_service)
+operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
+notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1602,6 +1632,16 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_execution_service.analytics_summary(),
         **mcp_approvals_inbox_service.analytics_summary(),
         **mcp_policy_service.analytics_summary(),
+        **mcp_audit_service.analytics_summary(),
+        **mcp_secret_registry_service.analytics_summary(),
+        **unified_approvals_service.analytics_summary(),
+        **health_monitor_service.analytics_summary(),
+        **usage_ledger_service.analytics_summary(),
+        **local_retrieval_service.analytics_summary(),
+        **eval_harness_service.analytics_summary(),
+        **playbook_library_service.analytics_summary(),
+        **operating_layer_v2_service.analytics_summary(),
+        **notifications_center_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3479,6 +3519,79 @@ def reject_mcp_inbox_item(item_id: str) -> dict:
 
 
 # ----------------------------------------------------------------------
+# v46.0 MCP Audit & Replay — read-only unified timeline + dry replay.
+# ----------------------------------------------------------------------
+@router.get("/mcp/audit/summary")
+def get_mcp_audit_summary() -> dict:
+    return mcp_audit_service.summary()
+
+
+@router.get("/mcp/audit")
+def get_mcp_audit(
+    connector_id: str | None = Query(default=None),
+    event_type: str | None = Query(default=None),
+    since: str | None = Query(default=None),
+) -> dict:
+    events = mcp_audit_service.timeline(connector_id=connector_id, event_type=event_type, since=since)
+    return {"events": events, "count": len(events)}
+
+
+@router.get("/mcp/audit/export")
+def export_mcp_audit(format: str = Query(default="markdown")) -> dict:
+    fmt = format if format in ("markdown", "json") else "markdown"
+    return mcp_audit_service.export(fmt)
+
+
+@router.get("/mcp/audit/replays")
+def list_mcp_replays() -> dict:
+    replays = mcp_audit_service.list_replays()
+    return {"replays": replays, "count": len(replays)}
+
+
+@router.post("/mcp/audit/replay")
+def replay_mcp_request(request: MCPReplayRequest) -> dict:
+    try:
+        return mcp_audit_service.replay(request.request_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v47.0 Secret Reference Registry — key names + readiness only; never values.
+# ----------------------------------------------------------------------
+@router.get("/mcp/secrets/summary")
+def get_mcp_secrets_summary() -> dict:
+    return mcp_secret_registry_service.summary()
+
+
+@router.get("/mcp/secrets")
+def list_mcp_secrets() -> dict:
+    refs = mcp_secret_registry_service.list_refs()
+    return {"refs": refs, "count": len(refs)}
+
+
+@router.post("/mcp/secrets")
+def register_mcp_secret(request: MCPSecretRefCreateRequest) -> dict:
+    return mcp_secret_registry_service.register_ref(request.model_dump())
+
+
+@router.patch("/mcp/secrets/{ref_id}")
+def update_mcp_secret(ref_id: str, request: MCPSecretRefUpdateRequest) -> dict:
+    try:
+        return mcp_secret_registry_service.update_ref(ref_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Secret reference not found") from error
+
+
+@router.post("/mcp/secrets/{ref_id}/rotate")
+def rotate_mcp_secret(ref_id: str) -> dict:
+    try:
+        return mcp_secret_registry_service.mark_rotated(ref_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Secret reference not found") from error
+
+
+# ----------------------------------------------------------------------
 # v45.0 MCP Policy Engine — tighten-only deny rules evaluated before planning.
 # ----------------------------------------------------------------------
 @router.get("/mcp/policies/summary")
@@ -3573,6 +3686,246 @@ def run_mcp_execution(request_id: str) -> dict:
         detail = str(error)
         status = 404 if "not found" in detail.lower() else 409
         raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v48.0 Unified Approvals Center — one queue across all approval sources.
+# (Distinct /approvals-center prefix to avoid the pre-existing /approvals workflow.)
+# ----------------------------------------------------------------------
+@router.get("/approvals-center/summary")
+def get_approvals_center_summary() -> dict:
+    return unified_approvals_service.summary()
+
+
+@router.get("/approvals-center")
+def list_approvals_center(source: str | None = Query(default=None)) -> dict:
+    items = unified_approvals_service.list_pending(source)
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/approvals-center/approve")
+def approve_approvals_center(request: ApprovalDecisionRequest) -> dict:
+    try:
+        return unified_approvals_service.approve(request.source, request.item_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+@router.post("/approvals-center/reject")
+def reject_approvals_center(request: ApprovalDecisionRequest) -> dict:
+    try:
+        return unified_approvals_service.reject(request.source, request.item_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v49.0 Health & Readiness Monitor — read-only scored health dashboard.
+# ----------------------------------------------------------------------
+@router.get("/health-monitor/dashboard")
+def get_health_monitor_dashboard() -> dict:
+    return health_monitor_service.dashboard()
+
+
+@router.get("/health-monitor/snapshots")
+def list_health_snapshots() -> dict:
+    snapshots = health_monitor_service.list_snapshots()
+    return {"snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/health-monitor/snapshots")
+def create_health_snapshot() -> dict:
+    return health_monitor_service.create_snapshot()
+
+
+# ----------------------------------------------------------------------
+# v50.0 Cost & Usage Ledger — usage estimates + budgets (no billing).
+# ----------------------------------------------------------------------
+@router.get("/usage-ledger/summary")
+def get_usage_ledger_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    return usage_ledger_service.summary(workspace_id)
+
+
+@router.get("/usage-ledger/entries")
+def list_usage_entries(workspace_id: str | None = Query(default=None)) -> dict:
+    entries = usage_ledger_service.list_entries(workspace_id)
+    return {"entries": entries, "count": len(entries)}
+
+
+@router.post("/usage-ledger/entries")
+def record_usage_entry(request: UsageRecordRequest) -> dict:
+    return usage_ledger_service.record_usage(request.model_dump())
+
+
+@router.get("/usage-ledger/budgets")
+def list_usage_budgets() -> dict:
+    budgets = usage_ledger_service.list_budgets()
+    return {"budgets": budgets, "count": len(budgets)}
+
+
+@router.post("/usage-ledger/budgets")
+def set_usage_budget(request: UsageBudgetRequest) -> dict:
+    return usage_ledger_service.set_budget(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v51.0 Local Retrieval Layer — local chunking + keyword retrieval.
+# ----------------------------------------------------------------------
+@router.get("/retrieval/summary")
+def get_retrieval_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    return local_retrieval_service.summary(workspace_id)
+
+
+@router.get("/retrieval/documents")
+def list_retrieval_documents(workspace_id: str | None = Query(default=None)) -> dict:
+    docs = local_retrieval_service.list_documents(workspace_id)
+    return {"documents": docs, "count": len(docs)}
+
+
+@router.post("/retrieval/documents")
+def index_retrieval_document(request: RetrievalIndexRequest) -> dict:
+    return local_retrieval_service.index_document(request.model_dump())
+
+
+@router.post("/retrieval/query")
+def query_retrieval(request: RetrievalQueryRequest) -> dict:
+    return local_retrieval_service.query(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v52.0 Evaluation Harness 2.0 — repeatable suites + scorecards + regression.
+# ----------------------------------------------------------------------
+@router.get("/eval-harness/summary")
+def get_eval_harness_summary() -> dict:
+    return eval_harness_service.summary()
+
+
+@router.get("/eval-harness/suites")
+def list_eval_suites() -> dict:
+    suites = eval_harness_service.list_suites()
+    return {"suites": suites, "count": len(suites)}
+
+
+@router.post("/eval-harness/suites")
+def create_eval_suite(request: EvalSuiteCreateRequest) -> dict:
+    return eval_harness_service.create_suite(request.model_dump())
+
+
+@router.post("/eval-harness/suites/{suite_id}/run")
+def run_eval_suite(suite_id: str) -> dict:
+    try:
+        return eval_harness_service.run_suite(suite_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Suite not found") from error
+
+
+@router.get("/eval-harness/runs")
+def list_eval_runs(suite_id: str | None = Query(default=None)) -> dict:
+    runs = eval_harness_service.list_runs(suite_id)
+    return {"runs": runs, "count": len(runs)}
+
+
+@router.get("/eval-harness/suites/{suite_id}/regression")
+def get_eval_regression(suite_id: str) -> dict:
+    return eval_harness_service.regression(suite_id)
+
+
+# ----------------------------------------------------------------------
+# v53.0 Playbook Library — reusable multi-step playbooks (planning-first).
+# ----------------------------------------------------------------------
+@router.get("/playbooks/summary")
+def get_playbooks_summary() -> dict:
+    return playbook_library_service.summary()
+
+
+@router.get("/playbooks")
+def list_playbooks() -> dict:
+    playbooks = playbook_library_service.list_playbooks()
+    return {"playbooks": playbooks, "count": len(playbooks)}
+
+
+@router.post("/playbooks")
+def create_playbook(request: PlaybookCreateRequest) -> dict:
+    return playbook_library_service.create_playbook(request.model_dump())
+
+
+@router.post("/playbooks/{playbook_id}/run")
+def run_playbook(playbook_id: str) -> dict:
+    try:
+        return playbook_library_service.run_playbook(playbook_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Playbook not found") from error
+
+
+@router.get("/playbooks/runs")
+def list_playbook_runs(playbook_id: str | None = Query(default=None)) -> dict:
+    runs = playbook_library_service.list_runs(playbook_id)
+    return {"runs": runs, "count": len(runs)}
+
+
+# ----------------------------------------------------------------------
+# v55.0 EvolveAgent Operating Layer 2.0 — expanded capability map + scorecard.
+# ----------------------------------------------------------------------
+@router.get("/operating-layer-2/dashboard")
+def get_operating_layer_v2_dashboard() -> dict:
+    return operating_layer_v2_service.dashboard()
+
+
+@router.get("/operating-layer-2/capabilities")
+def get_operating_layer_v2_capabilities() -> dict:
+    return operating_layer_v2_service.capabilities()
+
+
+@router.get("/operating-layer-2/scorecard")
+def get_operating_layer_v2_scorecard() -> dict:
+    return operating_layer_v2_service.scorecard()
+
+
+@router.get("/operating-layer-2/snapshots")
+def list_operating_layer_v2_snapshots() -> dict:
+    snapshots = operating_layer_v2_service.list_snapshots()
+    return {"snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/operating-layer-2/snapshots")
+def create_operating_layer_v2_snapshot() -> dict:
+    return operating_layer_v2_service.create_snapshot()
+
+
+@router.post("/operating-layer-2/report")
+def create_operating_layer_v2_report() -> dict:
+    return operating_layer_v2_service.create_report()
+
+
+# ----------------------------------------------------------------------
+# v56.0 Notifications & Alerts Center — local in-app digest (no real sending).
+# ----------------------------------------------------------------------
+@router.get("/notifications/summary")
+def get_notifications_summary() -> dict:
+    return notifications_center_service.summary()
+
+
+@router.get("/notifications")
+def list_notifications(unread: bool = Query(default=False)) -> dict:
+    items = notifications_center_service.list_notifications(unacknowledged_only=unread)
+    return {"notifications": items, "count": len(items)}
+
+
+@router.post("/notifications/generate")
+def generate_notifications() -> dict:
+    return notifications_center_service.generate()
+
+
+@router.post("/notifications/{notif_id}/ack")
+def acknowledge_notification(notif_id: str) -> dict:
+    try:
+        return notifications_center_service.acknowledge(notif_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Notification not found") from error
 
 
 @router.get("/governance")

@@ -1,4 +1,60 @@
-# EvolveAgent AI — Project Summary (current completed: v45.0 MCP Policy Engine · v44.5 Portfolio & Demo Pack)
+# EvolveAgent AI — Project Summary (current completed: v56.0 Notifications & Alerts Center · v45.1 MCP Hub UI)
+
+## v56 — Notifications & Alerts Center
+
+A local in-app digest that turns platform signals — blocked governance actions, degraded health, and pending-approval backlog — into an acknowledgeable notifications feed. It sends nothing externally (no email/SMS/push); generation is idempotent per signal (an unacknowledged notification with the same signature is not duplicated). Exposed at `/api/notifications` (generate, list, acknowledge, summary), in analytics, and as a Notifications Developer-Mode panel. Generation and acknowledgement are governance-logged.
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+Refreshes the v40 capstone to cover the v41–v53 additions in an expanded 19-group capability map, and adds a platform-wide readiness & governance scorecard combining capability coverage, governance posture, health, and approvals backlog into graded dimensions and an overall grade. It reads existing local state only — explicitly not AGI — and persists governance-logged snapshots/reports. Exposed at `/api/operating-layer-2` (dashboard, capabilities, scorecard, snapshots, report); the original v40 layer is untouched. (v54 was folded into the v44.5 portfolio pass.)
+
+## v53 — Playbook Library
+
+## v53 — Playbook Library
+
+Reusable, governed multi-step playbooks — saved sequences of planned actions users can re-run. Running a playbook is planning-first: each step is drafted, informational, or (for risky steps) held for explicit approval — nothing is executed. A run produces a per-step outcome record. Exposed at `/api/playbooks` (create, run, runs, summary), in analytics, and as a Playbook Library Developer-Mode panel. Playbook creation and runs are governance-logged.
+
+## v52 — Evaluation Harness 2.0
+
+## v52 — Evaluation Harness 2.0
+
+Turns ad-hoc evaluation into repeatable suites and scorecards with regression tracking. A suite holds cases (prompt, reference answer, expected keywords); running it is deterministic and mock-safe — each case is scored by expected-keyword coverage over its reference answer, with no real LLM call — so scores are stable and regressions detectable across runs. Exposed at `/api/eval-harness` (suites, run, runs, regression, summary), in analytics, and as an Evaluation Harness Developer-Mode panel. Suite creation and runs are governance-logged.
+
+## v51 — Local Retrieval Layer
+
+## v51 — Local Retrieval Layer
+
+Deepens the v6 memory work: it chunks workspace documents locally and answers queries by keyword-overlap scoring, returning the best-matching chunks with a source citation. Standard-library only — no external vector database and no network — mirroring the project's local-first stance. Exposed at `/api/retrieval` (index documents, query, summary), in analytics, and as a Local Retrieval Developer-Mode panel. Indexing and queries are governance-logged.
+
+## v50 — Cost & Usage Ledger
+
+## v50 — Cost & Usage Ledger
+
+A local ledger of API usage estimates (mock or real) with per-workspace budgets and near/over threshold warnings, extending v11 cost visibility. Costs are estimates derived from illustrative per-unit rates; nothing is billed, charged, or sent. Exposed at `/api/usage-ledger` (entries + budgets + summary), in analytics, and as a Cost & Usage Ledger Developer-Mode panel. Recording usage and setting budgets are governance-logged.
+
+## v49 — Health & Readiness Monitor
+
+## v49 — Health & Readiness Monitor
+
+A read-only aggregation of platform health signals derived from local state — governance blocked ratio, approvals backlog (MCP + business), secret-key readiness, MCP connectors, and policy posture — scored into one health dashboard with per-check status (ok/warn/critical/info), an overall score, and recommendations. It performs no actions; it only reads existing collections and can persist a governance-logged health snapshot. Exposed at `/api/health-monitor`, in analytics, and as a Health & Readiness Developer-Mode panel.
+
+## v48 — Unified Approvals Center
+
+## v48 — Unified Approvals Center
+
+Generalizes the v44 MCP approvals inbox across all approval sources — today the MCP execution requests (v42) and the business-operator approval items (v33) — into one prioritized queue (high-risk / oldest first, with a source filter). Approve/reject **delegate to the owning governed service** (which performs the state transition and governance logging), so the center adds no new execution power. Exposed at `/api/approvals-center` (distinct from the pre-existing `/approvals` workflow), surfaced in analytics, and shown as its own "Approvals Center" Developer-Mode panel.
+
+## v47 — Secret Reference Registry
+
+## v47 — Secret Reference Registry
+
+A local catalog of which secret/env keys the MCP connectors need — with readiness (is the env var set? true/false), owner, category, and rotation reminders. It records only the key **name**; it never stores, reads, logs, or returns a secret value (readiness is derived from `os.environ` as a boolean). CRUD + rotate at `/api/mcp/secrets`, analytics fields, and a Secrets tab in the MCP Hub panel. Registration and rotation are governance-logged.
+
+## v46 — MCP Audit & Replay
+
+A read-only unified audit timeline across the MCP surface — connector events (v41), execution requests/results (v42/v43), and MCP-tagged governance events — with filtering and markdown/JSON export at `/api/mcp/audit`. It also adds a **dry replay**: re-deriving what a past execution request would do today via the connector planning layer, **without executing anything** (the only write is a stored replay record; replays are governance-logged). Surfaced as an "Audit" tab in the MCP Hub panel. Paired with **v45.1**, a frontend-only pass that reorganized the MCP Hub into internal tabs with risk badges.
 
 ## v45 — MCP Policy Engine
 

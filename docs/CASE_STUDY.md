@@ -180,3 +180,63 @@ With a real execution path in place (v43), the natural governance need is a sing
 ## v45 — MCP Policy Engine
 
 After building a real (but sandboxed) execution path and an approvals inbox, the next governance need is declarative control over what may even be attempted. The MCP Policy Engine lets an operator write deny rules — by connector, action, or risk level, with wildcards and carve-outs — that are evaluated before connector planning. It is deliberately tighten-only: there is no allow effect, so a policy can only add a block, never grant new access. This is a common real-world guardrail pattern (deny-by-policy) layered on top of the existing governed primitives without changing default behavior.
+
+---
+
+## v46 — MCP Audit & Replay
+
+Governance is only as good as its audit trail. v46 aggregates the whole MCP surface — connector events, executions, and MCP governance — into one read-only timeline with export, and adds a dry replay that shows how a past request would be evaluated under todays connectors and policies without executing anything. Combined with the v45.1 UI pass (tabbed MCP Hub), the MCP arc now reads as a coherent, inspectable governance story from registration through audit.
+
+---
+
+## v47 — Secret Reference Registry
+
+Managing integrations means tracking secrets without ever touching them. The Secret Reference Registry catalogs which env keys each connector needs, whether they are set, and when they should be rotated — recording only the key name and a readiness boolean. It demonstrates a security-conscious pattern: know your secret surface and rotation posture while guaranteeing values are never stored, logged, or returned. It extends the MCP arc from planning and execution into operational hygiene, all within the local-first, governed contract.
+
+---
+
+## v48 — Unified Approvals Center
+
+Approvals were scattered across subsystems, so v48 unifies them. It aggregates every pending approval — MCP executions and business-operator items today — into one prioritized queue and routes each decision back to the service that owns it. This is the classic inbox pattern generalized across a platform, built on top of existing governed primitives without adding any new execution authority.
+
+---
+
+## v49 — Health & Readiness Monitor
+
+As the platform grew, a single readiness view became valuable. The Health & Readiness Monitor scores governance, approvals backlog, secret readiness, connectors, and policy posture into one dashboard with actionable recommendations — entirely read-only, derived from existing local state. It demonstrates observability layered on top of the governed primitives without introducing any new authority.
+
+---
+
+## v50 — Cost & Usage Ledger
+
+Cost visibility matters even in a mock-first system. The Cost & Usage Ledger records usage estimates per capability and workspace, tracks budgets, and warns as usage approaches or exceeds them — all as estimates, with no billing or payment. It extends the early v11 cost-control work into a first-class, governed ledger.
+
+---
+
+## v51 — Local Retrieval Layer
+
+Grounding answers in your own documents usually implies an external vector database. v51 shows it can stay local-first: it chunks documents, scores keyword overlap, and returns cited passages entirely on the local machine — no external service, no network. It extends the early memory-intelligence work into a lightweight, governed retrieval layer consistent with the platforms local-first contract.
+
+---
+
+## v52 — Evaluation Harness 2.0
+
+Quality needs to be measured repeatably, not judged once. The Evaluation Harness turns evaluation into versioned suites and scorecards with regression tracking, using deterministic, mock-safe scoring so results are stable across runs and machines. It extends the early evaluation-lab work into a reproducible quality gate consistent with the platforms local-first, mock-first design.
+
+---
+
+## v53 — Playbook Library
+
+Repeatable workflows are valuable, but only if they stay safe. The Playbook Library lets users capture multi-step sequences and re-run them planning-first — planning the safe steps and holding risky ones for approval, with nothing executed. It packages the platforms governed, mock-first philosophy into reusable, shareable workflows.
+
+---
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+After a long arc of governance and observability features, v55 refreshes the capstone: an expanded capability map plus a graded readiness and governance scorecard that rolls coverage, governance posture, health, and approvals backlog into one view. It stays true to the frame set at v40 - not AGI, a governed orchestration layer - now spanning the full v15-v53 surface.
+
+---
+
+## v56 — Notifications & Alerts Center
+
+A governed system needs to surface what needs attention. The Notifications & Alerts Center digests governance blocks, health issues, and approvals backlog into an in-app feed the user can acknowledge - with no external delivery. It keeps the alerting fully local and governed, consistent with the platforms no-real-sending contract.

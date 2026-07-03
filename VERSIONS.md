@@ -18,8 +18,8 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **~480** API routes
 - **48** service test modules
 - **494** passing backend tests
-- single-file React UI (~**10,200** lines)
-- **45** implementation versions (+ the v44.5 consolidation pass)
+- single-file React UI (~**10,300** lines)
+- **55** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
 
 ## Architecture Pattern
 
@@ -352,6 +352,72 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/policies` (+ `/summary`, `/evaluate`, `/{policy_id}`).
 - **Safety boundary:** **Tighten-only** — policies can only add blocks, never grant access (no "allow" effect exists). Local records; evaluated before planning; denials governance-logged.
 
+### v46 — MCP Audit & Replay
+- **Purpose:** A read-only, auditable view of the MCP surface plus a safe dry replay.
+- **How it operates:** `MCPAuditService` builds a unified timeline from connector events, execution requests/results, and MCP-tagged governance events (filter by connector / event type / since), and exports it as markdown or JSON. **Replay** re-derives what a past execution request would do today via `plan_connector_action` (dry) — it never executes, stores a replay record, and logs a governance event.
+- **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
+- **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
+
+### v56 — Notifications & Alerts Center
+- **Purpose:** A local, in-app place to see and clear important platform alerts.
+- **How it operates:** `NotificationsCenterService` scans signals — blocked governance actions, degraded health (from the v49 monitor), and pending-approval backlog — and turns them into notifications with a severity and a signature. Generation is idempotent (an unacknowledged notification with the same signature is not duplicated); users acknowledge to clear. Generation and acknowledgement are governance-logged.
+- **Main API route groups:** `/api/notifications` (+ `/summary`, `/generate`, `/{id}/ack`).
+- **Safety boundary:** In-app digest only — nothing is sent externally (no email, SMS, or push).
+
+### v55 — EvolveAgent Operating Layer 2.0
+- **Purpose:** A refreshed capstone dashboard covering the v41–v53 additions with a platform readiness & governance scorecard.
+- **How it operates:** `OperatingLayerV2Service` builds an expanded 19-group capability map (each active by data presence) and a scorecard across four dimensions — capability coverage, governance (blocked ratio), health (from the v49 monitor), and approvals backlog — each graded A–F with an overall grade. Snapshots and a final report are persisted and governance-logged. The original v40 operating layer is left untouched (distinct `/api/operating-layer-2` prefix).
+- **Main API route groups:** `/api/operating-layer-2` (+ `/dashboard`, `/capabilities`, `/scorecard`, `/snapshots`, `/report`).
+- **Safety boundary:** Read-only aggregation + persisted snapshot; carries the "not AGI" disclaimer and the full safety-boundary list. *(v54 was folded into the v44.5 portfolio pass.)*
+
+### v53 — Playbook Library
+- **Purpose:** Save and re-run governed multi-step action sequences without executing anything.
+- **How it operates:** `PlaybookLibraryService` stores playbooks of steps (plan / note / approval_required). Running a playbook is planning-first: plan steps are drafted (mock), note steps are informational, and approval_required steps are held for explicit human approval — the run records a per-step outcome and never executes. Creation and runs are governance-logged.
+- **Main API route groups:** `/api/playbooks` (+ `/{id}/run`, `/runs`, `/summary`).
+- **Safety boundary:** Planning-first — nothing is executed; risky steps always require approval.
+
+### v52 — Evaluation Harness 2.0
+- **Purpose:** Repeatable, regression-aware quality evaluation for agent behavior.
+- **How it operates:** `EvalHarnessService` stores suites of cases (prompt, reference answer, expected keywords). Running a suite scores each case deterministically by expected-keyword coverage over its reference answer — no real LLM call — producing a scorecard with per-case scores, pass counts, and a delta vs the previous run for regression detection. Suite creation and runs are governance-logged.
+- **Main API route groups:** `/api/eval-harness` (+ `/suites`, `/suites/{id}/run`, `/runs`, `/suites/{id}/regression`, `/summary`).
+- **Safety boundary:** Deterministic and mock-safe — no real LLM/provider call; scores are stable and reproducible.
+
+### v51 — Local Retrieval Layer
+- **Purpose:** Ground answers in workspace documents using purely local retrieval.
+- **How it operates:** `LocalRetrievalService` chunks indexed documents on sentence boundaries, tokenizes each chunk (stopword-filtered), and answers queries by keyword-overlap scoring — returning the top chunks with a citation and matched terms. Standard library only; queries are workspace-scoped. Indexing and queries are governance-logged.
+- **Main API route groups:** `/api/retrieval` (+ `/documents`, `/query`, `/summary`).
+- **Safety boundary:** Local-first — no external vector database, no network; chunks and scores are computed locally.
+
+### v50 — Cost & Usage Ledger
+- **Purpose:** Track API usage estimates and budgets per workspace — visibility only, never billing.
+- **How it operates:** `UsageLedgerService` records usage entries (capability, units, estimated cost derived from illustrative rates when not supplied), stores per-workspace budgets, and computes an under/near/over status with warnings and a by-capability breakdown. Recording and budget changes are governance-logged.
+- **Main API route groups:** `/api/usage-ledger` (+ `/summary`, `/entries`, `/budgets`).
+- **Safety boundary:** Estimates and planning only — extends v11 cost visibility; no billing, charging, or payment is performed.
+
+### v49 — Health & Readiness Monitor
+- **Purpose:** One scored, read-only view of platform health and readiness.
+- **How it operates:** `HealthMonitorService` derives checks from local collections — governance blocked ratio, approvals backlog, secret-key readiness, MCP connectors, and policy posture — each with an ok/warn/critical/info status, rolled into an overall score and recommendations. Snapshots are persisted and governance-logged.
+- **Main API route groups:** `/api/health-monitor` (+ `/dashboard`, `/snapshots`).
+- **Safety boundary:** Read-only aggregation; performs no actions, changes no state except a stored snapshot.
+
+### v48 — Unified Approvals Center
+- **Purpose:** One prioritized place to review and act on everything awaiting human approval, across every source.
+- **How it operates:** `UnifiedApprovalsService` aggregates pending MCP execution requests (v42) and business-operator approval items (v33), normalizes each with a source/title/risk/age, and sorts high-risk then oldest first (with a source filter). Approve/reject delegate to the owning service (`MCPExecutionService` / `BusinessOperatorAdvancedService`), which do the logging.
+- **Main API route groups:** `/api/approvals-center` (+ `/summary`, `/approve`, `/reject`) — a distinct prefix from the pre-existing `/approvals` workflow.
+- **Safety boundary:** Triage + delegated decisions only; no new execution power, no bypass; each decision flows through its owning governed service.
+
+### v47 — Secret Reference Registry
+- **Purpose:** Know which secrets each connection needs and whether they are ready — without ever touching the values.
+- **How it operates:** `MCPSecretRegistryService` stores references (key name, label, owner, category, optional connector slug, rotation interval). Readiness is computed from `os.environ` as a boolean; a rotation-due flag is derived from `rotation_days` + `last_rotated_at`. Registration, update, and rotate are governance-logged.
+- **Main API route groups:** `/api/mcp/secrets` (+ `/summary`, `/{ref_id}`, `/{ref_id}/rotate`).
+- **Safety boundary:** References only — it never stores, reads, logs, or returns a secret value; a defensive presenter strips any `value` field and exposes only key name + `is_set` boolean.
+
+### v45.1 — MCP Hub UI
+- **Purpose:** Make the multi-version MCP Hub panel usable.
+- **How it operates:** Reorganized the panel into internal tabs (Connectors · Policies · Approvals · Executions · Audit) with live counts, and added CSS for the tab bar and risk badges. Frontend-only.
+- **Main API route groups:** none.
+- **Safety boundary:** Presentation only; no behavior change.
+
 ### v44.5 — Portfolio & Demo Pack
 - **Purpose:** A consolidation and presentation pass to make the repo portfolio- and demo-ready before the v45–v55 arc.
 - **How it operates:** Documentation only — synced scale numbers and the canonical one-line description across the docs; added a portfolio pack (`docs/PORTFOLIO_PACK.md`), a refreshed screenshot guide, a 5–7 minute demo script, `docs/RELEASE_NOTES_v44.md`, and `docs/DEMO_DATA_CHECKLIST.md`.
@@ -409,4 +475,15 @@ From v15 onward every version follows the governed architecture above: a service
 | v43 | MCP Read-Only Adapter | `/api/mcp/adapter/status` | Opt-in real read-only exec (git/fs), mock fallback | Stdlib only; no shell/network/writes/secrets; sandboxed; opt-in |
 | v44 | MCP Approvals Inbox | `/api/mcp/inbox` | Prioritized queue of pending approvals; approve/reject | Triage + delegated decisions only; no new execution power |
 | v45 | MCP Policy Engine | `/api/mcp/policies` | Deny-only policies evaluated before planning | Tighten-only; never grants access; governance-logged |
+| v45.1 | MCP Hub UI | (frontend) | Tabbed MCP Hub panel + risk badges | Presentation only; no behavior change |
+| v46 | MCP Audit & Replay | `/api/mcp/audit` | Read-only timeline + export + dry replay | No real execution; read-only; stored replay artifact only |
+| v47 | Secret Reference Registry | `/api/mcp/secrets` | Key-reference catalog + readiness + rotation | References only; never stores/returns secret values |
+| v48 | Unified Approvals Center | `/api/approvals-center` | One prioritized queue across all approval sources | Triage + delegated decisions only; no new execution power |
+| v49 | Health & Readiness Monitor | `/api/health-monitor` | Read-only scored health dashboard + snapshots | Read-only aggregation; no actions taken |
+| v50 | Cost & Usage Ledger | `/api/usage-ledger` | Usage estimates + per-workspace budgets | Estimates only; no billing/charge/payment |
+| v51 | Local Retrieval Layer | `/api/retrieval` | Local chunking + keyword retrieval with citations | Local-first; no external vector DB or network |
+| v52 | Evaluation Harness 2.0 | `/api/eval-harness` | Repeatable suites/scorecards + regression tracking | Deterministic, mock-safe; no real LLM call |
+| v53 | Playbook Library | `/api/playbooks` | Reusable multi-step playbooks, run planning-first | Nothing executed; risky steps require approval |
+| v55 | Operating Layer 2.0 | `/api/operating-layer-2` | Expanded capability map + readiness/governance scorecard | Read-only; not AGI; v40 layer untouched |
+| v56 | Notifications & Alerts Center | `/api/notifications` | Local digest of platform alerts; acknowledge | In-app only; no email/SMS/push |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

@@ -304,6 +304,40 @@ import {
   getMcpPolicySummary,
   createMcpPolicy,
   updateMcpPolicy,
+  getMcpAudit,
+  getMcpAuditSummary,
+  replayMcpRequest,
+  getMcpSecrets,
+  getMcpSecretsSummary,
+  registerMcpSecret,
+  rotateMcpSecret,
+  getApprovalsCenter,
+  getApprovalsCenterSummary,
+  approveCenterItem,
+  rejectCenterItem,
+  getHealthMonitorDashboard,
+  createHealthSnapshot,
+  getUsageLedgerSummary,
+  recordUsageEntry,
+  setUsageBudget,
+  getRetrievalSummary,
+  indexRetrievalDocument,
+  queryRetrieval,
+  getEvalSummary,
+  getEvalSuites,
+  createEvalSuite,
+  runEvalSuite,
+  getPlaybooksSummary,
+  getPlaybooks,
+  createPlaybook,
+  runPlaybook,
+  getOperatingLayerV2Dashboard,
+  createOperatingLayerV2Snapshot,
+  createOperatingLayerV2Report,
+  getNotificationsSummary,
+  getNotifications,
+  generateNotifications,
+  acknowledgeNotification,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -970,6 +1004,49 @@ function App() {
   const [mcpPolicySlug, setMcpPolicySlug] = useState('*')
   const [mcpPolicyAction, setMcpPolicyAction] = useState('*')
   const [mcpTab, setMcpTab] = useState('connectors')
+  const [mcpAudit, setMcpAudit] = useState([])
+  const [mcpAuditSummary, setMcpAuditSummary] = useState(null)
+  const [mcpReplayId, setMcpReplayId] = useState('')
+  const [mcpReplayResult, setMcpReplayResult] = useState(null)
+  const [mcpSecrets, setMcpSecrets] = useState([])
+  const [mcpSecretsSummary, setMcpSecretsSummary] = useState(null)
+  const [mcpSecretKey, setMcpSecretKey] = useState('')
+  const [showApprovalsCenter, setShowApprovalsCenter] = useState(false)
+  const [approvalsCenter, setApprovalsCenter] = useState([])
+  const [approvalsCenterSummary, setApprovalsCenterSummary] = useState(null)
+  const [acBusy, setAcBusy] = useState(false)
+  const [acError, setAcError] = useState(null)
+  const [showHealthMonitor, setShowHealthMonitor] = useState(false)
+  const [healthDashboard, setHealthDashboard] = useState(null)
+  const [healthBusy, setHealthBusy] = useState(false)
+  const [showUsageLedger, setShowUsageLedger] = useState(false)
+  const [usageSummary, setUsageSummary] = useState(null)
+  const [usageBusy, setUsageBusy] = useState(false)
+  const [usageBudgetInput, setUsageBudgetInput] = useState('')
+  const [showRetrieval, setShowRetrieval] = useState(false)
+  const [retrievalSummary, setRetrievalSummary] = useState(null)
+  const [retrievalBusy, setRetrievalBusy] = useState(false)
+  const [retrievalDocText, setRetrievalDocText] = useState('')
+  const [retrievalQuery, setRetrievalQuery] = useState('')
+  const [retrievalResults, setRetrievalResults] = useState([])
+  const [showEvalHarness, setShowEvalHarness] = useState(false)
+  const [evalSummary, setEvalSummary] = useState(null)
+  const [evalSuites, setEvalSuites] = useState([])
+  const [evalBusy, setEvalBusy] = useState(false)
+  const [evalRun, setEvalRun] = useState(null)
+  const [showPlaybooks, setShowPlaybooks] = useState(false)
+  const [playbooksSummary, setPlaybooksSummary] = useState(null)
+  const [playbooks, setPlaybooks] = useState([])
+  const [playbookBusy, setPlaybookBusy] = useState(false)
+  const [playbookRun, setPlaybookRun] = useState(null)
+  const [showOpLayer2, setShowOpLayer2] = useState(false)
+  const [opLayer2, setOpLayer2] = useState(null)
+  const [opLayer2Busy, setOpLayer2Busy] = useState(false)
+  const [opLayer2Report, setOpLayer2Report] = useState(null)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notificationsSummary, setNotificationsSummary] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [notifBusy, setNotifBusy] = useState(false)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1102,6 +1179,14 @@ function App() {
     refreshCompanionPanel()
     refreshOperatingLayerPanel()
     refreshMcpPanel()
+    refreshApprovalsCenter()
+    refreshHealthMonitor()
+    refreshUsageLedger()
+    refreshRetrieval()
+    refreshEvalHarness()
+    refreshPlaybooks()
+    refreshOpLayer2()
+    refreshNotifications()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2749,6 +2834,225 @@ function App() {
     if (report) setOperatingLayerArtifact({ kind: 'report', data: report })
   }
 
+  async function refreshApprovalsCenter() {
+    const [items, summary] = await Promise.all([
+      getApprovalsCenter(),
+      getApprovalsCenterSummary(),
+    ])
+    setApprovalsCenter(items?.items || [])
+    setApprovalsCenterSummary(summary)
+  }
+
+  async function refreshHealthMonitor() {
+    const dashboard = await getHealthMonitorDashboard()
+    setHealthDashboard(dashboard)
+  }
+
+  async function refreshUsageLedger() {
+    const summary = await getUsageLedgerSummary(workspaceId)
+    setUsageSummary(summary)
+  }
+
+  async function refreshRetrieval() {
+    const summary = await getRetrievalSummary(workspaceId)
+    setRetrievalSummary(summary)
+  }
+
+  async function refreshEvalHarness() {
+    const [summary, suites] = await Promise.all([getEvalSummary(), getEvalSuites()])
+    setEvalSummary(summary)
+    setEvalSuites(suites?.suites || [])
+  }
+
+  async function refreshPlaybooks() {
+    const [summary, list] = await Promise.all([getPlaybooksSummary(), getPlaybooks()])
+    setPlaybooksSummary(summary)
+    setPlaybooks(list?.playbooks || [])
+  }
+
+  async function refreshOpLayer2() {
+    const dashboard = await getOperatingLayerV2Dashboard()
+    setOpLayer2(dashboard)
+  }
+
+  async function refreshNotifications() {
+    const [summary, list] = await Promise.all([getNotificationsSummary(), getNotifications(true)])
+    setNotificationsSummary(summary)
+    setNotifications(list?.notifications || [])
+  }
+
+  async function runNotifAction(action) {
+    setNotifBusy(true)
+    try {
+      await action()
+      await refreshNotifications()
+    } finally {
+      setNotifBusy(false)
+    }
+  }
+
+  async function handleGenerateNotifications() {
+    await runNotifAction(() => generateNotifications())
+  }
+
+  async function handleAckNotification(notifId) {
+    await runNotifAction(() => acknowledgeNotification(notifId))
+  }
+
+  async function runOpLayer2Action(action) {
+    setOpLayer2Busy(true)
+    try {
+      const value = await action()
+      await refreshOpLayer2()
+      return value
+    } finally {
+      setOpLayer2Busy(false)
+    }
+  }
+
+  async function handleOpLayer2Snapshot() {
+    await runOpLayer2Action(() => createOperatingLayerV2Snapshot())
+  }
+
+  async function handleOpLayer2Report() {
+    const report = await runOpLayer2Action(() => createOperatingLayerV2Report())
+    if (report) setOpLayer2Report(report)
+  }
+
+  async function runPlaybookAction(action) {
+    setPlaybookBusy(true)
+    try {
+      const value = await action()
+      await refreshPlaybooks()
+      return value
+    } finally {
+      setPlaybookBusy(false)
+    }
+  }
+
+  async function handleCreateSamplePlaybook() {
+    await runPlaybookAction(() => createPlaybook({
+      name: 'Sample release playbook',
+      steps: [
+        { title: 'Draft changelog', step_type: 'plan', detail: 'Summarize changes.' },
+        { title: 'Notify reviewers', step_type: 'note', detail: 'Ping the team.' },
+        { title: 'Publish release', step_type: 'approval_required', detail: 'Risky — needs approval.' },
+      ],
+    }))
+  }
+
+  async function handleRunPlaybook(playbookId) {
+    const run = await runPlaybookAction(() => runPlaybook(playbookId))
+    if (run) setPlaybookRun(run)
+  }
+
+  async function runEvalAction(action) {
+    setEvalBusy(true)
+    try {
+      const value = await action()
+      await refreshEvalHarness()
+      return value
+    } finally {
+      setEvalBusy(false)
+    }
+  }
+
+  async function handleCreateSampleEvalSuite() {
+    await runEvalAction(() => createEvalSuite({
+      name: 'Sample quality suite',
+      cases: [
+        { prompt: 'Explain governance', reference_answer: 'Governance logs every action and blocks risky ones.', expected_keywords: ['governance', 'logs', 'blocks'] },
+        { prompt: 'Explain memory', reference_answer: 'Memory is scored and retrieved locally.', expected_keywords: ['memory', 'local', 'scored'] },
+      ],
+    }))
+  }
+
+  async function handleRunEvalSuite(suiteId) {
+    const run = await runEvalAction(() => runEvalSuite(suiteId))
+    if (run) setEvalRun(run)
+  }
+
+  async function runRetrievalAction(action) {
+    setRetrievalBusy(true)
+    try {
+      const value = await action()
+      await refreshRetrieval()
+      return value
+    } finally {
+      setRetrievalBusy(false)
+    }
+  }
+
+  async function handleIndexRetrievalDoc(event) {
+    event.preventDefault()
+    if (!retrievalDocText.trim()) return
+    await runRetrievalAction(async () => {
+      await indexRetrievalDocument({ workspace_id: workspaceId, title: 'Note', content: retrievalDocText.trim() })
+      setRetrievalDocText('')
+    })
+  }
+
+  async function handleQueryRetrieval(event) {
+    event.preventDefault()
+    if (!retrievalQuery.trim()) return
+    const result = await runRetrievalAction(() => queryRetrieval({ workspace_id: workspaceId, query: retrievalQuery.trim() }))
+    if (result) setRetrievalResults(result.results || [])
+  }
+
+  async function runUsageAction(action) {
+    setUsageBusy(true)
+    try {
+      await action()
+      await refreshUsageLedger()
+    } finally {
+      setUsageBusy(false)
+    }
+  }
+
+  async function handleSetUsageBudget(event) {
+    event.preventDefault()
+    if (!usageBudgetInput.trim()) return
+    await runUsageAction(async () => {
+      await setUsageBudget({ workspace_id: workspaceId, monthly_limit: Number(usageBudgetInput) })
+      setUsageBudgetInput('')
+    })
+  }
+
+  async function handleRecordSampleUsage() {
+    await runUsageAction(() => recordUsageEntry({ workspace_id: workspaceId, capability: 'text', units: 1000 }))
+  }
+
+  async function handleCreateHealthSnapshot() {
+    setHealthBusy(true)
+    try {
+      await createHealthSnapshot()
+      await refreshHealthMonitor()
+    } finally {
+      setHealthBusy(false)
+    }
+  }
+
+  async function runAcAction(action) {
+    setAcBusy(true)
+    setAcError(null)
+    try {
+      await action()
+      await refreshApprovalsCenter()
+    } catch (error) {
+      setAcError(error.message || 'Approvals action failed')
+    } finally {
+      setAcBusy(false)
+    }
+  }
+
+  async function handleApproveCenter(source, itemId) {
+    await runAcAction(() => approveCenterItem(source, itemId))
+  }
+
+  async function handleRejectCenter(source, itemId) {
+    await runAcAction(() => rejectCenterItem(source, itemId))
+  }
+
   async function refreshMcpPanel() {
     const [summary, connectors, templates] = await Promise.all([
       getMcpSummary(),
@@ -2774,6 +3078,38 @@ function App() {
     setMcpInboxSummary(inboxSummary)
     const policies = await getMcpPolicies()
     setMcpPolicies(policies?.policies || [])
+    const [audit, auditSummary] = await Promise.all([
+      getMcpAudit(),
+      getMcpAuditSummary(),
+    ])
+    setMcpAudit(audit?.events || [])
+    setMcpAuditSummary(auditSummary)
+    const [secrets, secretsSummary] = await Promise.all([
+      getMcpSecrets(),
+      getMcpSecretsSummary(),
+    ])
+    setMcpSecrets(secrets?.refs || [])
+    setMcpSecretsSummary(secretsSummary)
+  }
+
+  async function handleRegisterMcpSecret(event) {
+    event.preventDefault()
+    if (!mcpSecretKey.trim()) return
+    await runMcpAction(async () => {
+      await registerMcpSecret({ key_name: mcpSecretKey.trim() })
+      setMcpSecretKey('')
+    })
+  }
+
+  async function handleRotateMcpSecret(refId) {
+    await runMcpAction(() => rotateMcpSecret(refId))
+  }
+
+  async function handleReplayMcpRequest(event) {
+    event.preventDefault()
+    if (!mcpReplayId.trim()) return
+    const result = await runMcpAction(() => replayMcpRequest(mcpReplayId.trim()))
+    if (result) setMcpReplayResult(result)
   }
 
   async function handleApproveInboxItem(itemId) {
@@ -8307,6 +8643,345 @@ function App() {
 
         {developerMode && (
           <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowNotifications((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Notifications{notificationsSummary?.unread ? ` (${notificationsSummary.unread})` : ''}
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showNotifications && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Notifications & Alerts Center · v56.0</strong>
+                  <span>Local in-app digest of governance blocks, health, and approvals backlog. No email/SMS/push is sent.</span>
+                </div>
+                {notificationsSummary && (
+                  <p className="muted">unread: {notificationsSummary.unread} · critical: {notificationsSummary.critical_unread} · total: {notificationsSummary.total}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGenerateNotifications} disabled={notifBusy}>Generate</button>
+                  <button type="button" onClick={() => refreshNotifications()} disabled={notifBusy}>Refresh</button>
+                </div>
+                {notifications.length === 0 && <p className="muted">No unread notifications. 🎉</p>}
+                {notifications.slice(0, 8).map((n) => (
+                  <div className="agent-template-card" key={n.notif_id}>
+                    <strong><span className={`risk-badge ${n.severity === 'info' ? 'risk-low' : n.severity === 'warning' ? 'risk-medium' : 'risk-high'}`}>{n.severity}</span> {n.type}</strong>
+                    <p className="muted">{n.message}</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleAckNotification(n.notif_id)} disabled={notifBusy}>Acknowledge</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">In-app digest only — no external delivery (email/SMS/push).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOpLayer2((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Operating Layer 2.0
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOpLayer2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>EvolveAgent Operating Layer 2.0 · v55.0</strong>
+                  <span>Expanded capability map across v41–v53 + a platform readiness & governance scorecard.</span>
+                </div>
+                {opLayer2 && (
+                  <>
+                    <div className="agent-template-card">
+                      <strong>Overall: {opLayer2.overall_score}/100 · grade {opLayer2.overall_grade} · coverage {opLayer2.coverage_pct}%</strong>
+                    </div>
+                    {(opLayer2.dimensions || []).map((dim) => (
+                      <p className="muted" key={dim.name}>
+                        <span className={`risk-badge ${dim.grade === 'A' || dim.grade === 'B' ? 'risk-low' : dim.grade === 'C' ? 'risk-medium' : 'risk-high'}`}>{dim.grade}</span> {dim.name} — {dim.score}
+                      </p>
+                    ))}
+                    <p className="muted">capabilities active: {opLayer2.active_capability_groups}/{opLayer2.total_capability_groups}</p>
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleOpLayer2Snapshot} disabled={opLayer2Busy}>Snapshot</button>
+                  <button type="button" onClick={handleOpLayer2Report} disabled={opLayer2Busy}>Final report</button>
+                  <button type="button" onClick={() => refreshOpLayer2()} disabled={opLayer2Busy}>Refresh</button>
+                </div>
+                {opLayer2Report && (
+                  <div className="agent-template-card">
+                    <strong>{opLayer2Report.headline}</strong>
+                    <p className="muted">{opLayer2Report.disclaimer}</p>
+                  </div>
+                )}
+                {opLayer2?.disclaimer && <p className="muted"><strong>Disclaimer:</strong> {opLayer2.disclaimer}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowPlaybooks((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Playbook Library
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showPlaybooks && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Playbook Library · v53.0</strong>
+                  <span>Reusable multi-step playbooks. Runs are planning-first — steps are planned or held for approval; nothing is executed.</span>
+                </div>
+                {playbooksSummary && (
+                  <p className="muted">playbooks: {playbooksSummary.playbook_count} · runs: {playbooksSummary.run_count}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateSamplePlaybook} disabled={playbookBusy}>New sample playbook</button>
+                  <button type="button" onClick={() => refreshPlaybooks()} disabled={playbookBusy}>Refresh</button>
+                </div>
+                {playbooks.slice(0, 6).map((pb) => (
+                  <div className="agent-template-card" key={pb.playbook_id}>
+                    <strong>{pb.name}</strong>
+                    <p className="muted">{pb.step_count} step(s)</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRunPlaybook(pb.playbook_id)} disabled={playbookBusy}>Run (planning)</button>
+                    </div>
+                  </div>
+                ))}
+                {playbookRun && (
+                  <div className="agent-template-card">
+                    <strong>Run · {playbookRun.planned_count} planned · {playbookRun.approval_required_count} need approval</strong>
+                    {(playbookRun.steps || []).map((step) => (
+                      <p className="muted" key={step.step_index}>{step.status === 'approval_required' ? '⏸️' : step.status === 'planned' ? '📝' : 'ℹ️'} {step.title} — {step.status}</p>
+                    ))}
+                  </div>
+                )}
+                <p className="muted">Planning-first — nothing is executed; risky steps require approval.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowEvalHarness((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Evaluation Harness
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showEvalHarness && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Evaluation Harness 2.0 · v52.0</strong>
+                  <span>Repeatable eval suites + scorecards with regression tracking. Deterministic, mock-safe — no real LLM call.</span>
+                </div>
+                {evalSummary && (
+                  <p className="muted">suites: {evalSummary.suite_count} · runs: {evalSummary.run_count} · latest score: {evalSummary.latest_score ?? '—'} · regressions: {evalSummary.regressed_runs}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateSampleEvalSuite} disabled={evalBusy}>New sample suite</button>
+                  <button type="button" onClick={() => refreshEvalHarness()} disabled={evalBusy}>Refresh</button>
+                </div>
+                {evalSuites.slice(0, 6).map((suite) => (
+                  <div className="agent-template-card" key={suite.suite_id}>
+                    <strong>{suite.name}</strong>
+                    <p className="muted">{suite.case_count} case(s)</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRunEvalSuite(suite.suite_id)} disabled={evalBusy}>Run</button>
+                    </div>
+                  </div>
+                ))}
+                {evalRun && (
+                  <div className="agent-template-card">
+                    <strong>Run · score {evalRun.score} · {evalRun.pass_count}/{evalRun.case_count} passed{evalRun.regressed ? ' · ⚠️ REGRESSED' : ''}</strong>
+                    <p className="muted">delta vs previous: {evalRun.delta ?? '—'}</p>
+                  </div>
+                )}
+                <p className="muted">Deterministic, mock-safe scoring — scores are stable and regressions detectable across runs.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowRetrieval((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Local Retrieval
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showRetrieval && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Local Retrieval Layer · v51.0</strong>
+                  <span>Index workspace notes and query them with local keyword retrieval + citations. No external vector DB, no network.</span>
+                </div>
+                {retrievalSummary && (
+                  <p className="muted">documents: {retrievalSummary.document_count} · chunks: {retrievalSummary.chunk_count} · queries: {retrievalSummary.query_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleIndexRetrievalDoc}>
+                  <textarea placeholder="Paste a note/document to index for this workspace" value={retrievalDocText} onChange={(event) => setRetrievalDocText(event.target.value)} rows={2} />
+                  <button type="submit" disabled={retrievalBusy || !retrievalDocText.trim()}>Index document</button>
+                </form>
+                <form className="stacked-form" onSubmit={handleQueryRetrieval}>
+                  <input type="text" placeholder="Query (keyword retrieval)" value={retrievalQuery} onChange={(event) => setRetrievalQuery(event.target.value)} />
+                  <button type="submit" disabled={retrievalBusy || !retrievalQuery.trim()}>Query</button>
+                </form>
+                {retrievalResults.map((result, index) => (
+                  <div className="agent-template-card" key={index}>
+                    <strong>{result.citation} · score {result.score}</strong>
+                    <p className="muted">{result.text?.slice(0, 240)}</p>
+                    <p className="muted">matched: {(result.matched_terms || []).join(', ')}</p>
+                  </div>
+                ))}
+                <p className="muted">Local-first retrieval — chunks and scores computed locally; no external vector database or network call.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowUsageLedger((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Cost & Usage Ledger
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showUsageLedger && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Cost & Usage Ledger · v50.0</strong>
+                  <span>Local usage estimates + per-workspace budget for this workspace. Estimates only — no billing or charge.</span>
+                </div>
+                {usageSummary && (
+                  <>
+                    <div className="analytics-mini-grid">
+                      <div><span>Entries</span><strong>{usageSummary.entry_count}</strong></div>
+                      <div><span>Est. cost</span><strong>${usageSummary.total_estimated_cost}</strong></div>
+                      <div><span>Budget</span><strong>${usageSummary.monthly_limit}</strong></div>
+                      <div><span>Status</span><strong>{usageSummary.budget_status}</strong></div>
+                    </div>
+                    {usageSummary.warning && <p className="error-text">{usageSummary.warning}</p>}
+                    {Object.entries(usageSummary.by_capability || {}).map(([cap, cost]) => (
+                      <p className="muted" key={cap}>{cap}: ${cost}</p>
+                    ))}
+                  </>
+                )}
+                <form className="stacked-form" onSubmit={handleSetUsageBudget}>
+                  <input type="number" step="0.01" placeholder="monthly budget ($)" value={usageBudgetInput} onChange={(event) => setUsageBudgetInput(event.target.value)} />
+                  <button type="submit" disabled={usageBusy || !usageBudgetInput.trim()}>Set budget</button>
+                </form>
+                <div className="inline-actions">
+                  <button type="button" onClick={handleRecordSampleUsage} disabled={usageBusy}>Record sample usage</button>
+                  <button type="button" onClick={() => refreshUsageLedger()} disabled={usageBusy}>Refresh</button>
+                </div>
+                <p className="muted">Estimates only — extends v11 cost visibility; no billing, charging, or payment is performed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowHealthMonitor((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Health & Readiness
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showHealthMonitor && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Health & Readiness Monitor · v49.0</strong>
+                  <span>Read-only scored health across governance, approvals backlog, secret readiness, connectors, and policies.</span>
+                </div>
+                {healthDashboard && (
+                  <>
+                    <div className="agent-template-card">
+                      <strong>Health score: {healthDashboard.health_score} · <span className={`risk-badge ${healthDashboard.status === 'healthy' ? 'risk-low' : healthDashboard.status === 'degraded' ? 'risk-medium' : 'risk-high'}`}>{healthDashboard.status}</span></strong>
+                    </div>
+                    {(healthDashboard.checks || []).map((check) => (
+                      <p className="muted" key={check.name}>
+                        <span className={`risk-badge ${check.status === 'ok' || check.status === 'info' ? 'risk-low' : check.status === 'warn' ? 'risk-medium' : 'risk-high'}`}>{check.status}</span> {check.name} — {check.detail}
+                      </p>
+                    ))}
+                    {(healthDashboard.recommendations || []).map((rec, index) => (
+                      <p className="muted" key={index}>• {rec}</p>
+                    ))}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateHealthSnapshot} disabled={healthBusy}>Snapshot</button>
+                  <button type="button" onClick={() => refreshHealthMonitor()} disabled={healthBusy}>Refresh</button>
+                </div>
+                <p className="muted">Read-only aggregation — no actions are taken.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowApprovalsCenter((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Approvals Center
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showApprovalsCenter && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Unified Approvals Center · v48.0</strong>
+                  <span>One prioritized queue across all approval sources (MCP executions + business-operator). Approve/reject delegates to the owning governed service.</span>
+                </div>
+                {approvalsCenterSummary && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Pending</span><strong>{approvalsCenterSummary.pending_count}</strong></div>
+                    <div><span>High risk</span><strong>{approvalsCenterSummary.high_risk_pending}</strong></div>
+                    <div><span>MCP</span><strong>{approvalsCenterSummary.by_source?.mcp_execution}</strong></div>
+                    <div><span>Business</span><strong>{approvalsCenterSummary.by_source?.business_operator}</strong></div>
+                  </div>
+                )}
+                {acError && <p className="error-text">{acError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshApprovalsCenter()} disabled={acBusy}>Refresh</button>
+                </div>
+                {approvalsCenter.length === 0 && <p className="muted">No pending approvals across any source. 🎉</p>}
+                {approvalsCenter.slice(0, 8).map((item) => (
+                  <div className="agent-template-card" key={`${item.source}:${item.item_id}`}>
+                    <strong>{item.title}</strong>
+                    <p className="muted">
+                      {item.source} · <span className={`risk-badge risk-${item.risk_level}`}>{item.risk_level} risk</span> · {item.age_seconds}s old
+                    </p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleApproveCenter(item.source, item.item_id)} disabled={acBusy}>Approve</button>
+                      <button type="button" onClick={() => handleRejectCenter(item.source, item.item_id)} disabled={acBusy}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">Triage + delegated decisions only — each decision routes to its owning governed service and is logged there.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMcpPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8346,6 +9021,8 @@ function App() {
                     { id: 'policies', label: `Policies${mcpPolicies.length ? ` (${mcpPolicies.length})` : ''}` },
                     { id: 'approvals', label: `Approvals${mcpInboxSummary?.pending_count ? ` (${mcpInboxSummary.pending_count})` : ''}` },
                     { id: 'executions', label: 'Executions' },
+                    { id: 'audit', label: 'Audit' },
+                    { id: 'secrets', label: `Secrets${mcpSecretsSummary?.total_refs ? ` (${mcpSecretsSummary.total_refs})` : ''}` },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -8516,6 +9193,63 @@ function App() {
                 {mcpExecSummary?.safety_summary && (
                   <p className="muted">execution: real={String(mcpExecSummary.safety_summary.real_execution_enabled)} · shell={String(mcpExecSummary.safety_summary.shell_used)} · network={String(mcpExecSummary.safety_summary.network_calls_made)} · writes need approval={String(mcpExecSummary.safety_summary.write_actions_require_approval)}</p>
                 )}
+                </>
+                )}
+
+                {mcpTab === 'audit' && (
+                <>
+                {/* v46 — MCP Audit & Replay (read-only timeline + dry replay) */}
+                <h3>Audit timeline (v46)</h3>
+                {mcpAuditSummary && (
+                  <p className="muted">events: {mcpAuditSummary.total_events} · blocked: {mcpAuditSummary.blocked_events} · replays: {mcpAuditSummary.replay_count}</p>
+                )}
+                <div className="inline-actions">
+                  <a href={`${API_BASE}/api/mcp/audit/export?format=markdown`} target="_blank" rel="noreferrer"><button type="button">Export .md</button></a>
+                  <a href={`${API_BASE}/api/mcp/audit/export?format=json`} target="_blank" rel="noreferrer"><button type="button">Export .json</button></a>
+                  <button type="button" onClick={() => refreshMcpPanel()} disabled={mcpBusy}>Refresh</button>
+                </div>
+                {mcpAudit.slice(0, 12).map((event, index) => (
+                  <p className="muted" key={index}>
+                    <code>{(event.created_at || '').slice(11, 19)}</code> · {event.source}/{event.event_type}{event.blocked ? ' · blocked' : ''} — {event.message}
+                  </p>
+                ))}
+                <form className="stacked-form" onSubmit={handleReplayMcpRequest}>
+                  <h3>Replay a request (read-only)</h3>
+                  <input type="text" placeholder="execution request_id" value={mcpReplayId} onChange={(event) => setMcpReplayId(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpReplayId.trim()}>Replay (dry)</button>
+                </form>
+                {mcpReplayResult && (
+                  <div className="agent-template-card">
+                    <strong>Replay · would be allowed: {String(mcpReplayResult.would_be_allowed)}{mcpReplayResult.changed ? ' · CHANGED' : ''}</strong>
+                    <p className="muted">{mcpReplayResult.note}</p>
+                  </div>
+                )}
+                </>
+                )}
+
+                {mcpTab === 'secrets' && (
+                <>
+                {/* v47 — Secret Reference Registry (key names + readiness only; never values) */}
+                <h3>Secret references (v47)</h3>
+                <p className="muted">Catalog of required secret/env keys and readiness. Values are never stored, logged, or shown — only the key name and whether it is set.</p>
+                {mcpSecretsSummary && (
+                  <p className="muted">refs: {mcpSecretsSummary.total_refs} · set: {mcpSecretsSummary.set_count} · unset: {mcpSecretsSummary.unset_count} · rotation due: {mcpSecretsSummary.rotation_due_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleRegisterMcpSecret}>
+                  <input type="text" placeholder="env key name (e.g. GITHUB_TOKEN)" value={mcpSecretKey} onChange={(event) => setMcpSecretKey(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpSecretKey.trim()}>Register reference</button>
+                </form>
+                {mcpSecrets.slice(0, 8).map((ref) => (
+                  <div className="agent-template-card" key={ref.ref_id}>
+                    <strong>{ref.key_name}</strong>
+                    <p className="muted">
+                      {ref.category} · <span className={`risk-badge ${ref.is_set ? 'risk-low' : 'risk-high'}`}>{ref.is_set ? 'set' : 'not set'}</span>{ref.rotation_due ? ' · ⚠️ rotation due' : ''}{ref.owner ? ` · ${ref.owner}` : ''}
+                    </p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleRotateMcpSecret(ref.ref_id)} disabled={mcpBusy}>Mark rotated</button>
+                    </div>
+                  </div>
+                ))}
                 </>
                 )}
 

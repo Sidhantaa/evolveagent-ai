@@ -2394,6 +2394,112 @@ export function createMcpPolicy(payload) {
 export function updateMcpPolicy(policyId, payload) {
   return patchJson(`/api/mcp/policies/${policyId}`, payload)
 }
+export function getMcpAudit(params) {
+  const qs = new URLSearchParams(params || {}).toString()
+  return getJson(qs ? `/api/mcp/audit?${qs}` : '/api/mcp/audit')
+}
+export function getMcpAuditSummary() {
+  return getJson('/api/mcp/audit/summary')
+}
+export function replayMcpRequest(requestId) {
+  return postJson('/api/mcp/audit/replay', { request_id: requestId })
+}
+export function getMcpSecrets() {
+  return getJson('/api/mcp/secrets')
+}
+export function getMcpSecretsSummary() {
+  return getJson('/api/mcp/secrets/summary')
+}
+export function registerMcpSecret(payload) {
+  return postJson('/api/mcp/secrets', payload)
+}
+export function rotateMcpSecret(refId) {
+  return postJson(`/api/mcp/secrets/${refId}/rotate`, {})
+}
+export function getApprovalsCenter(source) {
+  return getJson(source ? `/api/approvals-center?source=${source}` : '/api/approvals-center')
+}
+export function getApprovalsCenterSummary() {
+  return getJson('/api/approvals-center/summary')
+}
+export function approveCenterItem(source, itemId) {
+  return postJson('/api/approvals-center/approve', { source, item_id: itemId })
+}
+export function rejectCenterItem(source, itemId) {
+  return postJson('/api/approvals-center/reject', { source, item_id: itemId })
+}
+export function getHealthMonitorDashboard() {
+  return getJson('/api/health-monitor/dashboard')
+}
+export function createHealthSnapshot() {
+  return postJson('/api/health-monitor/snapshots', {})
+}
+export function getUsageLedgerSummary(workspaceId) {
+  return getJson(workspaceId ? `/api/usage-ledger/summary?workspace_id=${workspaceId}` : '/api/usage-ledger/summary')
+}
+export function getUsageEntries(workspaceId) {
+  return getJson(workspaceId ? `/api/usage-ledger/entries?workspace_id=${workspaceId}` : '/api/usage-ledger/entries')
+}
+export function recordUsageEntry(payload) {
+  return postJson('/api/usage-ledger/entries', payload)
+}
+export function setUsageBudget(payload) {
+  return postJson('/api/usage-ledger/budgets', payload)
+}
+export function getRetrievalSummary(workspaceId) {
+  return getJson(workspaceId ? `/api/retrieval/summary?workspace_id=${workspaceId}` : '/api/retrieval/summary')
+}
+export function indexRetrievalDocument(payload) {
+  return postJson('/api/retrieval/documents', payload)
+}
+export function queryRetrieval(payload) {
+  return postJson('/api/retrieval/query', payload)
+}
+export function getEvalSummary() {
+  return getJson('/api/eval-harness/summary')
+}
+export function getEvalSuites() {
+  return getJson('/api/eval-harness/suites')
+}
+export function createEvalSuite(payload) {
+  return postJson('/api/eval-harness/suites', payload)
+}
+export function runEvalSuite(suiteId) {
+  return postJson(`/api/eval-harness/suites/${suiteId}/run`, {})
+}
+export function getPlaybooksSummary() {
+  return getJson('/api/playbooks/summary')
+}
+export function getPlaybooks() {
+  return getJson('/api/playbooks')
+}
+export function createPlaybook(payload) {
+  return postJson('/api/playbooks', payload)
+}
+export function runPlaybook(playbookId) {
+  return postJson(`/api/playbooks/${playbookId}/run`, {})
+}
+export function getOperatingLayerV2Dashboard() {
+  return getJson('/api/operating-layer-2/dashboard')
+}
+export function createOperatingLayerV2Snapshot() {
+  return postJson('/api/operating-layer-2/snapshots', {})
+}
+export function createOperatingLayerV2Report() {
+  return postJson('/api/operating-layer-2/report', {})
+}
+export function getNotificationsSummary() {
+  return getJson('/api/notifications/summary')
+}
+export function getNotifications(unread) {
+  return getJson(unread ? '/api/notifications?unread=true' : '/api/notifications')
+}
+export function generateNotifications() {
+  return postJson('/api/notifications/generate', {})
+}
+export function acknowledgeNotification(notifId) {
+  return postJson(`/api/notifications/${notifId}/ack`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }
