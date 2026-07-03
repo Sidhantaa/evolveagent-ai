@@ -1397,3 +1397,10 @@ class PlaybookCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=160)
     description: str = Field(default="", max_length=1000)
     steps: list[PlaybookStepModel] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
+# Task-aware MCP suggestion (voice/ask console)
+# ----------------------------------------------------------------------
+class MCPSuggestRequest(BaseModel):
+    task: str = Field(..., min_length=1, max_length=500)

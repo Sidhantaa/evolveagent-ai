@@ -129,6 +129,7 @@ from app.models.request_models import (
     RetrievalQueryRequest,
     EvalSuiteCreateRequest,
     PlaybookCreateRequest,
+    MCPSuggestRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -263,6 +264,7 @@ from app.services.organization_os_service import OrganizationOSService
 from app.services.hardware_companion_service import HardwareCompanionService
 from app.services.operating_layer_service import OperatingLayerService
 from app.services.mcp_connector_service import MCPConnectorService
+from app.services.mcp_suggestion_service import MCPSuggestionService
 from app.services.mcp_policy_service import MCPPolicyService
 from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
@@ -365,6 +367,7 @@ hardware_companion_service = HardwareCompanionService(storage, governance_servic
 operating_layer_service = OperatingLayerService(storage, governance_service)
 mcp_policy_service = MCPPolicyService(storage, governance_service)
 mcp_connector_service = MCPConnectorService(storage, governance_service, policy_service=mcp_policy_service)
+mcp_suggestion_service = MCPSuggestionService(mcp_connector_service, governance_service)
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
 mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
@@ -3393,6 +3396,12 @@ def get_operating_layer_audit() -> dict:
 @router.get("/mcp/summary")
 def get_mcp_summary() -> dict:
     return mcp_connector_service.summarize_mcp_hub()
+
+
+# Task-aware MCP suggestion — which connector(s) a task needs + key readiness (never values).
+@router.post("/mcp/suggest")
+def suggest_mcp(request: MCPSuggestRequest) -> dict:
+    return mcp_suggestion_service.suggest(request.task)
 
 
 @router.get("/mcp/templates")
