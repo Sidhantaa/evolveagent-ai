@@ -1597,6 +1597,123 @@ h2 {
   50% { opacity: 0.45; }
 }
 
+/* Centered Ask hero (voice-first, above the chat) */
+.ask-hero {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  max-width: 720px;
+  margin: 18px auto 22px;
+  padding: 26px 22px;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.02));
+  overflow: hidden;
+}
+
+.ask-hero-glow {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.35), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.ask-hero-title {
+  position: relative;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, #fff);
+}
+
+.ask-hero-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ask-hero-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #fff);
+  font-size: 15px;
+  outline: none;
+}
+
+.ask-hero-mic {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.75));
+  cursor: pointer;
+}
+
+.ask-hero-mic.listening {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.ask-hero-mic.speaking {
+  animation: pulse-speaking 1s ease-in-out infinite;
+}
+
+.ask-hero-go {
+  padding: 0 18px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(99, 102, 241, 0.9);
+  cursor: pointer;
+}
+
+.ask-hero-go:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ask-hero-hint {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ask-hero-chip {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  cursor: pointer;
+}
+
+.ask-hero-chip:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 /* Perplexity-style Sources + Follow-ups panel */
 .ask-panel {
   display: grid;

@@ -663,6 +663,7 @@ function App() {
   const [mcpSuggestions, setMcpSuggestions] = useState([])
   const [askSources, setAskSources] = useState([])
   const [askFollowups, setAskFollowups] = useState([])
+  const [heroInput, setHeroInput] = useState('')
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -4488,6 +4489,14 @@ function App() {
     }
     recognition.onend = () => setListening(false)
     recognition.start()
+  }
+
+  function heroSubmit(event) {
+    event.preventDefault()
+    const value = heroInput.trim()
+    if (!value || loading) return
+    setHeroInput('')
+    submitMessage(value)
   }
 
   // Speak an answer aloud via the browser (local text-to-speech; no external service).
@@ -9840,6 +9849,34 @@ function App() {
         </header>
 
         <section className={`chat-scroll ${!developerMode ? 'jarvis-scroll' : ''}`}>
+          {!developerMode && (
+            <div className="ask-hero">
+              <div className="ask-hero-glow" aria-hidden="true" />
+              <div className="ask-hero-title">✦ Ask EvolveAgent</div>
+              <form className="ask-hero-bar" onSubmit={heroSubmit}>
+                <input
+                  type="text"
+                  className="ask-hero-input"
+                  placeholder="Ask anything, or say a command…"
+                  value={heroInput}
+                  onChange={(event) => setHeroInput(event.target.value)}
+                />
+                <button type="button" className={`ask-hero-mic ${listening ? 'listening' : ''}`} onClick={startVoiceInput} aria-label="Speak" title="Push to talk — speak and it runs automatically">
+                  <Mic size={18} />
+                </button>
+                <button type="button" className={`ask-hero-mic ${voiceOutputEnabled ? 'listening' : ''} ${speaking ? 'speaking' : ''}`} onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }} aria-label="Toggle spoken answers" title={voiceOutputEnabled ? 'Spoken answers ON' : 'Spoken answers OFF'}>
+                  <Cpu size={18} />
+                </button>
+                <button type="submit" className="ask-hero-go" disabled={loading || !heroInput.trim()}>Ask</button>
+              </form>
+              <div className="ask-hero-hint">
+                {['Explain how EvolveAgent works', 'Plan a GitHub PR workflow', 'mcp: connect notion'].map((chip) => (
+                  <button key={chip} type="button" className="ask-hero-chip" onClick={() => submitMessage(chip)} disabled={loading}>{chip}</button>
+                ))}
+              </div>
+              {listening && <p className="jarvis-listening">Listening… speak your request.</p>}
+            </div>
+          )}
           {messages.length === 0 && !loading && !developerMode && (
             <div className="jarvis-command-center">
               <div className="jarvis-glow" aria-hidden="true" />
