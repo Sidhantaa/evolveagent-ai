@@ -1714,6 +1714,55 @@ h2 {
   color: #fff;
 }
 
+/* CLI command palette */
+.cli-palette {
+  position: relative;
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.cli-palette-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  padding: 2px 6px 4px;
+}
+
+.cli-cmd {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary, #fff);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cli-cmd:hover {
+  background: rgba(99, 102, 241, 0.16);
+}
+
+.cli-cmd strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: #a5b4fc;
+}
+
+.cli-cmd span {
+  font-size: 12px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
 /* Perplexity-style Sources + Follow-ups panel */
 .ask-panel {
   display: grid;

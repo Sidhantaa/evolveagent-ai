@@ -664,6 +664,7 @@ function App() {
   const [askSources, setAskSources] = useState([])
   const [askFollowups, setAskFollowups] = useState([])
   const [heroInput, setHeroInput] = useState('')
+  const [cliBusy, setCliBusy] = useState(false)
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -4309,9 +4310,14 @@ function App() {
   async function submitMessage(text = input) {
     const prompt = text.trim()
     if (!prompt || loading) return
-    // `mcp:` / `/mcp` command prefix routes into the MCP hub instead of the full workflow.
-    if (/^\/?mcp:/i.test(prompt) || /^\/mcp\b/i.test(prompt)) {
+    // `mcp:` prefix routes into the MCP hub instead of the full workflow.
+    if (/^mcp:/i.test(prompt)) {
       await handleMcpCommand(prompt)
+      return
+    }
+    // `/`-commands route to the governed CLI palette (no raw shell).
+    if (prompt.startsWith('/')) {
+      await runSlashCommand(prompt)
       return
     }
     const processedFiles = attachedFiles.filter((file) => file.status === 'processed')
@@ -4497,6 +4503,87 @@ function App() {
     if (!value || loading) return
     setHeroInput('')
     submitMessage(value)
+  }
+
+  // ---- CLI command palette (governed /-commands; no raw shell) ----
+  const SLASH_COMMANDS = [
+    { cmd: '/help', desc: 'List available commands' },
+    { cmd: '/mcp', desc: 'Suggest MCP tools for a task (e.g. /mcp connect github)' },
+    { cmd: '/connectors', desc: 'List MCP connectors' },
+    { cmd: '/health', desc: 'Show platform health score' },
+    { cmd: '/approvals', desc: 'Show pending approvals across sources' },
+    { cmd: '/notifications', desc: 'Generate & show alerts' },
+    { cmd: '/playbooks', desc: 'List saved playbooks' },
+    { cmd: '/run-playbook', desc: 'Run a playbook by name (planning-first)' },
+    { cmd: '/scorecard', desc: 'Operating Layer 2.0 readiness scorecard' },
+    { cmd: '/snapshot', desc: 'Capture an operating-layer snapshot' },
+  ]
+
+  function postCliResult(command, text, spokenSummary) {
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: 'user', content: command },
+      { id: crypto.randomUUID(), role: 'assistant', content: text, cli_command: true },
+    ])
+    if (spokenSummary) speak(spokenSummary)
+  }
+
+  async function runSlashCommand(raw) {
+    const parts = raw.trim().split(/\s+/)
+    const cmd = parts[0].toLowerCase()
+    const arg = parts.slice(1).join(' ').trim()
+    setInput('')
+    setHeroInput('')
+    setCliBusy(true)
+    try {
+      if (cmd === '/help') {
+        postCliResult(raw, 'Available commands:\n' + SLASH_COMMANDS.map((c) => `${c.cmd} — ${c.desc}`).join('\n'), 'Here are the available commands.')
+      } else if (cmd === '/mcp') {
+        await handleMcpCommand(`mcp: ${arg || 'general task'}`)
+      } else if (cmd === '/connectors') {
+        const data = await getMcpConnectors()
+        const list = (data.connectors || []).map((c) => `• ${c.name} — ${c.status} · ${c.enabled ? 'enabled' : 'disabled'}`).join('\n') || 'No connectors registered yet.'
+        postCliResult(raw, `MCP connectors:\n${list}`, `${data.count || 0} connectors registered.`)
+      } else if (cmd === '/health') {
+        const h = await getHealthMonitorDashboard()
+        const checks = (h.checks || []).map((c) => `• [${c.status}] ${c.name} — ${c.detail}`).join('\n')
+        postCliResult(raw, `Health: ${h.status} (score ${h.health_score})\n${checks}`, `Platform health is ${h.status}, score ${h.health_score}.`)
+      } else if (cmd === '/approvals') {
+        const a = await getApprovalsCenterSummary()
+        postCliResult(raw, `Pending approvals: ${a.pending_count} (high-risk ${a.high_risk_pending}). Sources: ${JSON.stringify(a.by_source)}`, `${a.pending_count} approvals pending.`)
+      } else if (cmd === '/notifications') {
+        await generateNotifications()
+        const s = await getNotificationsSummary()
+        postCliResult(raw, `Notifications — unread ${s.unread} (critical ${s.critical_unread}).`, `${s.unread} unread notifications.`)
+        refreshNotifications()
+      } else if (cmd === '/playbooks') {
+        const p = await getPlaybooks()
+        const list = (p.playbooks || []).map((pb) => `• ${pb.name} (${pb.step_count} steps)`).join('\n') || 'No playbooks saved.'
+        postCliResult(raw, `Playbooks:\n${list}`, `${p.count || 0} playbooks saved.`)
+      } else if (cmd === '/run-playbook') {
+        const p = await getPlaybooks()
+        const match = (p.playbooks || []).find((pb) => pb.name.toLowerCase().includes(arg.toLowerCase())) || (p.playbooks || [])[0]
+        if (!match) { postCliResult(raw, 'No playbooks to run. Create one first.', 'No playbooks to run.') }
+        else {
+          const run = await runPlaybook(match.playbook_id)
+          postCliResult(raw, `Ran "${match.name}" (planning-first): ${run.planned_count} planned, ${run.approval_required_count} need approval. Nothing was executed.`, `Ran ${match.name}. ${run.approval_required_count} steps need approval.`)
+        }
+      } else if (cmd === '/scorecard') {
+        const d = await getOperatingLayerV2Dashboard()
+        postCliResult(raw, `Operating Layer 2.0 — grade ${d.overall_grade} (${d.overall_score}/100), coverage ${d.coverage_pct}%.`, `Overall grade ${d.overall_grade}.`)
+        refreshOpLayer2()
+      } else if (cmd === '/snapshot') {
+        await createOperatingLayerV2Snapshot()
+        postCliResult(raw, 'Captured an Operating Layer 2.0 snapshot.', 'Snapshot captured.')
+        refreshOpLayer2()
+      } else {
+        postCliResult(raw, `Unknown command "${cmd}". Type /help for the list.`, 'Unknown command.')
+      }
+    } catch (err) {
+      postCliResult(raw, `Command failed: ${err.message}`, 'The command failed.')
+    } finally {
+      setCliBusy(false)
+    }
   }
 
   // Speak an answer aloud via the browser (local text-to-speech; no external service).
@@ -9867,10 +9954,20 @@ function App() {
                 <button type="button" className={`ask-hero-mic ${voiceOutputEnabled ? 'listening' : ''} ${speaking ? 'speaking' : ''}`} onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }} aria-label="Toggle spoken answers" title={voiceOutputEnabled ? 'Spoken answers ON' : 'Spoken answers OFF'}>
                   <Cpu size={18} />
                 </button>
-                <button type="submit" className="ask-hero-go" disabled={loading || !heroInput.trim()}>Ask</button>
+                <button type="submit" className="ask-hero-go" disabled={loading || cliBusy || !heroInput.trim()}>Ask</button>
               </form>
+              {heroInput.startsWith('/') && (
+                <div className="cli-palette">
+                  <div className="cli-palette-title">⌘ Commands</div>
+                  {SLASH_COMMANDS.filter((c) => c.cmd.startsWith(heroInput.split(' ')[0].toLowerCase())).map((c) => (
+                    <button key={c.cmd} type="button" className="cli-cmd" onClick={() => setHeroInput(c.cmd + ' ')}>
+                      <strong>{c.cmd}</strong><span>{c.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="ask-hero-hint">
-                {['Explain how EvolveAgent works', 'Plan a GitHub PR workflow', 'mcp: connect notion'].map((chip) => (
+                {['Explain how EvolveAgent works', 'Plan a GitHub PR workflow', 'mcp: connect notion', '/help', '/health'].map((chip) => (
                   <button key={chip} type="button" className="ask-hero-chip" onClick={() => submitMessage(chip)} disabled={loading}>{chip}</button>
                 ))}
               </div>
