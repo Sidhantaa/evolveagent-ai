@@ -1397,3 +1397,17 @@ class PlaybookCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=160)
     description: str = Field(default="", max_length=1000)
     steps: list[PlaybookStepModel] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
+# v57.0 Workspace Templates & Cloning
+# ----------------------------------------------------------------------
+class WorkspaceTemplateCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=1000)
+    default_tags: list[str] = Field(default_factory=list)
+    preset: dict = Field(default_factory=dict)
+
+
+class WorkspaceTemplateInstantiateRequest(BaseModel):
+    name: str = Field(default="", max_length=160)

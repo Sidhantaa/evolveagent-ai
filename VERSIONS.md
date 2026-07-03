@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **55** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
+- **56** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v57 — Workspace Templates & Cloning
+- **Purpose:** Reusable, preconfigured workspace setups you can clone on demand.
+- **How it operates:** `WorkspaceTemplatesService` stores templates (name, description, default tags, a preset of local settings). Instantiating a template calls the existing `WorkspaceService.create_workspace` to spin up a real local workspace preconfigured from it, and increments the template's instantiation count. Creation and instantiation are governance-logged.
+- **Main API route groups:** `/api/workspace-templates` (+ `/summary`, `/{id}/instantiate`).
+- **Safety boundary:** Local records only — no production provisioning, no authentication.
+
 ### v56 — Notifications & Alerts Center
 - **Purpose:** A local, in-app place to see and clear important platform alerts.
 - **How it operates:** `NotificationsCenterService` scans signals — blocked governance actions, degraded health (from the v49 monitor), and pending-approval backlog — and turns them into notifications with a severity and a signature. Generation is idempotent (an unacknowledged notification with the same signature is not duplicated); users acknowledge to clear. Generation and acknowledgement are governance-logged.
@@ -486,4 +492,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v53 | Playbook Library | `/api/playbooks` | Reusable multi-step playbooks, run planning-first | Nothing executed; risky steps require approval |
 | v55 | Operating Layer 2.0 | `/api/operating-layer-2` | Expanded capability map + readiness/governance scorecard | Read-only; not AGI; v40 layer untouched |
 | v56 | Notifications & Alerts Center | `/api/notifications` | Local digest of platform alerts; acknowledge | In-app only; no email/SMS/push |
+| v57 | Workspace Templates & Cloning | `/api/workspace-templates` | Reusable workspace presets + instantiate | Local records only; no production provisioning/auth |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
