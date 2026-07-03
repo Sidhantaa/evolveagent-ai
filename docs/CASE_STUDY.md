@@ -228,3 +228,9 @@ Quality needs to be measured repeatably, not judged once. The Evaluation Harness
 ## v53 — Playbook Library
 
 Repeatable workflows are valuable, but only if they stay safe. The Playbook Library lets users capture multi-step sequences and re-run them planning-first — planning the safe steps and holding risky ones for approval, with nothing executed. It packages the platforms governed, mock-first philosophy into reusable, shareable workflows.
+
+---
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+After a long arc of governance and observability features, v55 refreshes the capstone: an expanded capability map plus a graded readiness and governance scorecard that rolls coverage, governance posture, health, and approvals backlog into one view. It stays true to the frame set at v40 - not AGI, a governed orchestration layer - now spanning the full v15-v53 surface.

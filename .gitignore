@@ -186,6 +186,7 @@ backend/app/data/eval_suites.json
 backend/app/data/eval_runs.json
 backend/app/data/playbooks.json
 backend/app/data/playbook_runs.json
+backend/app/data/operating_layer_v2_snapshots.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

@@ -2479,6 +2479,15 @@ export function createPlaybook(payload) {
 export function runPlaybook(playbookId) {
   return postJson(`/api/playbooks/${playbookId}/run`, {})
 }
+export function getOperatingLayerV2Dashboard() {
+  return getJson('/api/operating-layer-2/dashboard')
+}
+export function createOperatingLayerV2Snapshot() {
+  return postJson('/api/operating-layer-2/snapshots', {})
+}
+export function createOperatingLayerV2Report() {
+  return postJson('/api/operating-layer-2/report', {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

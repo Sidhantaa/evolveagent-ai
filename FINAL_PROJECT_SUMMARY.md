@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v53.0 Playbook Library · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v55.0 EvolveAgent Operating Layer 2.0 · v45.1 MCP Hub UI)
+
+## v55 — EvolveAgent Operating Layer 2.0
+
+Refreshes the v40 capstone to cover the v41–v53 additions in an expanded 19-group capability map, and adds a platform-wide readiness & governance scorecard combining capability coverage, governance posture, health, and approvals backlog into graded dimensions and an overall grade. It reads existing local state only — explicitly not AGI — and persists governance-logged snapshots/reports. Exposed at `/api/operating-layer-2` (dashboard, capabilities, scorecard, snapshots, report); the original v40 layer is untouched. (v54 was folded into the v44.5 portfolio pass.)
+
+## v53 — Playbook Library
 
 ## v53 — Playbook Library
 

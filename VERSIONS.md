@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **53** implementation versions (+ the v44.5 / v45.1 consolidation & UI passes)
+- **54** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v55 — EvolveAgent Operating Layer 2.0
+- **Purpose:** A refreshed capstone dashboard covering the v41–v53 additions with a platform readiness & governance scorecard.
+- **How it operates:** `OperatingLayerV2Service` builds an expanded 19-group capability map (each active by data presence) and a scorecard across four dimensions — capability coverage, governance (blocked ratio), health (from the v49 monitor), and approvals backlog — each graded A–F with an overall grade. Snapshots and a final report are persisted and governance-logged. The original v40 operating layer is left untouched (distinct `/api/operating-layer-2` prefix).
+- **Main API route groups:** `/api/operating-layer-2` (+ `/dashboard`, `/capabilities`, `/scorecard`, `/snapshots`, `/report`).
+- **Safety boundary:** Read-only aggregation + persisted snapshot; carries the "not AGI" disclaimer and the full safety-boundary list. *(v54 was folded into the v44.5 portfolio pass.)*
+
 ### v53 — Playbook Library
 - **Purpose:** Save and re-run governed multi-step action sequences without executing anything.
 - **How it operates:** `PlaybookLibraryService` stores playbooks of steps (plan / note / approval_required). Running a playbook is planning-first: plan steps are drafted (mock), note steps are informational, and approval_required steps are held for explicit human approval — the run records a per-step outcome and never executes. Creation and runs are governance-logged.
@@ -472,4 +478,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v51 | Local Retrieval Layer | `/api/retrieval` | Local chunking + keyword retrieval with citations | Local-first; no external vector DB or network |
 | v52 | Evaluation Harness 2.0 | `/api/eval-harness` | Repeatable suites/scorecards + regression tracking | Deterministic, mock-safe; no real LLM call |
 | v53 | Playbook Library | `/api/playbooks` | Reusable multi-step playbooks, run planning-first | Nothing executed; risky steps require approval |
+| v55 | Operating Layer 2.0 | `/api/operating-layer-2` | Expanded capability map + readiness/governance scorecard | Read-only; not AGI; v40 layer untouched |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
