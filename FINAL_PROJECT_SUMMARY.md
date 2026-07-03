@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v55.0 EvolveAgent Operating Layer 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v56.0 Notifications & Alerts Center · v45.1 MCP Hub UI)
+
+## v56 — Notifications & Alerts Center
+
+A local in-app digest that turns platform signals — blocked governance actions, degraded health, and pending-approval backlog — into an acknowledgeable notifications feed. It sends nothing externally (no email/SMS/push); generation is idempotent per signal (an unacknowledged notification with the same signature is not duplicated). Exposed at `/api/notifications` (generate, list, acknowledge, summary), in analytics, and as a Notifications Developer-Mode panel. Generation and acknowledgement are governance-logged.
+
+## v55 — EvolveAgent Operating Layer 2.0
 
 ## v55 — EvolveAgent Operating Layer 2.0
 

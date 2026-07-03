@@ -190,6 +190,7 @@ class StorageService:
             "playbooks.json",
             "playbook_runs.json",
             "operating_layer_v2_snapshots.json",
+            "notifications.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",
