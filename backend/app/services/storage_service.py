@@ -192,6 +192,8 @@ class StorageService:
             "operating_layer_v2_snapshots.json",
             "notifications.json",
             "workspace_templates.json",
+            "scheduled_tasks.json",
+            "scheduled_task_runs.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

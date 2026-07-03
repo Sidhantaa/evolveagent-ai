@@ -342,6 +342,11 @@ import {
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
   instantiateWorkspaceTemplate,
+  getScheduledTasks,
+  getScheduledTasksSummary,
+  createScheduledTask,
+  toggleScheduledTask,
+  triggerScheduledTask,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1056,6 +1061,12 @@ function App() {
   const [wsTemplatesSummary, setWsTemplatesSummary] = useState(null)
   const [wsTemplateBusy, setWsTemplateBusy] = useState(false)
   const [wsTemplateName, setWsTemplateName] = useState('')
+  const [showScheduled, setShowScheduled] = useState(false)
+  const [scheduledTasks, setScheduledTasks] = useState([])
+  const [scheduledSummary, setScheduledSummary] = useState(null)
+  const [scheduledBusy, setScheduledBusy] = useState(false)
+  const [scheduledName, setScheduledName] = useState('')
+  const [scheduledSchedule, setScheduledSchedule] = useState('daily')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1197,6 +1208,7 @@ function App() {
     refreshOpLayer2()
     refreshNotifications()
     refreshWsTemplates()
+    refreshScheduled()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2889,6 +2901,39 @@ function App() {
     const [summary, list] = await Promise.all([getWorkspaceTemplatesSummary(), getWorkspaceTemplates()])
     setWsTemplatesSummary(summary)
     setWsTemplates(list?.templates || [])
+  }
+
+  async function refreshScheduled() {
+    const [summary, list] = await Promise.all([getScheduledTasksSummary(), getScheduledTasks()])
+    setScheduledSummary(summary)
+    setScheduledTasks(list?.tasks || [])
+  }
+
+  async function runScheduledAction(action) {
+    setScheduledBusy(true)
+    try {
+      await action()
+      await refreshScheduled()
+    } finally {
+      setScheduledBusy(false)
+    }
+  }
+
+  async function handleCreateScheduled(event) {
+    event.preventDefault()
+    if (!scheduledName.trim()) return
+    await runScheduledAction(async () => {
+      await createScheduledTask({ name: scheduledName.trim(), schedule: scheduledSchedule, action_type: 'plan' })
+      setScheduledName('')
+    })
+  }
+
+  async function handleTriggerScheduled(taskId) {
+    await runScheduledAction(() => triggerScheduledTask(taskId))
+  }
+
+  async function handleToggleScheduled(taskId, enabled) {
+    await runScheduledAction(() => toggleScheduledTask(taskId, enabled))
   }
 
   async function runWsTemplateAction(action) {
@@ -8676,6 +8721,47 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowScheduled((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Scheduled Tasks
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showScheduled && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Scheduled Tasks · v58.0</strong>
+                  <span>Local registry of scheduled tasks. Planning-first — no real background scheduler; triggers produce mock/planned runs, risky steps need approval.</span>
+                </div>
+                {scheduledSummary && (
+                  <p className="muted">tasks: {scheduledSummary.task_count} · enabled: {scheduledSummary.enabled_count} · due: {scheduledSummary.due_count} · runs: {scheduledSummary.run_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleCreateScheduled}>
+                  <input type="text" placeholder="Task name" value={scheduledName} onChange={(event) => setScheduledName(event.target.value)} />
+                  <select value={scheduledSchedule} onChange={(event) => setScheduledSchedule(event.target.value)}>
+                    {['manual', 'hourly', 'daily', 'weekly'].map((s) => (<option key={s} value={s}>{s}</option>))}
+                  </select>
+                  <button type="submit" disabled={scheduledBusy || !scheduledName.trim()}>Create task</button>
+                </form>
+                {scheduledTasks.slice(0, 6).map((t) => (
+                  <div className="agent-template-card" key={t.task_id}>
+                    <strong>{t.name}</strong>
+                    <p className="muted">{t.schedule} · {t.enabled ? 'enabled' : 'disabled'} · ran {t.trigger_count || 0}×</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleTriggerScheduled(t.task_id)} disabled={scheduledBusy || !t.enabled}>Trigger (mock)</button>
+                      <button type="button" onClick={() => handleToggleScheduled(t.task_id, !t.enabled)} disabled={scheduledBusy}>{t.enabled ? 'Disable' : 'Enable'}</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">Planning-first — no real background scheduler or execution; nothing runs on a timer.</p>
               </div>
             )}
           </section>

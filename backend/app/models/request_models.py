@@ -1411,3 +1411,18 @@ class WorkspaceTemplateCreateRequest(BaseModel):
 
 class WorkspaceTemplateInstantiateRequest(BaseModel):
     name: str = Field(default="", max_length=160)
+
+
+# ----------------------------------------------------------------------
+# v58.0 Scheduled Tasks (local, planning-first)
+# ----------------------------------------------------------------------
+class ScheduledTaskCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    schedule: str = Field(default="manual", pattern="^(manual|hourly|daily|weekly)$")
+    action_type: str = Field(default="plan", pattern="^(plan|note|approval_required)$")
+    detail: str = Field(default="", max_length=2000)
+    enabled: bool = Field(default=True)
+
+
+class ScheduledTaskToggleRequest(BaseModel):
+    enabled: bool
