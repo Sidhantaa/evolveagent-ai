@@ -234,3 +234,9 @@ Repeatable workflows are valuable, but only if they stay safe. The Playbook Libr
 ## v55 — EvolveAgent Operating Layer 2.0
 
 After a long arc of governance and observability features, v55 refreshes the capstone: an expanded capability map plus a graded readiness and governance scorecard that rolls coverage, governance posture, health, and approvals backlog into one view. It stays true to the frame set at v40 - not AGI, a governed orchestration layer - now spanning the full v15-v53 surface.
+
+---
+
+## v56 — Notifications & Alerts Center
+
+A governed system needs to surface what needs attention. The Notifications & Alerts Center digests governance blocks, health issues, and approvals backlog into an in-app feed the user can acknowledge - with no external delivery. It keeps the alerting fully local and governed, consistent with the platforms no-real-sending contract.

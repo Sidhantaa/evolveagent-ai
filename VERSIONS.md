@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **54** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
+- **55** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v56 — Notifications & Alerts Center
+- **Purpose:** A local, in-app place to see and clear important platform alerts.
+- **How it operates:** `NotificationsCenterService` scans signals — blocked governance actions, degraded health (from the v49 monitor), and pending-approval backlog — and turns them into notifications with a severity and a signature. Generation is idempotent (an unacknowledged notification with the same signature is not duplicated); users acknowledge to clear. Generation and acknowledgement are governance-logged.
+- **Main API route groups:** `/api/notifications` (+ `/summary`, `/generate`, `/{id}/ack`).
+- **Safety boundary:** In-app digest only — nothing is sent externally (no email, SMS, or push).
+
 ### v55 — EvolveAgent Operating Layer 2.0
 - **Purpose:** A refreshed capstone dashboard covering the v41–v53 additions with a platform readiness & governance scorecard.
 - **How it operates:** `OperatingLayerV2Service` builds an expanded 19-group capability map (each active by data presence) and a scorecard across four dimensions — capability coverage, governance (blocked ratio), health (from the v49 monitor), and approvals backlog — each graded A–F with an overall grade. Snapshots and a final report are persisted and governance-logged. The original v40 operating layer is left untouched (distinct `/api/operating-layer-2` prefix).
@@ -479,4 +485,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v52 | Evaluation Harness 2.0 | `/api/eval-harness` | Repeatable suites/scorecards + regression tracking | Deterministic, mock-safe; no real LLM call |
 | v53 | Playbook Library | `/api/playbooks` | Reusable multi-step playbooks, run planning-first | Nothing executed; risky steps require approval |
 | v55 | Operating Layer 2.0 | `/api/operating-layer-2` | Expanded capability map + readiness/governance scorecard | Read-only; not AGI; v40 layer untouched |
+| v56 | Notifications & Alerts Center | `/api/notifications` | Local digest of platform alerts; acknowledge | In-app only; no email/SMS/push |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

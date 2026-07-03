@@ -2488,6 +2488,18 @@ export function createOperatingLayerV2Snapshot() {
 export function createOperatingLayerV2Report() {
   return postJson('/api/operating-layer-2/report', {})
 }
+export function getNotificationsSummary() {
+  return getJson('/api/notifications/summary')
+}
+export function getNotifications(unread) {
+  return getJson(unread ? '/api/notifications?unread=true' : '/api/notifications')
+}
+export function generateNotifications() {
+  return postJson('/api/notifications/generate', {})
+}
+export function acknowledgeNotification(notifId) {
+  return postJson(`/api/notifications/${notifId}/ack`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

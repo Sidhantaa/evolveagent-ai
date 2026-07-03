@@ -334,6 +334,10 @@ import {
   getOperatingLayerV2Dashboard,
   createOperatingLayerV2Snapshot,
   createOperatingLayerV2Report,
+  getNotificationsSummary,
+  getNotifications,
+  generateNotifications,
+  acknowledgeNotification,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1039,6 +1043,10 @@ function App() {
   const [opLayer2, setOpLayer2] = useState(null)
   const [opLayer2Busy, setOpLayer2Busy] = useState(false)
   const [opLayer2Report, setOpLayer2Report] = useState(null)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notificationsSummary, setNotificationsSummary] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [notifBusy, setNotifBusy] = useState(false)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1178,6 +1186,7 @@ function App() {
     refreshEvalHarness()
     refreshPlaybooks()
     refreshOpLayer2()
+    refreshNotifications()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2864,6 +2873,30 @@ function App() {
   async function refreshOpLayer2() {
     const dashboard = await getOperatingLayerV2Dashboard()
     setOpLayer2(dashboard)
+  }
+
+  async function refreshNotifications() {
+    const [summary, list] = await Promise.all([getNotificationsSummary(), getNotifications(true)])
+    setNotificationsSummary(summary)
+    setNotifications(list?.notifications || [])
+  }
+
+  async function runNotifAction(action) {
+    setNotifBusy(true)
+    try {
+      await action()
+      await refreshNotifications()
+    } finally {
+      setNotifBusy(false)
+    }
+  }
+
+  async function handleGenerateNotifications() {
+    await runNotifAction(() => generateNotifications())
+  }
+
+  async function handleAckNotification(notifId) {
+    await runNotifAction(() => acknowledgeNotification(notifId))
   }
 
   async function runOpLayer2Action(action) {
@@ -8603,6 +8636,44 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowNotifications((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Notifications{notificationsSummary?.unread ? ` (${notificationsSummary.unread})` : ''}
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showNotifications && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Notifications & Alerts Center · v56.0</strong>
+                  <span>Local in-app digest of governance blocks, health, and approvals backlog. No email/SMS/push is sent.</span>
+                </div>
+                {notificationsSummary && (
+                  <p className="muted">unread: {notificationsSummary.unread} · critical: {notificationsSummary.critical_unread} · total: {notificationsSummary.total}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGenerateNotifications} disabled={notifBusy}>Generate</button>
+                  <button type="button" onClick={() => refreshNotifications()} disabled={notifBusy}>Refresh</button>
+                </div>
+                {notifications.length === 0 && <p className="muted">No unread notifications. 🎉</p>}
+                {notifications.slice(0, 8).map((n) => (
+                  <div className="agent-template-card" key={n.notif_id}>
+                    <strong><span className={`risk-badge ${n.severity === 'info' ? 'risk-low' : n.severity === 'warning' ? 'risk-medium' : 'risk-high'}`}>{n.severity}</span> {n.type}</strong>
+                    <p className="muted">{n.message}</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleAckNotification(n.notif_id)} disabled={notifBusy}>Acknowledge</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">In-app digest only — no external delivery (email/SMS/push).</p>
               </div>
             )}
           </section>

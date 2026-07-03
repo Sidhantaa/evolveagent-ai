@@ -275,6 +275,7 @@ from app.services.local_retrieval_service import LocalRetrievalService
 from app.services.eval_harness_service import EvalHarnessService
 from app.services.playbook_library_service import PlaybookLibraryService
 from app.services.operating_layer_v2_service import OperatingLayerV2Service
+from app.services.notifications_center_service import NotificationsCenterService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -375,6 +376,7 @@ local_retrieval_service = LocalRetrievalService(storage, governance_service)
 eval_harness_service = EvalHarnessService(storage, governance_service)
 playbook_library_service = PlaybookLibraryService(storage, governance_service)
 operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
+notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1639,6 +1641,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **eval_harness_service.analytics_summary(),
         **playbook_library_service.analytics_summary(),
         **operating_layer_v2_service.analytics_summary(),
+        **notifications_center_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3896,6 +3899,33 @@ def create_operating_layer_v2_snapshot() -> dict:
 @router.post("/operating-layer-2/report")
 def create_operating_layer_v2_report() -> dict:
     return operating_layer_v2_service.create_report()
+
+
+# ----------------------------------------------------------------------
+# v56.0 Notifications & Alerts Center — local in-app digest (no real sending).
+# ----------------------------------------------------------------------
+@router.get("/notifications/summary")
+def get_notifications_summary() -> dict:
+    return notifications_center_service.summary()
+
+
+@router.get("/notifications")
+def list_notifications(unread: bool = Query(default=False)) -> dict:
+    items = notifications_center_service.list_notifications(unacknowledged_only=unread)
+    return {"notifications": items, "count": len(items)}
+
+
+@router.post("/notifications/generate")
+def generate_notifications() -> dict:
+    return notifications_center_service.generate()
+
+
+@router.post("/notifications/{notif_id}/ack")
+def acknowledge_notification(notif_id: str) -> dict:
+    try:
+        return notifications_center_service.acknowledge(notif_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Notification not found") from error
 
 
 @router.get("/governance")
