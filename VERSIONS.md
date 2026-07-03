@@ -19,7 +19,7 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **48** service test modules
 - **494** passing backend tests
 - single-file React UI (~**10,300** lines)
-- **56** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
+- **57** implementation versions (v54 folded into v44.5; + the v44.5 / v45.1 passes)
 
 ## Architecture Pattern
 
@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v58 — Scheduled Tasks
+- **Purpose:** Register recurring tasks without any real background execution.
+- **How it operates:** `ScheduledTasksService` stores tasks (schedule + action type). There is no daemon and nothing runs on a timer; triggering a task performs a planning-first mock run (plan / note / hold-for-approval) and records the outcome. `due_tasks` computes which tasks would be due, purely informationally. Creation and triggers are governance-logged.
+- **Main API route groups:** `/api/scheduled-tasks` (+ `/{id}/trigger`, `/runs`, `/summary`).
+- **Safety boundary:** Planning-first — no real background scheduler or execution; risky steps require approval.
+
 ### v57 — Workspace Templates & Cloning
 - **Purpose:** Reusable, preconfigured workspace setups you can clone on demand.
 - **How it operates:** `WorkspaceTemplatesService` stores templates (name, description, default tags, a preset of local settings). Instantiating a template calls the existing `WorkspaceService.create_workspace` to spin up a real local workspace preconfigured from it, and increments the template's instantiation count. Creation and instantiation are governance-logged.
@@ -493,4 +499,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v55 | Operating Layer 2.0 | `/api/operating-layer-2` | Expanded capability map + readiness/governance scorecard | Read-only; not AGI; v40 layer untouched |
 | v56 | Notifications & Alerts Center | `/api/notifications` | Local digest of platform alerts; acknowledge | In-app only; no email/SMS/push |
 | v57 | Workspace Templates & Cloning | `/api/workspace-templates` | Reusable workspace presets + instantiate | Local records only; no production provisioning/auth |
+| v58 | Scheduled Tasks | `/api/scheduled-tasks` | Local scheduled-task registry; planning-first triggers | No daemon/timer execution; risky steps need approval |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

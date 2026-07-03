@@ -246,3 +246,9 @@ A governed system needs to surface what needs attention. The Notifications & Ale
 ## v57 — Workspace Templates & Cloning
 
 Spinning up consistent, preconfigured workspaces is a common need. The Workspace Templates feature lets users capture a preset once and clone it into new local workspaces on demand, incrementing usage counts and logging each action. It stays local-first with no production provisioning or auth, consistent with the platforms contract.
+
+---
+
+## v58 — Scheduled Tasks
+
+Scheduling usually implies a background daemon, but that would break the platforms no-real-execution contract. v58 keeps it planning-first: a local registry where triggering a task produces a planned or approval-held mock run and nothing runs automatically on a timer. It captures the intent of scheduling while staying fully governed and local.

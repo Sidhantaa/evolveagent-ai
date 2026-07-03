@@ -226,3 +226,7 @@ The Notifications & Alerts Center (`backend/app/services/notifications_center_se
 ## v57 — Workspace Templates & Cloning
 
 The Workspace Templates service (`backend/app/services/workspace_templates_service.py`, routes under `/api/workspace-templates`) lets users define reusable workspace presets (name, description, tags, and a preset of local settings) and instantiate them. Instantiation reuses the existing WorkspaceService to create a real local workspace preconfigured from the template. It is local structure only, with no production provisioning or authentication, and both creation and instantiation are governance-logged.
+
+## v58 — Scheduled Tasks
+
+The Scheduled Tasks service (`backend/app/services/scheduled_tasks_service.py`, routes under `/api/scheduled-tasks`) is a local registry of scheduled tasks. It runs no background scheduler and never executes anything on a timer. A task records a schedule (manual/hourly/daily/weekly) and an action; triggering performs a planning-first mock run (plan / note / hold-for-approval), and due_tasks is purely informational. Creation and triggers are governance-logged.

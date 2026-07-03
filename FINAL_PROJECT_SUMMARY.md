@@ -1,4 +1,10 @@
-# EvolveAgent AI — Project Summary (current completed: v57.0 Workspace Templates & Cloning · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v58.0 Scheduled Tasks · v45.1 MCP Hub UI)
+
+## v58 — Scheduled Tasks
+
+A local registry of scheduled tasks (manual/hourly/daily/weekly). It does not run a real background scheduler and never executes anything on a timer — there is no daemon. A task records a schedule and an action; triggering it performs a planning-first mock run (plan / note / hold-for-approval) and records the outcome; `due_tasks` is informational only. Exposed at `/api/scheduled-tasks` (create, list, toggle, trigger, runs, summary), in analytics, and as a Scheduled Tasks Developer-Mode panel. Stateful actions are governance-logged.
+
+## v57 — Workspace Templates & Cloning
 
 ## v57 — Workspace Templates & Cloning
 

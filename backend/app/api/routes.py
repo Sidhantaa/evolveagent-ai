@@ -131,6 +131,8 @@ from app.models.request_models import (
     PlaybookCreateRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
+    ScheduledTaskCreateRequest,
+    ScheduledTaskToggleRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -279,6 +281,7 @@ from app.services.playbook_library_service import PlaybookLibraryService
 from app.services.operating_layer_v2_service import OperatingLayerV2Service
 from app.services.notifications_center_service import NotificationsCenterService
 from app.services.workspace_templates_service import WorkspaceTemplatesService
+from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -381,6 +384,7 @@ playbook_library_service = PlaybookLibraryService(storage, governance_service)
 operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
 notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
 workspace_templates_service = WorkspaceTemplatesService(storage, governance_service, workspace_service)
+scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1647,6 +1651,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **operating_layer_v2_service.analytics_summary(),
         **notifications_center_service.analytics_summary(),
         **workspace_templates_service.analytics_summary(),
+        **scheduled_tasks_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3958,6 +3963,49 @@ def instantiate_workspace_template(template_id: str, request: WorkspaceTemplateI
         return workspace_templates_service.instantiate(template_id, request.model_dump() if request else {})
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Template not found") from error
+
+
+# ----------------------------------------------------------------------
+# v58.0 Scheduled Tasks — local registry, planning-first triggers (no daemon).
+# ----------------------------------------------------------------------
+@router.get("/scheduled-tasks/summary")
+def get_scheduled_tasks_summary() -> dict:
+    return scheduled_tasks_service.summary()
+
+
+@router.get("/scheduled-tasks/runs")
+def list_scheduled_task_runs(task_id: str | None = Query(default=None)) -> dict:
+    runs = scheduled_tasks_service.list_runs(task_id)
+    return {"runs": runs, "count": len(runs)}
+
+
+@router.get("/scheduled-tasks")
+def list_scheduled_tasks() -> dict:
+    tasks = scheduled_tasks_service.list_tasks()
+    return {"tasks": tasks, "count": len(tasks)}
+
+
+@router.post("/scheduled-tasks")
+def create_scheduled_task(request: ScheduledTaskCreateRequest) -> dict:
+    return scheduled_tasks_service.create_task(request.model_dump())
+
+
+@router.patch("/scheduled-tasks/{task_id}")
+def toggle_scheduled_task(task_id: str, request: ScheduledTaskToggleRequest) -> dict:
+    try:
+        return scheduled_tasks_service.set_enabled(task_id, request.enabled)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Task not found") from error
+
+
+@router.post("/scheduled-tasks/{task_id}/trigger")
+def trigger_scheduled_task(task_id: str) -> dict:
+    try:
+        return scheduled_tasks_service.trigger(task_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
 
 
 @router.get("/governance")

@@ -2512,6 +2512,21 @@ export function createWorkspaceTemplate(payload) {
 export function instantiateWorkspaceTemplate(templateId, payload) {
   return postJson(`/api/workspace-templates/${templateId}/instantiate`, payload || {})
 }
+export function getScheduledTasks() {
+  return getJson('/api/scheduled-tasks')
+}
+export function getScheduledTasksSummary() {
+  return getJson('/api/scheduled-tasks/summary')
+}
+export function createScheduledTask(payload) {
+  return postJson('/api/scheduled-tasks', payload)
+}
+export function toggleScheduledTask(taskId, enabled) {
+  return patchJson(`/api/scheduled-tasks/${taskId}`, { enabled })
+}
+export function triggerScheduledTask(taskId) {
+  return postJson(`/api/scheduled-tasks/${taskId}/trigger`, {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }
