@@ -2500,6 +2500,9 @@ export function generateNotifications() {
 export function acknowledgeNotification(notifId) {
   return postJson(`/api/notifications/${notifId}/ack`, {})
 }
+export function suggestMcp(task) {
+  return postJson('/api/mcp/suggest', { task })
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

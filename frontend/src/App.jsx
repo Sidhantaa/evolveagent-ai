@@ -338,6 +338,7 @@ import {
   getNotifications,
   generateNotifications,
   acknowledgeNotification,
+  suggestMcp,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -656,6 +657,10 @@ function App() {
   const [voiceUsed, setVoiceUsed] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [listening, setListening] = useState(false)
+  // Voice Ask Console (v-voice): speak answers aloud + task-aware MCP suggestions.
+  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
+  const [mcpSuggestions, setMcpSuggestions] = useState([])
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -4342,6 +4347,9 @@ function App() {
       setMessages((current) => [...current, assistantMessage])
       setSessionId(data.session_id)
       setSelectedRunId(assistantMessage.id)
+      // Voice Ask Console: speak the answer aloud + suggest the MCP(s) this task needs.
+      speak(assistantMessage.content)
+      refreshMcpSuggestions(prompt)
       await refreshHistory()
       await refreshChats()
       await refreshProviderStatus()
@@ -4462,12 +4470,53 @@ function App() {
       setInput(transcript)
       setVoiceTranscript(transcript)
       setVoiceUsed(Boolean(transcript))
+      // Push-to-talk, auto-submit: speaking a request runs it immediately.
+      if (transcript.trim()) {
+        submitMessage(transcript)
+      }
     }
     recognition.onerror = () => {
       setError('Voice input could not be transcribed. Try again or type your message.')
     }
     recognition.onend = () => setListening(false)
     recognition.start()
+  }
+
+  // Speak an answer aloud via the browser (local text-to-speech; no external service).
+  function speak(text) {
+    if (!voiceOutputEnabled || !text) return
+    const synth = window.speechSynthesis
+    if (!synth) return
+    try {
+      synth.cancel()
+      const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 1200))
+      utterance.lang = 'en-US'
+      utterance.onstart = () => setSpeaking(true)
+      utterance.onend = () => setSpeaking(false)
+      utterance.onerror = () => setSpeaking(false)
+      synth.speak(utterance)
+    } catch {
+      setSpeaking(false)
+    }
+  }
+
+  function stopSpeaking() {
+    window.speechSynthesis?.cancel()
+    setSpeaking(false)
+  }
+
+  // Task-aware MCP suggestions: which connector(s) a request needs + key readiness (never values).
+  async function refreshMcpSuggestions(prompt) {
+    if (!prompt || !prompt.trim()) {
+      setMcpSuggestions([])
+      return
+    }
+    try {
+      const result = await suggestMcp(prompt.trim())
+      setMcpSuggestions(result?.suggestions || [])
+    } catch {
+      setMcpSuggestions([])
+    }
   }
 
   function focusComposer() {
@@ -10062,6 +10111,20 @@ function App() {
           )}
         </section>
 
+        {mcpSuggestions.length > 0 && (
+          <section className="mcp-suggestions-bar">
+            <span className="mcp-suggest-label">🔌 Tools this task may need:</span>
+            {mcpSuggestions.map((s) => (
+              <span key={s.slug} className={`mcp-suggest-chip ${s.keys_ready ? 'ready' : 'needs-key'}`} title={s.recommended_action}>
+                {s.name}
+                {s.missing_keys.length > 0
+                  ? ` · needs ${s.missing_keys.join(', ')} ✗`
+                  : s.already_enabled ? ' · enabled ✓' : ' · key ready ✓'}
+              </span>
+            ))}
+          </section>
+        )}
+
         <section className={`chat-composer ${developerMode ? '' : 'jarvis-composer'}`}>
           {developerMode && (
           <div className="composer-controls">
@@ -10136,6 +10199,15 @@ function App() {
             </label>
             <button className={`mic-button ${listening ? 'listening' : ''}`} type="button" onClick={startVoiceInput} aria-label="Use voice input">
               <Mic size={18} />
+            </button>
+            <button
+              className={`mic-button voice-out ${voiceOutputEnabled ? 'listening' : ''} ${speaking ? 'speaking' : ''}`}
+              type="button"
+              onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
+              aria-label="Toggle spoken answers"
+              title={voiceOutputEnabled ? 'Spoken answers ON — tap to mute' : 'Spoken answers OFF — tap to have answers read aloud'}
+            >
+              <Cpu size={18} />
             </button>
             <textarea
               ref={composerRef}

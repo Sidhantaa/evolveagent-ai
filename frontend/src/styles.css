@@ -1581,6 +1581,61 @@ h2 {
   gap: 10px;
 }
 
+/* Voice Ask Console — spoken-answer toggle + MCP suggestion chips */
+.mic-button.voice-out.listening {
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.mic-button.voice-out.speaking {
+  animation: pulse-speaking 1s ease-in-out infinite;
+}
+
+@keyframes pulse-speaking {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.mcp-suggestions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 0 12px 6px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.mcp-suggest-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.mcp-suggest-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: default;
+}
+
+.mcp-suggest-chip.ready {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.mcp-suggest-chip.needs-key {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
 /* v45.1 — MCP Hub internal tab bar */
 .mcp-tabbar {
   display: flex;
