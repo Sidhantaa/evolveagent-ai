@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v60 — EvolveAgent OS 2.0 (capstone)
+- **Purpose:** A single unified command center over every system built across v1–v59, plus a final platform scorecard and report.
+- **How it operates:** `EvolveAgentOS2Service` indexes ~30 major systems grouped by domain (Core, Project & Portfolio, Business, Personal & Org, Research & Simulation, MCP Arc, Ops & Observability), marking each active-by-data with its API route and record count. It reuses the v55 Operating Layer 2.0 scorecard and the v49 health monitor for a live grade, exposes milestone stats (60 versions), and can persist a governance-logged snapshot or generate a final platform report. It reads existing local state only and takes no action beyond storing the snapshot/report. It is explicitly **not AGI** — a governed orchestration layer, not an autonomous general intelligence.
+- **Main API route groups:** `/api/os2` (+ `/dashboard`, `/command-center`, `/snapshots`, `/report`).
+- **Safety boundary:** Read-only aggregation of local data; no shell, no external sending, no destructive actions; risky operations across the platform still require human approval and stay governance-logged.
+
 ### v59 — Data Export & Backup
 - **Purpose:** Portable local backup of your content, with safe restore.
 - **How it operates:** `DataExportService` reads a curated allow-list of content collections into one JSON bundle for download. Import merges the bundle back in non-destructively — appending only items whose id is not already present, never overwriting or deleting. Secret values, governance logs, and analytics are excluded. Exports and imports are governance-logged.
@@ -507,4 +513,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v57 | Workspace Templates & Cloning | `/api/workspace-templates` | Reusable workspace presets + instantiate | Local records only; no production provisioning/auth |
 | v58 | Scheduled Tasks | `/api/scheduled-tasks` | Local scheduled-task registry; planning-first triggers | No daemon/timer execution; risky steps need approval |
 | v59 | Data Export & Backup | `/api/data-export` | Local JSON bundle export + non-destructive import | Local only; no upload; merge-only; no secrets in bundle |
+| v60 | EvolveAgent OS 2.0 (capstone) | `/api/os2` | Unified command center over v1–v59 + platform scorecard/report | Read-only local aggregation; not AGI; approvals + governance preserved |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

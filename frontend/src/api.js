@@ -2536,6 +2536,15 @@ export function exportDataBundle() {
 export function importDataBundle(bundle) {
   return postJson('/api/data-export/import', { bundle })
 }
+export function getOs2Dashboard() {
+  return getJson('/api/os2/dashboard')
+}
+export function createOs2Snapshot() {
+  return postJson('/api/os2/snapshots', {})
+}
+export function createOs2Report() {
+  return postJson('/api/os2/report', {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }
