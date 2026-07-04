@@ -2605,6 +2605,13 @@ export function getWorkspaceOsDashboard(workspaceId) {
 export function getWorkspaceOsSummary() {
   return getJson('/api/workspace-os/summary')
 }
+export function planContext(query, opts = {}) {
+  return postJson('/api/context/plan', {
+    query,
+    workspace_id: opts.workspaceId || null,
+    budget_chars: opts.budgetChars || 4000,
+  })
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

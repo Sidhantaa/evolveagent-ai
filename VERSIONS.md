@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v71 — Smart Context Engine
+- **Purpose:** Better context selection before every answer.
+- **How it operates:** `SmartContextService` is a read-only **context planner**: given a query + workspace, it scores candidate **memory / files / goals** by keyword overlap, gives a **selection reason** per item, enforces a **context budget** (character cap), **removes duplicate** context, and **filters out sensitive content** (emails, card-like numbers, key-like tokens, secret assignments) so it never enters the context. It returns a Developer-Mode **context trace** of what was included and excluded and why. It previews/plans context — it does not change the run pipeline. Governance-logged.
+- **Main API route groups:** `/api/context` (+ `/context/plan`, `/context/summary`).
+- **Safety boundary:** Read-only planning; sensitive content is filtered out and never included; nothing is executed; governance-logged.
+
 ### v70 — Workspace Operating System 2.0
 - **Purpose:** Make each workspace feel like its own AI OS.
 - **How it operates:** `WorkspaceOSService` builds a **per-workspace, read-only overview**: a workspace **dashboard**, a **memory graph** (memory nodes + knowledge-link edges), **feature-usage** counts across the workspace's collections, its **agents**, its **reports**, a recent **timeline** (via the v63 Activity Timeline scoped to the workspace), and a derived **health score** (completeness of goals/memory/agents → healthy/developing/sparse). It reads existing local state only, scoped to one workspace, and is governance-logged.
@@ -591,4 +597,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v68 | Real Provider Control Center 2.0 | `/api/provider-control` | Provider readiness dashboard, model-per-task + real/mock-per-capability prefs, cost estimate, latency stats, fallback policy, boolean-only key checks | Boolean-only key readiness; real calls env-gated; no secrets exposed; governance-logged |
 | v69 | Unified Notifications Inbox 2.0 | `/api/notifications-inbox` | Actionable inbox: approval/failed-run/provider-fallback/reminder/health alerts, severity grouping, mark-resolved, source links, idempotent generation | Read-only aggregation; additive to v56; governance-logged |
 | v70 | Workspace Operating System 2.0 | `/api/workspace-os` | Per-workspace dashboard: memory graph, feature usage, agents, reports, timeline, health score | Read-only workspace-scoped aggregation; no writes; governance-logged |
+| v71 | Smart Context Engine | `/api/context` | Context planner: memory/file/goal selection with reasons, budget control, dedup, sensitive-content filtering, context trace | Read-only preview; sensitive content filtered out; nothing executed; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

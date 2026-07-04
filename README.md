@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v70 — Workspace Operating System 2.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v71 — Smart Context Engine &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -33,6 +33,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
 - **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
 - **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
+- **v71 — Smart Context Engine:** a read-only **context planner** that picks which **memory / files / goals** feed an answer — with a **selection reason** per item, a **context budget**, **duplicate removal**, and **sensitive-content filtering** (emails, key-like tokens, etc. are never included), plus a Developer-Mode **context trace**. At `/api/context`.
 - **v70 — Workspace Operating System 2.0:** makes each workspace its own AI OS — a per-workspace **dashboard** with a **memory graph** (nodes + knowledge-link edges), **feature usage**, **agents**, **reports**, a scoped **timeline**, and a derived **health score**. Read-only and workspace-scoped. At `/api/workspace-os`.
 - **v69 — Unified Notifications Inbox 2.0:** an **actionable inbox** that unifies approval alerts, failed-run alerts, provider-fallback alerts, scheduled-task reminders, and health warnings — **grouped by severity**, with **mark-resolved** and **links to the source event**. Generation is **idempotent** and it's **additive** to the v56 center. At `/api/notifications-inbox`.
 - **v68 — Real Provider Control Center 2.0:** a **readiness dashboard** for OpenAI / Claude / Gemini / Mistral / local, with **model-per-task** and **real/mock-per-capability** preferences, a **cost estimate** (from the usage ledger), **latency** stats, and a **fallback policy**. **API key checks report booleans only** — no secret values are ever exposed. At `/api/provider-control`.
