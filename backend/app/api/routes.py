@@ -307,6 +307,7 @@ from app.services.workspace_os_service import WorkspaceOSService
 from app.services.smart_context_service import SmartContextService
 from app.services.agent_quality_service import AgentQualityService
 from app.services.workflow_recommendation_service import WorkflowRecommendationService
+from app.services.personal_productivity_service import PersonalProductivityService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -426,6 +427,7 @@ workspace_os_service = WorkspaceOSService(storage, governance_service, activity_
 smart_context_service = SmartContextService(storage, governance_service)
 agent_quality_service = AgentQualityService(storage, governance_service)
 workflow_recommendation_service = WorkflowRecommendationService(storage, governance_service)
+personal_productivity_service = PersonalProductivityService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1708,6 +1710,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **smart_context_service.analytics_summary(),
         **agent_quality_service.analytics_summary(),
         **workflow_recommendation_service.analytics_summary(),
+        **personal_productivity_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4381,6 +4384,24 @@ def workflow_recommend(request: WorkflowRecommendRequest) -> dict:
 @router.get("/workflow-recommend/summary")
 def workflow_recommend_summary() -> dict:
     return workflow_recommendation_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v74.0 Personal Productivity Brain — what should I work on now? (read-only).
+# ----------------------------------------------------------------------
+@router.get("/productivity")
+def productivity_brain(workspace_id: str | None = Query(default=None)) -> dict:
+    return personal_productivity_service.brain(workspace_id=workspace_id)
+
+
+@router.get("/productivity/what-now")
+def productivity_what_now(workspace_id: str | None = Query(default=None)) -> dict:
+    return personal_productivity_service.what_now(workspace_id=workspace_id)
+
+
+@router.get("/productivity/summary")
+def productivity_summary() -> dict:
+    return personal_productivity_service.summary()
 
 
 @router.get("/activity/export")

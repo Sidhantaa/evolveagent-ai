@@ -381,6 +381,7 @@ import {
   planContext,
   getAgentQuality,
   recommendWorkflow,
+  getProductivityBrain,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1167,6 +1168,8 @@ function App() {
   const [workflowGoal, setWorkflowGoal] = useState('')
   const [workflowRec, setWorkflowRec] = useState(null)
   const [workflowBusy, setWorkflowBusy] = useState(false)
+  const [showProductivity, setShowProductivity] = useState(false)
+  const [productivityBrain, setProductivityBrain] = useState(null)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3190,6 +3193,14 @@ function App() {
   async function refreshAgentQuality() {
     try {
       setAgentQuality(await getAgentQuality())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshProductivity() {
+    try {
+      setProductivityBrain(await getProductivityBrain(workspaceId))
     } catch {
       // best-effort
     }
@@ -9431,6 +9442,52 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowProductivity((current) => !current); if (!productivityBrain) refreshProductivity() }}>
+              <span>
+                <Flag size={15} />
+                Productivity Brain
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showProductivity && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Productivity Brain · v74.0</strong>
+                  <span>Priority recommendations, daily focus, blockers, overdue review, goal progress, and "what should I work on now?" — read-only.</span>
+                </div>
+                {productivityBrain && (
+                  <>
+                    {productivityBrain.what_now?.pick && (
+                      <div className="agent-template-card">
+                        <strong>▶ What now: {productivityBrain.what_now.pick}</strong>
+                        <span className="gs-trace">{productivityBrain.what_now.reason}</span>
+                      </div>
+                    )}
+                    <p className="muted">{productivityBrain.open_task_count} open · {productivityBrain.overdue?.length} overdue · {productivityBrain.blockers?.length} blocked · goals {productivityBrain.goal_progress?.avg_progress_pct}%</p>
+                    <div className="agent-template-card">
+                      <strong>Daily focus</strong>
+                      {(productivityBrain.daily_focus || []).map((t, i) => (<span key={i} className="home-action">• {t.title}{t.due_date ? ` (due ${String(t.due_date).slice(0, 10)})` : ''}</span>))}
+                      {(!productivityBrain.daily_focus || productivityBrain.daily_focus.length === 0) && <span className="gs-trace">No open tasks.</span>}
+                    </div>
+                    {productivityBrain.upcoming_deadlines?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Upcoming deadlines</strong>
+                        {productivityBrain.upcoming_deadlines.map((d, i) => (<span key={i} className="gs-trace">• {d.title} — {String(d.due_date).slice(0, 10)}</span>))}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshProductivity()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only — nothing is created or completed.</p>
               </div>
             )}
           </section>
