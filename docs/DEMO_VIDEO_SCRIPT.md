@@ -12,6 +12,12 @@ A scene-by-scene script with narration and suggested prompts. Target length: **5
 
 > "This is EvolveAgent AI — a local-first, workspace-aware multi-agent AI operating system built with FastAPI and React. Instead of one opaque chatbot call, every request is routed through a Master Agent to a team of specialist agents, wrapped in a governance layer, workspace memory, and a two-mode UI. It runs entirely on your machine with JSON storage, and works with or without API keys thanks to mock fallback."
 
+## 1b. Master Agent Voice Console — talk to the whole platform (≈45s)
+
+**On screen:** Simple Mode AI-native hero. Click the mic and say: *"Review this Python function and suggest a refactor."* Then type `mcp: connect notion`, then `/health`.
+
+> "In v60.1 the Master Agent became the single top-level way you interact with everything. This clean AI-native hero is one surface over all sixty versions. I can push-to-talk — I speak a request, it auto-routes to the right subsystem, answers, and reads the answer back aloud using the browser's speech synthesis. It shows me Answer, Sources, and Follow-ups. A `mcp:` prefix routes tool-connection requests to the connector hub, and a CLI palette of governed slash-commands — `/health`, `/approvals`, `/scorecard` — gives command-style control. It even suggests which MCP tools a task needs and whether their keys are set — booleans only, never the secret values. And it stays planning-first: if I ask it to send, pay, delete, or deploy, it holds the action for my approval instead of running it."
+
 ## 2. Architecture — Master Agent + services + governance (≈45s)
 
 **On screen:** Developer Mode; run `Explain how EvolveAgent AI works.`

@@ -6,7 +6,11 @@ Accurate, portfolio-ready wording for resumes, LinkedIn, and applications. Pick 
 
 ## Current headline bullet (recommended)
 
-> Designed and built **EvolveAgent AI**, a local-first multi-agent AI operating system (FastAPI + React) spanning **44 iterative versions**, **85 services**, **~480 API routes**, and **494 passing tests** — with a governed architecture (per-action audit logging, approval gates, opt-in real providers with mock fallback) and a four-version MCP tool-connection layer that safely advances from planning to sandboxed, read-only execution.
+> Designed and built **EvolveAgent AI**, a local-first multi-agent AI operating system (FastAPI + React) spanning **60+ iterative versions** — culminating in a **Master Agent voice console** (v60.1) that routes any spoken or typed request across every subsystem via a clean AI-native hero (push-to-talk voice input, spoken answers, `mcp:`/CLI command palette, task-aware MCP suggestions) — with a governed, planning-first architecture (per-action audit logging, approval gates that risky actions can never bypass, opt-in real providers with mock fallback) and a full MCP tool-connection layer that safely advances from planning to sandboxed, read-only execution.
+
+## Master Agent Voice Console bullet (v60.1)
+
+> Built a **Master Agent** as the single top-level routing surface over 60+ platform versions: an AI-native hero with **push-to-talk voice input** and **spoken answers** (browser speech synthesis), a **`mcp:` command prefix** and **governed CLI palette**, and **task-aware MCP tool suggestions** with boolean-only key-readiness (never exposing secret values) — all planning-first and approval-gated so send/pay/delete/deploy actions are always held for human approval and governance-logged.
 
 ---
 
