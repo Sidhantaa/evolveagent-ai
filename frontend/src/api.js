@@ -2618,6 +2618,9 @@ export function getAgentQuality() {
 export function recommendWorkflow(goal, taskType) {
   return postJson('/api/workflow-recommend', { goal, task_type: taskType || null })
 }
+export function getProductivityBrain(workspaceId) {
+  return getJson(workspaceId ? `/api/productivity?workspace_id=${workspaceId}` : '/api/productivity')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

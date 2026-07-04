@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v73 Workflow Recommendation Engine · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v74 Personal Productivity Brain · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -43,6 +43,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v71 — Smart Context Engine:** read-only **context planner** scoring memory/files/goals by keyword overlap / **selection reason** per item / **context budget** (char cap) / **duplicate removal** / **sensitive-content filtering** (emails / card-like numbers / key-like tokens / secret assignments never included) / Developer-Mode **context trace** (selected + excluded with reasons) / does not alter run pipeline / governance-logged / analytics / Smart Context Developer-Mode panel / `/api/context`.
 - [x] **v72 — Agent Quality Optimizer:** read-only analysis over run analytics + feedback / per-agent **score trends** (avg vs recent, up/down/flat) / **weak-agent detection** (recent < 60/100) / rule-based **prompt improvement suggestions** / **best agent by task type** / **regression checks** (prev vs recent window, >10% drop) / **human-feedback correlation** (ratings vs judge scores) / normalizes 0-1 & 0-100 scales / no prompt changes, nothing executed / governance-logged / analytics / Agent Quality Developer-Mode panel / `/api/agent-quality`.
 - [x] **v73 — Workflow Recommendation Engine:** classifies a goal (coding/research/business/data_analysis/general) / **recommended workflow** (ordered expected steps) / **similar past runs** (Master Agent route history by keyword) / **risk level** + **approval requirements** (risky verbs / sensitive task held for approval) / **time & complexity** estimate / read-only, planning-only / governance-logged / analytics / Workflow Recommender Developer-Mode panel / `/api/workflow-recommend`.
+- [x] **v74 — Personal Productivity Brain:** reads goals/life-tasks/deadlines / **priority recommendations** (overdue → priority → due date) / **daily focus** (top 3) / **blocker detection** / **overdue review** / **upcoming deadlines** / **goal-progress summary** (open goals + avg %) / "**what should I work on now?**" pick + reason / read-only, no create/complete / governance-logged / analytics / Productivity Brain Developer-Mode panel / `/api/productivity`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
