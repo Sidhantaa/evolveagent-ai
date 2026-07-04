@@ -146,6 +146,8 @@ from app.models.request_models import (
     ResearchSourcesRequest,
     ResearchBriefRequest,
     ResearchTextRequest,
+    MeetingAnalyzeRequest,
+    MeetingToGoalRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -321,6 +323,7 @@ from app.services.document_intelligence_service import DocumentIntelligenceServi
 from app.services.code_intelligence_service import CodeIntelligenceService
 from app.services.research_agent_service import ResearchAgentService
 from app.services.business_intelligence_service import BusinessIntelligenceService
+from app.services.meeting_intelligence_service import MeetingIntelligenceService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -445,6 +448,7 @@ document_intelligence_service = DocumentIntelligenceService(storage, governance_
 code_intelligence_service = CodeIntelligenceService(storage, governance_service)
 research_agent_service = ResearchAgentService(storage, governance_service)
 business_intelligence_service = BusinessIntelligenceService(storage, governance_service)
+meeting_intelligence_service = MeetingIntelligenceService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1732,6 +1736,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **code_intelligence_service.analytics_summary(),
         **research_agent_service.analytics_summary(),
         **business_intelligence_service.analytics_summary(),
+        **meeting_intelligence_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4540,6 +4545,24 @@ def business_intel_report(workspace_id: str | None = Query(default=None)) -> dic
 @router.get("/business-intel/summary")
 def business_intel_summary() -> dict:
     return business_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v79.0 Meeting Intelligence 2.0 — deterministic transcript extraction (read-only).
+# ----------------------------------------------------------------------
+@router.post("/meeting-intel/analyze")
+def meeting_intel_analyze(request: MeetingAnalyzeRequest) -> dict:
+    return meeting_intelligence_service.analyze(request.transcript)
+
+
+@router.post("/meeting-intel/to-goal")
+def meeting_intel_to_goal(request: MeetingToGoalRequest) -> dict:
+    return meeting_intelligence_service.to_goal_plan(request.transcript, request.title)
+
+
+@router.get("/meeting-intel/summary")
+def meeting_intel_summary() -> dict:
+    return meeting_intelligence_service.summary()
 
 
 @router.get("/activity/export")

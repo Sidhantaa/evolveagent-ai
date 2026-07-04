@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v79 — Meeting Intelligence 2.0
+- **Purpose:** Make recordings and meetings useful.
+- **How it operates:** `MeetingIntelligenceService` runs deterministic, read-only extraction over a submitted meeting **transcript**: a **summary**, **decisions**, **action items** with likely **owners**, generated **follow-up drafts** (not sent), and a **timeline view** (sentences with time cues). It can also **propose** a goal + task plan from the meeting — **planning-only**: it returns a proposed structure and does **not** create goals/tasks or send anything. No model call, no web. Governance-logged.
+- **Main API route groups:** `/api/meeting-intel` (+ `/analyze`, `/to-goal`, `/summary`).
+- **Safety boundary:** Deterministic + local; read-only; follow-up drafts are drafts (never sent); goal/task conversion is planning-only (nothing created); governance-logged.
+
 ### v78 — Business Intelligence 2.0
 - **Purpose:** Make the business modules more serious.
 - **How it operates:** `BusinessIntelligenceService` is a read-only analytics layer over local business records: a **KPI dashboard** (leads, proposals, win rate), a **lead pipeline summary** (by stage), a **proposal tracker** (by status), a **mock revenue forecast** (illustrative deal size × stage probability — clearly labelled, never real money), a **risk register** (project risks + derived pipeline risks), a **business report generator** (markdown), and an **executive summary export**. Read-only; governance-logged.
@@ -647,4 +653,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v76 | Code Intelligence 2.0 | `/api/code-intel` | Bug-risk scan, refactor plan, complexity metrics, route map, dependency list, test-coverage summary (on submitted code) | Static read-only analysis of submitted text; no edits/filesystem/execution; governance-logged |
 | v77 | Research Agent 2.0 | `/api/research-agent` | Source comparison, claim/evidence table, contradiction detection, citation quality score, research brief, bias flags | Deterministic + local; no web/model calls; read-only; governance-logged |
 | v78 | Business Intelligence 2.0 | `/api/business-intel` | KPI dashboard, lead pipeline, proposal tracker, mock revenue forecast, risk register, business report | Read-only; mock forecast; no billing/payment; governance-logged |
+| v79 | Meeting Intelligence 2.0 | `/api/meeting-intel` | Summary, decisions, action items + owners, follow-up drafts, timeline, propose goal/tasks | Deterministic + local; read-only; drafts never sent; goal conversion planning-only; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

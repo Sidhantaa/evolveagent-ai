@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v78 Business Intelligence 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v79 Meeting Intelligence 2.0 · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -48,6 +48,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v76 — Code Intelligence 2.0:** deterministic **read-only static analyzer** of submitted code — **bug-risk scan** (eval/exec, bare/broad except, hard-coded secrets, shell/subprocess, TODOs, `==None`, prints) / **suggested refactor plan** / **complexity metrics** (lines/functions/long-functions/max-line) / **API route map** / **dependency list** / **test-coverage summary** / no filesystem access, no edits, no execution / governance-logged / analytics / Code Intelligence Developer-Mode panel / `/api/code-intel`.
 - [x] **v77 — Research Agent 2.0:** deterministic **local research toolkit** — **source comparison** (pairwise overlap + agreement) / **claim/evidence table** / **contradiction detection** (shared subject + differing negation) / **citation quality score** (urls/years/attribution/ids) / **research brief generator** (markdown) / **bias/risk flags** (loaded language) / no web browsing, no model calls / read-only / governance-logged / analytics / `/api/research-agent`. *(Developer-Mode panel deferred — added in a later UI pass.)*
 - [x] **v78 — Business Intelligence 2.0:** read-only analytics over local business records — **KPI dashboard** (leads/proposals/win-rate) / **lead pipeline** (by stage) / **proposal tracker** (by status) / **mock revenue forecast** (illustrative deal size × stage probability, never real money) / **risk register** (project + derived pipeline risks) / **business report** + **executive summary** (markdown) / read-only, no billing/payment / governance-logged / analytics / `/api/business-intel`. *(Developer-Mode panel deferred to a later UI pass.)*
+- [x] **v79 — Meeting Intelligence 2.0:** deterministic read-only extraction over a submitted transcript — **summary** / **decisions** / **action items** + **owners** / **follow-up drafts** (never sent) / **timeline** (time cues) / **propose goal+tasks** (planning-only, nothing created) / no model call / governance-logged / analytics / `/api/meeting-intel`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
