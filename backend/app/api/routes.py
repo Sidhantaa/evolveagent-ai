@@ -130,6 +130,7 @@ from app.models.request_models import (
     EvalSuiteCreateRequest,
     PlaybookCreateRequest,
     MCPSuggestRequest,
+    MasterAgentRouteRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -287,6 +288,7 @@ from app.services.workspace_templates_service import WorkspaceTemplatesService
 from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.data_export_service import DataExportService
 from app.services.evolveagent_os2_service import EvolveAgentOS2Service
+from app.services.master_agent_service import MasterAgentService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -393,6 +395,7 @@ workspace_templates_service = WorkspaceTemplatesService(storage, governance_serv
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
+master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1662,6 +1665,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **scheduled_tasks_service.analytics_summary(),
         **data_export_service.analytics_summary(),
         **evolveagent_os2_service.analytics_summary(),
+        **master_agent_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4043,6 +4047,29 @@ def import_data_bundle(request: DataImportRequest) -> dict:
         return data_export_service.import_bundle(request.bundle)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# Master Agent — one top-level AI surface routing across all of v1–v60.
+# ----------------------------------------------------------------------
+@router.post("/master-agent/route")
+def master_agent_route(request: MasterAgentRouteRequest) -> dict:
+    return master_agent_service.route(
+        request.text,
+        workspace_id=request.workspace_id,
+        voice_used=request.voice_used,
+        execute=request.execute,
+    )
+
+
+@router.get("/master-agent/capabilities")
+def master_agent_capabilities() -> dict:
+    return master_agent_service.capabilities()
+
+
+@router.get("/master-agent/summary")
+def master_agent_summary() -> dict:
+    return master_agent_service.summary()
 
 
 # ----------------------------------------------------------------------

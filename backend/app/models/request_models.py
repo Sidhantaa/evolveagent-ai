@@ -1407,6 +1407,16 @@ class MCPSuggestRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Master Agent — single top-level AI surface over all of v1–v60
+# ----------------------------------------------------------------------
+class MasterAgentRouteRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=4000)
+    workspace_id: str | None = Field(default=None)
+    voice_used: bool = Field(default=False)
+    execute: bool = Field(default=False, description="Only honored for non-risky intents; risky actions still require explicit approval.")
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):

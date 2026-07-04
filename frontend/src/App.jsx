@@ -29,8 +29,11 @@ import {
   Route,
   RefreshCw,
   Send,
+  Shield,
   ShieldAlert,
   Sparkles,
+  Volume2,
+  VolumeX,
   Sun,
   Terminal,
   ThumbsDown,
@@ -339,6 +342,7 @@ import {
   generateNotifications,
   acknowledgeNotification,
   suggestMcp,
+  routeMasterAgent,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -680,6 +684,10 @@ function App() {
   const [askFollowups, setAskFollowups] = useState([])
   const [heroInput, setHeroInput] = useState('')
   const [cliBusy, setCliBusy] = useState(false)
+  // Master Agent (single top-level AI over all of v1–v60).
+  const [masterText, setMasterText] = useState('')
+  const [masterResult, setMasterResult] = useState(null)
+  const [masterBusy, setMasterBusy] = useState(false)
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -4672,6 +4680,60 @@ function App() {
     if (!value || loading) return
     setHeroInput('')
     submitMessage(value)
+  }
+
+  // ---- Master Agent: one AI surface that routes across all of v1–v60 ----
+  async function askMaster(rawText, voiceUsed = false) {
+    const text = (rawText ?? masterText).trim()
+    if (!text || masterBusy) return
+    // Command prefixes route to their governed surfaces instead of the router.
+    if (/^mcp:/i.test(text)) { setMasterText(''); return handleMcpCommand(text) }
+    if (text.startsWith('/')) { setMasterText(''); return runSlashCommand(text) }
+    setMasterBusy(true)
+    setError('')
+    try {
+      const result = await routeMasterAgent(text, { workspaceId, voiceUsed })
+      setMasterResult(result)
+      setAskSources(result.sources || [])
+      setAskFollowups(result.followups || [])
+      setMcpSuggestions(result.mcp_suggestions || [])
+      setMasterText('')
+      // Two-way voice: read the answer aloud (voice requests always speak; typed obeys the toggle).
+      if (voiceUsed && !voiceOutputEnabled) setVoiceOutputEnabled(true)
+      speak(result.requires_approval
+        ? `${result.answer}. Heads up — this needs your approval before anything runs.`
+        : result.answer)
+    } catch (err) {
+      setError(`Master Agent could not route that: ${err.message}`)
+    } finally {
+      setMasterBusy(false)
+    }
+  }
+
+  function masterSubmit(event) {
+    event.preventDefault()
+    askMaster(masterText, false)
+  }
+
+  // Push-to-talk for the Master Agent: speak → auto-route → spoken answer.
+  function startMasterVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setError('Voice input is not supported in this browser yet.')
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.onstart = () => { setListening(true); setError('') }
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || ''
+      if (transcript.trim()) askMaster(transcript, true)
+    }
+    recognition.onerror = () => setError('Voice input could not be transcribed. Try again or type.')
+    recognition.onend = () => setListening(false)
+    recognition.start()
   }
 
   // ---- CLI command palette (governed /-commands; no raw shell) ----
@@ -10268,82 +10330,116 @@ function App() {
           )}
         </header>
 
-        <section className={`chat-scroll ${!developerMode ? 'jarvis-scroll' : ''}`}>
-          {!developerMode && (
-            <div className="ask-hero">
-              <div className="ask-hero-glow" aria-hidden="true" />
-              <div className="ask-hero-title">✦ Ask EvolveAgent</div>
-              <form className="ask-hero-bar" onSubmit={heroSubmit}>
+        <section className="chat-scroll">
+          {messages.length === 0 && !loading && !developerMode && (
+            <div className="master-hero">
+              <div className="master-hero-orb"><Brain size={26} /></div>
+              <h2 className="master-hero-title">Master Agent</h2>
+              <p className="master-hero-sub">One AI over everything — speak or type, and it routes across all EvolveAgent systems.</p>
+              <form className="master-hero-bar" onSubmit={masterSubmit}>
                 <input
                   type="text"
-                  className="ask-hero-input"
-                  placeholder="Ask anything, or say a command…"
-                  value={heroInput}
-                  onChange={(event) => setHeroInput(event.target.value)}
+                  className="master-hero-input"
+                  placeholder="Ask anything, or say a command… (mcp: … or /help)"
+                  value={masterText}
+                  onChange={(event) => setMasterText(event.target.value)}
+                  disabled={masterBusy}
                 />
-                <button type="button" className={`ask-hero-mic ${listening ? 'listening' : ''}`} onClick={startVoiceInput} aria-label="Speak" title="Push to talk — speak and it runs automatically">
+                <button
+                  type="button"
+                  className={`master-hero-mic ${listening ? 'listening' : ''}`}
+                  onClick={startMasterVoice}
+                  aria-label="Push to talk"
+                  title="Push to talk — speak and it routes automatically"
+                >
                   <Mic size={18} />
                 </button>
-                <button type="button" className={`ask-hero-mic ${voiceOutputEnabled ? 'listening' : ''} ${speaking ? 'speaking' : ''}`} onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }} aria-label="Toggle spoken answers" title={voiceOutputEnabled ? 'Spoken answers ON' : 'Spoken answers OFF'}>
-                  <Cpu size={18} />
+                <button
+                  type="button"
+                  className={`master-hero-tts ${voiceOutputEnabled ? 'on' : ''} ${speaking ? 'speaking' : ''}`}
+                  onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
+                  aria-label="Toggle spoken answers"
+                  title={voiceOutputEnabled ? 'Spoken answers ON — tap to mute' : 'Spoken answers OFF — tap to hear answers'}
+                >
+                  {voiceOutputEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                 </button>
-                <button type="submit" className="ask-hero-go" disabled={loading || cliBusy || !heroInput.trim()}>Ask</button>
+                <button type="submit" className="master-hero-go" disabled={masterBusy || !masterText.trim()}>
+                  {masterBusy ? <Activity size={16} /> : 'Ask'}
+                </button>
               </form>
-              {heroInput.startsWith('/') && (
-                <div className="cli-palette">
-                  <div className="cli-palette-title">⌘ Commands</div>
-                  {SLASH_COMMANDS.filter((c) => c.cmd.startsWith(heroInput.split(' ')[0].toLowerCase())).map((c) => (
-                    <button key={c.cmd} type="button" className="cli-cmd" onClick={() => setHeroInput(c.cmd + ' ')}>
+              {masterText.startsWith('/') && (
+                <div className="master-cli">
+                  {SLASH_COMMANDS.filter((c) => c.cmd.startsWith(masterText.split(' ')[0].toLowerCase())).map((c) => (
+                    <button key={c.cmd} type="button" className="master-cli-cmd" onClick={() => setMasterText(c.cmd + ' ')}>
                       <strong>{c.cmd}</strong><span>{c.desc}</span>
                     </button>
                   ))}
                 </div>
               )}
-              <div className="ask-hero-hint">
-                {['Explain how EvolveAgent works', 'Plan a GitHub PR workflow', 'mcp: connect notion', '/help', '/health'].map((chip) => (
-                  <button key={chip} type="button" className="ask-hero-chip" onClick={() => submitMessage(chip)} disabled={loading}>{chip}</button>
-                ))}
-              </div>
-              {listening && <p className="jarvis-listening">Listening… speak your request.</p>}
-            </div>
-          )}
-          {messages.length === 0 && !loading && !developerMode && (
-            <div className="jarvis-command-center">
-              <div className="jarvis-glow" aria-hidden="true" />
-              <div className="jarvis-ring" aria-hidden="true" />
-              <div className="jarvis-command-header">
-                <h2>EvolveAgent AI</h2>
-                <p>Speak a command or type a mission</p>
-              </div>
-              <div className="jarvis-system-readout" aria-label="Capabilities">
-                <span>Agents online</span>
-                <span>Memory active</span>
-                <span>Tools governed</span>
-              </div>
-              <div className="jarvis-command-options">
-                <button
-                  type="button"
-                  className={`jarvis-command-option speak ${listening ? 'active' : ''}`}
-                  onClick={handleJarvisSpeak}
-                >
-                  <span className="jarvis-option-icon">
-                    <Mic size={28} />
-                  </span>
-                  <strong>Speak</strong>
-                  <span className="jarvis-option-subtitle">Start with voice and edit before sending.</span>
-                </button>
-                <button type="button" className="jarvis-command-option type" onClick={focusComposer}>
-                  <span className="jarvis-option-icon">
-                    <Keyboard size={28} />
-                  </span>
-                  <strong>Type</strong>
-                  <span className="jarvis-option-subtitle">Open the command line for text, files, or goals.</span>
-                </button>
-              </div>
-              {listening && <p className="jarvis-listening">Listening for your command...</p>}
-            </div>
-          )}
+              {listening && <p className="master-hero-hint listening">Listening… speak your request.</p>}
+              {!masterResult && !listening && (
+                <div className="master-hero-chips">
+                  {['Review this Python function', 'Plan a GitHub PR workflow', 'Summarize my compliance policy', 'mcp: connect notion', '/health'].map((chip) => (
+                    <button key={chip} type="button" className="master-chip" onClick={() => askMaster(chip, false)} disabled={masterBusy}>{chip}</button>
+                  ))}
+                </div>
+              )}
 
+              {masterResult && (
+                <div className="master-answer">
+                  {masterResult.requires_approval && (
+                    <div className="master-approval">
+                      <Shield size={15} />
+                      <span>Approval required before anything runs. {masterResult.approval_reasons?.join(' ')}</span>
+                    </div>
+                  )}
+                  <div className="master-answer-head">
+                    <span className="master-badge">{masterResult.intent?.primary_domain || 'Routed'}</span>
+                    <button type="button" className="master-answer-tts" onClick={() => (speaking ? stopSpeaking() : (setVoiceOutputEnabled(true), speak(masterResult.answer)))}>
+                      {speaking ? <><VolumeX size={13} /> Stop</> : <><Volume2 size={13} /> Read aloud</>}
+                    </button>
+                  </div>
+                  <div className="master-answer-body"><MarkdownMessage content={masterResult.answer || '(no answer)'} /></div>
+
+                  {askSources.length > 0 && (
+                    <div className="master-block">
+                      <h4>Sources</h4>
+                      <div className="master-source-list">
+                        {askSources.map((s, i) => (
+                          <span key={i} className="master-source">{s.label}{s.why ? ` · ${s.why}` : ''}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mcpSuggestions.length > 0 && (
+                    <div className="master-block">
+                      <h4>MCP tools</h4>
+                      <div className="master-source-list">
+                        {mcpSuggestions.map((m) => (
+                          <span key={m.slug} className={`master-mcp ${m.keys_ready ? 'ready' : 'missing'}`}>
+                            {m.name} · {m.keys_ready ? 'keys ready' : `needs ${m.missing_keys.join(', ')}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {askFollowups.length > 0 && (
+                    <div className="master-block">
+                      <h4>Follow-ups</h4>
+                      <div className="master-followups">
+                        {askFollowups.map((q, i) => (
+                          <button key={i} type="button" className="master-followup" onClick={() => askMaster(q, false)} disabled={masterBusy}>{q}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="master-disclaimer">{masterResult.disclaimer}</p>
+                </div>
+              )}
+            </div>
+          )}
           {messages.length === 0 && !loading && developerMode && (
               <div className="chat-empty">
               <div className="empty-orb">
@@ -10676,7 +10772,7 @@ function App() {
           </section>
         )}
 
-        <section className={`chat-composer ${developerMode ? '' : 'jarvis-composer'}`}>
+        <section className="chat-composer">
           {developerMode && (
           <div className="composer-controls">
             <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
@@ -10750,15 +10846,6 @@ function App() {
             </label>
             <button className={`mic-button ${listening ? 'listening' : ''}`} type="button" onClick={startVoiceInput} aria-label="Use voice input">
               <Mic size={18} />
-            </button>
-            <button
-              className={`mic-button voice-out ${voiceOutputEnabled ? 'listening' : ''} ${speaking ? 'speaking' : ''}`}
-              type="button"
-              onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
-              aria-label="Toggle spoken answers"
-              title={voiceOutputEnabled ? 'Spoken answers ON — tap to mute' : 'Spoken answers OFF — tap to have answers read aloud'}
-            >
-              <Cpu size={18} />
             </button>
             <textarea
               ref={composerRef}
