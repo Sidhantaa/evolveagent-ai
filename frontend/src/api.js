@@ -2584,6 +2584,12 @@ export function updateSettings(settings) {
 export function resetSettings() {
   return postJson('/api/settings/reset', {})
 }
+export function getProviderControl() {
+  return getJson('/api/provider-control/dashboard')
+}
+export function updateProviderControl(patch) {
+  return patchJson('/api/provider-control', patch)
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

@@ -199,6 +199,7 @@ class StorageService:
             "master_agent_runs.json",
             "demo_seed_log.json",
             "settings_center.json",
+            "provider_control.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

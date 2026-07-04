@@ -372,6 +372,8 @@ import {
   getSettings,
   updateSettings,
   resetSettings,
+  getProviderControl,
+  updateProviderControl,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1140,6 +1142,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [settingsData, setSettingsData] = useState(null)
   const [settingsBusy, setSettingsBusy] = useState(false)
+  const [showProviders, setShowProviders] = useState(false)
+  const [providerControl, setProviderControl] = useState(null)
+  const [providerBusy, setProviderBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3119,6 +3124,24 @@ function App() {
       setSettingsData(await getSettings())
     } catch {
       // best-effort
+    }
+  }
+
+  async function refreshProviderControl() {
+    try {
+      setProviderControl(await getProviderControl())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleCapabilityMode(capability, mode) {
+    setProviderBusy(true)
+    try {
+      await updateProviderControl({ capability_modes: { [capability]: mode } })
+      await refreshProviderControl()
+    } finally {
+      setProviderBusy(false)
     }
   }
 
@@ -9320,6 +9343,52 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowProviders((current) => !current); if (!providerControl) refreshProviderControl() }}>
+              <span>
+                <Gauge size={15} />
+                Provider Control
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showProviders && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Provider Control · v68.0</strong>
+                  <span>Readiness for OpenAI / Claude / Gemini / Mistral / local, model-per-task + real/mock preferences, cost & latency. Key readiness is boolean-only.</span>
+                </div>
+                {providerControl && (
+                  <>
+                    <p className="muted">{providerControl.ready_count}/{providerControl.providers?.length} ready · est cost ${providerControl.cost_estimate_usd}</p>
+                    <div className="agent-template-list">
+                      {providerControl.providers?.map((p) => (
+                        <div key={p.id} className="agent-template-card">
+                          <strong>{p.name} <span className={`feature-badge ${p.ready ? 'active' : 'needs_config'}`}>{p.ready ? 'ready' : 'needs key'}</span></strong>
+                          <span className="gs-trace">~{p.est_latency_ms}ms · ${p.est_cost_per_1k_usd}/1k · keys: {p.required_keys.join(', ') || 'none'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="agent-template-card">
+                      <strong>Capability mode (mock/real)</strong>
+                      {Object.entries(providerControl.capability_modes || {}).map(([cap, mode]) => (
+                        <label key={cap} className="settings-row">
+                          <span>{cap}</span>
+                          <select value={mode} disabled={providerBusy} onChange={(event) => handleCapabilityMode(cap, event.target.value)}>
+                            <option value="mock">mock</option>
+                            <option value="real">real</option>
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">{providerControl?.fallback_policy?.chain || 'Fallback: real when key set + mode real; else mock.'} No secret values are shown.</p>
               </div>
             )}
           </section>
