@@ -154,6 +154,8 @@ from app.models.request_models import (
     RedactionPreviewRequest,
     ImportPreviewRequest,
     ImportCommitRequest,
+    ExportRequest,
+    ExportPackageRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -335,6 +337,7 @@ from app.services.permission_profiles_service import PermissionProfilesService
 from app.services.governance_console_service import GovernanceConsoleService
 from app.services.data_manager_service import DataManagerService
 from app.services.import_center_service import ImportCenterService
+from app.services.export_center_service import ExportCenterService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -465,6 +468,7 @@ permission_profiles_service = PermissionProfilesService(storage, governance_serv
 governance_console_service = GovernanceConsoleService(storage, governance_service)
 data_manager_service = DataManagerService(storage, governance_service)
 import_center_service = ImportCenterService(storage, governance_service)
+export_center_service = ExportCenterService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1758,6 +1762,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **governance_console_service.analytics_summary(),
         **data_manager_service.analytics_summary(),
         **import_center_service.analytics_summary(),
+        **export_center_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4712,6 +4717,32 @@ def import_center_records(kind: str | None = Query(default=None)) -> dict:
 @router.get("/import-center/summary")
 def import_center_summary() -> dict:
     return import_center_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v85.0 Export Center — read-only portable exports (markdown/JSON).
+# ----------------------------------------------------------------------
+@router.post("/export-center/export")
+def export_center_export(request: ExportRequest) -> dict:
+    try:
+        return export_center_service.export(request.kind, request.format, request.workspace_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/export-center/package")
+def export_center_package(request: ExportPackageRequest) -> dict:
+    return export_center_service.package(request.kinds, request.format, request.workspace_id)
+
+
+@router.get("/export-center/case-study")
+def export_center_case_study() -> dict:
+    return export_center_service.case_study()
+
+
+@router.get("/export-center/summary")
+def export_center_summary() -> dict:
+    return export_center_service.summary()
 
 
 @router.get("/activity/export")

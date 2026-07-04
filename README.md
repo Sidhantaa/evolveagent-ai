@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v84 — Import Center &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v85 — Export Center &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -33,6 +33,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
 - **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
 - **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
+- **v85 — Export Center:** read-only **portable exports** — chats, reports, goals, memory, imported records — as **markdown/JSON**, plus a **portfolio case-study** and a **package builder** that bundles several kinds. Excludes secrets/governance/analytics; PDF via client print. At `/api/export-center`.
 - **v84 — Import Center:** import external data (documents, CSV, markdown notes, chat history, project notes) — **validated + sanitized** (emails/keys redacted) with an **import preview** before anything is saved. Imports land in a dedicated collection, never core data. At `/api/import-center`.
 - **v83 — Local Data Manager:** a read-only / planning-first view over local JSON storage — **collection browser**, **storage usage**, **cleanup suggestions** (advisory), a **backup** helper, and a **redaction preview** (counts sensitive matches, writes nothing). Never deletes or overwrites autonomously. At `/api/data-manager`.
 - **v82 — Governance Console 3.0:** a read-only **governance console** — dashboard (blocked ratio, risk mix), **policy violations**, **secret/PII events**, **prompt-injection warnings**, **approval audit**, **external-action audit**, and an **exportable governance report** (markdown/JSON). At `/api/governance-console`.
