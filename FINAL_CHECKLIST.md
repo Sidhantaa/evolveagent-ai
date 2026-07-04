@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v56.0 Notifications & Alerts Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v59.0 Data Export & Backup · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -25,6 +25,9 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v53 — Playbook Library:** reusable multi-step playbooks (plan/note/approval_required steps) / **planning-first runs — nothing executed** / risky steps held for approval / per-step outcome records / governance-logged / analytics / Playbook Library panel.
 - [x] **v55 — Operating Layer 2.0:** expanded 19-group capability map across v41–v53 / **readiness & governance scorecard** (coverage/governance/health/approvals → grades + overall) / snapshots + final report / disclaimer (not AGI) / v40 layer untouched / governance-logged / analytics / Operating Layer 2.0 panel. *(v54 folded into v44.5.)*
 - [x] **v56 — Notifications & Alerts Center:** local digest of governance-block/health/approvals-backlog signals / severity + type / **idempotent generation** / acknowledge / summary / governance-logged / analytics / Notifications panel; **no email/SMS/push — in-app only**.
+- [x] **v57 — Workspace Templates & Cloning:** reusable workspace templates (name/tags/preset) / **instantiate → creates a real local workspace** / instantiation count / governance-logged / analytics / Workspace Templates panel; **local records only, no production provisioning/auth**.
+- [x] **v58 — Scheduled Tasks:** local scheduled-task registry (manual/hourly/daily/weekly) / **planning-first triggers — no daemon, no timer execution** / risky steps held for approval / due = informational / enable-disable / run history / governance-logged / analytics / Scheduled Tasks panel.
+- [x] **v59 — Data Export & Backup:** export curated content collections to a downloadable JSON bundle / import back **non-destructively (merge by id)** / **local only, no external upload** / excludes secrets/governance/analytics / in-browser download / governance-logged / analytics / Data Export panel.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

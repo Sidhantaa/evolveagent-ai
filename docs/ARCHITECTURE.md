@@ -222,3 +222,15 @@ The Operating Layer 2.0 (`backend/app/services/operating_layer_v2_service.py`, r
 ## v56 — Notifications & Alerts Center
 
 The Notifications & Alerts Center (`backend/app/services/notifications_center_service.py`, routes under `/api/notifications`) turns platform signals — blocked governance actions, degraded health, and pending-approval backlog — into an in-app notifications feed. Generation is idempotent per signal signature, users acknowledge to clear, and nothing is sent externally (no email, SMS, or push). Generation and acknowledgement are governance-logged.
+
+## v57 — Workspace Templates & Cloning
+
+The Workspace Templates service (`backend/app/services/workspace_templates_service.py`, routes under `/api/workspace-templates`) lets users define reusable workspace presets (name, description, tags, and a preset of local settings) and instantiate them. Instantiation reuses the existing WorkspaceService to create a real local workspace preconfigured from the template. It is local structure only, with no production provisioning or authentication, and both creation and instantiation are governance-logged.
+
+## v58 — Scheduled Tasks
+
+The Scheduled Tasks service (`backend/app/services/scheduled_tasks_service.py`, routes under `/api/scheduled-tasks`) is a local registry of scheduled tasks. It runs no background scheduler and never executes anything on a timer. A task records a schedule (manual/hourly/daily/weekly) and an action; triggering performs a planning-first mock run (plan / note / hold-for-approval), and due_tasks is purely informational. Creation and triggers are governance-logged.
+
+## v59 — Data Export & Backup
+
+The Data Export service (`backend/app/services/data_export_service.py`, routes under `/api/data-export`) exports a curated allow-list of local content collections into one JSON bundle for download, and imports a bundle back non-destructively — appending only items whose id is not already present, never overwriting or deleting. Secret values, governance logs, and analytics are excluded, and everything is local with no external upload. Exports and imports are governance-logged.
