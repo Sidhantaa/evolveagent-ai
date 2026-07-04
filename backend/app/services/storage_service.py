@@ -197,6 +197,7 @@ class StorageService:
             "data_export_log.json",
             "os2_snapshots.json",
             "master_agent_runs.json",
+            "permission_profiles.json",
             "demo_seed_log.json",
             "settings_center.json",
             "provider_control.json",

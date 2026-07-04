@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v81 — Permission System 3.0
+- **Purpose:** Stronger, previewable control over actions.
+- **How it operates:** `PermissionProfilesService` adds declarative **permission profiles** scoped to global / workspace / agent / tool, matching an action pattern + risk level, with an effect of **deny / require_approval / allow**. Evaluation returns the **most restrictive** matching decision plus a **blocked-action explanation** and the **approval chain** for the risk (low: 0, medium: 1, high: 2 approvers). A **policy preview** evaluates a hypothetical action side-effect-free. It is **additive** to the core `PermissionService` (a separate profile layer) and consistent with planning-first: an `allow` never grants new execution power, and profiles can only tighten. Governance-logged.
+- **Main API route groups:** `/api/permissions` (+ `/profiles`, `/evaluate`, `/preview`, `/summary`).
+- **Safety boundary:** Advisory profile layer; can only tighten (deny/require_approval); `allow` grants no new power; risky unprofiled actions default to approval; governance-logged.
+
 ### v80 — Multi-Agent Collaboration 2.0
 - **Purpose:** Make agents collaborate visibly.
 - **How it operates:** `AgentCollaborationService` runs a deterministic, read-only analysis of a set of agent **contributions** (role + position) on a topic: an **agent conversation view**, a **consensus summary** (points shared across a majority), **disagreement notes** (positions that diverge or negate), a **reviewer/auditor pass** (flags contributions lacking evidence/reasoning), and a **final decision** (the most central position) with a **rationale**. No model call; nothing executed. Governance-logged.
@@ -661,4 +667,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v78 | Business Intelligence 2.0 | `/api/business-intel` | KPI dashboard, lead pipeline, proposal tracker, mock revenue forecast, risk register, business report | Read-only; mock forecast; no billing/payment; governance-logged |
 | v79 | Meeting Intelligence 2.0 | `/api/meeting-intel` | Summary, decisions, action items + owners, follow-up drafts, timeline, propose goal/tasks | Deterministic + local; read-only; drafts never sent; goal conversion planning-only; governance-logged |
 | v80 | Multi-Agent Collaboration 2.0 | `/api/collaboration` | Conversation view, consensus summary, disagreement notes, reviewer pass, final decision + rationale | Deterministic + local; read-only; no model call; nothing executed; governance-logged |
+| v81 | Permission System 3.0 | `/api/permissions` | Permission profiles (global/workspace/agent/tool), most-restrictive evaluation, approval chains by risk, policy preview, blocked-action explanation | Additive advisory layer; can only tighten; allow grants no new power; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
