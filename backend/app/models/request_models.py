@@ -1522,6 +1522,14 @@ class MeetingToGoalRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Multi-Agent Collaboration 2.0 (v80)
+# ----------------------------------------------------------------------
+class CollaborationRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    contributions: list[dict] = Field(default_factory=list, description="List of {role, position} agent contributions.")
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):

@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v80 — Multi-Agent Collaboration 2.0
+- **Purpose:** Make agents collaborate visibly.
+- **How it operates:** `AgentCollaborationService` runs a deterministic, read-only analysis of a set of agent **contributions** (role + position) on a topic: an **agent conversation view**, a **consensus summary** (points shared across a majority), **disagreement notes** (positions that diverge or negate), a **reviewer/auditor pass** (flags contributions lacking evidence/reasoning), and a **final decision** (the most central position) with a **rationale**. No model call; nothing executed. Governance-logged.
+- **Main API route groups:** `/api/collaboration` (+ `/analyze`, `/summary`).
+- **Safety boundary:** Deterministic + local; read-only analysis of submitted positions; no model call, nothing executed; governance-logged.
+
 ### v79 — Meeting Intelligence 2.0
 - **Purpose:** Make recordings and meetings useful.
 - **How it operates:** `MeetingIntelligenceService` runs deterministic, read-only extraction over a submitted meeting **transcript**: a **summary**, **decisions**, **action items** with likely **owners**, generated **follow-up drafts** (not sent), and a **timeline view** (sentences with time cues). It can also **propose** a goal + task plan from the meeting — **planning-only**: it returns a proposed structure and does **not** create goals/tasks or send anything. No model call, no web. Governance-logged.
@@ -654,4 +660,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v77 | Research Agent 2.0 | `/api/research-agent` | Source comparison, claim/evidence table, contradiction detection, citation quality score, research brief, bias flags | Deterministic + local; no web/model calls; read-only; governance-logged |
 | v78 | Business Intelligence 2.0 | `/api/business-intel` | KPI dashboard, lead pipeline, proposal tracker, mock revenue forecast, risk register, business report | Read-only; mock forecast; no billing/payment; governance-logged |
 | v79 | Meeting Intelligence 2.0 | `/api/meeting-intel` | Summary, decisions, action items + owners, follow-up drafts, timeline, propose goal/tasks | Deterministic + local; read-only; drafts never sent; goal conversion planning-only; governance-logged |
+| v80 | Multi-Agent Collaboration 2.0 | `/api/collaboration` | Conversation view, consensus summary, disagreement notes, reviewer pass, final decision + rationale | Deterministic + local; read-only; no model call; nothing executed; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

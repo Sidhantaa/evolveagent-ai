@@ -148,6 +148,7 @@ from app.models.request_models import (
     ResearchTextRequest,
     MeetingAnalyzeRequest,
     MeetingToGoalRequest,
+    CollaborationRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -324,6 +325,7 @@ from app.services.code_intelligence_service import CodeIntelligenceService
 from app.services.research_agent_service import ResearchAgentService
 from app.services.business_intelligence_service import BusinessIntelligenceService
 from app.services.meeting_intelligence_service import MeetingIntelligenceService
+from app.services.agent_collaboration_service import AgentCollaborationService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -449,6 +451,7 @@ code_intelligence_service = CodeIntelligenceService(storage, governance_service)
 research_agent_service = ResearchAgentService(storage, governance_service)
 business_intelligence_service = BusinessIntelligenceService(storage, governance_service)
 meeting_intelligence_service = MeetingIntelligenceService(storage, governance_service)
+agent_collaboration_service = AgentCollaborationService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1737,6 +1740,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **research_agent_service.analytics_summary(),
         **business_intelligence_service.analytics_summary(),
         **meeting_intelligence_service.analytics_summary(),
+        **agent_collaboration_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4563,6 +4567,19 @@ def meeting_intel_to_goal(request: MeetingToGoalRequest) -> dict:
 @router.get("/meeting-intel/summary")
 def meeting_intel_summary() -> dict:
     return meeting_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v80.0 Multi-Agent Collaboration 2.0 — visible multi-agent analysis (read-only).
+# ----------------------------------------------------------------------
+@router.post("/collaboration/analyze")
+def collaboration_analyze(request: CollaborationRequest) -> dict:
+    return agent_collaboration_service.analyze(request.topic, request.contributions)
+
+
+@router.get("/collaboration/summary")
+def collaboration_summary() -> dict:
+    return agent_collaboration_service.summary()
 
 
 @router.get("/activity/export")
