@@ -378,6 +378,7 @@ import {
   getNotificationsInbox,
   resolveNotificationInbox,
   getWorkspaceOsDashboard,
+  planContext,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1154,6 +1155,10 @@ function App() {
   const [inboxBusy, setInboxBusy] = useState(false)
   const [showWsOs, setShowWsOs] = useState(false)
   const [wsOsDashboard, setWsOsDashboard] = useState(null)
+  const [showContext, setShowContext] = useState(false)
+  const [contextQuery, setContextQuery] = useState('')
+  const [contextPlan, setContextPlan] = useState(null)
+  const [contextBusy, setContextBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3171,6 +3176,20 @@ function App() {
       setWsOsDashboard(await getWorkspaceOsDashboard(workspaceId))
     } catch {
       setWsOsDashboard(null)
+    }
+  }
+
+  async function runContextPlan(event) {
+    if (event) event.preventDefault()
+    const q = contextQuery.trim()
+    if (!q) return
+    setContextBusy(true)
+    try {
+      setContextPlan(await planContext(q, { workspaceId }))
+    } catch (err) {
+      setContextPlan({ error: err.message })
+    } finally {
+      setContextBusy(false)
     }
   }
 
@@ -9382,6 +9401,53 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowContext((current) => !current)}>
+              <span>
+                <Brain size={15} />
+                Smart Context
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showContext && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Smart Context Engine · v71.0</strong>
+                  <span>Plan which memory/files/goals feed an answer — with reasons, budget, dedup, and sensitive-content filtering. Read-only preview.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runContextPlan}>
+                  <input type="text" placeholder="Plan context for a query…" value={contextQuery} onChange={(event) => setContextQuery(event.target.value)} />
+                  <button type="submit" disabled={contextBusy || !contextQuery.trim()}>{contextBusy ? 'Planning…' : 'Plan context'}</button>
+                </form>
+                {contextPlan?.error ? (
+                  <p className="error">{contextPlan.error}</p>
+                ) : contextPlan && (
+                  <>
+                    <p className="muted">{contextPlan.selected_count} selected · {contextPlan.excluded_count} excluded · {contextPlan.used_chars}/{contextPlan.budget_chars} chars</p>
+                    <div className="agent-template-list">
+                      {contextPlan.selected?.map((item, i) => (
+                        <div key={`s${i}`} className="agent-template-card">
+                          <strong>✓ [{item.kind}] <span className="feature-badge active">score {item.score}</span></strong>
+                          <span>{item.preview}</span>
+                          <span className="gs-trace">{item.reason}</span>
+                        </div>
+                      ))}
+                      {contextPlan.excluded?.slice(0, 6).map((item, i) => (
+                        <div key={`e${i}`} className="agent-template-card">
+                          <strong>✗ [{item.kind}]</strong>
+                          <span className="gs-trace">{item.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">Read-only plan — sensitive content is filtered out and never included.</p>
               </div>
             )}
           </section>

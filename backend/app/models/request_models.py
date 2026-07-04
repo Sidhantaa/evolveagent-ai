@@ -1443,6 +1443,15 @@ class ProviderControlUpdateRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Smart Context Engine (v71)
+# ----------------------------------------------------------------------
+class ContextPlanRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=2000)
+    workspace_id: str | None = Field(default=None)
+    budget_chars: int = Field(default=4000, ge=200, le=20000)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
