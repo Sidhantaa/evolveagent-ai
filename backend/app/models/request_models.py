@@ -1510,6 +1510,18 @@ class ResearchTextRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Meeting Intelligence 2.0 (v79)
+# ----------------------------------------------------------------------
+class MeetingAnalyzeRequest(BaseModel):
+    transcript: str = Field(..., min_length=1, max_length=200000)
+
+
+class MeetingToGoalRequest(BaseModel):
+    transcript: str = Field(..., min_length=1, max_length=200000)
+    title: str | None = Field(default=None, max_length=200)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
