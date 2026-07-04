@@ -362,6 +362,8 @@ import {
   getActivityTimeline,
   exportActivityTimeline,
   getDashboardHome,
+  getFeatures,
+  tryFeature,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1119,6 +1121,10 @@ function App() {
   const [activityBusy, setActivityBusy] = useState(false)
   const [showHome, setShowHome] = useState(false)
   const [dashboardHome, setDashboardHome] = useState(null)
+  const [showFeatures, setShowFeatures] = useState(false)
+  const [featuresData, setFeaturesData] = useState(null)
+  const [featuresQuery, setFeaturesQuery] = useState('')
+  const [featuresStatus, setFeaturesStatus] = useState('')
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3036,6 +3042,24 @@ function App() {
   async function refreshHome() {
     try {
       setDashboardHome(await getDashboardHome(workspaceId))
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshFeatures() {
+    try {
+      setFeaturesData(await getFeatures({ q: featuresQuery || undefined, status: featuresStatus || undefined }))
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleTryFeature(key) {
+    try {
+      const data = await tryFeature(key)
+      setCopied(data.launch_note || `Open ${data.open_route}`)
+      setTimeout(() => setCopied(''), 3500)
     } catch {
       // best-effort
     }
@@ -9206,6 +9230,54 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowFeatures((current) => !current); if (!featuresData) refreshFeatures() }}>
+              <span>
+                <Library size={15} />
+                Feature Registry
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showFeatures && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Feature Registry · v65.0</strong>
+                  <span>Canonical, searchable map of every feature — service, route, category, and status (active / demo-safe / mock / needs-config).</span>
+                </div>
+                <form className="stacked-form" onSubmit={(event) => { event.preventDefault(); refreshFeatures() }}>
+                  <input type="text" placeholder="Search features…" value={featuresQuery} onChange={(event) => setFeaturesQuery(event.target.value)} />
+                  <div className="inline-actions">
+                    <select value={featuresStatus} onChange={(event) => { setFeaturesStatus(event.target.value); }} aria-label="Status filter">
+                      <option value="">All statuses</option>
+                      {(featuresData?.statuses || ['active', 'demo_safe', 'mock', 'needs_config']).map((s) => (<option key={s} value={s}>{s}</option>))}
+                    </select>
+                    <button type="submit">Search</button>
+                  </div>
+                </form>
+                {featuresData && (
+                  <p className="muted">{featuresData.feature_count} of {featuresData.total_features} features · {featuresData.categories?.length} categories</p>
+                )}
+                <div className="agent-template-list">
+                  {(featuresData?.features || []).map((feature) => (
+                    <div key={feature.key} className="agent-template-card">
+                      <strong>{feature.name} <span className="feature-version">{feature.version}</span></strong>
+                      <span>{feature.category} · {feature.route}</span>
+                      <div className="feature-status-row">
+                        {feature.status.map((s) => (<span key={s} className={`feature-badge ${s}`}>{s}</span>))}
+                      </div>
+                      <div className="master-fb-row">
+                        <button type="button" className="master-fb" onClick={() => handleTryFeature(feature.key)}>Try this feature</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="muted">Read-only discovery — "Try" shows the route to open.</p>
               </div>
             )}
           </section>

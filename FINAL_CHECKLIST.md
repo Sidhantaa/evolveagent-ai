@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v64 Dashboard Home 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v65 Feature Registry + Capability Map 3.0 · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -34,6 +34,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v62 — Global Search Across Everything:** one **read-only** keyword search across 13 local collections (chats/messages/files/goals/agents/memory/workflows/reports/simulations/schedules/ideas/documents) / **type + workspace + date filters** / ranked results with **preview** + **source-collection trace** / **"use as context"** seeds the composer / **excludes secrets/governance/analytics** / no writes / governance-logged / analytics / Global Search Developer-Mode panel / `/api/search`.
 - [x] **v63 — Unified Activity Timeline:** chronological merge (newest-first) of governance events, routes, goals, files, reports, memory, tool executions, and approvals / **type + workspace + actor + status + date filters** / **expandable** event detail / **governance-linked** flag / **markdown + JSON export** / read-only, secrets excluded / governance-logged / analytics / Activity Timeline Developer-Mode panel / `/api/activity`.
 - [x] **v64 — Dashboard Home 2.0:** one homepage overview — **Today** snapshot (events/approvals/upcoming/health) / active workspace summary / pending approvals (business + MCP) / recent runs / **system health** (reuses v49) / upcoming tasks (scheduled + Life OS) / rule-based **suggested next actions** / **quick-launch cards** / read-only, no writes / governance-logged / analytics / Dashboard Home Developer-Mode panel / `/api/home`.
+- [x] **v65 — Feature Registry + Capability Map 3.0:** canonical registry of every feature (name/version/**service**/**route**/**category**/**status tags**: active/demo-safe/mock/needs-config) / **feature search** + status/category filters / **route → feature map** / **summary** (counts by category & status) / **"try this feature"** launcher returning the route to open / read-only / governance-logged / analytics / Feature Registry Developer-Mode panel / `/api/features`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

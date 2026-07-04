@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v65 — Feature Registry + Capability Map 3.0
+- **Purpose:** Make all 60+ versions discoverable.
+- **How it operates:** `FeatureRegistryService` holds a **canonical registry** of every major feature with its owning **service**, primary **route**, **category**, and **status tags** (active / demo-safe / mock / needs-config). It supports **feature search**, status/category filters, a **route → feature map** (Developer-Mode route map), a **summary** (counts by category/status), and a **"try this feature"** descriptor that hands back the route to open. Read-only; governance-logged.
+- **Main API route groups:** `/api/features` (+ `/features/route-map`, `/features/summary`, `/features/{key}/try`).
+- **Safety boundary:** Read-only discovery; no writes; governance-logged.
+
 ### v64 — Dashboard Home 2.0
 - **Purpose:** Replace scattered panels with one professional homepage.
 - **How it operates:** `DashboardHomeService` assembles a single read-only overview: a **Today** snapshot (events today, pending approvals, upcoming tasks, health status), the **active workspace** summary, **pending approvals** (business + MCP), **recent runs/routes**, **system health** (reusing the v49 monitor + top recommendations), **upcoming tasks** (scheduled + Life OS), rule-based **suggested next actions**, and **quick-launch cards** to every major surface. It only reads existing local state — nothing is created or executed — and is governance-logged.
@@ -549,4 +555,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v62 | Global Search Across Everything | `/api/search` | One read-only keyword search across chats/files/goals/agents/memory/workflows/reports/simulations/schedules; type/workspace/date filters; preview; source trace; use-as-context | Strictly read-only; no writes; secrets/governance/analytics excluded; governance-logged |
 | v63 | Unified Activity Timeline | `/api/activity` | Chronological merge of runs/approvals/tool-executions/memory/files/reports/goals; type/workspace/actor/status/date filters; expandable detail; markdown/JSON export; governance-linked | Read-only aggregation; no writes; secrets excluded; governance-logged |
 | v64 | Dashboard Home 2.0 | `/api/home` | One homepage: Today overview, active workspace, pending approvals, recent runs, system health, upcoming tasks, suggested actions, quick-launch cards | Read-only aggregation; no writes/actions; governance-logged |
+| v65 | Feature Registry + Capability Map 3.0 | `/api/features` | Canonical searchable registry of every feature (service/route/category/status), route→feature map, "try this feature" launcher | Read-only discovery; no writes; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

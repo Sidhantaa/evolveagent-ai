@@ -293,6 +293,7 @@ from app.services.master_agent_service import MasterAgentService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
+from app.services.feature_registry_service import FeatureRegistryService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -403,6 +404,7 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
+feature_registry_service = FeatureRegistryService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1676,6 +1678,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
+        **feature_registry_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4136,6 +4139,36 @@ def activity_timeline_summary() -> dict:
 @router.get("/home")
 def dashboard_home(workspace_id: str | None = Query(default=None)) -> dict:
     return dashboard_home_service.home(workspace_id=workspace_id)
+
+
+# ----------------------------------------------------------------------
+# v65.0 Feature Registry + Capability Map 3.0 — make all 60+ versions discoverable.
+# ----------------------------------------------------------------------
+@router.get("/features")
+def list_features(
+    q: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+) -> dict:
+    return feature_registry_service.list_features(query=q, status=status, category=category)
+
+
+@router.get("/features/route-map")
+def features_route_map() -> dict:
+    return feature_registry_service.route_map()
+
+
+@router.get("/features/summary")
+def features_summary() -> dict:
+    return feature_registry_service.summary()
+
+
+@router.post("/features/{key}/try")
+def try_feature(key: str) -> dict:
+    try:
+        return feature_registry_service.try_feature(key)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.get("/activity/export")
