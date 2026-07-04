@@ -48,6 +48,26 @@ CAPABILITY_ROUTES = [
 # Verbs that imply a real-world side effect → require explicit approval before any execution.
 _RISKY_VERBS = ["send", "email", "pay", "purchase", "delete", "remove", "deploy", "post to", "message the", "transfer", "charge", "publish"]
 
+# v61: the recommended workflow/tool to reach for in each domain (shown before execution).
+_ROUTE_WORKFLOWS = {
+    "Coding & Review": "Run the coding/review workflow (/api/run, task_type=code_review).",
+    "Research & Retrieval": "Query the local retrieval layer, then summarize with citations (/api/retrieval).",
+    "Project & Portfolio": "Open Mission Control / Project Manager to plan milestones (/api/project-manager).",
+    "Business Operations": "Draft in the Business Operator, hold sends/invoices for approval (/api/business-operator).",
+    "Compliance & Legal": "Scan with the Compliance module and review findings (/api/compliance).",
+    "Personal / Life OS": "Add to Life OS tasks/reminders and plan the day (/api/life-os).",
+    "Innovation & Simulation": "Brainstorm in the Innovation Lab or run a Simulation scenario (/api/innovation-lab).",
+    "MCP Tools & Integrations": "Suggest + register the right MCP connector, check key readiness (/api/mcp).",
+    "Approvals & Governance": "Open the Approvals Center and review the governance log (/api/approvals-center).",
+    "Health & Ops": "Check the Health Monitor and Usage Ledger (/api/health-monitor).",
+    "Playbooks & Automation": "Run a saved Playbook (planning-first) or schedule a task (/api/playbooks).",
+}
+
+# v61: below this confidence the router marks the route uncertain and uses a safe fallback.
+_CONFIDENCE_FALLBACK_THRESHOLD = 0.34
+_FALLBACK_DOMAIN = "Research & Retrieval"
+_FALLBACK_ROUTE = "/api/retrieval"
+
 
 class MasterAgentService:
     """The Master Agent — a single top-level AI surface over all of v1–v60.
@@ -81,14 +101,31 @@ class MasterAgentService:
         haystack = f" {re.sub(r'[^a-z0-9]+', ' ', (text or '').lower())} "
         scored = []
         for cap in CAPABILITY_ROUTES:
-            hits = sum(1 for kw in cap["keywords"] if kw in haystack)
-            if hits:
-                scored.append({"domain": cap["domain"], "route": cap["route"], "risky": cap["risky"], "match_score": hits})
+            matched = [kw for kw in cap["keywords"] if kw in haystack]
+            if matched:
+                scored.append({
+                    "domain": cap["domain"], "route": cap["route"], "risky": cap["risky"],
+                    "match_score": len(matched), "matched_keywords": matched,
+                })
         scored.sort(key=lambda c: c["match_score"], reverse=True)
-        # Always give the model a default so it never returns "no capability".
+        # Always give the router a default so it never returns "no capability".
         if not scored:
-            scored.append({"domain": "Research & Retrieval", "route": "/api/retrieval", "risky": False, "match_score": 0})
+            scored.append({"domain": _FALLBACK_DOMAIN, "route": _FALLBACK_ROUTE, "risky": False, "match_score": 0, "matched_keywords": []})
+        # v61: normalized confidence = top score share of total matched signal.
+        total = sum(c["match_score"] for c in scored) or 1
+        for cap in scored:
+            cap["confidence"] = round(cap["match_score"] / total, 2)
         return scored
+
+    @staticmethod
+    def _route_explanation(top: dict, fallback_used: bool) -> str:
+        if fallback_used:
+            return (
+                "No capability matched strongly, so the router fell back to "
+                f"{_FALLBACK_DOMAIN} (safe default) — refine the request for a more specific route."
+            )
+        kws = ", ".join(top.get("matched_keywords", [])[:5]) or "general intent"
+        return f"Routed to {top['domain']} (confidence {int(top['confidence'] * 100)}%) — matched: {kws}."
 
     def _detect_risky_intent(self, text: str, engaged: list[dict]) -> tuple[bool, list[str]]:
         haystack = f" {(text or '').lower()} "
@@ -119,6 +156,15 @@ class MasterAgentService:
         text = (text or "").strip()
         engaged = self._classify(text)
         top = engaged[:3]
+        primary = top[0]
+        # v61: uncertain routing → safe fallback (never silently guess a specific system).
+        confidence = primary.get("confidence", 0.0)
+        fallback_used = primary.get("match_score", 0) == 0 or confidence < _CONFIDENCE_FALLBACK_THRESHOLD
+        route_explanation = self._route_explanation(primary, fallback_used)
+        suggested_workflow = _ROUTE_WORKFLOWS.get(
+            _FALLBACK_DOMAIN if fallback_used else primary["domain"],
+            "Answer directly, then suggest a specific workflow.",
+        )
         mcp = self.mcp_suggestion.suggest(text)
         requires_approval, approval_reasons = self._detect_risky_intent(text, engaged)
 
@@ -155,12 +201,15 @@ class MasterAgentService:
         record = {
             "run_id": str(uuid4()),
             "request": text[:1000],
-            "primary_domain": top[0]["domain"] if top else None,
+            "primary_domain": _FALLBACK_DOMAIN if fallback_used else primary["domain"],
             "engaged_domains": [c["domain"] for c in top],
+            "confidence": confidence,
+            "fallback_used": fallback_used,
             "requires_approval": requires_approval,
             "executed": answered and not blocked_execution,
             "keys_ready": all(s.get("keys_ready") for s in mcp.get("suggestions", [])) if mcp.get("suggestions") else True,
             "voice_used": voice_used,
+            "feedback": None,          # v61: set later via record_feedback → drives route accuracy
             "created_at": self._now(),
         }
         self.storage.append(self.runs_file, record)
@@ -182,9 +231,17 @@ class MasterAgentService:
             "run_id": record["run_id"],
             "request": text,
             "intent": {
-                "primary_domain": top[0]["domain"] if top else None,
+                "primary_domain": record["primary_domain"],
                 "engaged": top,
+                "confidence": confidence,
+                "fallback_used": fallback_used,
+                "route_explanation": route_explanation,
+                "suggested_workflow": suggested_workflow,
             },
+            "confidence": confidence,
+            "fallback_used": fallback_used,
+            "route_explanation": route_explanation,
+            "suggested_workflow": suggested_workflow,
             "answer": answer,
             "answered": answered,
             "agents_used": agents_used,
@@ -223,22 +280,70 @@ class MasterAgentService:
                 unique.append(item)
         return unique[:5]
 
+    # ------------------------------------------------------------------
+    # v61: route feedback → route-accuracy analytics
+    # ------------------------------------------------------------------
+    def record_feedback(self, run_id: str, correct: bool, note: str = "", correct_domain: str | None = None) -> dict:
+        runs = self.storage.read_list(self.runs_file)
+        target = next((r for r in runs if r.get("run_id") == run_id), None)
+        if target is None:
+            raise ValueError("Master Agent route not found")
+        target["feedback"] = {
+            "correct": bool(correct),
+            "correct_domain": correct_domain,
+            "note": (note or "")[:500],
+            "at": self._now(),
+        }
+        self.storage.write_list(self.runs_file, runs)
+        self.governance.log_event(
+            GovernanceEvent(
+                task_type="master_agent",
+                agent_name="Master Agent",
+                action_type="master_route_feedback",
+                tool_used="MasterAgentService",
+                permission_level="read_only",
+                approved=True,
+                blocked=False,
+                risk_score=1,
+                reason=f"Route feedback recorded: {'correct' if correct else 'incorrect'}.",
+            )
+        )
+        return {"run_id": run_id, "feedback": target["feedback"], "route_accuracy": self._route_accuracy(runs)}
+
+    @staticmethod
+    def _route_accuracy(runs: list[dict]) -> dict:
+        rated = [r for r in runs if r.get("feedback")]
+        correct = sum(1 for r in rated if r["feedback"].get("correct"))
+        rated_count = len(rated)
+        return {
+            "rated_routes": rated_count,
+            "correct_routes": correct,
+            "accuracy_pct": round((correct / rated_count) * 100) if rated_count else None,
+        }
+
     def analytics_summary(self) -> dict:
         runs = self.storage.read_list(self.runs_file)
+        accuracy = self._route_accuracy(runs)
         return {
             "master_agent_runs": len(runs),
             "master_agent_approvals_required": sum(1 for r in runs if r.get("requires_approval")),
+            "master_agent_fallback_routes": sum(1 for r in runs if r.get("fallback_used")),
+            "master_agent_route_accuracy_pct": accuracy["accuracy_pct"],
         }
 
     def summary(self) -> dict:
         runs = self.storage.read_list(self.runs_file)
         by_domain: dict[str, int] = {}
+        confidences = [r.get("confidence") for r in runs if isinstance(r.get("confidence"), (int, float))]
         for run in runs:
             key = run.get("primary_domain") or "unknown"
             by_domain[key] = by_domain.get(key, 0) + 1
         return {
             "total_routes": len(runs),
             "approvals_required": sum(1 for r in runs if r.get("requires_approval")),
+            "fallback_routes": sum(1 for r in runs if r.get("fallback_used")),
+            "avg_confidence": round(sum(confidences) / len(confidences), 2) if confidences else None,
+            "route_accuracy": self._route_accuracy(runs),
             "by_domain": by_domain,
             "capability_count": len(CAPABILITY_ROUTES),
             "recent": list(reversed(runs[-10:])),

@@ -2517,6 +2517,13 @@ export function getMasterAgentCapabilities() {
 export function getMasterAgentSummary() {
   return getJson('/api/master-agent/summary')
 }
+export function sendMasterRouteFeedback(runId, correct, opts = {}) {
+  return postJson(`/api/master-agent/route/${runId}/feedback`, {
+    correct: Boolean(correct),
+    correct_domain: opts.correctDomain || null,
+    note: opts.note || '',
+  })
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }
