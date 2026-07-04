@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v59.0 Data Export & Backup · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v60.1 Master Agent Voice Console · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -28,6 +28,8 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v57 — Workspace Templates & Cloning:** reusable workspace templates (name/tags/preset) / **instantiate → creates a real local workspace** / instantiation count / governance-logged / analytics / Workspace Templates panel; **local records only, no production provisioning/auth**.
 - [x] **v58 — Scheduled Tasks:** local scheduled-task registry (manual/hourly/daily/weekly) / **planning-first triggers — no daemon, no timer execution** / risky steps held for approval / due = informational / enable-disable / run history / governance-logged / analytics / Scheduled Tasks panel.
 - [x] **v59 — Data Export & Backup:** export curated content collections to a downloadable JSON bundle / import back **non-destructively (merge by id)** / **local only, no external upload** / excludes secrets/governance/analytics / in-browser download / governance-logged / analytics / Data Export panel.
+- [x] **v60 — EvolveAgent OS 2.0 (capstone):** unified command center indexing every system across v1–v59 (grouped by domain, active-by-data with route + record counts) / live platform scorecard (reuses v55 grade + v49 health) / milestone stats / governance-logged snapshot + final report / **read-only aggregation, not AGI** / analytics / EvolveAgent OS 2.0 panel.
+- [x] **v60.1 — Master Agent Voice Console:** Master Agent is the single top-level routing surface across v1–v60 / clean AI-native hero / **push-to-talk voice input** (user-activated, no wake word/recording) / **spoken answers** via browser speech synthesis / **`mcp:` prefix** routes tool-connection requests / **CLI palette** of governed `/`-commands / **task-aware MCP suggestions** (key-readiness booleans, never values) / Answer + Sources + Follow-ups / **planning-first, approval-gated** (risky send/pay/delete/deploy always held for approval; client flag can't bypass) / governance-logged / analytics / `/api/master-agent`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
