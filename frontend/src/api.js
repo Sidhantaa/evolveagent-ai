@@ -2560,6 +2560,21 @@ export function getFeatures(opts = {}) {
 export function tryFeature(key) {
   return postJson(`/api/features/${key}/try`, {})
 }
+export function getDemoSummary() {
+  return getJson('/api/demo/summary')
+}
+export function getDemoScript() {
+  return getJson('/api/demo/script')
+}
+export function getDemoCaseStudy() {
+  return getJson('/api/demo/case-study')
+}
+export function seedDemoData() {
+  return postJson('/api/demo/seed', {})
+}
+export function resetDemoData() {
+  return postJson('/api/demo/reset', {})
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

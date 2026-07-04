@@ -294,6 +294,7 @@ from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
 from app.services.feature_registry_service import FeatureRegistryService
+from app.services.demo_service import DemoService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -405,6 +406,7 @@ global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
 feature_registry_service = FeatureRegistryService(storage, governance_service)
+demo_service = DemoService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1679,6 +1681,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
         **feature_registry_service.analytics_summary(),
+        **demo_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4169,6 +4172,49 @@ def try_feature(key: str) -> dict:
         return feature_registry_service.try_feature(key)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v66.0 Demo Mode / Portfolio Mode 2.0 — demo-safe, impressive, resettable.
+# ----------------------------------------------------------------------
+@router.get("/demo/script")
+def demo_script() -> dict:
+    return demo_service.script()
+
+
+@router.get("/demo/walkthrough")
+def demo_walkthrough() -> dict:
+    return demo_service.walkthrough()
+
+
+@router.get("/demo/feature-sequence")
+def demo_feature_sequence() -> dict:
+    return demo_service.feature_sequence()
+
+
+@router.get("/demo/resume-bullets")
+def demo_resume_bullets() -> dict:
+    return demo_service.resume_bullets()
+
+
+@router.get("/demo/case-study")
+def demo_case_study() -> dict:
+    return demo_service.case_study()
+
+
+@router.get("/demo/summary")
+def demo_summary() -> dict:
+    return demo_service.summary()
+
+
+@router.post("/demo/seed")
+def demo_seed() -> dict:
+    return demo_service.seed()
+
+
+@router.post("/demo/reset")
+def demo_reset() -> dict:
+    return demo_service.reset()
 
 
 @router.get("/activity/export")

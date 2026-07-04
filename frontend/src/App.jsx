@@ -364,6 +364,11 @@ import {
   getDashboardHome,
   getFeatures,
   tryFeature,
+  getDemoSummary,
+  getDemoScript,
+  getDemoCaseStudy,
+  seedDemoData,
+  resetDemoData,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1125,6 +1130,10 @@ function App() {
   const [featuresData, setFeaturesData] = useState(null)
   const [featuresQuery, setFeaturesQuery] = useState('')
   const [featuresStatus, setFeaturesStatus] = useState('')
+  const [showDemo, setShowDemo] = useState(false)
+  const [demoSummary, setDemoSummary] = useState(null)
+  const [demoScript, setDemoScript] = useState(null)
+  const [demoBusy, setDemoBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3063,6 +3072,53 @@ function App() {
     } catch {
       // best-effort
     }
+  }
+
+  async function refreshDemo() {
+    try {
+      const [summary, script] = await Promise.all([getDemoSummary(), demoScript ? Promise.resolve(demoScript) : getDemoScript()])
+      setDemoSummary(summary)
+      setDemoScript(script)
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleDemoSeed() {
+    setDemoBusy(true)
+    try {
+      const data = await seedDemoData()
+      setCopied(`Seeded demo workspace (${data.seeded_count} records).`)
+      setTimeout(() => setCopied(''), 3500)
+      await refreshDemo()
+    } finally {
+      setDemoBusy(false)
+    }
+  }
+
+  async function handleDemoReset() {
+    setDemoBusy(true)
+    try {
+      const data = await resetDemoData()
+      setCopied(`Reset demo data — removed ${data.removed_count} demo record(s). User data untouched.`)
+      setTimeout(() => setCopied(''), 4000)
+      await refreshDemo()
+    } finally {
+      setDemoBusy(false)
+    }
+  }
+
+  async function handleDemoCaseStudy() {
+    const data = await getDemoCaseStudy()
+    const blob = new Blob([data.content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'evolveagent-case-study.md'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
   }
 
   async function handleActivityExport() {
@@ -9230,6 +9286,46 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowDemo((current) => !current); if (!demoSummary) refreshDemo() }}>
+              <span>
+                <Sparkles size={15} />
+                Demo / Portfolio Mode
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDemo && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Demo / Portfolio Mode · v66.0</strong>
+                  <span>One-click demo script, guided walkthrough, demo-safe sample data (scoped + resettable), resume bullets, and case-study export.</span>
+                </div>
+                {demoScript?.script?.length > 0 && (
+                  <div className="agent-template-list">
+                    {demoScript.script.map((step) => (
+                      <div key={step.step} className="agent-template-card">
+                        <strong>{step.step}. {step.title}</strong>
+                        <span>{step.action}</span>
+                        <span className="gs-trace">{step.route} · {step.why}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {demoSummary && (
+                  <p className="muted">active demo batches: {demoSummary.active_demo_batches}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleDemoSeed} disabled={demoBusy}>Seed demo data</button>
+                  <button type="button" onClick={handleDemoReset} disabled={demoBusy}>Reset demo data</button>
+                  <button type="button" onClick={handleDemoCaseStudy}>Export case study</button>
+                </div>
+                <p className="muted">Demo content is read-only. Seed/reset only touch demo-tagged records — your data is never removed.</p>
               </div>
             )}
           </section>
