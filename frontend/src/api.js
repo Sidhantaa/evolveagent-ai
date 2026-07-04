@@ -2549,6 +2549,17 @@ export function exportActivityTimeline(format = 'markdown') {
 export function getDashboardHome(workspaceId) {
   return getJson(workspaceId ? `/api/home?workspace_id=${workspaceId}` : '/api/home')
 }
+export function getFeatures(opts = {}) {
+  const params = new URLSearchParams()
+  if (opts.q) params.set('q', opts.q)
+  if (opts.status) params.set('status', opts.status)
+  if (opts.category) params.set('category', opts.category)
+  const qs = params.toString()
+  return getJson(qs ? `/api/features?${qs}` : '/api/features')
+}
+export function tryFeature(key) {
+  return postJson(`/api/features/${key}/try`, {})
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

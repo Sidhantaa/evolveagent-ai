@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v64 — Dashboard Home 2.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v65 — Feature Registry + Capability Map 3.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -33,6 +33,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
 - **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
 - **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
+- **v65 — Feature Registry + Capability Map 3.0:** a **canonical, searchable registry** of every feature — owning service, primary route, category, and **status** (active / demo-safe / mock / needs-config) — with a **route → feature map** and a **"try this feature"** launcher. Read-only discovery; governance-logged. At `/api/features`.
 - **v64 — Dashboard Home 2.0:** one professional **homepage** over the whole OS — a **Today** overview, active workspace summary, pending approvals, recent runs, system health, upcoming tasks, rule-based **suggested next actions**, and **quick-launch cards**. Read-only aggregation of existing state; governance-logged. At `/api/home`.
 - **v63 — Unified Activity Timeline:** one **chronological** view of everything the OS did — runs, approvals, tool executions, memory changes, file events, reports, and goals — merged newest-first, with **type/workspace/actor/status/date filters**, expandable event detail, **governance-linked** events, and **markdown/JSON export**. Read-only; governance-logged. At `/api/activity`.
 - **v62 — Global Search Across Everything:** one **read-only** search bar across the whole OS — chats, files, goals, agents, memory, workflows, reports, simulations, schedules, ideas, and documents — with **type/workspace/date filters**, result **previews**, a Developer-Mode **source trace**, and a **"use as context"** action that seeds the composer. Excludes secrets/governance/analytics; governance-logged. At `/api/search`.
