@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v78 — Business Intelligence 2.0
+- **Purpose:** Make the business modules more serious.
+- **How it operates:** `BusinessIntelligenceService` is a read-only analytics layer over local business records: a **KPI dashboard** (leads, proposals, win rate), a **lead pipeline summary** (by stage), a **proposal tracker** (by status), a **mock revenue forecast** (illustrative deal size × stage probability — clearly labelled, never real money), a **risk register** (project risks + derived pipeline risks), a **business report generator** (markdown), and an **executive summary export**. Read-only; governance-logged.
+- **Main API route groups:** `/api/business-intel` (+ `/dashboard`, `/report`, `/summary`).
+- **Safety boundary:** Read-only analytics; revenue forecast is mock/illustrative; no billing or payment; governance-logged.
+
 ### v77 — Research Agent 2.0
 - **Purpose:** Stronger evidence-based research.
 - **How it operates:** `ResearchAgentService` is a deterministic, local, **read-only** research toolkit over sources you pass in: **source comparison** (pairwise term overlap + agreement level), a **claim/evidence table** (claim-like vs evidence-bearing sentences), **contradiction detection** (shared-subject sentences differing in negation), a **citation quality score** (presence of urls/years/attribution/identifiers), a **research brief generator** (structured markdown packet), and **bias/risk flags** (loaded/absolute language). It never browses the web or calls a model. Governance-logged.
@@ -640,4 +646,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v75 | Document Intelligence 2.0 | `/api/doc-intel` | Document comparison, resume ATS scoring, contract/risk summary, CSV insight, document Q&A | Deterministic + local; no external model calls; read-only; governance-logged |
 | v76 | Code Intelligence 2.0 | `/api/code-intel` | Bug-risk scan, refactor plan, complexity metrics, route map, dependency list, test-coverage summary (on submitted code) | Static read-only analysis of submitted text; no edits/filesystem/execution; governance-logged |
 | v77 | Research Agent 2.0 | `/api/research-agent` | Source comparison, claim/evidence table, contradiction detection, citation quality score, research brief, bias flags | Deterministic + local; no web/model calls; read-only; governance-logged |
+| v78 | Business Intelligence 2.0 | `/api/business-intel` | KPI dashboard, lead pipeline, proposal tracker, mock revenue forecast, risk register, business report | Read-only; mock forecast; no billing/payment; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

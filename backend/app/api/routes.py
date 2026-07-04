@@ -320,6 +320,7 @@ from app.services.personal_productivity_service import PersonalProductivityServi
 from app.services.document_intelligence_service import DocumentIntelligenceService
 from app.services.code_intelligence_service import CodeIntelligenceService
 from app.services.research_agent_service import ResearchAgentService
+from app.services.business_intelligence_service import BusinessIntelligenceService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -443,6 +444,7 @@ personal_productivity_service = PersonalProductivityService(storage, governance_
 document_intelligence_service = DocumentIntelligenceService(storage, governance_service)
 code_intelligence_service = CodeIntelligenceService(storage, governance_service)
 research_agent_service = ResearchAgentService(storage, governance_service)
+business_intelligence_service = BusinessIntelligenceService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1729,6 +1731,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **document_intelligence_service.analytics_summary(),
         **code_intelligence_service.analytics_summary(),
         **research_agent_service.analytics_summary(),
+        **business_intelligence_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4519,6 +4522,24 @@ def research_brief(request: ResearchBriefRequest) -> dict:
 @router.get("/research-agent/summary")
 def research_agent_summary() -> dict:
     return research_agent_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v78.0 Business Intelligence 2.0 — read-only business analytics (mock forecast).
+# ----------------------------------------------------------------------
+@router.get("/business-intel/dashboard")
+def business_intel_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    return business_intelligence_service.dashboard(workspace_id=workspace_id)
+
+
+@router.get("/business-intel/report")
+def business_intel_report(workspace_id: str | None = Query(default=None)) -> dict:
+    return business_intelligence_service.report(workspace_id=workspace_id)
+
+
+@router.get("/business-intel/summary")
+def business_intel_summary() -> dict:
+    return business_intelligence_service.summary()
 
 
 @router.get("/activity/export")
