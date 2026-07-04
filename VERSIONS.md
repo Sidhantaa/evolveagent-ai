@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v73 — Workflow Recommendation Engine
+- **Purpose:** Suggest the best workflow for the user's goal.
+- **How it operates:** `WorkflowRecommendationService` classifies a goal into a task type (coding / research / business / data_analysis / general), returns a **recommended workflow** (ordered expected steps from a template), surfaces **similar past runs** (from the Master Agent route history by keyword overlap), and estimates **risk level**, **approval requirements** (risky verbs or sensitive task types held for approval), and **time/complexity**. Read-only and planning-only — it recommends, it does not execute. Governance-logged.
+- **Main API route groups:** `/api/workflow-recommend` (+ `/summary`).
+- **Safety boundary:** Read-only recommendation; nothing executed; risky steps flagged for approval; governance-logged.
+
 ### v72 — Agent Quality Optimizer
 - **Purpose:** Improve agent outputs over time.
 - **How it operates:** `AgentQualityService` runs a read-only analysis over recorded run analytics (`per_agent_scores`, `overall_judge_score`, `task_type`) and human feedback: per-agent **score trends** (avg vs recent, up/down/flat), **weak-agent detection** (recent avg < 60/100), rule-based **prompt improvement suggestions**, **best agent by task type**, **regression checks** (previous window vs recent, flag >10% drop), and **human-feedback correlation** (ratings vs judge scores, alignment). It normalizes 0-1 or 0-100 score scales and computes from existing data only — it never changes prompts or runs anything. Governance-logged.
@@ -605,4 +611,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v70 | Workspace Operating System 2.0 | `/api/workspace-os` | Per-workspace dashboard: memory graph, feature usage, agents, reports, timeline, health score | Read-only workspace-scoped aggregation; no writes; governance-logged |
 | v71 | Smart Context Engine | `/api/context` | Context planner: memory/file/goal selection with reasons, budget control, dedup, sensitive-content filtering, context trace | Read-only preview; sensitive content filtered out; nothing executed; governance-logged |
 | v72 | Agent Quality Optimizer | `/api/agent-quality` | Per-agent score trends, weak-agent detection, prompt suggestions, best-by-task, regression checks, feedback correlation | Read-only analysis; no prompt changes; nothing executed; governance-logged |
+| v73 | Workflow Recommendation Engine | `/api/workflow-recommend` | Recommended workflow (expected steps), similar past runs, risk level, approval needs, time/complexity estimate | Read-only recommendation; nothing executed; risky steps flagged for approval; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

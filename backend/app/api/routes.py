@@ -136,6 +136,7 @@ from app.models.request_models import (
     SettingsImportRequest,
     ProviderControlUpdateRequest,
     ContextPlanRequest,
+    WorkflowRecommendRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -305,6 +306,7 @@ from app.services.notifications_inbox_service import NotificationsInboxService
 from app.services.workspace_os_service import WorkspaceOSService
 from app.services.smart_context_service import SmartContextService
 from app.services.agent_quality_service import AgentQualityService
+from app.services.workflow_recommendation_service import WorkflowRecommendationService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -423,6 +425,7 @@ notifications_inbox_service = NotificationsInboxService(storage, governance_serv
 workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
 smart_context_service = SmartContextService(storage, governance_service)
 agent_quality_service = AgentQualityService(storage, governance_service)
+workflow_recommendation_service = WorkflowRecommendationService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1704,6 +1707,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **workspace_os_service.analytics_summary(),
         **smart_context_service.analytics_summary(),
         **agent_quality_service.analytics_summary(),
+        **workflow_recommendation_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4364,6 +4368,19 @@ def agent_quality_summary() -> dict:
 @router.get("/agent-quality/best-by-task")
 def agent_quality_best_by_task() -> dict:
     return {"best_by_task": agent_quality_service.best_by_task()}
+
+
+# ----------------------------------------------------------------------
+# v73.0 Workflow Recommendation Engine — suggest the best workflow (read-only).
+# ----------------------------------------------------------------------
+@router.post("/workflow-recommend")
+def workflow_recommend(request: WorkflowRecommendRequest) -> dict:
+    return workflow_recommendation_service.recommend(request.goal, task_type=request.task_type)
+
+
+@router.get("/workflow-recommend/summary")
+def workflow_recommend_summary() -> dict:
+    return workflow_recommendation_service.summary()
 
 
 @router.get("/activity/export")

@@ -380,6 +380,7 @@ import {
   getWorkspaceOsDashboard,
   planContext,
   getAgentQuality,
+  recommendWorkflow,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1162,6 +1163,10 @@ function App() {
   const [contextBusy, setContextBusy] = useState(false)
   const [showAgentQuality, setShowAgentQuality] = useState(false)
   const [agentQuality, setAgentQuality] = useState(null)
+  const [showWorkflowRec, setShowWorkflowRec] = useState(false)
+  const [workflowGoal, setWorkflowGoal] = useState('')
+  const [workflowRec, setWorkflowRec] = useState(null)
+  const [workflowBusy, setWorkflowBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3187,6 +3192,20 @@ function App() {
       setAgentQuality(await getAgentQuality())
     } catch {
       // best-effort
+    }
+  }
+
+  async function runWorkflowRec(event) {
+    if (event) event.preventDefault()
+    const goal = workflowGoal.trim()
+    if (!goal) return
+    setWorkflowBusy(true)
+    try {
+      setWorkflowRec(await recommendWorkflow(goal))
+    } catch (err) {
+      setWorkflowRec({ error: err.message })
+    } finally {
+      setWorkflowBusy(false)
     }
   }
 
@@ -9412,6 +9431,52 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowWorkflowRec((current) => !current)}>
+              <span>
+                <Route size={15} />
+                Workflow Recommender
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWorkflowRec && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Workflow Recommender · v73.0</strong>
+                  <span>Recommends the best workflow for a goal — expected steps, risk level, approval needs, time/complexity, and similar past runs. Planning-only.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runWorkflowRec}>
+                  <input type="text" placeholder="Describe a goal…" value={workflowGoal} onChange={(event) => setWorkflowGoal(event.target.value)} />
+                  <button type="submit" disabled={workflowBusy || !workflowGoal.trim()}>{workflowBusy ? 'Thinking…' : 'Recommend'}</button>
+                </form>
+                {workflowRec?.error ? (
+                  <p className="error">{workflowRec.error}</p>
+                ) : workflowRec && (
+                  <>
+                    <p className="muted">
+                      {workflowRec.task_type} · risk {workflowRec.risk_level} · ~{workflowRec.estimated_minutes}min · {workflowRec.complexity}
+                      {workflowRec.requires_approval ? ' · needs approval' : ''}
+                    </p>
+                    <div className="agent-template-card">
+                      <strong>Recommended steps</strong>
+                      {workflowRec.recommended_workflow?.map((step, i) => (<span key={i} className="home-action">{i + 1}. {step}</span>))}
+                    </div>
+                    {workflowRec.approval_reason && <p className="gs-trace">🔒 {workflowRec.approval_reason}</p>}
+                    {workflowRec.similar_past_runs?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Similar past runs</strong>
+                        {workflowRec.similar_past_runs.map((r, i) => (<span key={i} className="gs-trace">• [{r.domain}] {r.request}</span>))}
+                      </div>
+                    )}
+                  </>
+                )}
+                <p className="muted">Read-only recommendation — nothing is executed; risky steps require approval.</p>
               </div>
             )}
           </section>

@@ -2615,6 +2615,9 @@ export function planContext(query, opts = {}) {
 export function getAgentQuality() {
   return getJson('/api/agent-quality/dashboard')
 }
+export function recommendWorkflow(goal, taskType) {
+  return postJson('/api/workflow-recommend', { goal, task_type: taskType || null })
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }
