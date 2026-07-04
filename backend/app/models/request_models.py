@@ -1494,6 +1494,22 @@ class CodeTextRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Research Agent 2.0 (v77)
+# ----------------------------------------------------------------------
+class ResearchSourcesRequest(BaseModel):
+    sources: list[dict] = Field(default_factory=list, description="List of {title, text} sources.")
+
+
+class ResearchBriefRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    sources: list[dict] = Field(default_factory=list)
+
+
+class ResearchTextRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100000)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):

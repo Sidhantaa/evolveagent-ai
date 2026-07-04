@@ -143,6 +143,9 @@ from app.models.request_models import (
     DocQARequest,
     CodeAnalyzeRequest,
     CodeTextRequest,
+    ResearchSourcesRequest,
+    ResearchBriefRequest,
+    ResearchTextRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -316,6 +319,7 @@ from app.services.workflow_recommendation_service import WorkflowRecommendationS
 from app.services.personal_productivity_service import PersonalProductivityService
 from app.services.document_intelligence_service import DocumentIntelligenceService
 from app.services.code_intelligence_service import CodeIntelligenceService
+from app.services.research_agent_service import ResearchAgentService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -438,6 +442,7 @@ workflow_recommendation_service = WorkflowRecommendationService(storage, governa
 personal_productivity_service = PersonalProductivityService(storage, governance_service)
 document_intelligence_service = DocumentIntelligenceService(storage, governance_service)
 code_intelligence_service = CodeIntelligenceService(storage, governance_service)
+research_agent_service = ResearchAgentService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1723,6 +1728,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **personal_productivity_service.analytics_summary(),
         **document_intelligence_service.analytics_summary(),
         **code_intelligence_service.analytics_summary(),
+        **research_agent_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4475,6 +4481,44 @@ def code_intel_test_coverage(request: CodeTextRequest) -> dict:
 @router.get("/code-intel/summary")
 def code_intel_summary() -> dict:
     return code_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v77.0 Research Agent 2.0 — deterministic local research toolkit (read-only).
+# ----------------------------------------------------------------------
+@router.post("/research-agent/compare")
+def research_compare(request: ResearchSourcesRequest) -> dict:
+    return research_agent_service.compare_sources(request.sources)
+
+
+@router.post("/research-agent/claims")
+def research_claims(request: ResearchTextRequest) -> dict:
+    return research_agent_service.claim_evidence(request.text)
+
+
+@router.post("/research-agent/contradictions")
+def research_contradictions(request: ResearchSourcesRequest) -> dict:
+    return research_agent_service.detect_contradictions(request.sources)
+
+
+@router.post("/research-agent/citation-quality")
+def research_citation_quality(request: ResearchSourcesRequest) -> dict:
+    return research_agent_service.citation_quality(request.sources)
+
+
+@router.post("/research-agent/bias")
+def research_bias(request: ResearchTextRequest) -> dict:
+    return research_agent_service.bias_flags(request.text)
+
+
+@router.post("/research-agent/brief")
+def research_brief(request: ResearchBriefRequest) -> dict:
+    return research_agent_service.brief(request.topic, request.sources)
+
+
+@router.get("/research-agent/summary")
+def research_agent_summary() -> dict:
+    return research_agent_service.summary()
 
 
 @router.get("/activity/export")
