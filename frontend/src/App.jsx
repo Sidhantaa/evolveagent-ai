@@ -361,6 +361,7 @@ import {
   getGlobalSearchSources,
   getActivityTimeline,
   exportActivityTimeline,
+  getDashboardHome,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1116,6 +1117,8 @@ function App() {
   const [activityTimeline, setActivityTimeline] = useState(null)
   const [activityType, setActivityType] = useState('')
   const [activityBusy, setActivityBusy] = useState(false)
+  const [showHome, setShowHome] = useState(false)
+  const [dashboardHome, setDashboardHome] = useState(null)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3027,6 +3030,14 @@ function App() {
       setActivityTimeline({ events: [], event_count: 0 })
     } finally {
       setActivityBusy(false)
+    }
+  }
+
+  async function refreshHome() {
+    try {
+      setDashboardHome(await getDashboardHome(workspaceId))
+    } catch {
+      // best-effort
     }
   }
 
@@ -9195,6 +9206,62 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowHome((current) => !current); if (!dashboardHome) refreshHome() }}>
+              <span>
+                <Gauge size={15} />
+                Dashboard Home
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showHome && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Dashboard Home · v64.0</strong>
+                  <span>One professional homepage — Today, active workspace, approvals, recent runs, health, upcoming tasks, and suggested actions.</span>
+                </div>
+                {dashboardHome && (
+                  <>
+                    <div className="home-grid">
+                      <div className="home-stat"><strong>{dashboardHome.today?.events_today ?? 0}</strong><span>events today</span></div>
+                      <div className="home-stat"><strong>{dashboardHome.today?.pending_approvals ?? 0}</strong><span>approvals</span></div>
+                      <div className="home-stat"><strong>{dashboardHome.today?.upcoming_tasks ?? 0}</strong><span>upcoming</span></div>
+                      <div className="home-stat"><strong>{dashboardHome.system_health?.score ?? '—'}</strong><span>health {dashboardHome.system_health?.status}</span></div>
+                    </div>
+                    <p className="muted">workspace: {dashboardHome.active_workspace?.name}</p>
+                    {dashboardHome.suggested_actions?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Suggested next</strong>
+                        <span>{dashboardHome.suggested_actions.map((a, i) => <span key={i} className="home-action">• {a}</span>)}</span>
+                      </div>
+                    )}
+                    {dashboardHome.recent_runs?.length > 0 && (
+                      <div className="agent-template-list">
+                        {dashboardHome.recent_runs.map((run, i) => (
+                          <div key={i} className="agent-template-card">
+                            <strong>{run.domain || 'Routed'}{run.requires_approval ? ' · needs approval' : ''}</strong>
+                            <span>{run.request}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="home-launch">
+                      {dashboardHome.quick_launch?.map((card) => (
+                        <span key={card.route} className="home-launch-card">{card.label}</span>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshHome()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only overview — nothing is created or executed.</p>
               </div>
             )}
           </section>
