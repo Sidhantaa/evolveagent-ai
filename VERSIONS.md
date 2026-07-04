@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v66 — Demo Mode / Portfolio Mode 2.0
+- **Purpose:** Make the app impressive for interviews and GitHub, and safe to demo.
+- **How it operates:** `DemoService` provides a **one-click demo script** (ordered beats with the prompt/route to show), a **guided walkthrough**, an **auto-open feature sequence**, a refreshed **resume-bullet** set, and a **project case-study export** (markdown) — all read-only, generated content. It can **seed a demo-safe sample workspace** (a workspace + goals + an idea, every record tagged `demo_seed=true` and tracked in a seed log) and **reset demo data** — reset removes **only** demo-tagged records it created and leaves user data untouched. Seeding/reset are explicit and governance-logged.
+- **Main API route groups:** `/api/demo` (+ `/script`, `/walkthrough`, `/feature-sequence`, `/resume-bullets`, `/case-study`, `/summary`, `/seed`, `/reset`).
+- **Safety boundary:** Demo content is read-only; sample data is **scoped and reversible** — reset never deletes user data, only `demo_seed`-tagged records; governance-logged.
+
 ### v65 — Feature Registry + Capability Map 3.0
 - **Purpose:** Make all 60+ versions discoverable.
 - **How it operates:** `FeatureRegistryService` holds a **canonical registry** of every major feature with its owning **service**, primary **route**, **category**, and **status tags** (active / demo-safe / mock / needs-config). It supports **feature search**, status/category filters, a **route → feature map** (Developer-Mode route map), a **summary** (counts by category/status), and a **"try this feature"** descriptor that hands back the route to open. Read-only; governance-logged.
@@ -556,4 +562,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v63 | Unified Activity Timeline | `/api/activity` | Chronological merge of runs/approvals/tool-executions/memory/files/reports/goals; type/workspace/actor/status/date filters; expandable detail; markdown/JSON export; governance-linked | Read-only aggregation; no writes; secrets excluded; governance-logged |
 | v64 | Dashboard Home 2.0 | `/api/home` | One homepage: Today overview, active workspace, pending approvals, recent runs, system health, upcoming tasks, suggested actions, quick-launch cards | Read-only aggregation; no writes/actions; governance-logged |
 | v65 | Feature Registry + Capability Map 3.0 | `/api/features` | Canonical searchable registry of every feature (service/route/category/status), route→feature map, "try this feature" launcher | Read-only discovery; no writes; governance-logged |
+| v66 | Demo Mode / Portfolio Mode 2.0 | `/api/demo` | One-click demo script, walkthrough, feature sequence, resume bullets, case-study export; demo-safe seed + scoped reset | Read-only content; sample data scoped/reversible; reset only removes demo-tagged records; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
