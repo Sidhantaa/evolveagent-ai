@@ -377,6 +377,7 @@ import {
   generateNotificationsInbox,
   getNotificationsInbox,
   resolveNotificationInbox,
+  getWorkspaceOsDashboard,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1151,6 +1152,8 @@ function App() {
   const [showInbox, setShowInbox] = useState(false)
   const [inboxData, setInboxData] = useState(null)
   const [inboxBusy, setInboxBusy] = useState(false)
+  const [showWsOs, setShowWsOs] = useState(false)
+  const [wsOsDashboard, setWsOsDashboard] = useState(null)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3159,6 +3162,15 @@ function App() {
       setInboxData(await getNotificationsInbox())
     } catch {
       // best-effort
+    }
+  }
+
+  async function refreshWsOs() {
+    if (!workspaceId) { setWsOsDashboard({ error: 'No active workspace selected.' }); return }
+    try {
+      setWsOsDashboard(await getWorkspaceOsDashboard(workspaceId))
+    } catch {
+      setWsOsDashboard(null)
     }
   }
 
@@ -9370,6 +9382,57 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowWsOs((current) => !current); if (!wsOsDashboard) refreshWsOs() }}>
+              <span>
+                <Layers3 size={15} />
+                Workspace OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWsOs && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Workspace OS · v70.0</strong>
+                  <span>Per-workspace overview — dashboard, memory graph, feature usage, agents, reports, timeline, and a health score.</span>
+                </div>
+                {wsOsDashboard?.error ? (
+                  <p className="muted">{wsOsDashboard.error}</p>
+                ) : wsOsDashboard && (
+                  <>
+                    <div className="home-grid">
+                      <div className="home-stat"><strong>{wsOsDashboard.health?.score ?? '—'}</strong><span>health {wsOsDashboard.health?.status}</span></div>
+                      <div className="home-stat"><strong>{wsOsDashboard.memory_graph?.node_count ?? 0}</strong><span>memory nodes</span></div>
+                      <div className="home-stat"><strong>{wsOsDashboard.memory_graph?.edge_count ?? 0}</strong><span>memory edges</span></div>
+                      <div className="home-stat"><strong>{wsOsDashboard.agents?.length ?? 0}</strong><span>agents</span></div>
+                    </div>
+                    <p className="muted">{wsOsDashboard.workspace_name}</p>
+                    <div className="agent-template-card">
+                      <strong>Feature usage</strong>
+                      <span className="gs-trace">{Object.entries(wsOsDashboard.feature_usage || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
+                    </div>
+                    {wsOsDashboard.timeline?.length > 0 && (
+                      <div className="agent-template-list">
+                        {wsOsDashboard.timeline.slice(0, 6).map((event, i) => (
+                          <div key={i} className="agent-template-card">
+                            <strong>[{event.type}] {event.title}</strong>
+                            <span className="gs-trace">{event.timestamp}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshWsOs()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only, workspace-scoped — nothing is created or executed.</p>
               </div>
             )}
           </section>

@@ -301,6 +301,7 @@ from app.services.demo_service import DemoService
 from app.services.settings_service import SettingsService
 from app.services.provider_control_service import ProviderControlService
 from app.services.notifications_inbox_service import NotificationsInboxService
+from app.services.workspace_os_service import WorkspaceOSService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -416,6 +417,7 @@ demo_service = DemoService(storage, governance_service)
 settings_service = SettingsService(storage, governance_service)
 provider_control_service = ProviderControlService(storage, governance_service)
 notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
+workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1694,6 +1696,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **settings_service.analytics_summary(),
         **provider_control_service.analytics_summary(),
         **notifications_inbox_service.analytics_summary(),
+        **workspace_os_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4310,6 +4313,19 @@ def notifications_inbox_resolve(item_id: str) -> dict:
         return notifications_inbox_service.resolve(item_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v70.0 Workspace Operating System 2.0 — per-workspace AI OS overview.
+# ----------------------------------------------------------------------
+@router.get("/workspace-os/summary")
+def workspace_os_summary() -> dict:
+    return workspace_os_service.summary()
+
+
+@router.get("/workspace-os/{workspace_id}/dashboard")
+def workspace_os_dashboard(workspace_id: str) -> dict:
+    return workspace_os_service.dashboard(workspace_id)
 
 
 @router.get("/activity/export")
