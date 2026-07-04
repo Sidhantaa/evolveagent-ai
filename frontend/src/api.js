@@ -2503,6 +2503,51 @@ export function acknowledgeNotification(notifId) {
 export function suggestMcp(task) {
   return postJson('/api/mcp/suggest', { task })
 }
+export function getWorkspaceTemplates() {
+  return getJson('/api/workspace-templates')
+}
+export function getWorkspaceTemplatesSummary() {
+  return getJson('/api/workspace-templates/summary')
+}
+export function createWorkspaceTemplate(payload) {
+  return postJson('/api/workspace-templates', payload)
+}
+export function instantiateWorkspaceTemplate(templateId, payload) {
+  return postJson(`/api/workspace-templates/${templateId}/instantiate`, payload || {})
+}
+export function getScheduledTasks() {
+  return getJson('/api/scheduled-tasks')
+}
+export function getScheduledTasksSummary() {
+  return getJson('/api/scheduled-tasks/summary')
+}
+export function createScheduledTask(payload) {
+  return postJson('/api/scheduled-tasks', payload)
+}
+export function toggleScheduledTask(taskId, enabled) {
+  return patchJson(`/api/scheduled-tasks/${taskId}`, { enabled })
+}
+export function triggerScheduledTask(taskId) {
+  return postJson(`/api/scheduled-tasks/${taskId}/trigger`, {})
+}
+export function getDataExportSummary() {
+  return getJson('/api/data-export/summary')
+}
+export function exportDataBundle() {
+  return postJson('/api/data-export/bundle', {})
+}
+export function importDataBundle(bundle) {
+  return postJson('/api/data-export/import', { bundle })
+}
+export function getOs2Dashboard() {
+  return getJson('/api/os2/dashboard')
+}
+export function createOs2Snapshot() {
+  return postJson('/api/os2/snapshots', {})
+}
+export function createOs2Report() {
+  return postJson('/api/os2/report', {})
+}
 export function getMcpExecutions(connectorId) {
   return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
 }

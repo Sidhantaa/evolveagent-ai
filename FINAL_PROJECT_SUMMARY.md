@@ -1,4 +1,22 @@
-# EvolveAgent AI — Project Summary (current completed: v56.0 Notifications & Alerts Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v59.0 Data Export & Backup · v45.1 MCP Hub UI)
+
+## v59 — Data Export & Backup
+
+Exports a curated set of local content collections into a single JSON bundle the user can download, and imports a bundle back in. Import is non-destructive — it merges by appending items whose id is not already present, never overwriting or deleting. Everything is local (no external upload); secret values, governance logs, and analytics are excluded. Exposed at `/api/data-export` (bundle, import, summary), in analytics, and as a Data Export Developer-Mode panel with in-browser download. Exports and imports are governance-logged.
+
+## v58 — Scheduled Tasks
+
+## v58 — Scheduled Tasks
+
+A local registry of scheduled tasks (manual/hourly/daily/weekly). It does not run a real background scheduler and never executes anything on a timer — there is no daemon. A task records a schedule and an action; triggering it performs a planning-first mock run (plan / note / hold-for-approval) and records the outcome; `due_tasks` is informational only. Exposed at `/api/scheduled-tasks` (create, list, toggle, trigger, runs, summary), in analytics, and as a Scheduled Tasks Developer-Mode panel. Stateful actions are governance-logged.
+
+## v57 — Workspace Templates & Cloning
+
+## v57 — Workspace Templates & Cloning
+
+Define reusable workspace templates (name, description, tags, preset of local settings) and instantiate them to spin up a new local workspace preconfigured from the template. Local structure only — no production provisioning, no auth. Exposed at `/api/workspace-templates` (create, list, instantiate, summary), in analytics, and as a Workspace Templates Developer-Mode panel. Template creation and instantiation are governance-logged.
+
+## v56 — Notifications & Alerts Center
 
 ## v56 — Notifications & Alerts Center
 

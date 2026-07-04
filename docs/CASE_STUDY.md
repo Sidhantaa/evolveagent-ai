@@ -240,3 +240,21 @@ After a long arc of governance and observability features, v55 refreshes the cap
 ## v56 — Notifications & Alerts Center
 
 A governed system needs to surface what needs attention. The Notifications & Alerts Center digests governance blocks, health issues, and approvals backlog into an in-app feed the user can acknowledge - with no external delivery. It keeps the alerting fully local and governed, consistent with the platforms no-real-sending contract.
+
+---
+
+## v57 — Workspace Templates & Cloning
+
+Spinning up consistent, preconfigured workspaces is a common need. The Workspace Templates feature lets users capture a preset once and clone it into new local workspaces on demand, incrementing usage counts and logging each action. It stays local-first with no production provisioning or auth, consistent with the platforms contract.
+
+---
+
+## v58 — Scheduled Tasks
+
+Scheduling usually implies a background daemon, but that would break the platforms no-real-execution contract. v58 keeps it planning-first: a local registry where triggering a task produces a planned or approval-held mock run and nothing runs automatically on a timer. It captures the intent of scheduling while staying fully governed and local.
+
+---
+
+## v59 — Data Export & Backup
+
+A local-first system should let you take your data with you. v59 exports a curated bundle of content collections for download and imports it back with a non-destructive merge, so restoring never clobbers existing data. It excludes secrets, governance logs, and analytics, and never uploads anything - portability that stays within the platforms local-first, safe contract.

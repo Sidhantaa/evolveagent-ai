@@ -1404,3 +1404,39 @@ class PlaybookCreateRequest(BaseModel):
 # ----------------------------------------------------------------------
 class MCPSuggestRequest(BaseModel):
     task: str = Field(..., min_length=1, max_length=500)
+
+
+# ----------------------------------------------------------------------
+# v57.0 Workspace Templates & Cloning
+# ----------------------------------------------------------------------
+class WorkspaceTemplateCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=1000)
+    default_tags: list[str] = Field(default_factory=list)
+    preset: dict = Field(default_factory=dict)
+
+
+class WorkspaceTemplateInstantiateRequest(BaseModel):
+    name: str = Field(default="", max_length=160)
+
+
+# ----------------------------------------------------------------------
+# v58.0 Scheduled Tasks (local, planning-first)
+# ----------------------------------------------------------------------
+class ScheduledTaskCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    schedule: str = Field(default="manual", pattern="^(manual|hourly|daily|weekly)$")
+    action_type: str = Field(default="plan", pattern="^(plan|note|approval_required)$")
+    detail: str = Field(default="", max_length=2000)
+    enabled: bool = Field(default=True)
+
+
+class ScheduledTaskToggleRequest(BaseModel):
+    enabled: bool
+
+
+# ----------------------------------------------------------------------
+# v59.0 Data Export & Backup
+# ----------------------------------------------------------------------
+class DataImportRequest(BaseModel):
+    bundle: dict = Field(default_factory=dict)

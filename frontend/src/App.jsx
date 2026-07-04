@@ -339,6 +339,21 @@ import {
   generateNotifications,
   acknowledgeNotification,
   suggestMcp,
+  getWorkspaceTemplates,
+  getWorkspaceTemplatesSummary,
+  createWorkspaceTemplate,
+  instantiateWorkspaceTemplate,
+  getScheduledTasks,
+  getScheduledTasksSummary,
+  createScheduledTask,
+  toggleScheduledTask,
+  triggerScheduledTask,
+  getDataExportSummary,
+  getOs2Dashboard,
+  createOs2Snapshot,
+  createOs2Report,
+  exportDataBundle,
+  importDataBundle,
   getMcpExecutions,
   requestMcpExecution,
   approveMcpExecution,
@@ -1056,6 +1071,26 @@ function App() {
   const [notificationsSummary, setNotificationsSummary] = useState(null)
   const [notifications, setNotifications] = useState([])
   const [notifBusy, setNotifBusy] = useState(false)
+  const [showWsTemplates, setShowWsTemplates] = useState(false)
+  const [wsTemplates, setWsTemplates] = useState([])
+  const [wsTemplatesSummary, setWsTemplatesSummary] = useState(null)
+  const [wsTemplateBusy, setWsTemplateBusy] = useState(false)
+  const [wsTemplateName, setWsTemplateName] = useState('')
+  const [showScheduled, setShowScheduled] = useState(false)
+  const [scheduledTasks, setScheduledTasks] = useState([])
+  const [scheduledSummary, setScheduledSummary] = useState(null)
+  const [scheduledBusy, setScheduledBusy] = useState(false)
+  const [scheduledName, setScheduledName] = useState('')
+  const [scheduledSchedule, setScheduledSchedule] = useState('daily')
+  const [showDataExport, setShowDataExport] = useState(false)
+  const [dataExportSummary, setDataExportSummary] = useState(null)
+  const [dataExportBusy, setDataExportBusy] = useState(false)
+  const [showOs2, setShowOs2] = useState(false)
+  const [os2Dashboard, setOs2Dashboard] = useState(null)
+  const [os2Report, setOs2Report] = useState(null)
+  const [os2Busy, setOs2Busy] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -1196,6 +1231,10 @@ function App() {
     refreshPlaybooks()
     refreshOpLayer2()
     refreshNotifications()
+    refreshWsTemplates()
+    refreshScheduled()
+    refreshDataExport()
+    refreshOs2()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2882,6 +2921,136 @@ function App() {
   async function refreshOpLayer2() {
     const dashboard = await getOperatingLayerV2Dashboard()
     setOpLayer2(dashboard)
+  }
+
+  async function refreshWsTemplates() {
+    const [summary, list] = await Promise.all([getWorkspaceTemplatesSummary(), getWorkspaceTemplates()])
+    setWsTemplatesSummary(summary)
+    setWsTemplates(list?.templates || [])
+  }
+
+  async function refreshScheduled() {
+    const [summary, list] = await Promise.all([getScheduledTasksSummary(), getScheduledTasks()])
+    setScheduledSummary(summary)
+    setScheduledTasks(list?.tasks || [])
+  }
+
+  async function refreshDataExport() {
+    const summary = await getDataExportSummary()
+    setDataExportSummary(summary)
+  }
+
+  async function refreshOs2() {
+    const dashboard = await getOs2Dashboard()
+    setOs2Dashboard(dashboard)
+  }
+
+  async function handleOs2Snapshot() {
+    setOs2Busy(true)
+    try {
+      await createOs2Snapshot()
+      await refreshOs2()
+    } finally {
+      setOs2Busy(false)
+    }
+  }
+
+  async function handleOs2Report() {
+    setOs2Busy(true)
+    try {
+      const report = await createOs2Report()
+      setOs2Report(report)
+      await refreshOs2()
+    } finally {
+      setOs2Busy(false)
+    }
+  }
+
+  async function handleExportDownload() {
+    setDataExportBusy(true)
+    try {
+      const bundle = await exportDataBundle()
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `evolveagent-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      await refreshDataExport()
+    } finally {
+      setDataExportBusy(false)
+    }
+  }
+
+  async function handleImportBundle(event) {
+    event.preventDefault()
+    if (!importText.trim()) return
+    setDataExportBusy(true)
+    try {
+      const bundle = JSON.parse(importText)
+      const result = await importDataBundle(bundle)
+      setImportResult(result)
+      setImportText('')
+      await refreshDataExport()
+    } catch (err) {
+      setImportResult({ error: err.message })
+    } finally {
+      setDataExportBusy(false)
+    }
+  }
+
+  async function runScheduledAction(action) {
+    setScheduledBusy(true)
+    try {
+      await action()
+      await refreshScheduled()
+    } finally {
+      setScheduledBusy(false)
+    }
+  }
+
+  async function handleCreateScheduled(event) {
+    event.preventDefault()
+    if (!scheduledName.trim()) return
+    await runScheduledAction(async () => {
+      await createScheduledTask({ name: scheduledName.trim(), schedule: scheduledSchedule, action_type: 'plan' })
+      setScheduledName('')
+    })
+  }
+
+  async function handleTriggerScheduled(taskId) {
+    await runScheduledAction(() => triggerScheduledTask(taskId))
+  }
+
+  async function handleToggleScheduled(taskId, enabled) {
+    await runScheduledAction(() => toggleScheduledTask(taskId, enabled))
+  }
+
+  async function runWsTemplateAction(action) {
+    setWsTemplateBusy(true)
+    try {
+      await action()
+      await refreshWsTemplates()
+    } finally {
+      setWsTemplateBusy(false)
+    }
+  }
+
+  async function handleCreateWsTemplate(event) {
+    event.preventDefault()
+    if (!wsTemplateName.trim()) return
+    await runWsTemplateAction(async () => {
+      await createWorkspaceTemplate({ name: wsTemplateName.trim(), default_tags: [], preset: {} })
+      setWsTemplateName('')
+    })
+  }
+
+  async function handleInstantiateWsTemplate(templateId) {
+    await runWsTemplateAction(() => instantiateWorkspaceTemplate(templateId, {}))
+    await refreshWorkspaces?.()
   }
 
   async function refreshNotifications() {
@@ -8835,6 +9004,170 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowDataExport((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Data Export & Backup
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDataExport && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Data Export & Backup · v59.0</strong>
+                  <span>Download a local JSON bundle of your content collections, or import one. Local only — no external upload. Import is non-destructive (merge).</span>
+                </div>
+                {dataExportSummary && (
+                  <p className="muted">collections: {dataExportSummary.exportable_collections} · items: {dataExportSummary.total_current_items} · exports: {dataExportSummary.export_events} · imports: {dataExportSummary.import_events}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleExportDownload} disabled={dataExportBusy}>Download backup (.json)</button>
+                  <button type="button" onClick={() => refreshDataExport()} disabled={dataExportBusy}>Refresh</button>
+                </div>
+                <form className="stacked-form" onSubmit={handleImportBundle}>
+                  <h3>Import a bundle</h3>
+                  <textarea placeholder="Paste a backup bundle JSON to merge (non-destructive)" value={importText} onChange={(event) => setImportText(event.target.value)} rows={2} />
+                  <button type="submit" disabled={dataExportBusy || !importText.trim()}>Import (merge)</button>
+                </form>
+                {importResult && (
+                  <div className="agent-template-card">
+                    <strong>{importResult.error ? 'Import failed' : `Imported ${importResult.total_imported} new item(s)`}</strong>
+                    <p className="muted">{importResult.error || importResult.note}</p>
+                  </div>
+                )}
+                <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOs2((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                EvolveAgent OS 2.0
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOs2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>EvolveAgent OS 2.0 · v60.0 (capstone)</strong>
+                  <span>Unified command center over every system (v1–v59) + live platform scorecard. Read-only aggregation of local data — not AGI.</span>
+                </div>
+                {os2Dashboard && (
+                  <>
+                    <p className="muted">
+                      grade {os2Dashboard.scorecard?.overall_grade} ({os2Dashboard.scorecard?.overall_score}/100) · systems {os2Dashboard.command_center?.active_systems}/{os2Dashboard.command_center?.total_systems} active · health {os2Dashboard.health?.status}
+                    </p>
+                    <div className="agent-template-list">
+                      {(os2Dashboard.command_center?.domains || []).map((domain) => (
+                        <div key={domain.domain} className="agent-template-card">
+                          <strong>{domain.domain} · {domain.active_count}/{domain.system_count} active</strong>
+                          <span>{(domain.systems || []).map((system) => system.label).join(' · ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleOs2Snapshot} disabled={os2Busy}>Snapshot</button>
+                  <button type="button" onClick={handleOs2Report} disabled={os2Busy}>Generate report</button>
+                  <button type="button" onClick={() => refreshOs2()} disabled={os2Busy}>Refresh</button>
+                </div>
+                {os2Report && (
+                  <div className="agent-template-card">
+                    <strong>{os2Report.title}</strong>
+                    <p className="muted">{os2Report.headline}</p>
+                  </div>
+                )}
+                <p className="muted">{os2Dashboard?.disclaimer || 'This is not AGI — a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards.'}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowScheduled((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Scheduled Tasks
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showScheduled && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Scheduled Tasks · v58.0</strong>
+                  <span>Local registry of scheduled tasks. Planning-first — no real background scheduler; triggers produce mock/planned runs, risky steps need approval.</span>
+                </div>
+                {scheduledSummary && (
+                  <p className="muted">tasks: {scheduledSummary.task_count} · enabled: {scheduledSummary.enabled_count} · due: {scheduledSummary.due_count} · runs: {scheduledSummary.run_count}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleCreateScheduled}>
+                  <input type="text" placeholder="Task name" value={scheduledName} onChange={(event) => setScheduledName(event.target.value)} />
+                  <select value={scheduledSchedule} onChange={(event) => setScheduledSchedule(event.target.value)}>
+                    {['manual', 'hourly', 'daily', 'weekly'].map((s) => (<option key={s} value={s}>{s}</option>))}
+                  </select>
+                  <button type="submit" disabled={scheduledBusy || !scheduledName.trim()}>Create task</button>
+                </form>
+                {scheduledTasks.slice(0, 6).map((t) => (
+                  <div className="agent-template-card" key={t.task_id}>
+                    <strong>{t.name}</strong>
+                    <p className="muted">{t.schedule} · {t.enabled ? 'enabled' : 'disabled'} · ran {t.trigger_count || 0}×</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleTriggerScheduled(t.task_id)} disabled={scheduledBusy || !t.enabled}>Trigger (mock)</button>
+                      <button type="button" onClick={() => handleToggleScheduled(t.task_id, !t.enabled)} disabled={scheduledBusy}>{t.enabled ? 'Disable' : 'Enable'}</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">Planning-first — no real background scheduler or execution; nothing runs on a timer.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowWsTemplates((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Workspace Templates
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWsTemplates && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Workspace Templates & Cloning · v57.0</strong>
+                  <span>Define reusable workspace presets and instantiate them into new local workspaces. Local records only — no production provisioning or auth.</span>
+                </div>
+                {wsTemplatesSummary && (
+                  <p className="muted">templates: {wsTemplatesSummary.template_count} · instantiations: {wsTemplatesSummary.total_instantiations}</p>
+                )}
+                <form className="stacked-form" onSubmit={handleCreateWsTemplate}>
+                  <input type="text" placeholder="Template name (e.g. Engineering workspace)" value={wsTemplateName} onChange={(event) => setWsTemplateName(event.target.value)} />
+                  <button type="submit" disabled={wsTemplateBusy || !wsTemplateName.trim()}>Create template</button>
+                </form>
+                {wsTemplates.slice(0, 6).map((t) => (
+                  <div className="agent-template-card" key={t.template_id}>
+                    <strong>{t.name}</strong>
+                    <p className="muted">{t.default_tags?.join(', ') || 'no tags'} · used {t.instantiation_count || 0}×</p>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleInstantiateWsTemplate(t.template_id)} disabled={wsTemplateBusy}>Create workspace from this</button>
+                    </div>
+                  </div>
+                ))}
+                <p className="muted">Local workspace templates and clones only — no production provisioning or authentication.</p>
               </div>
             )}
           </section>

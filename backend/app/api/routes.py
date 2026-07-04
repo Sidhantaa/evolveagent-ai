@@ -130,6 +130,11 @@ from app.models.request_models import (
     EvalSuiteCreateRequest,
     PlaybookCreateRequest,
     MCPSuggestRequest,
+    WorkspaceTemplateCreateRequest,
+    WorkspaceTemplateInstantiateRequest,
+    ScheduledTaskCreateRequest,
+    ScheduledTaskToggleRequest,
+    DataImportRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -278,6 +283,10 @@ from app.services.eval_harness_service import EvalHarnessService
 from app.services.playbook_library_service import PlaybookLibraryService
 from app.services.operating_layer_v2_service import OperatingLayerV2Service
 from app.services.notifications_center_service import NotificationsCenterService
+from app.services.workspace_templates_service import WorkspaceTemplatesService
+from app.services.scheduled_tasks_service import ScheduledTasksService
+from app.services.data_export_service import DataExportService
+from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -380,6 +389,10 @@ eval_harness_service = EvalHarnessService(storage, governance_service)
 playbook_library_service = PlaybookLibraryService(storage, governance_service)
 operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
 notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
+workspace_templates_service = WorkspaceTemplatesService(storage, governance_service, workspace_service)
+scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
+data_export_service = DataExportService(storage, governance_service)
+evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1645,6 +1658,10 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **playbook_library_service.analytics_summary(),
         **operating_layer_v2_service.analytics_summary(),
         **notifications_center_service.analytics_summary(),
+        **workspace_templates_service.analytics_summary(),
+        **scheduled_tasks_service.analytics_summary(),
+        **data_export_service.analytics_summary(),
+        **evolveagent_os2_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3935,6 +3952,126 @@ def acknowledge_notification(notif_id: str) -> dict:
         return notifications_center_service.acknowledge(notif_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Notification not found") from error
+
+
+# ----------------------------------------------------------------------
+# v57.0 Workspace Templates & Cloning — local templates + instantiate.
+# ----------------------------------------------------------------------
+@router.get("/workspace-templates/summary")
+def get_workspace_templates_summary() -> dict:
+    return workspace_templates_service.summary()
+
+
+@router.get("/workspace-templates")
+def list_workspace_templates() -> dict:
+    templates = workspace_templates_service.list_templates()
+    return {"templates": templates, "count": len(templates)}
+
+
+@router.post("/workspace-templates")
+def create_workspace_template(request: WorkspaceTemplateCreateRequest) -> dict:
+    return workspace_templates_service.create_template(request.model_dump())
+
+
+@router.post("/workspace-templates/{template_id}/instantiate")
+def instantiate_workspace_template(template_id: str, request: WorkspaceTemplateInstantiateRequest | None = None) -> dict:
+    try:
+        return workspace_templates_service.instantiate(template_id, request.model_dump() if request else {})
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Template not found") from error
+
+
+# ----------------------------------------------------------------------
+# v58.0 Scheduled Tasks — local registry, planning-first triggers (no daemon).
+# ----------------------------------------------------------------------
+@router.get("/scheduled-tasks/summary")
+def get_scheduled_tasks_summary() -> dict:
+    return scheduled_tasks_service.summary()
+
+
+@router.get("/scheduled-tasks/runs")
+def list_scheduled_task_runs(task_id: str | None = Query(default=None)) -> dict:
+    runs = scheduled_tasks_service.list_runs(task_id)
+    return {"runs": runs, "count": len(runs)}
+
+
+@router.get("/scheduled-tasks")
+def list_scheduled_tasks() -> dict:
+    tasks = scheduled_tasks_service.list_tasks()
+    return {"tasks": tasks, "count": len(tasks)}
+
+
+@router.post("/scheduled-tasks")
+def create_scheduled_task(request: ScheduledTaskCreateRequest) -> dict:
+    return scheduled_tasks_service.create_task(request.model_dump())
+
+
+@router.patch("/scheduled-tasks/{task_id}")
+def toggle_scheduled_task(task_id: str, request: ScheduledTaskToggleRequest) -> dict:
+    try:
+        return scheduled_tasks_service.set_enabled(task_id, request.enabled)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Task not found") from error
+
+
+@router.post("/scheduled-tasks/{task_id}/trigger")
+def trigger_scheduled_task(task_id: str) -> dict:
+    try:
+        return scheduled_tasks_service.trigger(task_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v59.0 Data Export & Backup — local bundle export/import (non-destructive).
+# ----------------------------------------------------------------------
+@router.get("/data-export/summary")
+def get_data_export_summary() -> dict:
+    return data_export_service.summary()
+
+
+@router.post("/data-export/bundle")
+def export_data_bundle() -> dict:
+    return data_export_service.export_bundle()
+
+
+@router.post("/data-export/import")
+def import_data_bundle(request: DataImportRequest) -> dict:
+    try:
+        return data_export_service.import_bundle(request.bundle)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v60.0 EvolveAgent OS 2.0 — unified command center + final report (capstone).
+# ----------------------------------------------------------------------
+@router.get("/os2/dashboard")
+def get_os2_dashboard() -> dict:
+    return evolveagent_os2_service.dashboard()
+
+
+@router.get("/os2/command-center")
+def get_os2_command_center() -> dict:
+    return evolveagent_os2_service.command_center()
+
+
+@router.get("/os2/snapshots")
+def list_os2_snapshots() -> dict:
+    snapshots = evolveagent_os2_service.list_snapshots()
+    return {"snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/os2/snapshots")
+def create_os2_snapshot() -> dict:
+    return evolveagent_os2_service.create_snapshot()
+
+
+@router.post("/os2/report")
+def create_os2_report() -> dict:
+    return evolveagent_os2_service.create_report()
 
 
 @router.get("/governance")
