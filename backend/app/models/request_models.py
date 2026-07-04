@@ -1530,6 +1530,25 @@ class CollaborationRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Permission System 3.0 (v81)
+# ----------------------------------------------------------------------
+class PermissionProfileRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    scope_type: str = Field(default="global")
+    scope_value: str = Field(default="*", max_length=120)
+    action_pattern: str = Field(default="*", max_length=120)
+    effect: str = Field(default="require_approval")
+    risk_level: str = Field(default="high")
+
+
+class PermissionEvaluateRequest(BaseModel):
+    scope_type: str = Field(default="global")
+    scope_value: str = Field(default="*", max_length=120)
+    action: str = Field(..., min_length=1, max_length=120)
+    risk_level: str = Field(default="medium")
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
