@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v85 — Export Center
+- **Purpose:** Make outputs portable.
+- **How it operates:** `ExportCenterService` performs read-only export of selected local data — **chats**, **reports**, **goals**, **memory**, **imported** records — as **markdown** or **JSON**, plus a **portfolio case-study** export and a **package builder** that bundles several kinds into one document. (PDF is produced client-side via print; the API returns markdown/JSON.) It excludes secrets, governance logs, and analytics, and never mutates data. Governance-logged.
+- **Main API route groups:** `/api/export-center` (+ `/export`, `/package`, `/case-study`, `/summary`).
+- **Safety boundary:** Read-only export; excludes secrets/governance/analytics; no mutation; PDF via client print; governance-logged.
+
 ### v84 — Import Center
 - **Purpose:** Bring external data into EvolveAgent safely.
 - **How it operates:** `ImportCenterService` parses submitted content by **kind** (document, csv, markdown, chat_history, project_notes) into records, **validates** (allowed kind, size caps) and **sanitizes** (redacts emails / key-like tokens / card-like numbers) **before saving**, offers an **import preview** (shows sanitized records without writing), and a **commit** that appends the sanitized records to a dedicated `imported_records` collection (never into core collections). Additive and governance-logged; secret values are redacted, never stored.
@@ -689,4 +695,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v82 | Governance Console 3.0 | `/api/governance-console` | Governance dashboard, policy violations, secret redactions, prompt-injection warnings, approval + external-action audit, export report | Read-only aggregation; nothing mutated; governance-logged |
 | v83 | Local Data Manager | `/api/data-manager` | Collection browser, storage usage, cleanup suggestions, redaction preview, backup | Read-only/planning-first; no deletes/redactions/overwrites (advisory only); governance-logged |
 | v84 | Import Center | `/api/import-center` | Import documents/csv/markdown/chat/notes; validate + sanitize + preview before saving to a dedicated collection | Validate + sanitize before save; secrets redacted (never stored); dedicated collection only; governance-logged |
+| v85 | Export Center | `/api/export-center` | Export chats/reports/goals/memory/imported as markdown/JSON; case study; package builder | Read-only; excludes secrets/governance/analytics; PDF via client print; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

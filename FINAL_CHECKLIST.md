@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v84 Import Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v85 Export Center · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -54,6 +54,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v82 — Governance Console 3.0:** read-only console over the governance log — **dashboard** (totals/blocked-ratio/by action-risk-permission) / **policy violations** (blocked) / **secret redactions** (secret/PII) / **prompt-injection warnings** / **approval audit** / **external-action audit** / **export report** (markdown/JSON) / nothing mutated / governance-logged / analytics / `/api/governance-console`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] **v83 — Local Data Manager:** read-only/planning-first storage view — **collection browser** (records + bytes) / **storage usage** (totals + largest) / **cleanup suggestions** (large/ephemeral, advisory) / **backup** helper (read-only export path) / **redaction preview** (counts sensitive matches, writes nothing) / **no deletes/redactions/overwrites autonomously** / governance-logged / analytics / `/api/data-manager`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] **v84 — Import Center:** import **documents/csv/markdown/chat_history/project_notes** / **validate** (allowed kind, size caps) / **sanitize** (redact emails/key-like tokens/card-like numbers) **before saving** / **import preview** (no write) / **commit** appends sanitized records to a **dedicated `imported_records` collection** (never core) / secrets redacted, never stored / governance-logged / analytics / `/api/import-center`. *(Developer-Mode panel deferred to a later UI pass.)*
+- [x] **v85 — Export Center:** read-only **portable exports** of chats/reports/goals/memory/imported as **markdown/JSON** / **portfolio case-study** export / **package builder** (bundle several kinds) / excludes secrets/governance/analytics / PDF via client print / no mutation / governance-logged / analytics / `/api/export-center`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

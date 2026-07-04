@@ -1570,6 +1570,21 @@ class ImportCommitRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Export Center (v85)
+# ----------------------------------------------------------------------
+class ExportRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    format: str = Field(default="markdown")
+    workspace_id: str | None = Field(default=None)
+
+
+class ExportPackageRequest(BaseModel):
+    kinds: list[str] = Field(default_factory=list)
+    format: str = Field(default="markdown")
+    workspace_id: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
