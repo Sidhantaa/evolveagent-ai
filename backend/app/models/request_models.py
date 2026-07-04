@@ -1549,6 +1549,13 @@ class PermissionEvaluateRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Local Data Manager (v83)
+# ----------------------------------------------------------------------
+class RedactionPreviewRequest(BaseModel):
+    collection: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):

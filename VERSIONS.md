@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v83 — Local Data Manager
+- **Purpose:** Manage JSON storage safely.
+- **How it operates:** `DataManagerService` is a read-only / planning-first view over the local JSON store: a **collection browser** (record counts + byte sizes), **storage usage** (totals + largest collections), **cleanup suggestions** (large/ephemeral collections — advisory only), a **backup** helper (reuses the read-only export path), and a **redaction preview** (counts sensitive matches per collection **without writing**). It never deletes, redacts, or overwrites data autonomously — destructive operations are surfaced as suggestions only. Governance-logged.
+- **Main API route groups:** `/api/data-manager` (+ `/browse`, `/usage`, `/cleanup-suggestions`, `/redaction-preview`, `/summary`).
+- **Safety boundary:** Read-only / planning-first; no deletes/redactions/overwrites (suggestions only); secret values counted, never returned; governance-logged.
+
 ### v82 — Governance Console 3.0
 - **Purpose:** Make safety visible and trustworthy.
 - **How it operates:** `GovernanceConsoleService` is a read-only console over the governance log: a **governance dashboard** (totals, blocked ratio, by action/risk/permission-level), **policy violations** (blocked events), **secret redactions** (secret/PII/redaction events), **prompt-injection warnings** (firewall/injection events), an **approval audit**, an **external-action audit** (action-level / MCP-execution events), and an **exportable governance report** (markdown/JSON). It reads existing governance events only and never mutates them. Viewing is itself governance-logged.
@@ -675,4 +681,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v80 | Multi-Agent Collaboration 2.0 | `/api/collaboration` | Conversation view, consensus summary, disagreement notes, reviewer pass, final decision + rationale | Deterministic + local; read-only; no model call; nothing executed; governance-logged |
 | v81 | Permission System 3.0 | `/api/permissions` | Permission profiles (global/workspace/agent/tool), most-restrictive evaluation, approval chains by risk, policy preview, blocked-action explanation | Additive advisory layer; can only tighten; allow grants no new power; governance-logged |
 | v82 | Governance Console 3.0 | `/api/governance-console` | Governance dashboard, policy violations, secret redactions, prompt-injection warnings, approval + external-action audit, export report | Read-only aggregation; nothing mutated; governance-logged |
+| v83 | Local Data Manager | `/api/data-manager` | Collection browser, storage usage, cleanup suggestions, redaction preview, backup | Read-only/planning-first; no deletes/redactions/overwrites (advisory only); governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
