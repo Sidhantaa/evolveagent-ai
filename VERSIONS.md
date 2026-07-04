@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v75 — Document Intelligence 2.0
+- **Purpose:** Make document work much stronger.
+- **How it operates:** `DocumentIntelligenceService` is a **deterministic, local, read-only** document toolkit operating on text you pass in: **document comparison** (term overlap + unique terms + verdict), **resume ATS scoring** (keyword coverage vs a job's keywords with matched/missing + recommendation), **contract/risk summary** (flags auto-renewal, liability, termination, non-compete, confidentiality, penalty clauses), **CSV insight report** (rows/columns/headers profiling), and **document Q&A** (keyword sentence retrieval — no LLM). All scoring is deterministic (no external model call). Governance-logged.
+- **Main API route groups:** `/api/doc-intel` (+ `/compare`, `/ats`, `/contract-risk`, `/csv-insight`, `/qa`, `/summary`).
+- **Safety boundary:** Deterministic + local; no external model calls; read-only (text passed in, nothing stored beyond governance logging); "not legal advice" on contract review.
+
 ### v74 — Personal Productivity Brain
 - **Purpose:** Help you decide what to do next.
 - **How it operates:** `PersonalProductivityService` reads goals, life tasks, and deadlines to produce **priority recommendations** (overdue-first, then priority, then due date), a **daily focus list** (top 3), **blocker detection**, an **overdue task review**, **upcoming deadlines**, a **goal-progress summary** (open goals + average progress %), and a "**what should I work on now?**" pick with a reason. Read-only — it never creates or completes anything. Governance-logged.
@@ -619,4 +625,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v72 | Agent Quality Optimizer | `/api/agent-quality` | Per-agent score trends, weak-agent detection, prompt suggestions, best-by-task, regression checks, feedback correlation | Read-only analysis; no prompt changes; nothing executed; governance-logged |
 | v73 | Workflow Recommendation Engine | `/api/workflow-recommend` | Recommended workflow (expected steps), similar past runs, risk level, approval needs, time/complexity estimate | Read-only recommendation; nothing executed; risky steps flagged for approval; governance-logged |
 | v74 | Personal Productivity Brain | `/api/productivity` | Priority recommendations, daily focus, blocker detection, overdue review, goal progress, "what now?" pick | Read-only review; no task create/complete; governance-logged |
+| v75 | Document Intelligence 2.0 | `/api/doc-intel` | Document comparison, resume ATS scoring, contract/risk summary, CSV insight, document Q&A | Deterministic + local; no external model calls; read-only; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

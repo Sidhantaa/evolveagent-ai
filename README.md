@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v74 — Personal Productivity Brain &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v75 — Document Intelligence 2.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -33,6 +33,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
 - **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
 - **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
+- **v75 — Document Intelligence 2.0:** a **deterministic, local** document toolkit — **comparison**, **resume ATS scoring**, **contract/risk summary**, **CSV insight**, and **document Q&A** (keyword retrieval, no LLM). At `/api/doc-intel`.
 - **v74 — Personal Productivity Brain:** helps you decide what to do next — **priority recommendations**, a **daily focus list**, **blocker detection**, **overdue review**, a **goal-progress summary**, and a "**what should I work on now?**" pick. Read-only. At `/api/productivity`.
 - **v73 — Workflow Recommendation Engine:** recommends the best **workflow** for a goal — **expected steps**, **similar past runs**, **risk level**, **approval requirements**, and **time/complexity** estimate. Read-only and planning-only. At `/api/workflow-recommend`.
 - **v72 — Agent Quality Optimizer:** read-only analysis of recorded run analytics + feedback — per-agent **score trends**, **weak-agent detection**, **prompt improvement suggestions**, **best agent by task type**, **regression checks**, and **human-feedback correlation**. No prompts changed; nothing executed. At `/api/agent-quality`.

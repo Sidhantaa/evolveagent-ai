@@ -2621,6 +2621,15 @@ export function recommendWorkflow(goal, taskType) {
 export function getProductivityBrain(workspaceId) {
   return getJson(workspaceId ? `/api/productivity?workspace_id=${workspaceId}` : '/api/productivity')
 }
+export function docContractRisk(text) {
+  return postJson('/api/doc-intel/contract-risk', { text })
+}
+export function docCsvInsight(text) {
+  return postJson('/api/doc-intel/csv-insight', { text })
+}
+export function docAtsScore(resumeText, jobKeywords) {
+  return postJson('/api/doc-intel/ats', { resume_text: resumeText, job_keywords: jobKeywords })
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

@@ -137,6 +137,10 @@ from app.models.request_models import (
     ProviderControlUpdateRequest,
     ContextPlanRequest,
     WorkflowRecommendRequest,
+    DocCompareRequest,
+    AtsScoreRequest,
+    DocTextRequest,
+    DocQARequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -308,6 +312,7 @@ from app.services.smart_context_service import SmartContextService
 from app.services.agent_quality_service import AgentQualityService
 from app.services.workflow_recommendation_service import WorkflowRecommendationService
 from app.services.personal_productivity_service import PersonalProductivityService
+from app.services.document_intelligence_service import DocumentIntelligenceService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -428,6 +433,7 @@ smart_context_service = SmartContextService(storage, governance_service)
 agent_quality_service = AgentQualityService(storage, governance_service)
 workflow_recommendation_service = WorkflowRecommendationService(storage, governance_service)
 personal_productivity_service = PersonalProductivityService(storage, governance_service)
+document_intelligence_service = DocumentIntelligenceService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1711,6 +1717,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **agent_quality_service.analytics_summary(),
         **workflow_recommendation_service.analytics_summary(),
         **personal_productivity_service.analytics_summary(),
+        **document_intelligence_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4402,6 +4409,39 @@ def productivity_what_now(workspace_id: str | None = Query(default=None)) -> dic
 @router.get("/productivity/summary")
 def productivity_summary() -> dict:
     return personal_productivity_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v75.0 Document Intelligence 2.0 — deterministic local document toolkit.
+# ----------------------------------------------------------------------
+@router.post("/doc-intel/compare")
+def doc_intel_compare(request: DocCompareRequest) -> dict:
+    return document_intelligence_service.compare(request.text_a, request.text_b)
+
+
+@router.post("/doc-intel/ats")
+def doc_intel_ats(request: AtsScoreRequest) -> dict:
+    return document_intelligence_service.ats_score(request.resume_text, request.job_keywords)
+
+
+@router.post("/doc-intel/contract-risk")
+def doc_intel_contract_risk(request: DocTextRequest) -> dict:
+    return document_intelligence_service.contract_risk(request.text)
+
+
+@router.post("/doc-intel/csv-insight")
+def doc_intel_csv_insight(request: DocTextRequest) -> dict:
+    return document_intelligence_service.csv_insight(request.text)
+
+
+@router.post("/doc-intel/qa")
+def doc_intel_qa(request: DocQARequest) -> dict:
+    return document_intelligence_service.qa(request.text, request.question)
+
+
+@router.get("/doc-intel/summary")
+def doc_intel_summary() -> dict:
+    return document_intelligence_service.summary()
 
 
 @router.get("/activity/export")
