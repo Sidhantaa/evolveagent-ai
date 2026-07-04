@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v75 Document Intelligence 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v76 Code Intelligence 2.0 · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -45,6 +45,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v73 — Workflow Recommendation Engine:** classifies a goal (coding/research/business/data_analysis/general) / **recommended workflow** (ordered expected steps) / **similar past runs** (Master Agent route history by keyword) / **risk level** + **approval requirements** (risky verbs / sensitive task held for approval) / **time & complexity** estimate / read-only, planning-only / governance-logged / analytics / Workflow Recommender Developer-Mode panel / `/api/workflow-recommend`.
 - [x] **v74 — Personal Productivity Brain:** reads goals/life-tasks/deadlines / **priority recommendations** (overdue → priority → due date) / **daily focus** (top 3) / **blocker detection** / **overdue review** / **upcoming deadlines** / **goal-progress summary** (open goals + avg %) / "**what should I work on now?**" pick + reason / read-only, no create/complete / governance-logged / analytics / Productivity Brain Developer-Mode panel / `/api/productivity`.
 - [x] **v75 — Document Intelligence 2.0:** **deterministic, local, read-only** document toolkit — **comparison** (term overlap + unique + verdict) / **resume ATS scoring** (keyword coverage, matched/missing, recommendation) / **contract/risk summary** (auto-renewal/liability/termination/non-compete/confidentiality/penalty clauses) / **CSV insight** (rows/columns/headers) / **document Q&A** (keyword sentence retrieval, no LLM) / no external model calls / governance-logged / analytics / Document Intelligence Developer-Mode panel / `/api/doc-intel`.
+- [x] **v76 — Code Intelligence 2.0:** deterministic **read-only static analyzer** of submitted code — **bug-risk scan** (eval/exec, bare/broad except, hard-coded secrets, shell/subprocess, TODOs, `==None`, prints) / **suggested refactor plan** / **complexity metrics** (lines/functions/long-functions/max-line) / **API route map** / **dependency list** / **test-coverage summary** / no filesystem access, no edits, no execution / governance-logged / analytics / Code Intelligence Developer-Mode panel / `/api/code-intel`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
