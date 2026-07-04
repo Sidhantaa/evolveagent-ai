@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v90 — EvolveAgent Product Launch Console (capstone)
+- **Purpose:** Make the whole project launch-ready — the finale of the v61–v90 arc.
+- **How it operates:** `ProductLaunchService` renders a single read-only **launch dashboard** unifying **product positioning** (name, tagline, one-liner, pillars), a **feature matrix** (from the v65 registry grouped by category + status), **demo-mode** pointers, one-click links to **portfolio / resume / case-study exports** (v66/v85), a **launch report** (markdown), and a **final readiness score** (blending the v88 QA release-readiness with feature demo-safe coverage). It reads existing state only and takes no action beyond a governance-logged view. Explicitly **not AGI**.
+- **Main API route groups:** `/api/launch-console` (+ `/dashboard`, `/report`, `/summary`).
+- **Safety boundary:** Read-only aggregation; nothing created or executed; not AGI; governance-logged.
+
 ### v89 — Release Manager
 - **Purpose:** Prepare versions professionally.
 - **How it operates:** `ReleaseManagerService` offers read-only generators for release hygiene: a **version checklist**, a **changelog** (derived from the feature registry, grouped by version), a **PR summary** generator, **release notes**, a **GitHub tag planner** (suggests the next patch/minor/major tag), a **demo checklist**, and a **Linear sync checklist**. It produces text only — it does not tag, push, or call GitHub/Linear. Governance-logged.
@@ -724,4 +730,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v87 | Integration Hub 3.0 | `/api/integration-hub` | Integration cards (Slack/Notion/Linear/GitHub), connection status, scopes, last sync, error explanation, dry-run test | Read-only; boolean status only (no secret display); dry-run makes no real network call; governance-logged |
 | v88 | Quality Assurance Center | `/api/qa-center` | Feature verification matrix, manual QA checklist, failed-feature tracker, regression dashboard, release-readiness score | Read-only aggregation; does not run tests (no shell); additive QA records; governance-logged |
 | v89 | Release Manager | `/api/release-manager` | Version checklist, changelog, PR summary, release notes, tag planner, demo + Linear checklists | Read-only text generators; no git tag/push; no GitHub/Linear calls; governance-logged |
+| v90 | EvolveAgent Product Launch Console (capstone) | `/api/launch-console` | Launch dashboard: positioning, feature matrix, demo mode, portfolio/resume/case-study exports, final readiness score | Read-only aggregation; nothing created/executed; not AGI; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

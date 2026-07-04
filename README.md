@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v89 — Release Manager &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v90 — EvolveAgent Product Launch Console (capstone) &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -33,6 +33,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
 - **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
 - **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
+- **v90 — EvolveAgent Product Launch Console (capstone):** the finale — a single **launch dashboard** unifying **product positioning**, a **feature matrix**, **demo-mode** pointers, **portfolio/resume/case-study exports**, a **launch report**, and a **final readiness score**. Read-only; explicitly **not AGI**. At `/api/launch-console`.
 - **v89 — Release Manager:** read-only release-prep generators — a **version checklist**, a **changelog**, a **PR summary** generator, **release notes**, a **GitHub tag planner**, and **demo + Linear sync checklists**. Text only; no tagging/pushing/external calls. At `/api/release-manager`.
 - **v88 — Quality Assurance Center:** a **feature verification matrix**, a **manual QA checklist**, a **failed-feature tracker**, a **regression dashboard**, and a **release-readiness score**. Records QA results locally; does not run tests itself (CI/local report status). At `/api/qa-center`.
 - **v87 — Integration Hub 3.0:** clean **integration cards** for Slack/Notion/Linear/GitHub — **connection status** (boolean, no secret display), **scopes**, **last sync**, **error explanation**, and a **dry-run test** (no real network call). At `/api/integration-hub`.
