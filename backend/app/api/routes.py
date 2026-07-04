@@ -141,6 +141,8 @@ from app.models.request_models import (
     AtsScoreRequest,
     DocTextRequest,
     DocQARequest,
+    CodeAnalyzeRequest,
+    CodeTextRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -313,6 +315,7 @@ from app.services.agent_quality_service import AgentQualityService
 from app.services.workflow_recommendation_service import WorkflowRecommendationService
 from app.services.personal_productivity_service import PersonalProductivityService
 from app.services.document_intelligence_service import DocumentIntelligenceService
+from app.services.code_intelligence_service import CodeIntelligenceService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -434,6 +437,7 @@ agent_quality_service = AgentQualityService(storage, governance_service)
 workflow_recommendation_service = WorkflowRecommendationService(storage, governance_service)
 personal_productivity_service = PersonalProductivityService(storage, governance_service)
 document_intelligence_service = DocumentIntelligenceService(storage, governance_service)
+code_intelligence_service = CodeIntelligenceService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1718,6 +1722,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **workflow_recommendation_service.analytics_summary(),
         **personal_productivity_service.analytics_summary(),
         **document_intelligence_service.analytics_summary(),
+        **code_intelligence_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4442,6 +4447,34 @@ def doc_intel_qa(request: DocQARequest) -> dict:
 @router.get("/doc-intel/summary")
 def doc_intel_summary() -> dict:
     return document_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v76.0 Code Intelligence 2.0 — static analysis of submitted code (read-only).
+# ----------------------------------------------------------------------
+@router.post("/code-intel/analyze")
+def code_intel_analyze(request: CodeAnalyzeRequest) -> dict:
+    return code_intelligence_service.analyze(request.code, request.language)
+
+
+@router.post("/code-intel/routes")
+def code_intel_routes(request: CodeTextRequest) -> dict:
+    return code_intelligence_service.route_map(request.code)
+
+
+@router.post("/code-intel/dependencies")
+def code_intel_dependencies(request: CodeTextRequest) -> dict:
+    return code_intelligence_service.dependencies(request.code)
+
+
+@router.post("/code-intel/test-coverage")
+def code_intel_test_coverage(request: CodeTextRequest) -> dict:
+    return code_intelligence_service.test_coverage(request.code)
+
+
+@router.get("/code-intel/summary")
+def code_intel_summary() -> dict:
+    return code_intelligence_service.summary()
 
 
 @router.get("/activity/export")

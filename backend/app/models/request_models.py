@@ -1482,6 +1482,18 @@ class DocQARequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Code Intelligence 2.0 (v76)
+# ----------------------------------------------------------------------
+class CodeAnalyzeRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=200000)
+    language: str = Field(default="python", max_length=30)
+
+
+class CodeTextRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=200000)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):

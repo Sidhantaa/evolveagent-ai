@@ -384,6 +384,7 @@ import {
   getProductivityBrain,
   docContractRisk,
   docAtsScore,
+  analyzeCode,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1176,6 +1177,10 @@ function App() {
   const [docIntelText, setDocIntelText] = useState('')
   const [docIntelResult, setDocIntelResult] = useState(null)
   const [docIntelBusy, setDocIntelBusy] = useState(false)
+  const [showCodeIntel, setShowCodeIntel] = useState(false)
+  const [codeIntelText, setCodeIntelText] = useState('')
+  const [codeIntelResult, setCodeIntelResult] = useState(null)
+  const [codeIntelBusy, setCodeIntelBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3209,6 +3214,18 @@ function App() {
       setProductivityBrain(await getProductivityBrain(workspaceId))
     } catch {
       // best-effort
+    }
+  }
+
+  async function runCodeAnalyze() {
+    if (!codeIntelText.trim()) return
+    setCodeIntelBusy(true)
+    try {
+      setCodeIntelResult(await analyzeCode(codeIntelText))
+    } catch (err) {
+      setCodeIntelResult({ error: err.message })
+    } finally {
+      setCodeIntelBusy(false)
     }
   }
 
@@ -9476,6 +9493,52 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCodeIntel((current) => !current)}>
+              <span>
+                <GitBranch size={15} />
+                Code Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCodeIntel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Code Intelligence · v76.0</strong>
+                  <span>Static, read-only analysis of pasted code — bug-risk scan, refactor plan, metrics, route map, dependencies. Never reads the filesystem or edits code.</span>
+                </div>
+                <form className="stacked-form" onSubmit={(event) => { event.preventDefault(); runCodeAnalyze() }}>
+                  <textarea placeholder="Paste code to analyze…" value={codeIntelText} onChange={(event) => setCodeIntelText(event.target.value)} rows={4} />
+                  <button type="submit" disabled={codeIntelBusy || !codeIntelText.trim()}>{codeIntelBusy ? 'Analyzing…' : 'Analyze code'}</button>
+                </form>
+                {codeIntelResult?.error ? (
+                  <p className="error">{codeIntelResult.error}</p>
+                ) : codeIntelResult && (
+                  <>
+                    <p className="muted">
+                      risk <span className={`feature-badge ${codeIntelResult.risk_level === 'low' ? 'active' : 'needs_config'}`}>{codeIntelResult.risk_level}</span> · {codeIntelResult.risk_count} findings · {codeIntelResult.metrics?.lines} lines · {codeIntelResult.metrics?.functions} fns
+                    </p>
+                    <div className="agent-template-list">
+                      {codeIntelResult.bug_risks?.slice(0, 8).map((f, i) => (
+                        <div key={i} className="agent-template-card">
+                          <strong><span className={`feature-badge ${f.severity === 'high' ? 'needs_config' : f.severity === 'medium' ? 'demo_safe' : 'active'}`}>{f.severity}</span> line {f.line}</strong>
+                          <span className="gs-trace">{f.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="agent-template-card">
+                      <strong>Refactor plan</strong>
+                      {codeIntelResult.suggested_refactors?.map((s, i) => (<span key={i} className="home-action">• {s}</span>))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">Static analysis of submitted text only — read-only, no edits, no filesystem access.</p>
               </div>
             )}
           </section>

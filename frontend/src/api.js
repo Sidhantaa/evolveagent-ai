@@ -2630,6 +2630,9 @@ export function docCsvInsight(text) {
 export function docAtsScore(resumeText, jobKeywords) {
   return postJson('/api/doc-intel/ats', { resume_text: resumeText, job_keywords: jobKeywords })
 }
+export function analyzeCode(code, language) {
+  return postJson('/api/code-intel/analyze', { code, language: language || 'python' })
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }
