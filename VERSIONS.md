@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v86 — Plugin Marketplace 3.0
+- **Purpose:** Make plugins safer and easier.
+- **How it operates:** `PluginMarketplaceService` provides a local plugin **catalog** with **validation** (required fields + declared permissions), a **permission review** (flags high-risk permissions: network/write/execute/shell), **enable / disable** toggles, a **plugin activity log**, a **plugin test runner** (dry / mock — nothing executed), and a **plugin health score**. It is additive and separate from the core plugin-manifest loader (dedicated `marketplace_plugins` collection); **high-risk permissions keep a plugin disabled until explicitly reviewed/enabled**, and enabling an invalid/high-risk plugin is blocked. Governance-logged.
+- **Main API route groups:** `/api/plugin-marketplace` (+ `/catalog`, `/register`, `/{id}/toggle`, `/{id}/test`, `/activity`, `/summary`).
+- **Safety boundary:** Additive to core loader; high-risk plugins disabled until reviewed; enabling invalid/high-risk blocked; test runner is mock (nothing executed); governance-logged.
+
 ### v85 — Export Center
 - **Purpose:** Make outputs portable.
 - **How it operates:** `ExportCenterService` performs read-only export of selected local data — **chats**, **reports**, **goals**, **memory**, **imported** records — as **markdown** or **JSON**, plus a **portfolio case-study** export and a **package builder** that bundles several kinds into one document. (PDF is produced client-side via print; the API returns markdown/JSON.) It excludes secrets, governance logs, and analytics, and never mutates data. Governance-logged.
@@ -696,4 +702,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v83 | Local Data Manager | `/api/data-manager` | Collection browser, storage usage, cleanup suggestions, redaction preview, backup | Read-only/planning-first; no deletes/redactions/overwrites (advisory only); governance-logged |
 | v84 | Import Center | `/api/import-center` | Import documents/csv/markdown/chat/notes; validate + sanitize + preview before saving to a dedicated collection | Validate + sanitize before save; secrets redacted (never stored); dedicated collection only; governance-logged |
 | v85 | Export Center | `/api/export-center` | Export chats/reports/goals/memory/imported as markdown/JSON; case study; package builder | Read-only; excludes secrets/governance/analytics; PDF via client print; governance-logged |
+| v86 | Plugin Marketplace 3.0 | `/api/plugin-marketplace` | Plugin catalog, validation, permission review, enable/disable, activity log, mock test runner, health score | Additive; high-risk disabled until reviewed; enabling invalid/high-risk blocked; mock test runner; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

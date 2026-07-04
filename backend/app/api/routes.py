@@ -156,6 +156,8 @@ from app.models.request_models import (
     ImportCommitRequest,
     ExportRequest,
     ExportPackageRequest,
+    PluginRegisterRequest,
+    PluginToggleRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -338,6 +340,7 @@ from app.services.governance_console_service import GovernanceConsoleService
 from app.services.data_manager_service import DataManagerService
 from app.services.import_center_service import ImportCenterService
 from app.services.export_center_service import ExportCenterService
+from app.services.plugin_marketplace_service import PluginMarketplaceService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -469,6 +472,7 @@ governance_console_service = GovernanceConsoleService(storage, governance_servic
 data_manager_service = DataManagerService(storage, governance_service)
 import_center_service = ImportCenterService(storage, governance_service)
 export_center_service = ExportCenterService(storage, governance_service)
+plugin_marketplace_service = PluginMarketplaceService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1763,6 +1767,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **data_manager_service.analytics_summary(),
         **import_center_service.analytics_summary(),
         **export_center_service.analytics_summary(),
+        **plugin_marketplace_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4743,6 +4748,45 @@ def export_center_case_study() -> dict:
 @router.get("/export-center/summary")
 def export_center_summary() -> dict:
     return export_center_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v86.0 Plugin Marketplace 3.0 — safer plugin catalog (additive; mock test runner).
+# ----------------------------------------------------------------------
+@router.get("/plugin-marketplace/catalog")
+def plugin_marketplace_catalog() -> dict:
+    return plugin_marketplace_service.catalog()
+
+
+@router.post("/plugin-marketplace/register")
+def plugin_marketplace_register(request: PluginRegisterRequest) -> dict:
+    return plugin_marketplace_service.register(request.name, request.description, request.permissions)
+
+
+@router.post("/plugin-marketplace/{plugin_id}/toggle")
+def plugin_marketplace_toggle(plugin_id: str, request: PluginToggleRequest) -> dict:
+    try:
+        return plugin_marketplace_service.toggle(plugin_id, request.enabled)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/plugin-marketplace/{plugin_id}/test")
+def plugin_marketplace_test(plugin_id: str) -> dict:
+    try:
+        return plugin_marketplace_service.test_run(plugin_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/plugin-marketplace/activity")
+def plugin_marketplace_activity() -> dict:
+    return plugin_marketplace_service.activity_log()
+
+
+@router.get("/plugin-marketplace/summary")
+def plugin_marketplace_summary() -> dict:
+    return plugin_marketplace_service.summary()
 
 
 @router.get("/activity/export")

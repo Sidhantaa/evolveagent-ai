@@ -1585,6 +1585,19 @@ class ExportPackageRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Plugin Marketplace 3.0 (v86)
+# ----------------------------------------------------------------------
+class PluginRegisterRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    permissions: list[str] = Field(default_factory=list)
+
+
+class PluginToggleRequest(BaseModel):
+    enabled: bool
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
