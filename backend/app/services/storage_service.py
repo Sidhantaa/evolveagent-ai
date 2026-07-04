@@ -195,6 +195,7 @@ class StorageService:
             "scheduled_tasks.json",
             "scheduled_task_runs.json",
             "data_export_log.json",
+            "os2_snapshots.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

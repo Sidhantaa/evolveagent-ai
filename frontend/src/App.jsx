@@ -348,6 +348,9 @@ import {
   toggleScheduledTask,
   triggerScheduledTask,
   getDataExportSummary,
+  getOs2Dashboard,
+  createOs2Snapshot,
+  createOs2Report,
   exportDataBundle,
   importDataBundle,
   getMcpExecutions,
@@ -1073,6 +1076,10 @@ function App() {
   const [showDataExport, setShowDataExport] = useState(false)
   const [dataExportSummary, setDataExportSummary] = useState(null)
   const [dataExportBusy, setDataExportBusy] = useState(false)
+  const [showOs2, setShowOs2] = useState(false)
+  const [os2Dashboard, setOs2Dashboard] = useState(null)
+  const [os2Report, setOs2Report] = useState(null)
+  const [os2Busy, setOs2Busy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -1218,6 +1225,7 @@ function App() {
     refreshWsTemplates()
     refreshScheduled()
     refreshDataExport()
+    refreshOs2()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2921,6 +2929,32 @@ function App() {
   async function refreshDataExport() {
     const summary = await getDataExportSummary()
     setDataExportSummary(summary)
+  }
+
+  async function refreshOs2() {
+    const dashboard = await getOs2Dashboard()
+    setOs2Dashboard(dashboard)
+  }
+
+  async function handleOs2Snapshot() {
+    setOs2Busy(true)
+    try {
+      await createOs2Snapshot()
+      await refreshOs2()
+    } finally {
+      setOs2Busy(false)
+    }
+  }
+
+  async function handleOs2Report() {
+    setOs2Busy(true)
+    try {
+      const report = await createOs2Report()
+      setOs2Report(report)
+      await refreshOs2()
+    } finally {
+      setOs2Busy(false)
+    }
   }
 
   async function handleExportDownload() {
@@ -8810,6 +8844,53 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOs2((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                EvolveAgent OS 2.0
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOs2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>EvolveAgent OS 2.0 · v60.0 (capstone)</strong>
+                  <span>Unified command center over every system (v1–v59) + live platform scorecard. Read-only aggregation of local data — not AGI.</span>
+                </div>
+                {os2Dashboard && (
+                  <>
+                    <p className="muted">
+                      grade {os2Dashboard.scorecard?.overall_grade} ({os2Dashboard.scorecard?.overall_score}/100) · systems {os2Dashboard.command_center?.active_systems}/{os2Dashboard.command_center?.total_systems} active · health {os2Dashboard.health?.status}
+                    </p>
+                    <div className="agent-template-list">
+                      {(os2Dashboard.command_center?.domains || []).map((domain) => (
+                        <div key={domain.domain} className="agent-template-card">
+                          <strong>{domain.domain} · {domain.active_count}/{domain.system_count} active</strong>
+                          <span>{(domain.systems || []).map((system) => system.label).join(' · ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleOs2Snapshot} disabled={os2Busy}>Snapshot</button>
+                  <button type="button" onClick={handleOs2Report} disabled={os2Busy}>Generate report</button>
+                  <button type="button" onClick={() => refreshOs2()} disabled={os2Busy}>Refresh</button>
+                </div>
+                {os2Report && (
+                  <div className="agent-template-card">
+                    <strong>{os2Report.title}</strong>
+                    <p className="muted">{os2Report.headline}</p>
+                  </div>
+                )}
+                <p className="muted">{os2Dashboard?.disclaimer || 'This is not AGI — a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards.'}</p>
               </div>
             )}
           </section>

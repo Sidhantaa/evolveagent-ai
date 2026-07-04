@@ -284,6 +284,7 @@ from app.services.notifications_center_service import NotificationsCenterService
 from app.services.workspace_templates_service import WorkspaceTemplatesService
 from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.data_export_service import DataExportService
+from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -388,6 +389,7 @@ notifications_center_service = NotificationsCenterService(storage, governance_se
 workspace_templates_service = WorkspaceTemplatesService(storage, governance_service, workspace_service)
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 data_export_service = DataExportService(storage, governance_service)
+evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1656,6 +1658,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **workspace_templates_service.analytics_summary(),
         **scheduled_tasks_service.analytics_summary(),
         **data_export_service.analytics_summary(),
+        **evolveagent_os2_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4031,6 +4034,35 @@ def import_data_bundle(request: DataImportRequest) -> dict:
         return data_export_service.import_bundle(request.bundle)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v60.0 EvolveAgent OS 2.0 — unified command center + final report (capstone).
+# ----------------------------------------------------------------------
+@router.get("/os2/dashboard")
+def get_os2_dashboard() -> dict:
+    return evolveagent_os2_service.dashboard()
+
+
+@router.get("/os2/command-center")
+def get_os2_command_center() -> dict:
+    return evolveagent_os2_service.command_center()
+
+
+@router.get("/os2/snapshots")
+def list_os2_snapshots() -> dict:
+    snapshots = evolveagent_os2_service.list_snapshots()
+    return {"snapshots": snapshots, "count": len(snapshots)}
+
+
+@router.post("/os2/snapshots")
+def create_os2_snapshot() -> dict:
+    return evolveagent_os2_service.create_snapshot()
+
+
+@router.post("/os2/report")
+def create_os2_report() -> dict:
+    return evolveagent_os2_service.create_report()
 
 
 @router.get("/governance")
