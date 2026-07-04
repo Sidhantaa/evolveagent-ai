@@ -3543,3 +3543,23 @@ ul {
 
 /* ---- v62 Global Search: Developer-Mode source trace ---- */
 .gs-trace { font-size: 11px; color: var(--color-text-subtle); }
+
+/* ---- v63 Activity Timeline (Developer-Mode panel) ---- */
+.activity-event { border-bottom: 1px solid var(--color-border); padding: 6px 0; }
+.activity-event > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  list-style: none;
+}
+.activity-event > summary::-webkit-details-marker { display: none; }
+.activity-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--color-text-subtle); flex: 0 0 auto;
+}
+.activity-dot.gov { background: var(--color-accent-cyan); }
+.activity-detail { padding: 6px 0 4px 14px; }
+.activity-detail p { margin: 2px 0; font-size: 12px; color: var(--color-text-muted); }

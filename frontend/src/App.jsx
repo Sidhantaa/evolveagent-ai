@@ -359,6 +359,8 @@ import {
   sendMasterRouteFeedback,
   globalSearch,
   getGlobalSearchSources,
+  getActivityTimeline,
+  exportActivityTimeline,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1110,6 +1112,10 @@ function App() {
   const [globalSearchResults, setGlobalSearchResults] = useState(null)
   const [globalSearchSources, setGlobalSearchSources] = useState(null)
   const [globalSearchBusy, setGlobalSearchBusy] = useState(false)
+  const [showActivity, setShowActivity] = useState(false)
+  const [activityTimeline, setActivityTimeline] = useState(null)
+  const [activityType, setActivityType] = useState('')
+  const [activityBusy, setActivityBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3010,6 +3016,31 @@ function App() {
     setInput((current) => seed + (current || ''))
     setDeveloperMode(true)
     composerRef.current?.focus()
+  }
+
+  async function refreshActivity(type = activityType) {
+    setActivityBusy(true)
+    try {
+      const data = await getActivityTimeline({ workspaceId, types: type || undefined, limit: 40 })
+      setActivityTimeline(data)
+    } catch {
+      setActivityTimeline({ events: [], event_count: 0 })
+    } finally {
+      setActivityBusy(false)
+    }
+  }
+
+  async function handleActivityExport() {
+    const data = await exportActivityTimeline('markdown')
+    const blob = new Blob([data.content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `evolveagent-activity-${new Date().toISOString().slice(0, 10)}.md`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
   }
 
   async function handleOs2Snapshot() {
@@ -9164,6 +9195,52 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowActivity((current) => !current); if (!activityTimeline) refreshActivity() }}>
+              <span>
+                <Route size={15} />
+                Activity Timeline
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showActivity && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Activity Timeline · v63.0</strong>
+                  <span>One chronological view of everything the OS did — runs, approvals, tool executions, memory, files, reports, goals. Read-only.</span>
+                </div>
+                <div className="inline-actions">
+                  <select value={activityType} onChange={(event) => { setActivityType(event.target.value); refreshActivity(event.target.value) }} aria-label="Filter by type">
+                    <option value="">All types</option>
+                    {(activityTimeline?.types || []).map((t) => (<option key={t} value={t}>{t}</option>))}
+                  </select>
+                  <button type="button" onClick={() => refreshActivity()} disabled={activityBusy}>Refresh</button>
+                  <button type="button" onClick={handleActivityExport}>Export</button>
+                </div>
+                {activityTimeline && (
+                  <p className="muted">{activityTimeline.event_count} of {activityTimeline.total_available} events{activityTimeline.by_type ? ` · ${Object.entries(activityTimeline.by_type).map(([t, n]) => `${t}:${n}`).join(' ')}` : ''}</p>
+                )}
+                <div className="agent-template-list">
+                  {(activityTimeline?.events || []).map((event, index) => (
+                    <details key={`${event.source_collection}-${index}`} className="activity-event">
+                      <summary>
+                        <span className={`activity-dot ${event.governance_linked ? 'gov' : ''}`} />
+                        [{event.type}] {event.title}{event.status ? ` · ${event.status}` : ''}
+                      </summary>
+                      <div className="activity-detail">
+                        {event.detail && <p>{event.detail}</p>}
+                        <p className="gs-trace">{event.timestamp || 'n/a'} · source: {event.source_collection}{event.actor ? ` · ${event.actor}` : ''}</p>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+                <p className="muted">Read-only chronological aggregation — no secrets, no writes.</p>
               </div>
             )}
           </section>

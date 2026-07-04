@@ -2534,6 +2534,18 @@ export function globalSearch(query, opts = {}) {
 export function getGlobalSearchSources() {
   return getJson('/api/search/sources')
 }
+export function getActivityTimeline(opts = {}) {
+  const params = new URLSearchParams()
+  if (opts.workspaceId) params.set('workspace_id', opts.workspaceId)
+  if (opts.types) params.set('types', opts.types)
+  if (opts.status) params.set('status', opts.status)
+  if (opts.limit) params.set('limit', String(opts.limit))
+  const qs = params.toString()
+  return getJson(qs ? `/api/activity?${qs}` : '/api/activity')
+}
+export function exportActivityTimeline(format = 'markdown') {
+  return getJson(`/api/activity/export?format=${format}`)
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

@@ -291,6 +291,7 @@ from app.services.data_export_service import DataExportService
 from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.master_agent_service import MasterAgentService
 from app.services.global_search_service import GlobalSearchService
+from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -399,6 +400,7 @@ data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
 global_search_service = GlobalSearchService(storage, governance_service)
+activity_timeline_service = ActivityTimelineService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1670,6 +1672,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **evolveagent_os2_service.analytics_summary(),
         **master_agent_service.analytics_summary(),
         **global_search_service.analytics_summary(),
+        **activity_timeline_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4101,6 +4104,38 @@ def global_search(
 @router.get("/search/sources")
 def global_search_sources() -> dict:
     return global_search_service.sources()
+
+
+# ----------------------------------------------------------------------
+# v63.0 Unified Activity Timeline — chronological view of everything the OS did.
+# ----------------------------------------------------------------------
+@router.get("/activity")
+def activity_timeline(
+    workspace_id: str | None = Query(default=None),
+    types: str | None = Query(default=None, description="Comma-separated event types."),
+    status: str | None = Query(default=None),
+    actor: str | None = Query(default=None),
+    since: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> dict:
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    return activity_timeline_service.timeline(workspace_id=workspace_id, types=type_list, status=status, actor=actor, since=since, limit=limit)
+
+
+@router.get("/activity/summary")
+def activity_timeline_summary() -> dict:
+    return activity_timeline_service.summary()
+
+
+@router.get("/activity/export")
+def activity_timeline_export(
+    format: str = Query(default="markdown", pattern="^(markdown|json)$"),
+    workspace_id: str | None = Query(default=None),
+    types: str | None = Query(default=None),
+    since: str | None = Query(default=None),
+) -> dict:
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    return activity_timeline_service.export(fmt=format, workspace_id=workspace_id, types=type_list, since=since)
 
 
 # ----------------------------------------------------------------------
