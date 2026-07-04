@@ -341,6 +341,7 @@ from app.services.data_manager_service import DataManagerService
 from app.services.import_center_service import ImportCenterService
 from app.services.export_center_service import ExportCenterService
 from app.services.plugin_marketplace_service import PluginMarketplaceService
+from app.services.integration_hub_service import IntegrationHubService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -473,6 +474,7 @@ data_manager_service = DataManagerService(storage, governance_service)
 import_center_service = ImportCenterService(storage, governance_service)
 export_center_service = ExportCenterService(storage, governance_service)
 plugin_marketplace_service = PluginMarketplaceService(storage, governance_service)
+integration_hub_service = IntegrationHubService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1768,6 +1770,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **import_center_service.analytics_summary(),
         **export_center_service.analytics_summary(),
         **plugin_marketplace_service.analytics_summary(),
+        **integration_hub_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4787,6 +4790,27 @@ def plugin_marketplace_activity() -> dict:
 @router.get("/plugin-marketplace/summary")
 def plugin_marketplace_summary() -> dict:
     return plugin_marketplace_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v87.0 Integration Hub 3.0 — read-only integration cards (no secret display).
+# ----------------------------------------------------------------------
+@router.get("/integration-hub/cards")
+def integration_hub_cards() -> dict:
+    return integration_hub_service.cards()
+
+
+@router.post("/integration-hub/{integration_id}/dry-run")
+def integration_hub_dry_run(integration_id: str) -> dict:
+    try:
+        return integration_hub_service.dry_run(integration_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/integration-hub/summary")
+def integration_hub_summary() -> dict:
+    return integration_hub_service.summary()
 
 
 @router.get("/activity/export")
