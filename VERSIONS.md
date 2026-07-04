@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v68 — Real Provider Control Center 2.0
+- **Purpose:** Cleanly manage OpenAI / Claude / Gemini / Mistral / local providers.
+- **How it operates:** `ProviderControlService` gives a **read-only readiness dashboard** per provider (is a required env key set? boolean only), editable **model-per-task** and **real/mock-per-capability** preferences, a **fallback policy** (real when key set + mode real, else local/mock), a **cost estimate** aggregated from the v50 usage ledger, and per-provider **latency** estimates. **API key safety checks report booleans only** — a key's value is never read, logged, or returned. Preference changes are governance-logged; real calls remain env-gated.
+- **Main API route groups:** `/api/provider-control` (+ `/dashboard`, `/summary`, `/key-check`, PATCH).
+- **Safety boundary:** Boolean-only key readiness (no secret values); preferences are local; real calls stay env-gated; governance-logged.
+
 ### v67 — Settings Center
 - **Purpose:** A central place for local configuration.
 - **How it operates:** `SettingsService` stores user **preferences** as a single local document across categories — **provider** (default model, prefer-mock), **modes** (developer/deep defaults), **feature toggles**, a **safety preference**, **workspace defaults**, **voice** (spoken answers, push-to-talk), and **theme**. Every update is validated against an allow-list; unknown categories/keys and **any secret-like key** (containing key/token/secret/password/credential) are **rejected**. The hard safety boundaries are surfaced as **read-only/enforced** and cannot be disabled. Supports **export/import** (secrets excluded) and **reset-to-defaults**. Changes are governance-logged.
@@ -570,4 +576,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v65 | Feature Registry + Capability Map 3.0 | `/api/features` | Canonical searchable registry of every feature (service/route/category/status), route→feature map, "try this feature" launcher | Read-only discovery; no writes; governance-logged |
 | v66 | Demo Mode / Portfolio Mode 2.0 | `/api/demo` | One-click demo script, walkthrough, feature sequence, resume bullets, case-study export; demo-safe seed + scoped reset | Read-only content; sample data scoped/reversible; reset only removes demo-tagged records; governance-logged |
 | v67 | Settings Center | `/api/settings` | Central local preferences (provider/modes/features/safety/workspace/voice/theme), allow-list validated, export/import, reset | No secret values stored; secret-like keys rejected; hard safety enforced read-only; governance-logged |
+| v68 | Real Provider Control Center 2.0 | `/api/provider-control` | Provider readiness dashboard, model-per-task + real/mock-per-capability prefs, cost estimate, latency stats, fallback policy, boolean-only key checks | Boolean-only key readiness; real calls env-gated; no secrets exposed; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

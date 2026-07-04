@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v67 Settings Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v68 Real Provider Control Center 2.0 · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -37,6 +37,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v65 — Feature Registry + Capability Map 3.0:** canonical registry of every feature (name/version/**service**/**route**/**category**/**status tags**: active/demo-safe/mock/needs-config) / **feature search** + status/category filters / **route → feature map** / **summary** (counts by category & status) / **"try this feature"** launcher returning the route to open / read-only / governance-logged / analytics / Feature Registry Developer-Mode panel / `/api/features`.
 - [x] **v66 — Demo / Portfolio Mode 2.0:** **one-click demo script** / guided walkthrough / auto-open **feature sequence** / refreshed **resume bullets** / **case-study export** (markdown) / **demo-safe sample workspace** seed (records tagged `demo_seed=true`, tracked in seed log) / **scoped reset** removing only demo-tagged records (**user data untouched**) / read-only content / governance-logged / analytics / Demo/Portfolio Developer-Mode panel / `/api/demo`.
 - [x] **v67 — Settings Center:** central local **preferences** (provider / modes / features / safety / workspace defaults / voice / theme) as one document / **allow-list validation** (unknown categories/keys + **secret-like keys rejected**) / **no secret values stored** / hard safety boundaries surfaced **enforced read-only** / **export/import** (secrets excluded) + **reset-to-defaults** / governance-logged / analytics / Settings Center Developer-Mode panel / `/api/settings`.
+- [x] **v68 — Real Provider Control Center 2.0:** **readiness dashboard** for OpenAI/Claude/Gemini/Mistral/local (env-key set? **boolean only**) / **model-per-task** + **real/mock-per-capability** preferences / **cost estimate** (from v50 ledger) / **latency** stats / **fallback policy** / **API key safety checks report booleans only — values never read/logged/returned** / real calls remain env-gated / governance-logged / analytics / Provider Control Developer-Mode panel / `/api/provider-control`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

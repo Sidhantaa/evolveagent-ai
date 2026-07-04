@@ -134,6 +134,7 @@ from app.models.request_models import (
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
+    ProviderControlUpdateRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -298,6 +299,7 @@ from app.services.dashboard_home_service import DashboardHomeService
 from app.services.feature_registry_service import FeatureRegistryService
 from app.services.demo_service import DemoService
 from app.services.settings_service import SettingsService
+from app.services.provider_control_service import ProviderControlService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -411,6 +413,7 @@ dashboard_home_service = DashboardHomeService(storage, governance_service, healt
 feature_registry_service = FeatureRegistryService(storage, governance_service)
 demo_service = DemoService(storage, governance_service)
 settings_service = SettingsService(storage, governance_service)
+provider_control_service = ProviderControlService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1687,6 +1690,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **feature_registry_service.analytics_summary(),
         **demo_service.analytics_summary(),
         **settings_service.analytics_summary(),
+        **provider_control_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4251,6 +4255,29 @@ def import_settings(request: SettingsImportRequest) -> dict:
         return settings_service.import_settings({"settings": request.settings})
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v68.0 Real Provider Control Center 2.0 — readiness, model/mode prefs, cost/latency.
+# ----------------------------------------------------------------------
+@router.get("/provider-control/dashboard")
+def provider_control_dashboard() -> dict:
+    return provider_control_service.dashboard()
+
+
+@router.get("/provider-control/summary")
+def provider_control_summary() -> dict:
+    return provider_control_service.summary()
+
+
+@router.get("/provider-control/key-check")
+def provider_control_key_check() -> dict:
+    return provider_control_service.key_check()
+
+
+@router.patch("/provider-control")
+def provider_control_update(request: ProviderControlUpdateRequest) -> dict:
+    return provider_control_service.update(request.model_by_task, request.capability_modes, request.fallback_enabled)
 
 
 @router.get("/activity/export")

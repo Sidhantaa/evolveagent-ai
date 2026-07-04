@@ -1434,6 +1434,15 @@ class SettingsImportRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Provider Control Center (v68)
+# ----------------------------------------------------------------------
+class ProviderControlUpdateRequest(BaseModel):
+    model_by_task: dict | None = Field(default=None, description="task_type → model name preference.")
+    capability_modes: dict | None = Field(default=None, description="capability → 'mock' | 'real' preference.")
+    fallback_enabled: bool | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
