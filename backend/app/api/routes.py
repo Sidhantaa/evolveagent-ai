@@ -151,6 +151,7 @@ from app.models.request_models import (
     CollaborationRequest,
     PermissionProfileRequest,
     PermissionEvaluateRequest,
+    RedactionPreviewRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -330,6 +331,7 @@ from app.services.meeting_intelligence_service import MeetingIntelligenceService
 from app.services.agent_collaboration_service import AgentCollaborationService
 from app.services.permission_profiles_service import PermissionProfilesService
 from app.services.governance_console_service import GovernanceConsoleService
+from app.services.data_manager_service import DataManagerService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -458,6 +460,7 @@ meeting_intelligence_service = MeetingIntelligenceService(storage, governance_se
 agent_collaboration_service = AgentCollaborationService(storage, governance_service)
 permission_profiles_service = PermissionProfilesService(storage, governance_service)
 governance_console_service = GovernanceConsoleService(storage, governance_service)
+data_manager_service = DataManagerService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1749,6 +1752,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **agent_collaboration_service.analytics_summary(),
         **permission_profiles_service.analytics_summary(),
         **governance_console_service.analytics_summary(),
+        **data_manager_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4643,6 +4647,37 @@ def governance_console_report(format: str = Query(default="markdown", pattern="^
 @router.get("/governance-console/summary")
 def governance_console_summary() -> dict:
     return governance_console_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v83.0 Local Data Manager — read-only/planning-first storage management.
+# ----------------------------------------------------------------------
+@router.get("/data-manager/browse")
+def data_manager_browse() -> dict:
+    return data_manager_service.browse()
+
+
+@router.get("/data-manager/usage")
+def data_manager_usage() -> dict:
+    return data_manager_service.usage()
+
+
+@router.get("/data-manager/cleanup-suggestions")
+def data_manager_cleanup() -> dict:
+    return data_manager_service.cleanup_suggestions()
+
+
+@router.post("/data-manager/redaction-preview")
+def data_manager_redaction_preview(request: RedactionPreviewRequest) -> dict:
+    try:
+        return data_manager_service.redaction_preview(request.collection)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/data-manager/summary")
+def data_manager_summary() -> dict:
+    return data_manager_service.summary()
 
 
 @router.get("/activity/export")

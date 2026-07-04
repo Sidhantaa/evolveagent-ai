@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v82 Governance Console 3.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v83 Local Data Manager · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -52,6 +52,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v80 — Multi-Agent Collaboration 2.0:** deterministic read-only analysis of agent contributions (role+position) — **conversation view** / **consensus summary** (majority-shared terms) / **disagreement notes** (low overlap or opposing negation) / **reviewer/auditor pass** (flags no-evidence contributions) / **final decision** (most central position) + **rationale** / no model call, nothing executed / governance-logged / analytics / `/api/collaboration`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] **v81 — Permission System 3.0:** declarative **permission profiles** (global/workspace/agent/tool + action pattern + risk) with **deny/require_approval/allow** / **most-restrictive** evaluation / **approval chains by risk** (0/1/2 approvers) / side-effect-free **policy preview** / **blocked-action explanation** / **additive** to core PermissionService; can only tighten; allow grants no new power / governance-logged / analytics / `/api/permissions`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] **v82 — Governance Console 3.0:** read-only console over the governance log — **dashboard** (totals/blocked-ratio/by action-risk-permission) / **policy violations** (blocked) / **secret redactions** (secret/PII) / **prompt-injection warnings** / **approval audit** / **external-action audit** / **export report** (markdown/JSON) / nothing mutated / governance-logged / analytics / `/api/governance-console`. *(Developer-Mode panel deferred to a later UI pass.)*
+- [x] **v83 — Local Data Manager:** read-only/planning-first storage view — **collection browser** (records + bytes) / **storage usage** (totals + largest) / **cleanup suggestions** (large/ephemeral, advisory) / **backup** helper (read-only export path) / **redaction preview** (counts sensitive matches, writes nothing) / **no deletes/redactions/overwrites autonomously** / governance-logged / analytics / `/api/data-manager`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
