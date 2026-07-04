@@ -2514,6 +2514,9 @@ export function routeMasterAgent(text, opts = {}) {
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }
+export function getMasterAgentSummary() {
+  return getJson('/api/master-agent/summary')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }
