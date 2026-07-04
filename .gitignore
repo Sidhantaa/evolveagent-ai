@@ -197,6 +197,7 @@ backend/app/data/master_agent_runs.json
 backend/app/data/permission_profiles.json
 backend/app/data/imported_records.json
 backend/app/data/marketplace_plugins.json
+backend/app/data/qa_results.json
 backend/app/data/demo_seed_log.json
 backend/app/data/settings_center.json
 backend/app/data/provider_control.json

@@ -1598,6 +1598,15 @@ class PluginToggleRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Quality Assurance Center (v88)
+# ----------------------------------------------------------------------
+class QARecordRequest(BaseModel):
+    feature_key: str = Field(..., min_length=1, max_length=80)
+    status: str = Field(default="pass")
+    note: str = Field(default="", max_length=500)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
