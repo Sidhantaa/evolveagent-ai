@@ -199,6 +199,7 @@ class StorageService:
             "master_agent_runs.json",
             "permission_profiles.json",
             "imported_records.json",
+            "marketplace_plugins.json",
             "demo_seed_log.json",
             "settings_center.json",
             "provider_control.json",
