@@ -3540,3 +3540,6 @@ ul {
 }
 .master-fb:hover { color: var(--color-text-primary); border-color: var(--color-accent-cyan); }
 .master-fb-done { font-size: 11px; color: var(--color-text-muted); }
+
+/* ---- v62 Global Search: Developer-Mode source trace ---- */
+.gs-trace { font-size: 11px; color: var(--color-text-subtle); }

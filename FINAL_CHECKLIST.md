@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v61 Unified Command Router 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v62 Global Search Across Everything · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -31,6 +31,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v60 — EvolveAgent OS 2.0 (capstone):** unified command center indexing every system across v1–v59 (grouped by domain, active-by-data with route + record counts) / live platform scorecard (reuses v55 grade + v49 health) / milestone stats / governance-logged snapshot + final report / **read-only aggregation, not AGI** / analytics / EvolveAgent OS 2.0 panel.
 - [x] **v60.1 — Master Agent Voice Console:** Master Agent is the single top-level routing surface across v1–v60 / clean AI-native hero / **push-to-talk voice input** (user-activated, no wake word/recording) / **spoken answers** via browser speech synthesis / **`mcp:` prefix** routes tool-connection requests / **CLI palette** of governed `/`-commands / **task-aware MCP suggestions** (key-readiness booleans, never values) / Answer + Sources + Follow-ups / **planning-first, approval-gated** (risky send/pay/delete/deploy always held for approval; client flag can't bypass) / governance-logged / analytics / `/api/master-agent`.
 - [x] **v61 — Unified Command Router 2.0:** Master Agent route **confidence** + **"why this route"** explanation (matched keywords) / **suggested workflow before execution** / **safe fallback route when uncertain** (no silent guessing) / **route-accuracy feedback** (correct/wrong) + analytics (accuracy %, avg confidence, fallback count) / **backward-compatible** (response only gains fields) / hero + Developer-Mode panel surfacing / **planning-first & approval-gate unchanged** / governance-logged / `/api/master-agent/route/{id}/feedback`.
+- [x] **v62 — Global Search Across Everything:** one **read-only** keyword search across 13 local collections (chats/messages/files/goals/agents/memory/workflows/reports/simulations/schedules/ideas/documents) / **type + workspace + date filters** / ranked results with **preview** + **source-collection trace** / **"use as context"** seeds the composer / **excludes secrets/governance/analytics** / no writes / governance-logged / analytics / Global Search Developer-Mode panel / `/api/search`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

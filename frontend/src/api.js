@@ -2524,6 +2524,16 @@ export function sendMasterRouteFeedback(runId, correct, opts = {}) {
     note: opts.note || '',
   })
 }
+export function globalSearch(query, opts = {}) {
+  const params = new URLSearchParams({ q: query })
+  if (opts.workspaceId) params.set('workspace_id', opts.workspaceId)
+  if (opts.types) params.set('types', opts.types)
+  if (opts.since) params.set('since', opts.since)
+  return getJson(`/api/search?${params.toString()}`)
+}
+export function getGlobalSearchSources() {
+  return getJson('/api/search/sources')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

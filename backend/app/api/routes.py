@@ -290,6 +290,7 @@ from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.data_export_service import DataExportService
 from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.master_agent_service import MasterAgentService
+from app.services.global_search_service import GlobalSearchService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -397,6 +398,7 @@ scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
+global_search_service = GlobalSearchService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1667,6 +1669,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **data_export_service.analytics_summary(),
         **evolveagent_os2_service.analytics_summary(),
         **master_agent_service.analytics_summary(),
+        **global_search_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4079,6 +4082,25 @@ def master_agent_route_feedback(run_id: str, request: MasterRouteFeedbackRequest
 @router.get("/master-agent/summary")
 def master_agent_summary() -> dict:
     return master_agent_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v62.0 Global Search — one read-only search bar across the whole OS.
+# ----------------------------------------------------------------------
+@router.get("/search")
+def global_search(
+    q: str = Query(..., min_length=1),
+    workspace_id: str | None = Query(default=None),
+    types: str | None = Query(default=None, description="Comma-separated result types to filter by."),
+    since: str | None = Query(default=None, description="ISO timestamp; only results created at/after this."),
+) -> dict:
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    return global_search_service.search(q, workspace_id=workspace_id, types=type_list, since=since)
+
+
+@router.get("/search/sources")
+def global_search_sources() -> dict:
+    return global_search_service.sources()
 
 
 # ----------------------------------------------------------------------

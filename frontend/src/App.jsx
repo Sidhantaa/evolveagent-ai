@@ -357,6 +357,8 @@ import {
   getMasterAgentSummary,
   getMasterAgentCapabilities,
   sendMasterRouteFeedback,
+  globalSearch,
+  getGlobalSearchSources,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1103,6 +1105,11 @@ function App() {
   const [showMasterPanel, setShowMasterPanel] = useState(false)
   const [masterSummary, setMasterSummary] = useState(null)
   const [masterCapabilities, setMasterCapabilities] = useState(null)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('')
+  const [globalSearchResults, setGlobalSearchResults] = useState(null)
+  const [globalSearchSources, setGlobalSearchSources] = useState(null)
+  const [globalSearchBusy, setGlobalSearchBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -2977,6 +2984,32 @@ function App() {
     } catch {
       // best-effort feedback
     }
+  }
+
+  async function runGlobalSearch(event) {
+    if (event) event.preventDefault()
+    const q = globalSearchQuery.trim()
+    if (!q) return
+    setGlobalSearchBusy(true)
+    try {
+      const [results, sources] = await Promise.all([
+        globalSearch(q, { workspaceId }),
+        globalSearchSources ? Promise.resolve(globalSearchSources) : getGlobalSearchSources(),
+      ])
+      setGlobalSearchResults(results)
+      setGlobalSearchSources(sources)
+    } catch (err) {
+      setGlobalSearchResults({ error: err.message, results: [] })
+    } finally {
+      setGlobalSearchBusy(false)
+    }
+  }
+
+  function useSearchResultAsContext(result) {
+    const seed = `Context from ${result.label} — "${result.title}": ${result.preview}\n\n`
+    setInput((current) => seed + (current || ''))
+    setDeveloperMode(true)
+    composerRef.current?.focus()
   }
 
   async function handleOs2Snapshot() {
@@ -9131,6 +9164,55 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowGlobalSearch((current) => !current)}>
+              <span>
+                <Layers3 size={15} />
+                Global Search
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showGlobalSearch && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Global Search · v62.0</strong>
+                  <span>One read-only search across chats, files, goals, agents, memory, workflows, reports, simulations, schedules, and more.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runGlobalSearch}>
+                  <input type="text" placeholder="Search everything…" value={globalSearchQuery} onChange={(event) => setGlobalSearchQuery(event.target.value)} />
+                  <button type="submit" disabled={globalSearchBusy || !globalSearchQuery.trim()}>{globalSearchBusy ? 'Searching…' : 'Search'}</button>
+                </form>
+                {globalSearchSources && (
+                  <p className="muted">{globalSearchSources.total_indexed_items} items across {globalSearchSources.sources?.length} sources</p>
+                )}
+                {globalSearchResults && (
+                  <>
+                    {globalSearchResults.error ? (
+                      <p className="error">{globalSearchResults.error}</p>
+                    ) : (
+                      <p className="muted">{globalSearchResults.result_count} result{globalSearchResults.result_count === 1 ? '' : 's'}{globalSearchResults.by_type && Object.keys(globalSearchResults.by_type).length > 0 ? ` · ${Object.entries(globalSearchResults.by_type).map(([t, n]) => `${t}:${n}`).join(' ')}` : ''}</p>
+                    )}
+                    <div className="agent-template-list">
+                      {(globalSearchResults.results || []).map((result) => (
+                        <div key={`${result.source_collection}-${result.id}-${result.score}`} className="agent-template-card">
+                          <strong>[{result.type}] {result.title}</strong>
+                          <span>{result.preview}</span>
+                          <span className="gs-trace">source: {result.source_collection} · score {result.score}</span>
+                          <div className="master-fb-row">
+                            <button type="button" className="master-fb" onClick={() => useSearchResultAsContext(result)}>Use as context</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">Read-only — nothing is modified. "Use as context" seeds the composer.</p>
               </div>
             )}
           </section>

@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v62 — Global Search Across Everything
+- **Purpose:** One search bar for the whole OS.
+- **How it operates:** `GlobalSearchService` runs a **read-only** keyword search across a curated set of local collections — chats, messages, files, goals, agents, memory, workflows (playbooks), reports (portfolio + business), simulations, schedules, ideas, and documents — scoring by keyword overlap and returning ranked results with a short **preview**, the **source collection** (a Developer-Mode source trace), workspace, and timestamp. Results can be **filtered by type, workspace, and date (`since`)**, and any result can seed the composer via **"use as context."** It never mutates data and excludes secrets, governance logs, and analytics. Searches are governance-logged.
+- **Main API route groups:** `/api/search` (+ `/search/sources`).
+- **Safety boundary:** Strictly read-only local search; no writes; secrets/governance/analytics excluded; governance-logged.
+
 ### v61 — Unified Command Router 2.0
 - **Purpose:** Make the Master Agent route every request more reliably, and make each routing decision explainable and measurable.
 - **How it operates:** `MasterAgentService` now scores each candidate domain and derives a normalized **confidence**, an explicit **"why this route"** explanation (the keywords that matched), and a **suggested workflow/tool to reach for before execution**. When no capability matches strongly (confidence below a threshold), it uses a **safe fallback route** (Research & Retrieval) instead of silently guessing a specific system. Users can rate a route (correct / wrong) via feedback, which drives **route-accuracy analytics** (accuracy %, rated count, average confidence, fallback count). All additions are backward-compatible — the existing route response only gains fields. A **"Why this route?"** view is surfaced in the Simple-Mode hero and the Developer-Mode Master Agent panel.
@@ -528,4 +534,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v60 | EvolveAgent OS 2.0 (capstone) | `/api/os2` | Unified command center over v1–v59 + platform scorecard/report | Read-only local aggregation; not AGI; approvals + governance preserved |
 | v60.1 | Master Agent Voice Console | `/api/master-agent` | Single top-level AI routing across v1–v60; AI-native hero, push-to-talk voice, spoken answers, `mcp:`/CLI palette, task-aware MCP suggestions | Planning-first; approval-gated risky actions; boolean-only key readiness; governance-logged; not AGI |
 | v61 | Unified Command Router 2.0 | `/api/master-agent` | Route confidence + "why this route" explanation, suggested workflow before execution, safe fallback when uncertain, route-accuracy feedback/analytics | Read-only routing; planning-first unchanged; feedback is rating-only; governance-logged |
+| v62 | Global Search Across Everything | `/api/search` | One read-only keyword search across chats/files/goals/agents/memory/workflows/reports/simulations/schedules; type/workspace/date filters; preview; source trace; use-as-context | Strictly read-only; no writes; secrets/governance/analytics excluded; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
