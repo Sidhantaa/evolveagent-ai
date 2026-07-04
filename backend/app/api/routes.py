@@ -329,6 +329,7 @@ from app.services.business_intelligence_service import BusinessIntelligenceServi
 from app.services.meeting_intelligence_service import MeetingIntelligenceService
 from app.services.agent_collaboration_service import AgentCollaborationService
 from app.services.permission_profiles_service import PermissionProfilesService
+from app.services.governance_console_service import GovernanceConsoleService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -456,6 +457,7 @@ business_intelligence_service = BusinessIntelligenceService(storage, governance_
 meeting_intelligence_service = MeetingIntelligenceService(storage, governance_service)
 agent_collaboration_service = AgentCollaborationService(storage, governance_service)
 permission_profiles_service = PermissionProfilesService(storage, governance_service)
+governance_console_service = GovernanceConsoleService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1746,6 +1748,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **meeting_intelligence_service.analytics_summary(),
         **agent_collaboration_service.analytics_summary(),
         **permission_profiles_service.analytics_summary(),
+        **governance_console_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4622,6 +4625,24 @@ def preview_permission(request: PermissionEvaluateRequest) -> dict:
 @router.get("/permissions/summary")
 def permissions_summary() -> dict:
     return permission_profiles_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v82.0 Governance Console 3.0 — read-only console over the governance log.
+# ----------------------------------------------------------------------
+@router.get("/governance-console/dashboard")
+def governance_console_dashboard() -> dict:
+    return governance_console_service.dashboard()
+
+
+@router.get("/governance-console/report")
+def governance_console_report(format: str = Query(default="markdown", pattern="^(markdown|json)$")) -> dict:
+    return governance_console_service.report(fmt=format)
+
+
+@router.get("/governance-console/summary")
+def governance_console_summary() -> dict:
+    return governance_console_service.summary()
 
 
 @router.get("/activity/export")

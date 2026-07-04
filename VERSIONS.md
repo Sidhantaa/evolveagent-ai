@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v82 — Governance Console 3.0
+- **Purpose:** Make safety visible and trustworthy.
+- **How it operates:** `GovernanceConsoleService` is a read-only console over the governance log: a **governance dashboard** (totals, blocked ratio, by action/risk/permission-level), **policy violations** (blocked events), **secret redactions** (secret/PII/redaction events), **prompt-injection warnings** (firewall/injection events), an **approval audit**, an **external-action audit** (action-level / MCP-execution events), and an **exportable governance report** (markdown/JSON). It reads existing governance events only and never mutates them. Viewing is itself governance-logged.
+- **Main API route groups:** `/api/governance-console` (+ `/dashboard`, `/report`, `/summary`).
+- **Safety boundary:** Read-only aggregation of governance events; nothing mutated; governance-logged.
+
 ### v81 — Permission System 3.0
 - **Purpose:** Stronger, previewable control over actions.
 - **How it operates:** `PermissionProfilesService` adds declarative **permission profiles** scoped to global / workspace / agent / tool, matching an action pattern + risk level, with an effect of **deny / require_approval / allow**. Evaluation returns the **most restrictive** matching decision plus a **blocked-action explanation** and the **approval chain** for the risk (low: 0, medium: 1, high: 2 approvers). A **policy preview** evaluates a hypothetical action side-effect-free. It is **additive** to the core `PermissionService` (a separate profile layer) and consistent with planning-first: an `allow` never grants new execution power, and profiles can only tighten. Governance-logged.
@@ -668,4 +674,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v79 | Meeting Intelligence 2.0 | `/api/meeting-intel` | Summary, decisions, action items + owners, follow-up drafts, timeline, propose goal/tasks | Deterministic + local; read-only; drafts never sent; goal conversion planning-only; governance-logged |
 | v80 | Multi-Agent Collaboration 2.0 | `/api/collaboration` | Conversation view, consensus summary, disagreement notes, reviewer pass, final decision + rationale | Deterministic + local; read-only; no model call; nothing executed; governance-logged |
 | v81 | Permission System 3.0 | `/api/permissions` | Permission profiles (global/workspace/agent/tool), most-restrictive evaluation, approval chains by risk, policy preview, blocked-action explanation | Additive advisory layer; can only tighten; allow grants no new power; governance-logged |
+| v82 | Governance Console 3.0 | `/api/governance-console` | Governance dashboard, policy violations, secret redactions, prompt-injection warnings, approval + external-action audit, export report | Read-only aggregation; nothing mutated; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
