@@ -2546,6 +2546,9 @@ export function getActivityTimeline(opts = {}) {
 export function exportActivityTimeline(format = 'markdown') {
   return getJson(`/api/activity/export?format=${format}`)
 }
+export function getDashboardHome(workspaceId) {
+  return getJson(workspaceId ? `/api/home?workspace_id=${workspaceId}` : '/api/home')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

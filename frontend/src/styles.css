@@ -3563,3 +3563,20 @@ ul {
 .activity-dot.gov { background: var(--color-accent-cyan); }
 .activity-detail { padding: 6px 0 4px 14px; }
 .activity-detail p { margin: 2px 0; font-size: 12px; color: var(--color-text-muted); }
+
+/* ---- v64 Dashboard Home (Developer-Mode panel) ---- */
+.home-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 4px 0 8px; }
+.home-stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong); background: var(--color-bg-elevated);
+}
+.home-stat strong { font-size: 20px; color: var(--color-text-primary); }
+.home-stat span { font-size: 11px; color: var(--color-text-muted); }
+.home-action { display: block; font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.home-launch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.home-launch-card {
+  font-size: 11px; padding: 5px 10px; border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong); background: var(--color-bg-elevated);
+  color: var(--color-accent-cyan-soft);
+}

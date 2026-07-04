@@ -292,6 +292,7 @@ from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.master_agent_service import MasterAgentService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
+from app.services.dashboard_home_service import DashboardHomeService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -401,6 +402,7 @@ evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, ope
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
+dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1673,6 +1675,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **master_agent_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
+        **dashboard_home_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4125,6 +4128,14 @@ def activity_timeline(
 @router.get("/activity/summary")
 def activity_timeline_summary() -> dict:
     return activity_timeline_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v64.0 Dashboard Home 2.0 — one professional homepage over the whole OS.
+# ----------------------------------------------------------------------
+@router.get("/home")
+def dashboard_home(workspace_id: str | None = Query(default=None)) -> dict:
+    return dashboard_home_service.home(workspace_id=workspace_id)
 
 
 @router.get("/activity/export")
