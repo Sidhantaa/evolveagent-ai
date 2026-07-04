@@ -552,10 +552,20 @@ def add_goal_task(goal_id: str, request: CreateGoalTaskRequest) -> dict:
 
 @router.patch("/goals/{goal_id}/tasks/{task_id}")
 def update_goal_task(goal_id: str, task_id: str, request: UpdateGoalTaskRequest) -> dict:
-    task = goal_service.update_task(goal_id, task_id, request.model_dump(exclude_unset=True))
+    updates = request.model_dump(exclude_unset=True)
+    task = goal_service.update_task(goal_id, task_id, updates)
     if task is None:
         raise HTTPException(status_code=404, detail="Goal task not found")
-    return task.model_dump()
+    linear_sync = None
+    if updates.get("status") in {"done", "completed"}:
+        try:
+            linear_sync = linear_orchestration.on_goal_task_updated(goal_id, task_id, updates)
+        except LinearServiceError as error:
+            linear_sync = {"completed": False, "error": str(error)}
+    payload = task.model_dump()
+    if linear_sync is not None:
+        payload["linear_sync"] = linear_sync
+    return payload
 
 
 @router.post("/goals/{goal_id}/tasks/{task_id}/run", response_model=RunResponse)
@@ -583,6 +593,11 @@ def run_goal_task(goal_id: str, task_id: str) -> RunResponse:
             "last_result_summary": response.final_output[:240],
         },
     )
+    if final_status == "done":
+        try:
+            linear_orchestration.on_goal_task_updated(goal_id, task_id, {"status": "done"})
+        except LinearServiceError:
+            pass
     governance_service.log_event(
         GovernanceEvent(
             run_id=response.run_id,
@@ -839,6 +854,14 @@ def run_linear_issue(
 def comment_linear_issue(issue_id: str, request: LinearCommentRequest) -> dict:
     try:
         return linear_orchestration.add_comment(issue_id, request.body)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/complete")
+def complete_linear_issue(issue_id: str) -> dict:
+    try:
+        return linear_orchestration.complete_linear_issue(issue_id)
     except LinearServiceError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

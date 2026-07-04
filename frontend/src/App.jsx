@@ -43,6 +43,7 @@ import {
   createWorkspaceMemory,
   applyAutomation,
   approvePromptVersion,
+  completeLinearIssue,
   createChat,
   deleteChat,
   deleteMessage,
@@ -339,6 +340,7 @@ function App() {
       if (action === 'sync') await syncLinearIssue(issueId, workspaceId)
       if (action === 'select') await selectLinearIssue(issueId, workspaceId)
       if (action === 'run') await runLinearIssue(issueId, workspaceId)
+      if (action === 'complete') await completeLinearIssue(issueId)
       await refreshLinearData(workspaceId)
       await refreshMissionControl(workspaceId)
       await refreshAnalytics(workspaceId)
@@ -494,9 +496,14 @@ function App() {
 
   async function handleMarkGoalTaskDone(goalId, taskId) {
     try {
-      await updateGoalTask(goalId, taskId, { status: 'done' })
+      const result = await updateGoalTask(goalId, taskId, { status: 'done' })
       await handleSelectGoal(goalId)
       await refreshMissionControl()
+      await refreshLinearData(workspaceId)
+      if (result?.linear_sync?.completed) {
+        setCopied(`Linear ${result.linear_sync.identifier || 'issue'} marked Done`)
+        window.setTimeout(() => setCopied(''), 2000)
+      }
     } catch (err) {
       setError(err.message)
     }
@@ -1252,6 +1259,11 @@ function App() {
                       <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
                         Run task
                       </button>
+                      {developerMode && link?.status !== 'completed' && (
+                        <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
+                          Force Done in Linear
+                        </button>
+                      )}
                       {issue.url && (
                         <a href={issue.url} target="_blank" rel="noreferrer">
                           Open

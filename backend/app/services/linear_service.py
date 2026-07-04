@@ -134,7 +134,35 @@ class LinearService:
             raise LinearServiceError("Failed to create Linear comment")
         return result.get("comment") or {}
 
-    def update_linear_issue_status(self, issue_id: str, status_name: str) -> dict[str, Any]:
+    COMPLETED_STATE_NAMES = ("done", "completed", "complete")
+
+    @classmethod
+    def resolve_workflow_state(
+        cls,
+        states: list[dict[str, Any]],
+        status_name: str | None = None,
+        *,
+        prefer_completed: bool = False,
+    ) -> dict[str, Any] | None:
+        if status_name:
+            target = next((item for item in states if item.get("name", "").lower() == status_name.lower()), None)
+            if target is not None:
+                return target
+        if prefer_completed:
+            for name in cls.COMPLETED_STATE_NAMES:
+                target = next((item for item in states if item.get("name", "").lower() == name), None)
+                if target is not None:
+                    return target
+            return next((item for item in states if item.get("type") == "completed"), None)
+        return None
+
+    def update_linear_issue_status(
+        self,
+        issue_id: str,
+        status_name: str | None = None,
+        *,
+        prefer_completed: bool = False,
+    ) -> dict[str, Any]:
         states_query = """
         query IssueTeamStates($issueId: String!) {
           issue(id: $issueId) {
@@ -148,9 +176,14 @@ class LinearService:
         states = (
             ((state_data.get("issue") or {}).get("team") or {}).get("states") or {}
         ).get("nodes", [])
-        target = next((item for item in states if item.get("name", "").lower() == status_name.lower()), None)
+        target = self.resolve_workflow_state(
+            states,
+            status_name,
+            prefer_completed=prefer_completed or status_name is None,
+        )
         if target is None:
-            raise LinearServiceError(f"Linear workflow state '{status_name}' not found")
+            label = status_name or "completed"
+            raise LinearServiceError(f"Linear workflow state '{label}' not found")
 
         mutation = """
         mutation IssueUpdate($issueId: String!, $stateId: String!) {
@@ -179,26 +212,20 @@ class LinearService:
         }
 
     def map_issue_to_tasks(self, issue: dict[str, Any]) -> list[dict[str, Any]]:
-        from app.agents.goal_planner_agent import GoalPlannerAgent
-
-        prompt = f"{issue.get('title', '')}\n\n{issue.get('description') or ''}".strip()
-        _, planner_result = GoalPlannerAgent().run(prompt or issue.get("identifier", "Linear task"))
-        tasks = planner_result.get("tasks") or []
-        if not tasks:
-            tasks = [
-                {
-                    "title": issue.get("title") or "Complete Linear issue",
-                    "description": issue.get("description") or "",
-                    "phase": "Execution",
-                    "priority": "high" if issue.get("priority", 0) >= 2 else "medium",
-                    "depends_on": [],
-                    "recommended_agent": "Strategy Agent",
-                    "estimated_effort": "medium",
-                    "requires_approval": False,
-                    "automation_supported": True,
-                }
-            ]
-        return tasks
+        """One Mission Control task per Linear issue so Mark done auto-closes Linear."""
+        return [
+            {
+                "title": issue.get("title") or "Complete Linear issue",
+                "description": issue.get("description") or "",
+                "phase": "Execution",
+                "priority": "high" if issue.get("priority", 0) >= 2 else "medium",
+                "depends_on": [],
+                "recommended_agent": "Strategy Agent",
+                "estimated_effort": "medium",
+                "requires_approval": False,
+                "automation_supported": True,
+            }
+        ]
 
     def map_issue_to_task(self, issue: dict[str, Any]) -> dict[str, Any]:
         tasks = self.map_issue_to_tasks(issue)

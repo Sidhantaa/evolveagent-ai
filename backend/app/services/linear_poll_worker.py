@@ -68,6 +68,8 @@ class LinearPollWorker:
                         "branch": result.get("branch", {}).get("branch"),
                     }
                 )
+            for item in self.orchestration.sync_pending_completions():
+                processed.append(item)
         except LinearServiceError as error:
             self.last_error = str(error)
         except Exception as error:  # noqa: BLE001

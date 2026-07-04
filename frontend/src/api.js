@@ -490,3 +490,9 @@ export async function runLinearPollOnce() {
   if (!response.ok) throw new Error(`Linear poll failed with status ${response.status}`)
   return response.json()
 }
+
+export async function completeLinearIssue(issueId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/complete`, { method: 'POST' })
+  if (!response.ok) throw new Error(`Linear complete failed with status ${response.status}`)
+  return response.json()
+}

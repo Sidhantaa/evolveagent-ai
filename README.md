@@ -689,6 +689,7 @@ npm run build
 - `POST /api/linear/issues/{issue_id}/select`
 - `POST /api/linear/issues/{issue_id}/run`
 - `POST /api/linear/issues/{issue_id}/comment`
+- `POST /api/linear/issues/{issue_id}/complete`
 - `GET /api/linear/links`
 - `GET /api/linear/poll/status`
 - `POST /api/linear/poll/run-once`

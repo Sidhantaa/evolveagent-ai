@@ -170,8 +170,8 @@ class LinearOrchestrationService:
         goal_record, graph = self.goals.get_goal(goal_id) or ({}, {"tasks": []})
         next_task = self._next_pending_task(graph.get("tasks", []))
         if next_task is None:
-            self.links.update_status(issue_id, "completed", note="All subtasks complete")
-            return {**select_result, "run": None, "message": "No pending subtasks"}
+            completion = self.complete_linear_issue(issue_id, goal_id=goal_id)
+            return {**select_result, "run": None, "message": "No pending subtasks", "linear_completion": completion}
 
         self.goals.update_task(goal_id, next_task["task_id"], {"status": "running"})
         request = RunRequest(
@@ -247,10 +247,14 @@ class LinearOrchestrationService:
         except LinearServiceError as error:
             self._log("linear_comment_failed", str(error))
 
-        status = "completed" if final_status == "done" and not self._next_pending_task(
-            (self.goals.get_goal(goal_id) or ({}, {"tasks": []}))[1].get("tasks", [])
-        ) else "selected"
+        updated_tasks = (self.goals.get_goal(goal_id) or ({}, {"tasks": []}))[1].get("tasks", [])
+        all_complete = self._all_tasks_complete(updated_tasks)
+        status = "completed" if all_complete else "selected"
         self.links.update_status(issue_id, status, note=f"Completed subtask: {next_task.get('title')}")
+
+        linear_completion = None
+        if all_complete:
+            linear_completion = self.complete_linear_issue(issue_id, goal_id=goal_id)
 
         self.storage.append(
             "agent_analytics.json",
@@ -283,7 +287,144 @@ class LinearOrchestrationService:
                 "status": self.git.git_status(),
             },
             "linear_comment": comment,
+            "linear_completion": linear_completion,
         }
+
+    def complete_linear_issue(
+        self,
+        issue_id: str,
+        goal_id: str | None = None,
+        *,
+        skip_task_check: bool = False,
+    ) -> dict[str, Any]:
+        link = self.links.get_link_by_issue(issue_id)
+        if link is None and goal_id:
+            link = self.links.get_link_by_goal_task(goal_id)
+        if link is None:
+            raise LinearServiceError("Linear issue link not found")
+
+        resolved_goal_id = goal_id or link.get("goal_id")
+        if resolved_goal_id and not skip_task_check:
+            _, graph = self.goals.get_goal(resolved_goal_id) or ({}, {"tasks": []})
+            if graph.get("tasks") and not self._all_tasks_complete(graph.get("tasks", [])):
+                return {"completed": False, "reason": "Goal tasks are not all done yet"}
+
+        identifier = link.get("linear_identifier") or issue_id
+        if link.get("status") == "completed" and link.get("linear_status", "").lower() in {"done", "completed", "complete"}:
+            return {"completed": True, "already_completed": True, "identifier": identifier}
+
+        status_update: dict[str, Any] = {}
+        try:
+            status_update = self.linear.update_linear_issue_status(issue_id, prefer_completed=True)
+            self._log("linear_status_updated", f"Marked {identifier} as Done in Linear")
+        except LinearServiceError as error:
+            self._log("linear_status_update_failed", str(error))
+
+        commits = link.get("commits") or []
+        latest_commit = commits[-1]["hash"] if commits else "none"
+        pushes = link.get("pushes") or []
+        comment_body = (
+            f"**EvolveAgent task completed**\n\n"
+            f"- Issue: `{identifier}`\n"
+            f"- All Mission Control subtasks are done\n"
+            f"- Branch: `{link.get('branch_name') or 'n/a'}`\n"
+            f"- Latest commit: `{latest_commit}`\n"
+            f"- Push status: {'completed' if pushes else 'not pushed yet'}\n"
+        )
+        if status_update.get("status"):
+            comment_body += f"- Linear status: **{status_update['status']}**\n"
+
+        comment: dict[str, Any] = {}
+        try:
+            comment = self.linear.add_linear_comment(issue_id, comment_body)
+            self._log("linear_comment_created", f"Posted completion comment for {identifier}")
+        except LinearServiceError as error:
+            self._log("linear_comment_failed", str(error))
+
+        updated_link = self.links.create_or_update_link(
+            {
+                **link,
+                "status": "completed",
+                "linear_status": status_update.get("status") or "Done",
+                "last_run_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        self._log("linear_issue_completed", f"Completed Linear issue {identifier}")
+
+        return {
+            "completed": True,
+            "identifier": identifier,
+            "linear_status": status_update,
+            "linear_comment": comment,
+            "link": updated_link,
+        }
+
+    def on_goal_task_updated(self, goal_id: str, task_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        if updates.get("status") not in {"done", "completed"}:
+            return None
+        link = self.links.get_link_by_goal_task(goal_id, task_id)
+        if link is None:
+            link = self.links.get_link_by_goal_task(goal_id)
+        if link is None:
+            return None
+
+        issue_id = link["linear_issue_id"]
+        _, graph = self.goals.get_goal(goal_id) or ({}, {"tasks": []})
+        tasks = graph.get("tasks", [])
+        marked_task = next((task for task in tasks if task.get("task_id") == task_id), None)
+
+        if self._all_tasks_complete(tasks):
+            return self.complete_linear_issue(issue_id, goal_id=goal_id)
+
+        if link.get("task_id") == task_id:
+            return self.complete_linear_issue(issue_id, goal_id=goal_id, skip_task_check=True)
+
+        if marked_task:
+            remaining = [task.get("title") for task in tasks if task.get("status") not in {"done", "completed"}]
+            comment_body = (
+                f"**EvolveAgent subtask completed:** {marked_task.get('title')}\n\n"
+                f"Remaining Mission Control subtasks: {len(remaining)}\n"
+            )
+            if remaining:
+                comment_body += "\n".join(f"- {title}" for title in remaining[:5])
+            try:
+                comment = self.linear.add_linear_comment(issue_id, comment_body)
+                self._log("linear_comment_created", f"Posted subtask progress for {link.get('linear_identifier')}")
+                return {"completed": False, "progress_comment": comment}
+            except LinearServiceError as error:
+                self._log("linear_comment_failed", str(error))
+        return None
+
+    def sync_pending_completions(self) -> list[dict[str, Any]]:
+        """Auto-close Linear issues when linked goals are fully done."""
+        synced: list[dict[str, Any]] = []
+        for link in self.links.list_links():
+            if link.get("status") == "completed":
+                continue
+            goal_id = link.get("goal_id")
+            issue_id = link.get("linear_issue_id")
+            if not goal_id or not issue_id:
+                continue
+            _, graph = self.goals.get_goal(goal_id) or ({}, {"tasks": []})
+            tasks = graph.get("tasks", [])
+            if not tasks:
+                continue
+            if not self._all_tasks_complete(tasks):
+                linked_task = next((task for task in tasks if task.get("task_id") == link.get("task_id")), None)
+                if not linked_task or linked_task.get("status") not in {"done", "completed"}:
+                    continue
+                result = self.complete_linear_issue(issue_id, goal_id=goal_id, skip_task_check=True)
+            else:
+                result = self.complete_linear_issue(issue_id, goal_id=goal_id)
+            if result.get("completed"):
+                synced.append(
+                    {
+                        "issue_id": issue_id,
+                        "identifier": link.get("linear_identifier"),
+                        "action": "completed",
+                    }
+                )
+        return synced
 
     def add_comment(self, issue_id: str, body: str) -> dict[str, Any]:
         comment = self.linear.add_linear_comment(issue_id, body)
@@ -296,6 +437,12 @@ class LinearOrchestrationService:
             if task.get("status") in {None, "pending", "blocked"}:
                 return task
         return None
+
+    @staticmethod
+    def _all_tasks_complete(tasks: list[dict[str, Any]]) -> bool:
+        if not tasks:
+            return False
+        return all(task.get("status") in {"done", "completed"} for task in tasks)
 
     def _run_verification_commands(self) -> list[dict[str, Any]]:
         results = []
