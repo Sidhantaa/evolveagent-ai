@@ -158,6 +158,7 @@ from app.models.request_models import (
     ExportPackageRequest,
     PluginRegisterRequest,
     PluginToggleRequest,
+    QARecordRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -342,6 +343,7 @@ from app.services.import_center_service import ImportCenterService
 from app.services.export_center_service import ExportCenterService
 from app.services.plugin_marketplace_service import PluginMarketplaceService
 from app.services.integration_hub_service import IntegrationHubService
+from app.services.qa_center_service import QACenterService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -475,6 +477,7 @@ import_center_service = ImportCenterService(storage, governance_service)
 export_center_service = ExportCenterService(storage, governance_service)
 plugin_marketplace_service = PluginMarketplaceService(storage, governance_service)
 integration_hub_service = IntegrationHubService(storage, governance_service)
+qa_center_service = QACenterService(storage, governance_service, feature_registry_service, health_monitor_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1771,6 +1774,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **export_center_service.analytics_summary(),
         **plugin_marketplace_service.analytics_summary(),
         **integration_hub_service.analytics_summary(),
+        **qa_center_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4811,6 +4815,29 @@ def integration_hub_dry_run(integration_id: str) -> dict:
 @router.get("/integration-hub/summary")
 def integration_hub_summary() -> dict:
     return integration_hub_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v88.0 Quality Assurance Center — verification matrix + release readiness.
+# ----------------------------------------------------------------------
+@router.get("/qa-center/dashboard")
+def qa_center_dashboard() -> dict:
+    return qa_center_service.dashboard()
+
+
+@router.get("/qa-center/matrix")
+def qa_center_matrix() -> dict:
+    return qa_center_service.verification_matrix()
+
+
+@router.post("/qa-center/record")
+def qa_center_record(request: QARecordRequest) -> dict:
+    return qa_center_service.record(request.feature_key, request.status, request.note)
+
+
+@router.get("/qa-center/summary")
+def qa_center_summary() -> dict:
+    return qa_center_service.summary()
 
 
 @router.get("/activity/export")
