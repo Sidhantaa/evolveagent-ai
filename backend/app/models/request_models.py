@@ -1607,6 +1607,19 @@ class QARecordRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Release Manager (v89)
+# ----------------------------------------------------------------------
+class PRSummaryRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    changes: list[str] = Field(default_factory=list)
+
+
+class ReleaseNotesRequest(BaseModel):
+    version: str = Field(..., min_length=1, max_length=40)
+    highlights: list[str] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
