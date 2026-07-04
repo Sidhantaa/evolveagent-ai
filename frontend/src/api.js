@@ -2612,6 +2612,9 @@ export function planContext(query, opts = {}) {
     budget_chars: opts.budgetChars || 4000,
   })
 }
+export function getAgentQuality() {
+  return getJson('/api/agent-quality/dashboard')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

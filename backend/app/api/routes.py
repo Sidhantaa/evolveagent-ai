@@ -304,6 +304,7 @@ from app.services.provider_control_service import ProviderControlService
 from app.services.notifications_inbox_service import NotificationsInboxService
 from app.services.workspace_os_service import WorkspaceOSService
 from app.services.smart_context_service import SmartContextService
+from app.services.agent_quality_service import AgentQualityService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -421,6 +422,7 @@ provider_control_service = ProviderControlService(storage, governance_service)
 notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
 workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
 smart_context_service = SmartContextService(storage, governance_service)
+agent_quality_service = AgentQualityService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1701,6 +1703,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **notifications_inbox_service.analytics_summary(),
         **workspace_os_service.analytics_summary(),
         **smart_context_service.analytics_summary(),
+        **agent_quality_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4343,6 +4346,24 @@ def context_plan(request: ContextPlanRequest) -> dict:
 @router.get("/context/summary")
 def context_summary() -> dict:
     return smart_context_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v72.0 Agent Quality Optimizer — trends, weak agents, regressions (read-only).
+# ----------------------------------------------------------------------
+@router.get("/agent-quality/dashboard")
+def agent_quality_dashboard() -> dict:
+    return agent_quality_service.dashboard()
+
+
+@router.get("/agent-quality/summary")
+def agent_quality_summary() -> dict:
+    return agent_quality_service.summary()
+
+
+@router.get("/agent-quality/best-by-task")
+def agent_quality_best_by_task() -> dict:
+    return {"best_by_task": agent_quality_service.best_by_task()}
 
 
 @router.get("/activity/export")
