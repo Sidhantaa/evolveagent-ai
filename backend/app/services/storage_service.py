@@ -200,6 +200,7 @@ class StorageService:
             "demo_seed_log.json",
             "settings_center.json",
             "provider_control.json",
+            "notifications_inbox.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",

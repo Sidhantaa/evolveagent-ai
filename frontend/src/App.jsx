@@ -374,6 +374,9 @@ import {
   resetSettings,
   getProviderControl,
   updateProviderControl,
+  generateNotificationsInbox,
+  getNotificationsInbox,
+  resolveNotificationInbox,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1145,6 +1148,9 @@ function App() {
   const [showProviders, setShowProviders] = useState(false)
   const [providerControl, setProviderControl] = useState(null)
   const [providerBusy, setProviderBusy] = useState(false)
+  const [showInbox, setShowInbox] = useState(false)
+  const [inboxData, setInboxData] = useState(null)
+  const [inboxBusy, setInboxBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3130,6 +3136,27 @@ function App() {
   async function refreshProviderControl() {
     try {
       setProviderControl(await getProviderControl())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshInbox() {
+    setInboxBusy(true)
+    try {
+      await generateNotificationsInbox()
+      setInboxData(await getNotificationsInbox())
+    } catch {
+      // best-effort
+    } finally {
+      setInboxBusy(false)
+    }
+  }
+
+  async function handleInboxResolve(id) {
+    try {
+      await resolveNotificationInbox(id)
+      setInboxData(await getNotificationsInbox())
     } catch {
       // best-effort
     }
@@ -9343,6 +9370,44 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowInbox((current) => !current); if (!inboxData) refreshInbox() }}>
+              <span>
+                <Flag size={15} />
+                Notifications Inbox
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showInbox && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Notifications Inbox · v69.0</strong>
+                  <span>Actionable alerts — approvals, failed runs, provider fallback, reminders, health — grouped by severity with mark-resolved and source links.</span>
+                </div>
+                {inboxData && (
+                  <p className="muted">{inboxData.count} open{inboxData.by_severity ? ` · ${Object.entries(inboxData.by_severity).map(([s, n]) => `${s}:${n}`).join(' ')}` : ''}</p>
+                )}
+                <div className="agent-template-list">
+                  {(inboxData?.items || []).map((item) => (
+                    <div key={item.id} className="agent-template-card">
+                      <strong><span className={`feature-badge ${item.severity === 'critical' ? 'needs_config' : item.severity === 'warning' ? 'demo_safe' : 'active'}`}>{item.severity}</span> {item.title}</strong>
+                      <span className="gs-trace">{item.type} · {item.source_route}</span>
+                      <div className="master-fb-row">
+                        <button type="button" className="master-fb" onClick={() => handleInboxResolve(item.id)}>Mark resolved</button>
+                      </div>
+                    </div>
+                  ))}
+                  {inboxData && inboxData.count === 0 && <p className="muted">All clear — no open alerts.</p>}
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshInbox()} disabled={inboxBusy}>Refresh</button>
+                </div>
               </div>
             )}
           </section>
