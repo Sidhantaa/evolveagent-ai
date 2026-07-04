@@ -2599,6 +2599,12 @@ export function getNotificationsInbox(severity) {
 export function resolveNotificationInbox(id) {
   return postJson(`/api/notifications-inbox/${id}/resolve`, {})
 }
+export function getWorkspaceOsDashboard(workspaceId) {
+  return getJson(`/api/workspace-os/${workspaceId}/dashboard`)
+}
+export function getWorkspaceOsSummary() {
+  return getJson('/api/workspace-os/summary')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

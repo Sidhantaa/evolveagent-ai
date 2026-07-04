@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v69 Unified Notifications Inbox 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v70 Workspace Operating System 2.0 · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -39,6 +39,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v67 — Settings Center:** central local **preferences** (provider / modes / features / safety / workspace defaults / voice / theme) as one document / **allow-list validation** (unknown categories/keys + **secret-like keys rejected**) / **no secret values stored** / hard safety boundaries surfaced **enforced read-only** / **export/import** (secrets excluded) + **reset-to-defaults** / governance-logged / analytics / Settings Center Developer-Mode panel / `/api/settings`.
 - [x] **v68 — Real Provider Control Center 2.0:** **readiness dashboard** for OpenAI/Claude/Gemini/Mistral/local (env-key set? **boolean only**) / **model-per-task** + **real/mock-per-capability** preferences / **cost estimate** (from v50 ledger) / **latency** stats / **fallback policy** / **API key safety checks report booleans only — values never read/logged/returned** / real calls remain env-gated / governance-logged / analytics / Provider Control Developer-Mode panel / `/api/provider-control`.
 - [x] **v69 — Unified Notifications Inbox 2.0:** actionable inbox aggregating **approval / failed-run / provider-fallback / scheduled-reminder / health** alerts / **severity** grouping / **mark-resolved** / **source-route links** / **idempotent generation** (no unresolved duplicates) / **additive to v56** (distinct `/api/notifications-inbox`) / read-only source scan / governance-logged / analytics / Notifications Inbox Developer-Mode panel.
+- [x] **v70 — Workspace Operating System 2.0:** per-workspace **dashboard** / **memory graph** (nodes + knowledge-link edges) / **feature-usage** counts / workspace **agents** / workspace **reports** / scoped **timeline** (via v63) / derived **health score** (healthy/developing/sparse) / read-only, workspace-scoped / governance-logged / analytics / Workspace OS Developer-Mode panel / `/api/workspace-os`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 
