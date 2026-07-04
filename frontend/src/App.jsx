@@ -385,6 +385,46 @@ import {
   docContractRisk,
   docAtsScore,
   analyzeCode,
+  researchAgentClaims,
+  researchAgentBias,
+  researchAgentBrief,
+  getBusinessIntelDashboard,
+  getBusinessIntelReport,
+  analyzeMeetingTranscript,
+  meetingTranscriptToGoal,
+  analyzeCollaboration,
+  getPermissionProfiles,
+  createPermissionProfile,
+  deletePermissionProfile,
+  evaluatePermission,
+  getGovernanceConsoleDashboard,
+  getGovernanceConsoleReport,
+  getDataManagerBrowse,
+  getDataManagerUsage,
+  getDataManagerCleanup,
+  previewDataRedaction,
+  previewImport,
+  commitImport,
+  getImportRecords,
+  exportCenterExport,
+  exportCenterPackage,
+  getExportCenterCaseStudy,
+  getPluginMarketplaceCatalog,
+  registerMarketplacePlugin,
+  toggleMarketplacePlugin,
+  testMarketplacePlugin,
+  getPluginMarketplaceActivity,
+  getIntegrationHubCards,
+  dryRunIntegration,
+  getQaCenterDashboard,
+  getQaCenterMatrix,
+  recordQaStatus,
+  getReleaseManagerDashboard,
+  getReleaseManagerChangelog,
+  generatePrSummary,
+  generateReleaseNotes,
+  getLaunchConsoleDashboard,
+  getLaunchConsoleReport,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1181,6 +1221,69 @@ function App() {
   const [codeIntelText, setCodeIntelText] = useState('')
   const [codeIntelResult, setCodeIntelResult] = useState(null)
   const [codeIntelBusy, setCodeIntelBusy] = useState(false)
+  const [showResearchAgent2, setShowResearchAgent2] = useState(false)
+  const [researchAgentText, setResearchAgentText] = useState('This market is clearly the best opportunity. According to a 2025 report, adoption rose 38%.')
+  const [researchAgentResult, setResearchAgentResult] = useState(null)
+  const [researchAgentBusy, setResearchAgentBusy] = useState(false)
+  const [showBizIntel2, setShowBizIntel2] = useState(false)
+  const [bizIntel2, setBizIntel2] = useState(null)
+  const [bizIntelBusy, setBizIntelBusy] = useState(false)
+  const [showMeetingIntel2, setShowMeetingIntel2] = useState(false)
+  const [meetingIntelText, setMeetingIntelText] = useState('Monday 10:00 team decided we will launch the demo next week. Alex will update the backend tests. Priya will prepare the follow-up deck.')
+  const [meetingIntelResult, setMeetingIntelResult] = useState(null)
+  const [meetingIntelBusy, setMeetingIntelBusy] = useState(false)
+  const [showCollab2, setShowCollab2] = useState(false)
+  const [collabTopic, setCollabTopic] = useState('Should we automate this workflow now?')
+  const [collabRoleA, setCollabRoleA] = useState('Strategy Agent')
+  const [collabPositionA, setCollabPositionA] = useState('Automate the read-only planning steps because they reduce repeated manual work.')
+  const [collabRoleB, setCollabRoleB] = useState('Risk Agent')
+  const [collabPositionB, setCollabPositionB] = useState('Do not automate external sending or destructive actions without approval.')
+  const [collabResult, setCollabResult] = useState(null)
+  const [collabBusy, setCollabBusy] = useState(false)
+  const [showPerm3, setShowPerm3] = useState(false)
+  const [permProfiles, setPermProfiles] = useState(null)
+  const [permEval, setPermEval] = useState(null)
+  const [permBusy, setPermBusy] = useState(false)
+  const [permAction, setPermAction] = useState('send_email')
+  const [showGovConsole, setShowGovConsole] = useState(false)
+  const [govConsole, setGovConsole] = useState(null)
+  const [govBusy, setGovBusy] = useState(false)
+  const [showDataManager, setShowDataManager] = useState(false)
+  const [dataManager, setDataManager] = useState(null)
+  const [dataManagerPreview, setDataManagerPreview] = useState(null)
+  const [dataManagerBusy, setDataManagerBusy] = useState(false)
+  const [dataManagerCollection, setDataManagerCollection] = useState('chat_sessions.json')
+  const [showImportCenter, setShowImportCenter] = useState(false)
+  const [importCenterKind, setImportCenterKind] = useState('markdown')
+  const [importCenterContent, setImportCenterContent] = useState('# Project note\nImportant follow-up item.')
+  const [importCenterResult, setImportCenterResult] = useState(null)
+  const [importCenterRecords, setImportCenterRecords] = useState(null)
+  const [importCenterBusy, setImportCenterBusy] = useState(false)
+  const [showExportCenter2, setShowExportCenter2] = useState(false)
+  const [exportCenterKind, setExportCenterKind] = useState('chats')
+  const [exportCenterFormat, setExportCenterFormat] = useState('markdown')
+  const [exportCenterResult, setExportCenterResult] = useState(null)
+  const [exportCenterBusy, setExportCenterBusy] = useState(false)
+  const [showPluginMarket, setShowPluginMarket] = useState(false)
+  const [pluginMarket, setPluginMarket] = useState(null)
+  const [pluginActivity, setPluginActivity] = useState(null)
+  const [pluginBusy, setPluginBusy] = useState(false)
+  const [pluginName, setPluginName] = useState('Demo Safe Plugin')
+  const [showIntegrationHub2, setShowIntegrationHub2] = useState(false)
+  const [integrationHub2, setIntegrationHub2] = useState(null)
+  const [integrationBusy, setIntegrationBusy] = useState(false)
+  const [showQaCenter2, setShowQaCenter2] = useState(false)
+  const [qaCenter, setQaCenter] = useState(null)
+  const [qaMatrix, setQaMatrix] = useState(null)
+  const [qaBusy, setQaBusy] = useState(false)
+  const [showReleaseMgr, setShowReleaseMgr] = useState(false)
+  const [releaseMgr, setReleaseMgr] = useState(null)
+  const [releaseResult, setReleaseResult] = useState(null)
+  const [releaseBusy, setReleaseBusy] = useState(false)
+  const [showLaunchConsole, setShowLaunchConsole] = useState(false)
+  const [launchConsole, setLaunchConsole] = useState(null)
+  const [launchReport, setLaunchReport] = useState(null)
+  const [launchBusy, setLaunchBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3227,6 +3330,339 @@ function App() {
     } finally {
       setCodeIntelBusy(false)
     }
+  }
+
+  async function runResearchAgent2(mode) {
+    if (!researchAgentText.trim()) return
+    setResearchAgentBusy(true)
+    try {
+      const data = mode === 'bias'
+        ? await researchAgentBias(researchAgentText)
+        : mode === 'brief'
+          ? await researchAgentBrief(researchAgentText, [])
+          : await researchAgentClaims(researchAgentText)
+      setResearchAgentResult({ mode, data })
+    } catch (err) {
+      setResearchAgentResult({ error: err.message })
+    } finally {
+      setResearchAgentBusy(false)
+    }
+  }
+
+  async function refreshBizIntel2() {
+    setBizIntelBusy(true)
+    try {
+      setBizIntel2(await getBusinessIntelDashboard(workspaceId))
+    } catch (err) {
+      setBizIntel2({ error: err.message })
+    } finally {
+      setBizIntelBusy(false)
+    }
+  }
+
+  async function downloadBizIntelReport() {
+    const report = await getBusinessIntelReport(workspaceId)
+    downloadFile('business-intelligence-report.md', report.content || JSON.stringify(report, null, 2), 'text/markdown')
+  }
+
+  async function runMeetingIntel2(mode) {
+    if (!meetingIntelText.trim()) return
+    setMeetingIntelBusy(true)
+    try {
+      const data = mode === 'goal'
+        ? await meetingTranscriptToGoal(meetingIntelText, 'Meeting follow-up goal')
+        : await analyzeMeetingTranscript(meetingIntelText)
+      setMeetingIntelResult({ mode, data })
+    } catch (err) {
+      setMeetingIntelResult({ error: err.message })
+    } finally {
+      setMeetingIntelBusy(false)
+    }
+  }
+
+  async function runCollab2(event) {
+    if (event) event.preventDefault()
+    if (!collabTopic.trim()) return
+    setCollabBusy(true)
+    try {
+      setCollabResult(await analyzeCollaboration(collabTopic, [
+        { role: collabRoleA, position: collabPositionA },
+        { role: collabRoleB, position: collabPositionB },
+      ]))
+    } catch (err) {
+      setCollabResult({ error: err.message })
+    } finally {
+      setCollabBusy(false)
+    }
+  }
+
+  async function refreshPerm3() {
+    setPermBusy(true)
+    try {
+      setPermProfiles(await getPermissionProfiles())
+    } catch (err) {
+      setPermProfiles({ error: err.message })
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function createPermProfile() {
+    setPermBusy(true)
+    try {
+      await createPermissionProfile({
+        name: `Approval gate ${Date.now().toString().slice(-4)}`,
+        action_pattern: permAction || '*',
+        effect: 'require_approval',
+        risk_level: 'high',
+      })
+      await refreshPerm3()
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function deletePermProfile(profileId) {
+    setPermBusy(true)
+    try {
+      await deletePermissionProfile(profileId)
+      await refreshPerm3()
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function runPermEval() {
+    if (!permAction.trim()) return
+    setPermBusy(true)
+    try {
+      setPermEval(await evaluatePermission({ action: permAction, risk_level: 'high' }))
+    } catch (err) {
+      setPermEval({ error: err.message })
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function refreshGovConsole() {
+    setGovBusy(true)
+    try {
+      setGovConsole(await getGovernanceConsoleDashboard())
+    } catch (err) {
+      setGovConsole({ error: err.message })
+    } finally {
+      setGovBusy(false)
+    }
+  }
+
+  async function downloadGovConsole(format = 'markdown') {
+    const report = await getGovernanceConsoleReport(format)
+    downloadFile(`governance-console-report.${format === 'json' ? 'json' : 'md'}`, report.content || JSON.stringify(report, null, 2), format === 'json' ? 'application/json' : 'text/markdown')
+  }
+
+  async function refreshDataManager() {
+    setDataManagerBusy(true)
+    try {
+      const [browse, usage, cleanup] = await Promise.all([
+        getDataManagerBrowse(),
+        getDataManagerUsage(),
+        getDataManagerCleanup(),
+      ])
+      setDataManager({ browse, usage, cleanup })
+      const collections = browse?.collections || []
+      if (collections.length && !collections.some((item) => item.collection === dataManagerCollection)) {
+        setDataManagerCollection(collections[0].collection)
+      }
+    } catch (err) {
+      setDataManager({ error: err.message })
+    } finally {
+      setDataManagerBusy(false)
+    }
+  }
+
+  async function runDataManagerPreview() {
+    if (!dataManagerCollection.trim()) return
+    setDataManagerBusy(true)
+    try {
+      setDataManagerPreview(await previewDataRedaction(dataManagerCollection))
+    } catch (err) {
+      setDataManagerPreview({ error: err.message })
+    } finally {
+      setDataManagerBusy(false)
+    }
+  }
+
+  async function runImportCenter(mode) {
+    if (!importCenterContent.trim()) return
+    setImportCenterBusy(true)
+    try {
+      const result = mode === 'commit'
+        ? await commitImport(importCenterKind, importCenterContent, workspaceId)
+        : await previewImport(importCenterKind, importCenterContent)
+      setImportCenterResult(result)
+      setImportCenterRecords(await getImportRecords(importCenterKind))
+    } catch (err) {
+      setImportCenterResult({ error: err.message })
+    } finally {
+      setImportCenterBusy(false)
+    }
+  }
+
+  async function runExportCenter2(mode) {
+    setExportCenterBusy(true)
+    try {
+      const result = mode === 'package'
+        ? await exportCenterPackage([exportCenterKind], exportCenterFormat, workspaceId)
+        : mode === 'case'
+          ? await getExportCenterCaseStudy()
+          : await exportCenterExport(exportCenterKind, exportCenterFormat, workspaceId)
+      setExportCenterResult(result)
+      const content = result.content || result.package_content || JSON.stringify(result, null, 2)
+      downloadFile(`evolveagent-${mode}.${exportCenterFormat === 'json' ? 'json' : 'md'}`, content, exportCenterFormat === 'json' ? 'application/json' : 'text/markdown')
+    } catch (err) {
+      setExportCenterResult({ error: err.message })
+    } finally {
+      setExportCenterBusy(false)
+    }
+  }
+
+  async function refreshPluginMarket() {
+    setPluginBusy(true)
+    try {
+      const [catalog, activity] = await Promise.all([
+        getPluginMarketplaceCatalog(),
+        getPluginMarketplaceActivity(),
+      ])
+      setPluginMarket(catalog)
+      setPluginActivity(activity)
+    } catch (err) {
+      setPluginMarket({ error: err.message })
+    } finally {
+      setPluginBusy(false)
+    }
+  }
+
+  async function registerPluginMarket(event) {
+    if (event) event.preventDefault()
+    if (!pluginName.trim()) return
+    setPluginBusy(true)
+    try {
+      await registerMarketplacePlugin({ name: pluginName, description: 'Registered from Developer Mode', permissions: ['read'] })
+      setPluginName('')
+      await refreshPluginMarket()
+    } finally {
+      setPluginBusy(false)
+    }
+  }
+
+  async function runPluginAction(pluginId, action, enabled) {
+    setPluginBusy(true)
+    try {
+      if (action === 'toggle') await toggleMarketplacePlugin(pluginId, enabled)
+      if (action === 'test') await testMarketplacePlugin(pluginId)
+      await refreshPluginMarket()
+    } finally {
+      setPluginBusy(false)
+    }
+  }
+
+  async function refreshIntegrationHub2() {
+    setIntegrationBusy(true)
+    try {
+      setIntegrationHub2(await getIntegrationHubCards())
+    } catch (err) {
+      setIntegrationHub2({ error: err.message })
+    } finally {
+      setIntegrationBusy(false)
+    }
+  }
+
+  async function runIntegrationDry(integrationId) {
+    setIntegrationBusy(true)
+    try {
+      const dryRun = await dryRunIntegration(integrationId)
+      setIntegrationHub2((current) => ({ ...(current || {}), dry_run: dryRun }))
+    } finally {
+      setIntegrationBusy(false)
+    }
+  }
+
+  async function refreshQaCenter2() {
+    setQaBusy(true)
+    try {
+      const [dashboard, matrix] = await Promise.all([
+        getQaCenterDashboard(),
+        getQaCenterMatrix(),
+      ])
+      setQaCenter(dashboard)
+      setQaMatrix(matrix)
+    } catch (err) {
+      setQaCenter({ error: err.message })
+    } finally {
+      setQaBusy(false)
+    }
+  }
+
+  async function recordQaItem(featureKey, status) {
+    setQaBusy(true)
+    try {
+      await recordQaStatus(featureKey, status, `Marked ${status} from Developer Mode`)
+      await refreshQaCenter2()
+    } finally {
+      setQaBusy(false)
+    }
+  }
+
+  async function refreshReleaseMgr() {
+    setReleaseBusy(true)
+    try {
+      const [dashboard, changelog] = await Promise.all([
+        getReleaseManagerDashboard(),
+        getReleaseManagerChangelog(),
+      ])
+      setReleaseMgr({ dashboard, changelog })
+    } catch (err) {
+      setReleaseMgr({ error: err.message })
+    } finally {
+      setReleaseBusy(false)
+    }
+  }
+
+  async function runReleaseMgr(mode) {
+    setReleaseBusy(true)
+    try {
+      const result = mode === 'notes'
+        ? await generateReleaseNotes('v90.0', ['Developer Mode panels connected', 'Launch console ready'])
+        : await generatePrSummary('Developer-Mode panels for v77-v90', ['Research, BI, meetings, governance, QA, release, and launch panels'])
+      setReleaseResult(result)
+      downloadFile(`release-manager-${mode}.md`, result.content || JSON.stringify(result, null, 2), 'text/markdown')
+    } catch (err) {
+      setReleaseResult({ error: err.message })
+    } finally {
+      setReleaseBusy(false)
+    }
+  }
+
+  async function refreshLaunchConsole() {
+    setLaunchBusy(true)
+    try {
+      const [dashboard, report] = await Promise.all([
+        getLaunchConsoleDashboard(),
+        getLaunchConsoleReport(),
+      ])
+      setLaunchConsole(dashboard)
+      setLaunchReport(report)
+    } catch (err) {
+      setLaunchConsole({ error: err.message })
+    } finally {
+      setLaunchBusy(false)
+    }
+  }
+
+  async function downloadLaunchReport() {
+    const report = launchReport || await getLaunchConsoleReport()
+    downloadFile('evolveagent-launch-report.md', report.content || JSON.stringify(report, null, 2), 'text/markdown')
+    setLaunchReport(report)
   }
 
   async function runDocContractRisk() {
@@ -9539,6 +9975,405 @@ function App() {
                   </>
                 )}
                 <p className="muted">Static analysis of submitted text only — read-only, no edits, no filesystem access.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowResearchAgent2((current) => !current)}>
+              <span><Library size={15} /> Research Agent</span>
+              <ChevronDown size={15} />
+            </button>
+            {showResearchAgent2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Research Agent · v77.0</strong>
+                  <span>Claim extraction, citation-quality brief, and bias flagging for research text.</span>
+                </div>
+                <textarea value={researchAgentText} onChange={(event) => setResearchAgentText(event.target.value)} rows={3} />
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runResearchAgent2('claims')} disabled={researchAgentBusy}>Claims</button>
+                  <button type="button" onClick={() => runResearchAgent2('bias')} disabled={researchAgentBusy}>Bias flags</button>
+                  <button type="button" onClick={() => runResearchAgent2('brief')} disabled={researchAgentBusy}>Brief</button>
+                </div>
+                {researchAgentResult?.error ? <p className="error">{researchAgentResult.error}</p> : researchAgentResult && (
+                  <div className="agent-template-card">
+                    <strong>{researchAgentResult.mode}</strong>
+                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(researchAgentResult.data, null, 2).slice(0, 1800)}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowBizIntel2((current) => !current); if (!bizIntel2) refreshBizIntel2() }}>
+              <span><BarChart3 size={15} /> Business Intelligence</span>
+              <ChevronDown size={15} />
+            </button>
+            {showBizIntel2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Business Intelligence · v78.0</strong>
+                  <span>KPIs, pipeline, proposal tracking, mock forecast, and business risk register.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshBizIntel2} disabled={bizIntelBusy}>Refresh</button>
+                  <button type="button" onClick={downloadBizIntelReport}>Download report</button>
+                </div>
+                {bizIntel2?.error ? <p className="error">{bizIntel2.error}</p> : bizIntel2 && (
+                  <>
+                    <div className="analytics-mini-grid">
+                      {Object.entries(bizIntel2.kpis || {}).slice(0, 6).map(([key, value]) => (
+                        <div key={key}><span>{key.replaceAll('_', ' ')}</span><strong>{String(value)}</strong></div>
+                      ))}
+                    </div>
+                    {(bizIntel2.risk_register?.risks || []).slice(0, 4).map((risk, index) => (
+                      <p className="muted" key={index}>• {typeof risk === 'string' ? risk : JSON.stringify(risk)}</p>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowMeetingIntel2((current) => !current)}>
+              <span><MessageSquarePlus size={15} /> Meeting Intelligence</span>
+              <ChevronDown size={15} />
+            </button>
+            {showMeetingIntel2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Meeting Intelligence · v79.0</strong>
+                  <span>Transcript summary, decisions, action items, follow-up drafts, and goal conversion.</span>
+                </div>
+                <textarea value={meetingIntelText} onChange={(event) => setMeetingIntelText(event.target.value)} rows={3} />
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runMeetingIntel2('analyze')} disabled={meetingIntelBusy}>Analyze</button>
+                  <button type="button" onClick={() => runMeetingIntel2('goal')} disabled={meetingIntelBusy}>To goal</button>
+                </div>
+                {meetingIntelResult?.error ? <p className="error">{meetingIntelResult.error}</p> : meetingIntelResult && (
+                  <div className="agent-template-card">
+                    <strong>{meetingIntelResult.mode}</strong>
+                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(meetingIntelResult.data, null, 2).slice(0, 1800)}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCollab2((current) => !current)}>
+              <span><Bot size={15} /> Multi-Agent Collaboration</span>
+              <ChevronDown size={15} />
+            </button>
+            {showCollab2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Multi-Agent Collaboration · v80.0</strong>
+                  <span>Compare agent positions, disagreements, reviewer pass, consensus, and final decision.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runCollab2}>
+                  <input value={collabTopic} onChange={(event) => setCollabTopic(event.target.value)} placeholder="Topic" />
+                  <input value={collabRoleA} onChange={(event) => setCollabRoleA(event.target.value)} placeholder="Role A" />
+                  <textarea value={collabPositionA} onChange={(event) => setCollabPositionA(event.target.value)} rows={2} />
+                  <input value={collabRoleB} onChange={(event) => setCollabRoleB(event.target.value)} placeholder="Role B" />
+                  <textarea value={collabPositionB} onChange={(event) => setCollabPositionB(event.target.value)} rows={2} />
+                  <button type="submit" disabled={collabBusy}>Analyze collaboration</button>
+                </form>
+                {collabResult?.error ? <p className="error">{collabResult.error}</p> : collabResult && (
+                  <div className="agent-template-card">
+                    <strong>{collabResult.final_decision?.recommended_by ? `Recommended by ${collabResult.final_decision.recommended_by}` : 'Collaboration result'}</strong>
+                    <span className="gs-trace">{Array.isArray(collabResult.consensus_summary) ? collabResult.consensus_summary.join(', ') : collabResult.consensus_summary}</span>
+                    {collabResult.final_decision?.position && <span className="home-action">{collabResult.final_decision.position}</span>}
+                    {(collabResult.disagreement_notes || []).slice(0, 4).map((note, index) => (
+                      <span className="home-action" key={index}>• {typeof note === 'string' ? note : `${(note.between || []).join(' vs ') || 'agents'}: ${note.reason || JSON.stringify(note)}`}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowPerm3((current) => !current); if (!permProfiles) refreshPerm3() }}>
+              <span><Shield size={15} /> Permission System</span>
+              <ChevronDown size={15} />
+            </button>
+            {showPerm3 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Permission System · v81.0</strong>
+                  <span>Permission profiles, action evaluation, and approval decisions before risky work.</span>
+                </div>
+                <input value={permAction} onChange={(event) => setPermAction(event.target.value)} placeholder="Action to evaluate" />
+                <div className="inline-actions">
+                  <button type="button" onClick={runPermEval} disabled={permBusy}>Evaluate</button>
+                  <button type="button" onClick={createPermProfile} disabled={permBusy}>Create profile</button>
+                  <button type="button" onClick={refreshPerm3} disabled={permBusy}>Refresh</button>
+                </div>
+                {permEval && <p className="muted">decision: <strong>{permEval.decision || permEval.effect}</strong> · {permEval.explanation || permEval.reason}</p>}
+                {(permProfiles?.profiles || []).slice(0, 5).map((profile) => (
+                  <div className="agent-template-card" key={profile.profile_id}>
+                    <strong>{profile.name}</strong>
+                    <span className="gs-trace">{profile.action_pattern} · {profile.effect} · {profile.risk_level}</span>
+                    <button type="button" onClick={() => deletePermProfile(profile.profile_id)} disabled={permBusy}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowGovConsole((current) => !current); if (!govConsole) refreshGovConsole() }}>
+              <span><ShieldAlert size={15} /> Governance Console</span>
+              <ChevronDown size={15} />
+            </button>
+            {showGovConsole && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Governance Console · v82.0</strong>
+                  <span>Blocked ratio, risk summaries, policy violations, injection warnings, approval and external audit.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshGovConsole} disabled={govBusy}>Refresh</button>
+                  <button type="button" onClick={() => downloadGovConsole('markdown')}>Markdown</button>
+                  <button type="button" onClick={() => downloadGovConsole('json')}>JSON</button>
+                </div>
+                {govConsole?.error ? <p className="error">{govConsole.error}</p> : govConsole && (
+                  <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '220px', overflow: 'auto' }}>{JSON.stringify(govConsole, null, 2).slice(0, 2200)}</pre>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowDataManager((current) => !current); if (!dataManager) refreshDataManager() }}>
+              <span><Database size={15} /> Local Data Manager</span>
+              <ChevronDown size={15} />
+            </button>
+            {showDataManager && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Local Data Manager · v83.0</strong>
+                  <span>Browse local collections, usage totals, cleanup suggestions, and redaction previews.</span>
+                </div>
+                <input value={dataManagerCollection} onChange={(event) => setDataManagerCollection(event.target.value)} placeholder="collection name" />
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshDataManager} disabled={dataManagerBusy}>Refresh</button>
+                  <button type="button" onClick={runDataManagerPreview} disabled={dataManagerBusy}>Redaction preview</button>
+                </div>
+                {dataManager?.error ? <p className="error">{dataManager.error}</p> : dataManager && (
+                  <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(dataManager, null, 2).slice(0, 1800)}</pre>
+                )}
+                {dataManagerPreview && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '120px', overflow: 'auto' }}>{JSON.stringify(dataManagerPreview, null, 2).slice(0, 1200)}</pre>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowImportCenter((current) => !current)}>
+              <span><Paperclip size={15} /> Import Center</span>
+              <ChevronDown size={15} />
+            </button>
+            {showImportCenter && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Import Center · v84.0</strong>
+                  <span>Preview, sanitize, and commit imported document, CSV, markdown, chat, or project notes.</span>
+                </div>
+                <select value={importCenterKind} onChange={(event) => setImportCenterKind(event.target.value)}>
+                  {['document', 'csv', 'markdown', 'chat_history', 'project_notes'].map((kind) => <option key={kind}>{kind}</option>)}
+                </select>
+                <textarea value={importCenterContent} onChange={(event) => setImportCenterContent(event.target.value)} rows={3} />
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runImportCenter('preview')} disabled={importCenterBusy}>Preview</button>
+                  <button type="button" onClick={() => runImportCenter('commit')} disabled={importCenterBusy}>Commit</button>
+                </div>
+                {importCenterResult && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '160px', overflow: 'auto' }}>{JSON.stringify(importCenterResult, null, 2).slice(0, 1600)}</pre>}
+                {importCenterRecords?.records && <p className="muted">records: {importCenterRecords.records.length}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowExportCenter2((current) => !current)}>
+              <span><Download size={15} /> Export Center</span>
+              <ChevronDown size={15} />
+            </button>
+            {showExportCenter2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Export Center · v85.0</strong>
+                  <span>Portable markdown/JSON exports, package generation, and project case-study export.</span>
+                </div>
+                <select value={exportCenterKind} onChange={(event) => setExportCenterKind(event.target.value)}>
+                  {['chats', 'reports', 'goals', 'memory', 'imported'].map((kind) => <option key={kind}>{kind}</option>)}
+                </select>
+                <select value={exportCenterFormat} onChange={(event) => setExportCenterFormat(event.target.value)}>
+                  <option>markdown</option>
+                  <option>json</option>
+                </select>
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runExportCenter2('export')} disabled={exportCenterBusy}>Export</button>
+                  <button type="button" onClick={() => runExportCenter2('package')} disabled={exportCenterBusy}>Package</button>
+                  <button type="button" onClick={() => runExportCenter2('case')} disabled={exportCenterBusy}>Case study</button>
+                </div>
+                {exportCenterResult && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '160px', overflow: 'auto' }}>{JSON.stringify(exportCenterResult, null, 2).slice(0, 1600)}</pre>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowPluginMarket((current) => !current); if (!pluginMarket) refreshPluginMarket() }}>
+              <span><Cpu size={15} /> Plugin Marketplace</span>
+              <ChevronDown size={15} />
+            </button>
+            {showPluginMarket && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Plugin Marketplace · v86.0</strong>
+                  <span>Safe plugin catalog with health badges, registration, enable toggles, and mock tests.</span>
+                </div>
+                <form className="stacked-form" onSubmit={registerPluginMarket}>
+                  <input value={pluginName} onChange={(event) => setPluginName(event.target.value)} placeholder="Plugin name" />
+                  <button type="submit" disabled={pluginBusy || !pluginName.trim()}>Register</button>
+                </form>
+                {(pluginMarket?.plugins || pluginMarket?.catalog || []).slice(0, 6).map((plugin) => (
+                  <div className="agent-template-card" key={plugin.plugin_id || plugin.id || plugin.name}>
+                    <strong>{plugin.name} <span className={`feature-badge ${plugin.enabled ? 'active' : 'demo_safe'}`}>{plugin.enabled ? 'enabled' : 'disabled'}</span></strong>
+                    <span className="gs-trace">{plugin.description || plugin.health?.status || 'safe marketplace plugin'} · health {plugin.health?.score ?? 'n/a'}</span>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => runPluginAction(plugin.plugin_id || plugin.id, 'toggle', !plugin.enabled)} disabled={pluginBusy}>Toggle</button>
+                      <button type="button" onClick={() => runPluginAction(plugin.plugin_id || plugin.id, 'test')} disabled={pluginBusy}>Test</button>
+                    </div>
+                  </div>
+                ))}
+                {pluginActivity?.events && <p className="muted">activity events: {pluginActivity.events.length}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowIntegrationHub2((current) => !current); if (!integrationHub2) refreshIntegrationHub2() }}>
+              <span><Route size={15} /> Integration Hub</span>
+              <ChevronDown size={15} />
+            </button>
+            {showIntegrationHub2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Integration Hub · v87.0</strong>
+                  <span>Integration readiness cards, connected scopes, last sync, and dry-run checks.</span>
+                </div>
+                <div className="inline-actions"><button type="button" onClick={refreshIntegrationHub2} disabled={integrationBusy}>Refresh</button></div>
+                {(integrationHub2?.cards || integrationHub2?.integrations || []).map((card) => (
+                  <div className="agent-template-card" key={card.integration_id || card.id || card.name}>
+                    <strong>{card.name} <span className={`feature-badge ${card.connected ? 'active' : 'needs_config'}`}>{card.connected ? 'connected' : 'not connected'}</span></strong>
+                    <span className="gs-trace">scopes: {(card.scopes || []).join(', ') || 'none'} · last sync: {card.last_sync || 'never'}</span>
+                    <button type="button" onClick={() => runIntegrationDry(card.integration_id || card.id)} disabled={integrationBusy}>Dry run</button>
+                  </div>
+                ))}
+                {integrationHub2?.dry_run && <p className="muted">dry run: {integrationHub2.dry_run.status || integrationHub2.dry_run.result}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowQaCenter2((current) => !current); if (!qaCenter) refreshQaCenter2() }}>
+              <span><Gauge size={15} /> QA Center</span>
+              <ChevronDown size={15} />
+            </button>
+            {showQaCenter2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>QA Center · v88.0</strong>
+                  <span>Release readiness score, verification matrix, failed tracker, and QA record controls.</span>
+                </div>
+                <div className="inline-actions"><button type="button" onClick={refreshQaCenter2} disabled={qaBusy}>Refresh</button></div>
+                {qaCenter && <p className="muted">readiness: <strong>{qaCenter.release_readiness_score ?? qaCenter.readiness_score ?? 'n/a'}</strong></p>}
+                {(qaMatrix?.features || qaMatrix?.matrix || []).slice(0, 8).map((item) => (
+                  <div className="agent-template-card" key={item.feature_key || item.key || item.name}>
+                    <strong>{item.feature_key || item.key || item.name}</strong>
+                    <span className="gs-trace">{item.status || item.result || 'unchecked'}</span>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => recordQaItem(item.feature_key || item.key || item.name, 'pass')} disabled={qaBusy}>Pass</button>
+                      <button type="button" onClick={() => recordQaItem(item.feature_key || item.key || item.name, 'fail')} disabled={qaBusy}>Fail</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowReleaseMgr((current) => !current); if (!releaseMgr) refreshReleaseMgr() }}>
+              <span><Flag size={15} /> Release Manager</span>
+              <ChevronDown size={15} />
+            </button>
+            {showReleaseMgr && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Release Manager · v89.0</strong>
+                  <span>Release checklist, changelog, tag planning, PR summary, and release notes generators.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshReleaseMgr} disabled={releaseBusy}>Refresh</button>
+                  <button type="button" onClick={() => runReleaseMgr('pr')} disabled={releaseBusy}>PR summary</button>
+                  <button type="button" onClick={() => runReleaseMgr('notes')} disabled={releaseBusy}>Release notes</button>
+                </div>
+                {releaseMgr && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(releaseMgr, null, 2).slice(0, 1800)}</pre>}
+                {releaseResult && <p className="muted">generated: {releaseResult.title || releaseResult.version || releaseResult.format || 'artifact'}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowLaunchConsole((current) => !current); if (!launchConsole) refreshLaunchConsole() }}>
+              <span><Sparkles size={15} /> Product Launch Console</span>
+              <ChevronDown size={15} />
+            </button>
+            {showLaunchConsole && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Product Launch Console · v90.0</strong>
+                  <span>Capstone readiness dashboard with positioning, feature matrix, demo mode, exports, and launch report.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshLaunchConsole} disabled={launchBusy}>Refresh</button>
+                  <button type="button" onClick={downloadLaunchReport}>Download report</button>
+                </div>
+                {launchConsole?.error ? <p className="error">{launchConsole.error}</p> : launchConsole && (
+                  <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '220px', overflow: 'auto' }}>{JSON.stringify(launchConsole, null, 2).slice(0, 2200)}</pre>
+                )}
               </div>
             )}
           </section>
