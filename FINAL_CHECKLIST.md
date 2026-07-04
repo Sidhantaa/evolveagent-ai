@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v66 Demo / Portfolio Mode 2.0 · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v67 Settings Center · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -36,6 +36,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v64 — Dashboard Home 2.0:** one homepage overview — **Today** snapshot (events/approvals/upcoming/health) / active workspace summary / pending approvals (business + MCP) / recent runs / **system health** (reuses v49) / upcoming tasks (scheduled + Life OS) / rule-based **suggested next actions** / **quick-launch cards** / read-only, no writes / governance-logged / analytics / Dashboard Home Developer-Mode panel / `/api/home`.
 - [x] **v65 — Feature Registry + Capability Map 3.0:** canonical registry of every feature (name/version/**service**/**route**/**category**/**status tags**: active/demo-safe/mock/needs-config) / **feature search** + status/category filters / **route → feature map** / **summary** (counts by category & status) / **"try this feature"** launcher returning the route to open / read-only / governance-logged / analytics / Feature Registry Developer-Mode panel / `/api/features`.
 - [x] **v66 — Demo / Portfolio Mode 2.0:** **one-click demo script** / guided walkthrough / auto-open **feature sequence** / refreshed **resume bullets** / **case-study export** (markdown) / **demo-safe sample workspace** seed (records tagged `demo_seed=true`, tracked in seed log) / **scoped reset** removing only demo-tagged records (**user data untouched**) / read-only content / governance-logged / analytics / Demo/Portfolio Developer-Mode panel / `/api/demo`.
+- [x] **v67 — Settings Center:** central local **preferences** (provider / modes / features / safety / workspace defaults / voice / theme) as one document / **allow-list validation** (unknown categories/keys + **secret-like keys rejected**) / **no secret values stored** / hard safety boundaries surfaced **enforced read-only** / **export/import** (secrets excluded) + **reset-to-defaults** / governance-logged / analytics / Settings Center Developer-Mode panel / `/api/settings`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

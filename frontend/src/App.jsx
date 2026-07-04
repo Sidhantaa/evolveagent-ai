@@ -369,6 +369,9 @@ import {
   getDemoCaseStudy,
   seedDemoData,
   resetDemoData,
+  getSettings,
+  updateSettings,
+  resetSettings,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1134,6 +1137,9 @@ function App() {
   const [demoSummary, setDemoSummary] = useState(null)
   const [demoScript, setDemoScript] = useState(null)
   const [demoBusy, setDemoBusy] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [settingsData, setSettingsData] = useState(null)
+  const [settingsBusy, setSettingsBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3105,6 +3111,34 @@ function App() {
       await refreshDemo()
     } finally {
       setDemoBusy(false)
+    }
+  }
+
+  async function refreshSettings() {
+    try {
+      setSettingsData(await getSettings())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleSettingToggle(category, key, value) {
+    setSettingsBusy(true)
+    try {
+      const data = await updateSettings({ [category]: { [key]: value } })
+      setSettingsData((current) => ({ ...(current || {}), settings: data.settings }))
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
+
+  async function handleSettingsReset() {
+    setSettingsBusy(true)
+    try {
+      const data = await resetSettings()
+      setSettingsData((current) => ({ ...(current || {}), settings: data.settings }))
+    } finally {
+      setSettingsBusy(false)
     }
   }
 
@@ -9286,6 +9320,53 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowSettings((current) => !current); if (!settingsData) refreshSettings() }}>
+              <span>
+                <Cpu size={15} />
+                Settings Center
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSettings && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Settings Center · v67.0</strong>
+                  <span>Central local configuration — provider, modes, features, safety, voice, theme. No secret values are ever stored here.</span>
+                </div>
+                {settingsData?.settings && Object.entries(settingsData.settings).map(([category, keys]) => (
+                  <div key={category} className="agent-template-card">
+                    <strong>{category}</strong>
+                    {Object.entries(keys).map(([key, value]) => (
+                      <label key={key} className="settings-row">
+                        <span>{key}</span>
+                        {typeof value === 'boolean' ? (
+                          <input type="checkbox" checked={value} disabled={settingsBusy} onChange={(event) => handleSettingToggle(category, key, event.target.checked)} />
+                        ) : (
+                          <span className="settings-val">{String(value)}</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                ))}
+                {settingsData?.enforced_safety && (
+                  <details className="master-panel-caps">
+                    <summary>Enforced safety (read-only)</summary>
+                    <div className="agent-template-list">
+                      {settingsData.enforced_safety.map((s, i) => (<div key={i} className="agent-template-card"><span>🔒 {s}</span></div>))}
+                    </div>
+                  </details>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleSettingsReset} disabled={settingsBusy}>Reset to defaults</button>
+                </div>
+                <p className="muted">Preferences only — hard safety boundaries are enforced and cannot be disabled here.</p>
               </div>
             )}
           </section>

@@ -198,6 +198,7 @@ class StorageService:
             "os2_snapshots.json",
             "master_agent_runs.json",
             "demo_seed_log.json",
+            "settings_center.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",
