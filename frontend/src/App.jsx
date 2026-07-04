@@ -382,6 +382,8 @@ import {
   getAgentQuality,
   recommendWorkflow,
   getProductivityBrain,
+  docContractRisk,
+  docAtsScore,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1170,6 +1172,10 @@ function App() {
   const [workflowBusy, setWorkflowBusy] = useState(false)
   const [showProductivity, setShowProductivity] = useState(false)
   const [productivityBrain, setProductivityBrain] = useState(null)
+  const [showDocIntel, setShowDocIntel] = useState(false)
+  const [docIntelText, setDocIntelText] = useState('')
+  const [docIntelResult, setDocIntelResult] = useState(null)
+  const [docIntelBusy, setDocIntelBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3203,6 +3209,34 @@ function App() {
       setProductivityBrain(await getProductivityBrain(workspaceId))
     } catch {
       // best-effort
+    }
+  }
+
+  async function runDocContractRisk() {
+    if (!docIntelText.trim()) return
+    setDocIntelBusy(true)
+    try {
+      const r = await docContractRisk(docIntelText)
+      setDocIntelResult({ mode: 'contract', data: r })
+    } catch (err) {
+      setDocIntelResult({ error: err.message })
+    } finally {
+      setDocIntelBusy(false)
+    }
+  }
+
+  async function runDocAts() {
+    if (!docIntelText.trim()) return
+    setDocIntelBusy(true)
+    try {
+      const [resume, ...kw] = docIntelText.split('---')
+      const keywords = (kw.join('---') || '').split(',').map((s) => s.trim()).filter(Boolean)
+      const r = await docAtsScore(resume, keywords)
+      setDocIntelResult({ mode: 'ats', data: r })
+    } catch (err) {
+      setDocIntelResult({ error: err.message })
+    } finally {
+      setDocIntelBusy(false)
     }
   }
 
@@ -9442,6 +9476,50 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowDocIntel((current) => !current)}>
+              <span>
+                <FileText size={15} />
+                Document Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDocIntel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Document Intelligence · v75.0</strong>
+                  <span>Deterministic, local document tools — contract/risk summary, resume ATS scoring, CSV insight, comparison, Q&A. No external model calls.</span>
+                </div>
+                <form className="stacked-form" onSubmit={(event) => event.preventDefault()}>
+                  <textarea placeholder="Paste text… (for ATS: resume --- keyword1, keyword2)" value={docIntelText} onChange={(event) => setDocIntelText(event.target.value)} rows={3} />
+                  <div className="inline-actions">
+                    <button type="button" onClick={runDocContractRisk} disabled={docIntelBusy || !docIntelText.trim()}>Contract risk</button>
+                    <button type="button" onClick={runDocAts} disabled={docIntelBusy || !docIntelText.trim()}>ATS score</button>
+                  </div>
+                </form>
+                {docIntelResult?.error ? (
+                  <p className="error">{docIntelResult.error}</p>
+                ) : docIntelResult?.mode === 'contract' ? (
+                  <div className="agent-template-card">
+                    <strong>Contract risk: <span className={`feature-badge ${docIntelResult.data.risk_level === 'low' ? 'active' : 'needs_config'}`}>{docIntelResult.data.risk_level}</span></strong>
+                    {docIntelResult.data.flagged_clauses.map((f, i) => (<span key={i} className="gs-trace">• {f.clause}: {f.matched.join(', ')}</span>))}
+                    <span className="gs-trace">{docIntelResult.data.note}</span>
+                  </div>
+                ) : docIntelResult?.mode === 'ats' ? (
+                  <div className="agent-template-card">
+                    <strong>ATS score: {docIntelResult.data.ats_score}%</strong>
+                    <span className="gs-trace">matched: {docIntelResult.data.matched_keywords.join(', ') || 'none'}</span>
+                    <span className="gs-trace">missing: {docIntelResult.data.missing_keywords.join(', ') || 'none'}</span>
+                    <span className="home-action">{docIntelResult.data.recommendation}</span>
+                  </div>
+                ) : null}
+                <p className="muted">Deterministic + local — no external model calls; nothing is stored beyond governance logging.</p>
               </div>
             )}
           </section>

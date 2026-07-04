@@ -1460,6 +1460,28 @@ class WorkflowRecommendRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Document Intelligence 2.0 (v75)
+# ----------------------------------------------------------------------
+class DocCompareRequest(BaseModel):
+    text_a: str = Field(..., min_length=1, max_length=50000)
+    text_b: str = Field(..., min_length=1, max_length=50000)
+
+
+class AtsScoreRequest(BaseModel):
+    resume_text: str = Field(..., min_length=1, max_length=50000)
+    job_keywords: list[str] = Field(default_factory=list)
+
+
+class DocTextRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100000)
+
+
+class DocQARequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100000)
+    question: str = Field(..., min_length=1, max_length=1000)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
