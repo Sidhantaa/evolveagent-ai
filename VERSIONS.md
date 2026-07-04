@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v87 — Integration Hub 3.0
+- **Purpose:** Make Slack/Notion/Linear/GitHub-style integrations cleaner.
+- **How it operates:** `IntegrationHubService` renders read-only **integration cards** with **connection status** (is the env key set? **boolean only**), declared **scopes/permissions**, **last sync** (newest local timestamp for that integration), a plain-language **error explanation** when not connected, and a **dry-run test** (checks readiness without any real network call). **Secret values are never displayed** — only whether each key is set. Governance-logged.
+- **Main API route groups:** `/api/integration-hub` (+ `/cards`, `/{id}/dry-run`, `/summary`).
+- **Safety boundary:** Read-only; boolean connection status only (no secret display); dry-run makes no real network call; governance-logged.
+
 ### v86 — Plugin Marketplace 3.0
 - **Purpose:** Make plugins safer and easier.
 - **How it operates:** `PluginMarketplaceService` provides a local plugin **catalog** with **validation** (required fields + declared permissions), a **permission review** (flags high-risk permissions: network/write/execute/shell), **enable / disable** toggles, a **plugin activity log**, a **plugin test runner** (dry / mock — nothing executed), and a **plugin health score**. It is additive and separate from the core plugin-manifest loader (dedicated `marketplace_plugins` collection); **high-risk permissions keep a plugin disabled until explicitly reviewed/enabled**, and enabling an invalid/high-risk plugin is blocked. Governance-logged.
@@ -703,4 +709,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v84 | Import Center | `/api/import-center` | Import documents/csv/markdown/chat/notes; validate + sanitize + preview before saving to a dedicated collection | Validate + sanitize before save; secrets redacted (never stored); dedicated collection only; governance-logged |
 | v85 | Export Center | `/api/export-center` | Export chats/reports/goals/memory/imported as markdown/JSON; case study; package builder | Read-only; excludes secrets/governance/analytics; PDF via client print; governance-logged |
 | v86 | Plugin Marketplace 3.0 | `/api/plugin-marketplace` | Plugin catalog, validation, permission review, enable/disable, activity log, mock test runner, health score | Additive; high-risk disabled until reviewed; enabling invalid/high-risk blocked; mock test runner; governance-logged |
+| v87 | Integration Hub 3.0 | `/api/integration-hub` | Integration cards (Slack/Notion/Linear/GitHub), connection status, scopes, last sync, error explanation, dry-run test | Read-only; boolean status only (no secret display); dry-run makes no real network call; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
