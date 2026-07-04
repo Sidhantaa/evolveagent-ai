@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v88 Quality Assurance Center · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v89 Release Manager · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -58,6 +58,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v86 — Plugin Marketplace 3.0:** local plugin **catalog** / **validation** (fields + permissions) / **permission review** (flags network/write/execute/shell) / **enable/disable** / **activity log** / **mock test runner** (nothing executed) / **health score** / **additive** (dedicated collection, separate from core loader) / high-risk disabled until reviewed; enabling invalid/high-risk blocked / governance-logged / analytics / `/api/plugin-marketplace`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] **v87 — Integration Hub 3.0:** read-only **integration cards** (Slack/Notion/Linear/GitHub) / **connection status** (env key set? **boolean only, no secret display**) / **scopes/permissions** / **last sync** (newest local timestamp) / **error explanation** when not connected / **dry-run test** (no real network call) / governance-logged / analytics / `/api/integration-hub`. *(Developer-Mode panel deferred to a later UI pass.)* **Block 4 (v81-v87) complete.**
 - [x] **v88 — Quality Assurance Center:** **feature verification matrix** (from v65 registry + recorded QA status) / **manual QA checklist** / **failed-feature tracker** / **regression dashboard** (recent fails) / **release-readiness score** (coverage + demo-safe + pass-ratio + governance-health) / additive local QA records / **does not run tests itself (no shell)** / governance-logged / analytics / `/api/qa-center`. *(Developer-Mode panel deferred to a later UI pass.)*
+- [x] **v89 — Release Manager:** read-only release-prep generators — **version checklist** / **changelog** (from feature registry, grouped by version) / **PR summary** generator / **release notes** / **GitHub tag planner** (next patch/minor/major) / **demo checklist** / **Linear sync checklist** / text only, no git tag/push, no GitHub/Linear calls / governance-logged / analytics / `/api/release-manager`. *(Developer-Mode panel deferred to a later UI pass.)*
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

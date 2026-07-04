@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v89 — Release Manager
+- **Purpose:** Prepare versions professionally.
+- **How it operates:** `ReleaseManagerService` offers read-only generators for release hygiene: a **version checklist**, a **changelog** (derived from the feature registry, grouped by version), a **PR summary** generator, **release notes**, a **GitHub tag planner** (suggests the next patch/minor/major tag), a **demo checklist**, and a **Linear sync checklist**. It produces text only — it does not tag, push, or call GitHub/Linear. Governance-logged.
+- **Main API route groups:** `/api/release-manager` (+ `/dashboard`, `/changelog`, `/pr-summary`, `/release-notes`, `/summary`).
+- **Safety boundary:** Read-only text generators; no git tag/push, no GitHub/Linear calls; governance-logged.
+
 ### v88 — Quality Assurance Center
 - **Purpose:** Make testing/verification first-class.
 - **How it operates:** `QACenterService` aggregates quality signals: a **feature verification matrix** (from the v65 registry, with recorded QA status per feature), a **manual QA checklist**, a **failed-feature tracker**, a **regression dashboard** (recent QA fails), and a **release-readiness score** (feature coverage + demo-safe ratio + QA pass ratio + governance-health). QA results are recorded locally (additive). It does not run tests itself (no shell) — CI/local runs report status and this centralizes it. Governance-logged.
@@ -717,4 +723,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v86 | Plugin Marketplace 3.0 | `/api/plugin-marketplace` | Plugin catalog, validation, permission review, enable/disable, activity log, mock test runner, health score | Additive; high-risk disabled until reviewed; enabling invalid/high-risk blocked; mock test runner; governance-logged |
 | v87 | Integration Hub 3.0 | `/api/integration-hub` | Integration cards (Slack/Notion/Linear/GitHub), connection status, scopes, last sync, error explanation, dry-run test | Read-only; boolean status only (no secret display); dry-run makes no real network call; governance-logged |
 | v88 | Quality Assurance Center | `/api/qa-center` | Feature verification matrix, manual QA checklist, failed-feature tracker, regression dashboard, release-readiness score | Read-only aggregation; does not run tests (no shell); additive QA records; governance-logged |
+| v89 | Release Manager | `/api/release-manager` | Version checklist, changelog, PR summary, release notes, tag planner, demo + Linear checklists | Read-only text generators; no git tag/push; no GitHub/Linear calls; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

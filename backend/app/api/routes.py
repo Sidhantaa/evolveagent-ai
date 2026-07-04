@@ -159,6 +159,8 @@ from app.models.request_models import (
     PluginRegisterRequest,
     PluginToggleRequest,
     QARecordRequest,
+    PRSummaryRequest,
+    ReleaseNotesRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -344,6 +346,7 @@ from app.services.export_center_service import ExportCenterService
 from app.services.plugin_marketplace_service import PluginMarketplaceService
 from app.services.integration_hub_service import IntegrationHubService
 from app.services.qa_center_service import QACenterService
+from app.services.release_manager_service import ReleaseManagerService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -478,6 +481,7 @@ export_center_service = ExportCenterService(storage, governance_service)
 plugin_marketplace_service = PluginMarketplaceService(storage, governance_service)
 integration_hub_service = IntegrationHubService(storage, governance_service)
 qa_center_service = QACenterService(storage, governance_service, feature_registry_service, health_monitor_service)
+release_manager_service = ReleaseManagerService(storage, governance_service, feature_registry_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1775,6 +1779,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **plugin_marketplace_service.analytics_summary(),
         **integration_hub_service.analytics_summary(),
         **qa_center_service.analytics_summary(),
+        **release_manager_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4838,6 +4843,34 @@ def qa_center_record(request: QARecordRequest) -> dict:
 @router.get("/qa-center/summary")
 def qa_center_summary() -> dict:
     return qa_center_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v89.0 Release Manager — read-only release-prep generators (text only).
+# ----------------------------------------------------------------------
+@router.get("/release-manager/dashboard")
+def release_manager_dashboard() -> dict:
+    return release_manager_service.dashboard()
+
+
+@router.get("/release-manager/changelog")
+def release_manager_changelog() -> dict:
+    return release_manager_service.changelog()
+
+
+@router.post("/release-manager/pr-summary")
+def release_manager_pr_summary(request: PRSummaryRequest) -> dict:
+    return release_manager_service.pr_summary(request.title, request.changes)
+
+
+@router.post("/release-manager/release-notes")
+def release_manager_release_notes(request: ReleaseNotesRequest) -> dict:
+    return release_manager_service.release_notes(request.version, request.highlights)
+
+
+@router.get("/release-manager/summary")
+def release_manager_summary() -> dict:
+    return release_manager_service.summary()
 
 
 @router.get("/activity/export")
