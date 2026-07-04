@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v67 — Settings Center
+- **Purpose:** A central place for local configuration.
+- **How it operates:** `SettingsService` stores user **preferences** as a single local document across categories — **provider** (default model, prefer-mock), **modes** (developer/deep defaults), **feature toggles**, a **safety preference**, **workspace defaults**, **voice** (spoken answers, push-to-talk), and **theme**. Every update is validated against an allow-list; unknown categories/keys and **any secret-like key** (containing key/token/secret/password/credential) are **rejected**. The hard safety boundaries are surfaced as **read-only/enforced** and cannot be disabled. Supports **export/import** (secrets excluded) and **reset-to-defaults**. Changes are governance-logged.
+- **Main API route groups:** `/api/settings` (+ `/settings/reset`, `/settings/export`, `/settings/import`).
+- **Safety boundary:** Preferences only — **no secret values are ever stored**; hard safety boundaries stay enforced and read-only; a safety preference can only tighten; governance-logged.
+
 ### v66 — Demo Mode / Portfolio Mode 2.0
 - **Purpose:** Make the app impressive for interviews and GitHub, and safe to demo.
 - **How it operates:** `DemoService` provides a **one-click demo script** (ordered beats with the prompt/route to show), a **guided walkthrough**, an **auto-open feature sequence**, a refreshed **resume-bullet** set, and a **project case-study export** (markdown) — all read-only, generated content. It can **seed a demo-safe sample workspace** (a workspace + goals + an idea, every record tagged `demo_seed=true` and tracked in a seed log) and **reset demo data** — reset removes **only** demo-tagged records it created and leaves user data untouched. Seeding/reset are explicit and governance-logged.
@@ -563,4 +569,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v64 | Dashboard Home 2.0 | `/api/home` | One homepage: Today overview, active workspace, pending approvals, recent runs, system health, upcoming tasks, suggested actions, quick-launch cards | Read-only aggregation; no writes/actions; governance-logged |
 | v65 | Feature Registry + Capability Map 3.0 | `/api/features` | Canonical searchable registry of every feature (service/route/category/status), route→feature map, "try this feature" launcher | Read-only discovery; no writes; governance-logged |
 | v66 | Demo Mode / Portfolio Mode 2.0 | `/api/demo` | One-click demo script, walkthrough, feature sequence, resume bullets, case-study export; demo-safe seed + scoped reset | Read-only content; sample data scoped/reversible; reset only removes demo-tagged records; governance-logged |
+| v67 | Settings Center | `/api/settings` | Central local preferences (provider/modes/features/safety/workspace/voice/theme), allow-list validated, export/import, reset | No secret values stored; secret-like keys rejected; hard safety enforced read-only; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

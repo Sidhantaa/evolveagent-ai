@@ -2575,6 +2575,15 @@ export function seedDemoData() {
 export function resetDemoData() {
   return postJson('/api/demo/reset', {})
 }
+export function getSettings() {
+  return getJson('/api/settings')
+}
+export function updateSettings(settings) {
+  return patchJson('/api/settings', { settings })
+}
+export function resetSettings() {
+  return postJson('/api/settings/reset', {})
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

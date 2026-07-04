@@ -132,6 +132,8 @@ from app.models.request_models import (
     MCPSuggestRequest,
     MasterAgentRouteRequest,
     MasterRouteFeedbackRequest,
+    SettingsUpdateRequest,
+    SettingsImportRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -295,6 +297,7 @@ from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
 from app.services.feature_registry_service import FeatureRegistryService
 from app.services.demo_service import DemoService
+from app.services.settings_service import SettingsService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -407,6 +410,7 @@ activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
 feature_registry_service = FeatureRegistryService(storage, governance_service)
 demo_service = DemoService(storage, governance_service)
+settings_service = SettingsService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1682,6 +1686,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **dashboard_home_service.analytics_summary(),
         **feature_registry_service.analytics_summary(),
         **demo_service.analytics_summary(),
+        **settings_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4215,6 +4220,37 @@ def demo_seed() -> dict:
 @router.post("/demo/reset")
 def demo_reset() -> dict:
     return demo_service.reset()
+
+
+# ----------------------------------------------------------------------
+# v67.0 Settings Center — central local configuration (no secrets stored).
+# ----------------------------------------------------------------------
+@router.get("/settings")
+def get_settings() -> dict:
+    return settings_service.get_settings()
+
+
+@router.patch("/settings")
+def update_settings(request: SettingsUpdateRequest) -> dict:
+    return settings_service.update_settings(request.settings)
+
+
+@router.post("/settings/reset")
+def reset_settings() -> dict:
+    return settings_service.reset()
+
+
+@router.get("/settings/export")
+def export_settings() -> dict:
+    return settings_service.export_settings()
+
+
+@router.post("/settings/import")
+def import_settings(request: SettingsImportRequest) -> dict:
+    try:
+        return settings_service.import_settings({"settings": request.settings})
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @router.get("/activity/export")

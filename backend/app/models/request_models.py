@@ -1423,6 +1423,17 @@ class MasterRouteFeedbackRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Settings Center (v67)
+# ----------------------------------------------------------------------
+class SettingsUpdateRequest(BaseModel):
+    settings: dict = Field(default_factory=dict, description="Partial settings by category; only allow-listed keys are applied. No secret values.")
+
+
+class SettingsImportRequest(BaseModel):
+    settings: dict = Field(default_factory=dict)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
