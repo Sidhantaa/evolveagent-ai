@@ -2500,6 +2500,20 @@ export function generateNotifications() {
 export function acknowledgeNotification(notifId) {
   return postJson(`/api/notifications/${notifId}/ack`, {})
 }
+export function suggestMcp(task) {
+  return postJson('/api/mcp/suggest', { task })
+}
+export function routeMasterAgent(text, opts = {}) {
+  return postJson('/api/master-agent/route', {
+    text,
+    workspace_id: opts.workspaceId || null,
+    voice_used: Boolean(opts.voiceUsed),
+    execute: Boolean(opts.execute),
+  })
+}
+export function getMasterAgentCapabilities() {
+  return getJson('/api/master-agent/capabilities')
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

@@ -29,8 +29,11 @@ import {
   Route,
   RefreshCw,
   Send,
+  Shield,
   ShieldAlert,
   Sparkles,
+  Volume2,
+  VolumeX,
   Sun,
   Terminal,
   ThumbsDown,
@@ -338,6 +341,8 @@ import {
   getNotifications,
   generateNotifications,
   acknowledgeNotification,
+  suggestMcp,
+  routeMasterAgent,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -671,6 +676,18 @@ function App() {
   const [voiceUsed, setVoiceUsed] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [listening, setListening] = useState(false)
+  // Voice Ask Console (v-voice): speak answers aloud + task-aware MCP suggestions.
+  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
+  const [mcpSuggestions, setMcpSuggestions] = useState([])
+  const [askSources, setAskSources] = useState([])
+  const [askFollowups, setAskFollowups] = useState([])
+  const [heroInput, setHeroInput] = useState('')
+  const [cliBusy, setCliBusy] = useState(false)
+  // Master Agent (single top-level AI over all of v1–v60).
+  const [masterText, setMasterText] = useState('')
+  const [masterResult, setMasterResult] = useState(null)
+  const [masterBusy, setMasterBusy] = useState(false)
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -4470,6 +4487,16 @@ function App() {
   async function submitMessage(text = input) {
     const prompt = text.trim()
     if (!prompt || loading) return
+    // `mcp:` prefix routes into the MCP hub instead of the full workflow.
+    if (/^mcp:/i.test(prompt)) {
+      await handleMcpCommand(prompt)
+      return
+    }
+    // `/`-commands route to the governed CLI palette (no raw shell).
+    if (prompt.startsWith('/')) {
+      await runSlashCommand(prompt)
+      return
+    }
     const processedFiles = attachedFiles.filter((file) => file.status === 'processed')
     const processedRecordings = attachedRecordings.filter((recording) => recording.status === 'processed')
 
@@ -4511,6 +4538,10 @@ function App() {
       setMessages((current) => [...current, assistantMessage])
       setSessionId(data.session_id)
       setSelectedRunId(assistantMessage.id)
+      // Voice Ask Console: speak the answer aloud + Perplexity-style sources/follow-ups + MCP suggestions.
+      speak(assistantMessage.content)
+      refreshAskSources(prompt)
+      refreshMcpSuggestions(prompt).then((suggestions) => buildFollowups(prompt, suggestions))
       await refreshHistory()
       await refreshChats()
       await refreshProviderStatus()
@@ -4631,12 +4662,242 @@ function App() {
       setInput(transcript)
       setVoiceTranscript(transcript)
       setVoiceUsed(Boolean(transcript))
+      // Push-to-talk, auto-submit: speaking a request runs it immediately.
+      if (transcript.trim()) {
+        submitMessage(transcript)
+      }
     }
     recognition.onerror = () => {
       setError('Voice input could not be transcribed. Try again or type your message.')
     }
     recognition.onend = () => setListening(false)
     recognition.start()
+  }
+
+  function heroSubmit(event) {
+    event.preventDefault()
+    const value = heroInput.trim()
+    if (!value || loading) return
+    setHeroInput('')
+    submitMessage(value)
+  }
+
+  // ---- Master Agent: one AI surface that routes across all of v1–v60 ----
+  async function askMaster(rawText, voiceUsed = false) {
+    const text = (rawText ?? masterText).trim()
+    if (!text || masterBusy) return
+    // Command prefixes route to their governed surfaces instead of the router.
+    if (/^mcp:/i.test(text)) { setMasterText(''); return handleMcpCommand(text) }
+    if (text.startsWith('/')) { setMasterText(''); return runSlashCommand(text) }
+    setMasterBusy(true)
+    setError('')
+    try {
+      const result = await routeMasterAgent(text, { workspaceId, voiceUsed })
+      setMasterResult(result)
+      setAskSources(result.sources || [])
+      setAskFollowups(result.followups || [])
+      setMcpSuggestions(result.mcp_suggestions || [])
+      setMasterText('')
+      // Two-way voice: read the answer aloud (voice requests always speak; typed obeys the toggle).
+      if (voiceUsed && !voiceOutputEnabled) setVoiceOutputEnabled(true)
+      speak(result.requires_approval
+        ? `${result.answer}. Heads up — this needs your approval before anything runs.`
+        : result.answer)
+    } catch (err) {
+      setError(`Master Agent could not route that: ${err.message}`)
+    } finally {
+      setMasterBusy(false)
+    }
+  }
+
+  function masterSubmit(event) {
+    event.preventDefault()
+    askMaster(masterText, false)
+  }
+
+  // Push-to-talk for the Master Agent: speak → auto-route → spoken answer.
+  function startMasterVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setError('Voice input is not supported in this browser yet.')
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.onstart = () => { setListening(true); setError('') }
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || ''
+      if (transcript.trim()) askMaster(transcript, true)
+    }
+    recognition.onerror = () => setError('Voice input could not be transcribed. Try again or type.')
+    recognition.onend = () => setListening(false)
+    recognition.start()
+  }
+
+  // ---- CLI command palette (governed /-commands; no raw shell) ----
+  const SLASH_COMMANDS = [
+    { cmd: '/help', desc: 'List available commands' },
+    { cmd: '/mcp', desc: 'Suggest MCP tools for a task (e.g. /mcp connect github)' },
+    { cmd: '/connectors', desc: 'List MCP connectors' },
+    { cmd: '/health', desc: 'Show platform health score' },
+    { cmd: '/approvals', desc: 'Show pending approvals across sources' },
+    { cmd: '/notifications', desc: 'Generate & show alerts' },
+    { cmd: '/playbooks', desc: 'List saved playbooks' },
+    { cmd: '/run-playbook', desc: 'Run a playbook by name (planning-first)' },
+    { cmd: '/scorecard', desc: 'Operating Layer 2.0 readiness scorecard' },
+    { cmd: '/snapshot', desc: 'Capture an operating-layer snapshot' },
+  ]
+
+  function postCliResult(command, text, spokenSummary) {
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: 'user', content: command },
+      { id: crypto.randomUUID(), role: 'assistant', content: text, cli_command: true },
+    ])
+    if (spokenSummary) speak(spokenSummary)
+  }
+
+  async function runSlashCommand(raw) {
+    const parts = raw.trim().split(/\s+/)
+    const cmd = parts[0].toLowerCase()
+    const arg = parts.slice(1).join(' ').trim()
+    setInput('')
+    setHeroInput('')
+    setCliBusy(true)
+    try {
+      if (cmd === '/help') {
+        postCliResult(raw, 'Available commands:\n' + SLASH_COMMANDS.map((c) => `${c.cmd} — ${c.desc}`).join('\n'), 'Here are the available commands.')
+      } else if (cmd === '/mcp') {
+        await handleMcpCommand(`mcp: ${arg || 'general task'}`)
+      } else if (cmd === '/connectors') {
+        const data = await getMcpConnectors()
+        const list = (data.connectors || []).map((c) => `• ${c.name} — ${c.status} · ${c.enabled ? 'enabled' : 'disabled'}`).join('\n') || 'No connectors registered yet.'
+        postCliResult(raw, `MCP connectors:\n${list}`, `${data.count || 0} connectors registered.`)
+      } else if (cmd === '/health') {
+        const h = await getHealthMonitorDashboard()
+        const checks = (h.checks || []).map((c) => `• [${c.status}] ${c.name} — ${c.detail}`).join('\n')
+        postCliResult(raw, `Health: ${h.status} (score ${h.health_score})\n${checks}`, `Platform health is ${h.status}, score ${h.health_score}.`)
+      } else if (cmd === '/approvals') {
+        const a = await getApprovalsCenterSummary()
+        postCliResult(raw, `Pending approvals: ${a.pending_count} (high-risk ${a.high_risk_pending}). Sources: ${JSON.stringify(a.by_source)}`, `${a.pending_count} approvals pending.`)
+      } else if (cmd === '/notifications') {
+        await generateNotifications()
+        const s = await getNotificationsSummary()
+        postCliResult(raw, `Notifications — unread ${s.unread} (critical ${s.critical_unread}).`, `${s.unread} unread notifications.`)
+        refreshNotifications()
+      } else if (cmd === '/playbooks') {
+        const p = await getPlaybooks()
+        const list = (p.playbooks || []).map((pb) => `• ${pb.name} (${pb.step_count} steps)`).join('\n') || 'No playbooks saved.'
+        postCliResult(raw, `Playbooks:\n${list}`, `${p.count || 0} playbooks saved.`)
+      } else if (cmd === '/run-playbook') {
+        const p = await getPlaybooks()
+        const match = (p.playbooks || []).find((pb) => pb.name.toLowerCase().includes(arg.toLowerCase())) || (p.playbooks || [])[0]
+        if (!match) { postCliResult(raw, 'No playbooks to run. Create one first.', 'No playbooks to run.') }
+        else {
+          const run = await runPlaybook(match.playbook_id)
+          postCliResult(raw, `Ran "${match.name}" (planning-first): ${run.planned_count} planned, ${run.approval_required_count} need approval. Nothing was executed.`, `Ran ${match.name}. ${run.approval_required_count} steps need approval.`)
+        }
+      } else if (cmd === '/scorecard') {
+        const d = await getOperatingLayerV2Dashboard()
+        postCliResult(raw, `Operating Layer 2.0 — grade ${d.overall_grade} (${d.overall_score}/100), coverage ${d.coverage_pct}%.`, `Overall grade ${d.overall_grade}.`)
+        refreshOpLayer2()
+      } else if (cmd === '/snapshot') {
+        await createOperatingLayerV2Snapshot()
+        postCliResult(raw, 'Captured an Operating Layer 2.0 snapshot.', 'Snapshot captured.')
+        refreshOpLayer2()
+      } else {
+        postCliResult(raw, `Unknown command "${cmd}". Type /help for the list.`, 'Unknown command.')
+      }
+    } catch (err) {
+      postCliResult(raw, `Command failed: ${err.message}`, 'The command failed.')
+    } finally {
+      setCliBusy(false)
+    }
+  }
+
+  // Speak an answer aloud via the browser (local text-to-speech; no external service).
+  function speak(text) {
+    if (!voiceOutputEnabled || !text) return
+    const synth = window.speechSynthesis
+    if (!synth) return
+    try {
+      synth.cancel()
+      const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 1200))
+      utterance.lang = 'en-US'
+      utterance.onstart = () => setSpeaking(true)
+      utterance.onend = () => setSpeaking(false)
+      utterance.onerror = () => setSpeaking(false)
+      synth.speak(utterance)
+    } catch {
+      setSpeaking(false)
+    }
+  }
+
+  function stopSpeaking() {
+    window.speechSynthesis?.cancel()
+    setSpeaking(false)
+  }
+
+  // Task-aware MCP suggestions: which connector(s) a request needs + key readiness (never values).
+  async function refreshMcpSuggestions(prompt) {
+    if (!prompt || !prompt.trim()) {
+      setMcpSuggestions([])
+      return
+    }
+    try {
+      const result = await suggestMcp(prompt.trim())
+      setMcpSuggestions(result?.suggestions || [])
+      return result?.suggestions || []
+    } catch {
+      setMcpSuggestions([])
+      return []
+    }
+  }
+
+  // Perplexity-style sources: ground the answer in indexed workspace docs (local retrieval, v51).
+  async function refreshAskSources(prompt) {
+    if (!prompt || !prompt.trim()) {
+      setAskSources([])
+      return
+    }
+    try {
+      const result = await queryRetrieval({ workspace_id: workspaceId, query: prompt.trim(), top_k: 4 })
+      setAskSources(result?.results || [])
+    } catch {
+      setAskSources([])
+    }
+  }
+
+  // Build clickable follow-up questions from the task + suggested tools.
+  function buildFollowups(prompt, suggestions) {
+    const followups = []
+    for (const s of (suggestions || []).slice(0, 2)) {
+      followups.push(s.missing_keys.length > 0 ? `How do I set ${s.missing_keys[0]} for ${s.name}?` : `Connect ${s.name}`)
+    }
+    followups.push('Explain this in more detail', 'What are the risks and approvals involved?')
+    setAskFollowups(followups.slice(0, 5))
+  }
+
+  // `mcp:` / `/mcp` command prefix → route straight into the MCP hub (suggest + open panel).
+  async function handleMcpCommand(rawPrompt) {
+    const task = rawPrompt.replace(/^\/?mcp:?\s*/i, '').trim() || rawPrompt
+    const userMessage = { id: crypto.randomUUID(), role: 'user', content: rawPrompt }
+    setInput('')
+    const suggestions = await refreshMcpSuggestions(task)
+    setShowMcpPanel(true)
+    const lines = suggestions.length
+      ? suggestions.map((s) => `• ${s.name} — ${s.recommended_action}`).join('\n')
+      : 'No specific MCP connector matched that task.'
+    const answer = `MCP command routed to the Connector Hub.\n\n${lines}\n\nOpen Developer Mode → MCP Hub to register/enable and manage keys. (Key values are never shown — only whether each required key is set.)`
+    setMessages((current) => [
+      ...current,
+      userMessage,
+      { id: crypto.randomUUID(), role: 'assistant', content: answer, mcp_command: true },
+    ])
+    buildFollowups(task, suggestions)
+    speak('Opened the MCP connector hub with tool suggestions for your task.')
   }
 
   function focusComposer() {
@@ -10069,44 +10330,116 @@ function App() {
           )}
         </header>
 
-        <section className={`chat-scroll ${!developerMode ? 'jarvis-scroll' : ''}`}>
+        <section className="chat-scroll">
           {messages.length === 0 && !loading && !developerMode && (
-            <div className="jarvis-command-center">
-              <div className="jarvis-glow" aria-hidden="true" />
-              <div className="jarvis-ring" aria-hidden="true" />
-              <div className="jarvis-command-header">
-                <h2>EvolveAgent AI</h2>
-                <p>Speak a command or type a mission</p>
-              </div>
-              <div className="jarvis-system-readout" aria-label="Capabilities">
-                <span>Agents online</span>
-                <span>Memory active</span>
-                <span>Tools governed</span>
-              </div>
-              <div className="jarvis-command-options">
+            <div className="master-hero">
+              <div className="master-hero-orb"><Brain size={26} /></div>
+              <h2 className="master-hero-title">Master Agent</h2>
+              <p className="master-hero-sub">One AI over everything — speak or type, and it routes across all EvolveAgent systems.</p>
+              <form className="master-hero-bar" onSubmit={masterSubmit}>
+                <input
+                  type="text"
+                  className="master-hero-input"
+                  placeholder="Ask anything, or say a command… (mcp: … or /help)"
+                  value={masterText}
+                  onChange={(event) => setMasterText(event.target.value)}
+                  disabled={masterBusy}
+                />
                 <button
                   type="button"
-                  className={`jarvis-command-option speak ${listening ? 'active' : ''}`}
-                  onClick={handleJarvisSpeak}
+                  className={`master-hero-mic ${listening ? 'listening' : ''}`}
+                  onClick={startMasterVoice}
+                  aria-label="Push to talk"
+                  title="Push to talk — speak and it routes automatically"
                 >
-                  <span className="jarvis-option-icon">
-                    <Mic size={28} />
-                  </span>
-                  <strong>Speak</strong>
-                  <span className="jarvis-option-subtitle">Start with voice and edit before sending.</span>
+                  <Mic size={18} />
                 </button>
-                <button type="button" className="jarvis-command-option type" onClick={focusComposer}>
-                  <span className="jarvis-option-icon">
-                    <Keyboard size={28} />
-                  </span>
-                  <strong>Type</strong>
-                  <span className="jarvis-option-subtitle">Open the command line for text, files, or goals.</span>
+                <button
+                  type="button"
+                  className={`master-hero-tts ${voiceOutputEnabled ? 'on' : ''} ${speaking ? 'speaking' : ''}`}
+                  onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
+                  aria-label="Toggle spoken answers"
+                  title={voiceOutputEnabled ? 'Spoken answers ON — tap to mute' : 'Spoken answers OFF — tap to hear answers'}
+                >
+                  {voiceOutputEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                 </button>
-              </div>
-              {listening && <p className="jarvis-listening">Listening for your command...</p>}
+                <button type="submit" className="master-hero-go" disabled={masterBusy || !masterText.trim()}>
+                  {masterBusy ? <Activity size={16} /> : 'Ask'}
+                </button>
+              </form>
+              {masterText.startsWith('/') && (
+                <div className="master-cli">
+                  {SLASH_COMMANDS.filter((c) => c.cmd.startsWith(masterText.split(' ')[0].toLowerCase())).map((c) => (
+                    <button key={c.cmd} type="button" className="master-cli-cmd" onClick={() => setMasterText(c.cmd + ' ')}>
+                      <strong>{c.cmd}</strong><span>{c.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {listening && <p className="master-hero-hint listening">Listening… speak your request.</p>}
+              {!masterResult && !listening && (
+                <div className="master-hero-chips">
+                  {['Review this Python function', 'Plan a GitHub PR workflow', 'Summarize my compliance policy', 'mcp: connect notion', '/health'].map((chip) => (
+                    <button key={chip} type="button" className="master-chip" onClick={() => askMaster(chip, false)} disabled={masterBusy}>{chip}</button>
+                  ))}
+                </div>
+              )}
+
+              {masterResult && (
+                <div className="master-answer">
+                  {masterResult.requires_approval && (
+                    <div className="master-approval">
+                      <Shield size={15} />
+                      <span>Approval required before anything runs. {masterResult.approval_reasons?.join(' ')}</span>
+                    </div>
+                  )}
+                  <div className="master-answer-head">
+                    <span className="master-badge">{masterResult.intent?.primary_domain || 'Routed'}</span>
+                    <button type="button" className="master-answer-tts" onClick={() => (speaking ? stopSpeaking() : (setVoiceOutputEnabled(true), speak(masterResult.answer)))}>
+                      {speaking ? <><VolumeX size={13} /> Stop</> : <><Volume2 size={13} /> Read aloud</>}
+                    </button>
+                  </div>
+                  <div className="master-answer-body"><MarkdownMessage content={masterResult.answer || '(no answer)'} /></div>
+
+                  {askSources.length > 0 && (
+                    <div className="master-block">
+                      <h4>Sources</h4>
+                      <div className="master-source-list">
+                        {askSources.map((s, i) => (
+                          <span key={i} className="master-source">{s.label}{s.why ? ` · ${s.why}` : ''}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mcpSuggestions.length > 0 && (
+                    <div className="master-block">
+                      <h4>MCP tools</h4>
+                      <div className="master-source-list">
+                        {mcpSuggestions.map((m) => (
+                          <span key={m.slug} className={`master-mcp ${m.keys_ready ? 'ready' : 'missing'}`}>
+                            {m.name} · {m.keys_ready ? 'keys ready' : `needs ${m.missing_keys.join(', ')}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {askFollowups.length > 0 && (
+                    <div className="master-block">
+                      <h4>Follow-ups</h4>
+                      <div className="master-followups">
+                        {askFollowups.map((q, i) => (
+                          <button key={i} type="button" className="master-followup" onClick={() => askMaster(q, false)} disabled={masterBusy}>{q}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="master-disclaimer">{masterResult.disclaimer}</p>
+                </div>
+              )}
             </div>
           )}
-
           {messages.length === 0 && !loading && developerMode && (
               <div className="chat-empty">
               <div className="empty-orb">
@@ -10395,7 +10728,51 @@ function App() {
           )}
         </section>
 
-        <section className={`chat-composer ${developerMode ? '' : 'jarvis-composer'}`}>
+        {(askSources.length > 0 || askFollowups.length > 0 || mcpSuggestions.length > 0) && (
+          <section className="ask-panel">
+            {askSources.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">Sources</span>
+                <div className="ask-sources">
+                  {askSources.map((src, index) => (
+                    <span key={index} className="ask-source-chip" title={src.text?.slice(0, 200)}>
+                      [{index + 1}] {src.citation}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {mcpSuggestions.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">🔌 Tools this task may need</span>
+                <div className="ask-sources">
+                  {mcpSuggestions.map((s) => (
+                    <span key={s.slug} className={`mcp-suggest-chip ${s.keys_ready ? 'ready' : 'needs-key'}`} title={s.recommended_action}>
+                      {s.name}
+                      {s.missing_keys.length > 0
+                        ? ` · needs ${s.missing_keys.join(', ')} ✗`
+                        : s.already_enabled ? ' · enabled ✓' : ' · key ready ✓'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {askFollowups.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">Follow-ups</span>
+                <div className="ask-followups">
+                  {askFollowups.map((q, index) => (
+                    <button key={index} type="button" className="ask-followup-chip" onClick={() => submitMessage(q)} disabled={loading}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="chat-composer">
           {developerMode && (
           <div className="composer-controls">
             <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
