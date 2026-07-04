@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v72 — Agent Quality Optimizer
+- **Purpose:** Improve agent outputs over time.
+- **How it operates:** `AgentQualityService` runs a read-only analysis over recorded run analytics (`per_agent_scores`, `overall_judge_score`, `task_type`) and human feedback: per-agent **score trends** (avg vs recent, up/down/flat), **weak-agent detection** (recent avg < 60/100), rule-based **prompt improvement suggestions**, **best agent by task type**, **regression checks** (previous window vs recent, flag >10% drop), and **human-feedback correlation** (ratings vs judge scores, alignment). It normalizes 0-1 or 0-100 score scales and computes from existing data only — it never changes prompts or runs anything. Governance-logged.
+- **Main API route groups:** `/api/agent-quality` (+ `/dashboard`, `/summary`, `/best-by-task`).
+- **Safety boundary:** Read-only analysis; no prompt changes; nothing executed; governance-logged.
+
 ### v71 — Smart Context Engine
 - **Purpose:** Better context selection before every answer.
 - **How it operates:** `SmartContextService` is a read-only **context planner**: given a query + workspace, it scores candidate **memory / files / goals** by keyword overlap, gives a **selection reason** per item, enforces a **context budget** (character cap), **removes duplicate** context, and **filters out sensitive content** (emails, card-like numbers, key-like tokens, secret assignments) so it never enters the context. It returns a Developer-Mode **context trace** of what was included and excluded and why. It previews/plans context — it does not change the run pipeline. Governance-logged.
@@ -598,4 +604,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v69 | Unified Notifications Inbox 2.0 | `/api/notifications-inbox` | Actionable inbox: approval/failed-run/provider-fallback/reminder/health alerts, severity grouping, mark-resolved, source links, idempotent generation | Read-only aggregation; additive to v56; governance-logged |
 | v70 | Workspace Operating System 2.0 | `/api/workspace-os` | Per-workspace dashboard: memory graph, feature usage, agents, reports, timeline, health score | Read-only workspace-scoped aggregation; no writes; governance-logged |
 | v71 | Smart Context Engine | `/api/context` | Context planner: memory/file/goal selection with reasons, budget control, dedup, sensitive-content filtering, context trace | Read-only preview; sensitive content filtered out; nothing executed; governance-logged |
+| v72 | Agent Quality Optimizer | `/api/agent-quality` | Per-agent score trends, weak-agent detection, prompt suggestions, best-by-task, regression checks, feedback correlation | Read-only analysis; no prompt changes; nothing executed; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

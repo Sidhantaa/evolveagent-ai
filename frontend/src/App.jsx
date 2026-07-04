@@ -379,6 +379,7 @@ import {
   resolveNotificationInbox,
   getWorkspaceOsDashboard,
   planContext,
+  getAgentQuality,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1159,6 +1160,8 @@ function App() {
   const [contextQuery, setContextQuery] = useState('')
   const [contextPlan, setContextPlan] = useState(null)
   const [contextBusy, setContextBusy] = useState(false)
+  const [showAgentQuality, setShowAgentQuality] = useState(false)
+  const [agentQuality, setAgentQuality] = useState(null)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -3176,6 +3179,14 @@ function App() {
       setWsOsDashboard(await getWorkspaceOsDashboard(workspaceId))
     } catch {
       setWsOsDashboard(null)
+    }
+  }
+
+  async function refreshAgentQuality() {
+    try {
+      setAgentQuality(await getAgentQuality())
+    } catch {
+      // best-effort
     }
   }
 
@@ -9401,6 +9412,55 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowAgentQuality((current) => !current); if (!agentQuality) refreshAgentQuality() }}>
+              <span>
+                <ThumbsUp size={15} />
+                Agent Quality
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentQuality && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Agent Quality Optimizer · v72.0</strong>
+                  <span>Score trends, weak-agent detection, regression checks, best-agent-by-task, and human-feedback correlation. Read-only analysis.</span>
+                </div>
+                {agentQuality && (
+                  <>
+                    <p className="muted">{agentQuality.agents_tracked} agents · {agentQuality.weak_agents?.length} weak · {agentQuality.regressions?.length} regressed · scale {agentQuality.score_scale}</p>
+                    <div className="agent-template-list">
+                      {agentQuality.score_trends?.slice(0, 8).map((t) => (
+                        <div key={t.agent} className="agent-template-card">
+                          <strong>{t.agent} <span className={`feature-badge ${t.avg_score >= 60 ? 'active' : 'needs_config'}`}>{t.avg_score}</span> {t.trend === 'up' ? '↑' : t.trend === 'down' ? '↓' : '→'}</strong>
+                          <span className="gs-trace">{t.runs} runs · recent {t.recent_avg}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {agentQuality.weak_agents?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Suggestions</strong>
+                        {agentQuality.weak_agents.slice(0, 3).map((w) => (<span key={w.agent} className="home-action">• {w.agent}: {w.suggestion}</span>))}
+                      </div>
+                    )}
+                    {agentQuality.best_by_task?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Best agent by task</strong>
+                        <span className="gs-trace">{agentQuality.best_by_task.slice(0, 6).map((b) => `${b.task_type}:${b.best_agent}(${b.avg_score})`).join(' · ')}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshAgentQuality()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only — no prompts are changed and nothing is executed.</p>
               </div>
             )}
           </section>
