@@ -2590,6 +2590,15 @@ export function getProviderControl() {
 export function updateProviderControl(patch) {
   return patchJson('/api/provider-control', patch)
 }
+export function generateNotificationsInbox() {
+  return postJson('/api/notifications-inbox/generate', {})
+}
+export function getNotificationsInbox(severity) {
+  return getJson(severity ? `/api/notifications-inbox?severity=${severity}` : '/api/notifications-inbox')
+}
+export function resolveNotificationInbox(id) {
+  return postJson(`/api/notifications-inbox/${id}/resolve`, {})
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }

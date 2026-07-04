@@ -300,6 +300,7 @@ from app.services.feature_registry_service import FeatureRegistryService
 from app.services.demo_service import DemoService
 from app.services.settings_service import SettingsService
 from app.services.provider_control_service import ProviderControlService
+from app.services.notifications_inbox_service import NotificationsInboxService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -414,6 +415,7 @@ feature_registry_service = FeatureRegistryService(storage, governance_service)
 demo_service = DemoService(storage, governance_service)
 settings_service = SettingsService(storage, governance_service)
 provider_control_service = ProviderControlService(storage, governance_service)
+notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1691,6 +1693,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **demo_service.analytics_summary(),
         **settings_service.analytics_summary(),
         **provider_control_service.analytics_summary(),
+        **notifications_inbox_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4278,6 +4281,35 @@ def provider_control_key_check() -> dict:
 @router.patch("/provider-control")
 def provider_control_update(request: ProviderControlUpdateRequest) -> dict:
     return provider_control_service.update(request.model_by_task, request.capability_modes, request.fallback_enabled)
+
+
+# ----------------------------------------------------------------------
+# v69.0 Unified Notifications Inbox 2.0 — actionable alerts (additive to v56).
+# ----------------------------------------------------------------------
+@router.post("/notifications-inbox/generate")
+def notifications_inbox_generate() -> dict:
+    return notifications_inbox_service.generate()
+
+
+@router.get("/notifications-inbox")
+def notifications_inbox_list(
+    severity: str | None = Query(default=None),
+    include_resolved: bool = Query(default=False),
+) -> dict:
+    return notifications_inbox_service.list_items(severity=severity, include_resolved=include_resolved)
+
+
+@router.get("/notifications-inbox/summary")
+def notifications_inbox_summary() -> dict:
+    return notifications_inbox_service.summary()
+
+
+@router.post("/notifications-inbox/{item_id}/resolve")
+def notifications_inbox_resolve(item_id: str) -> dict:
+    try:
+        return notifications_inbox_service.resolve(item_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.get("/activity/export")

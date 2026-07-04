@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v69 — Unified Notifications Inbox 2.0
+- **Purpose:** Make alerts actionable.
+- **How it operates:** `NotificationsInboxService` aggregates live signals into one actionable inbox — **approval alerts**, **failed/blocked run alerts** (from the governance log), **provider-fallback alerts**, **scheduled-task reminders**, and **health warnings**. Each item has a **severity**, a **link to its source route**, and a stable key so **generation is idempotent** (an unresolved item is never duplicated). Items can be **marked resolved** and are **grouped by severity**. It is **additive** to the v56 Notifications Center (distinct `/api/notifications-inbox`), read-only against source data; generation/resolution are governance-logged.
+- **Main API route groups:** `/api/notifications-inbox` (+ `/generate`, `/summary`, `/{id}/resolve`).
+- **Safety boundary:** Read-only aggregation; idempotent generation; additive to v56; governance-logged.
+
 ### v68 — Real Provider Control Center 2.0
 - **Purpose:** Cleanly manage OpenAI / Claude / Gemini / Mistral / local providers.
 - **How it operates:** `ProviderControlService` gives a **read-only readiness dashboard** per provider (is a required env key set? boolean only), editable **model-per-task** and **real/mock-per-capability** preferences, a **fallback policy** (real when key set + mode real, else local/mock), a **cost estimate** aggregated from the v50 usage ledger, and per-provider **latency** estimates. **API key safety checks report booleans only** — a key's value is never read, logged, or returned. Preference changes are governance-logged; real calls remain env-gated.
@@ -577,4 +583,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v66 | Demo Mode / Portfolio Mode 2.0 | `/api/demo` | One-click demo script, walkthrough, feature sequence, resume bullets, case-study export; demo-safe seed + scoped reset | Read-only content; sample data scoped/reversible; reset only removes demo-tagged records; governance-logged |
 | v67 | Settings Center | `/api/settings` | Central local preferences (provider/modes/features/safety/workspace/voice/theme), allow-list validated, export/import, reset | No secret values stored; secret-like keys rejected; hard safety enforced read-only; governance-logged |
 | v68 | Real Provider Control Center 2.0 | `/api/provider-control` | Provider readiness dashboard, model-per-task + real/mock-per-capability prefs, cost estimate, latency stats, fallback policy, boolean-only key checks | Boolean-only key readiness; real calls env-gated; no secrets exposed; governance-logged |
+| v69 | Unified Notifications Inbox 2.0 | `/api/notifications-inbox` | Actionable inbox: approval/failed-run/provider-fallback/reminder/health alerts, severity grouping, mark-resolved, source links, idempotent generation | Read-only aggregation; additive to v56; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

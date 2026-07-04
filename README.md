@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v68 — Real Provider Control Center 2.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v69 — Unified Notifications Inbox 2.0 &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
 
@@ -33,6 +33,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
 - **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
 - **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
+- **v69 — Unified Notifications Inbox 2.0:** an **actionable inbox** that unifies approval alerts, failed-run alerts, provider-fallback alerts, scheduled-task reminders, and health warnings — **grouped by severity**, with **mark-resolved** and **links to the source event**. Generation is **idempotent** and it's **additive** to the v56 center. At `/api/notifications-inbox`.
 - **v68 — Real Provider Control Center 2.0:** a **readiness dashboard** for OpenAI / Claude / Gemini / Mistral / local, with **model-per-task** and **real/mock-per-capability** preferences, a **cost estimate** (from the usage ledger), **latency** stats, and a **fallback policy**. **API key checks report booleans only** — no secret values are ever exposed. At `/api/provider-control`.
 - **v67 — Settings Center:** one central place for local **preferences** — provider defaults, mode/feature toggles, a safety preference, workspace defaults, voice, and theme. Allow-list validated; **secret-like keys are rejected and no secret values are ever stored**; hard safety boundaries are enforced read-only. Export/import + reset. At `/api/settings`.
 - **v66 — Demo / Portfolio Mode 2.0:** a **one-click demo script**, guided walkthrough, auto-open feature sequence, refreshed **resume bullets**, and a **case-study export** — plus a **demo-safe sample workspace** you can **seed and reset**. Reset removes **only** demo-tagged records (`demo_seed=true`) — your data is never touched. Governance-logged. At `/api/demo`.

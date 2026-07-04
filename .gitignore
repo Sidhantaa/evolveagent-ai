@@ -197,6 +197,7 @@ backend/app/data/master_agent_runs.json
 backend/app/data/demo_seed_log.json
 backend/app/data/settings_center.json
 backend/app/data/provider_control.json
+backend/app/data/notifications_inbox.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json
