@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v77 — Research Agent 2.0
+- **Purpose:** Stronger evidence-based research.
+- **How it operates:** `ResearchAgentService` is a deterministic, local, **read-only** research toolkit over sources you pass in: **source comparison** (pairwise term overlap + agreement level), a **claim/evidence table** (claim-like vs evidence-bearing sentences), **contradiction detection** (shared-subject sentences differing in negation), a **citation quality score** (presence of urls/years/attribution/identifiers), a **research brief generator** (structured markdown packet), and **bias/risk flags** (loaded/absolute language). It never browses the web or calls a model. Governance-logged.
+- **Main API route groups:** `/api/research-agent` (+ `/compare`, `/claims`, `/contradictions`, `/citation-quality`, `/bias`, `/brief`, `/summary`).
+- **Safety boundary:** Deterministic + local; no web browsing, no model calls; read-only; heuristics flagged as "review before relying"; governance-logged.
+
 ### v76 — Code Intelligence 2.0
 - **Purpose:** Better code understanding without unsafe edits.
 - **How it operates:** `CodeIntelligenceService` is a deterministic, **read-only static analyzer** that operates on **submitted code text** — it never reads the filesystem or edits code. It produces a **bug-risk scan** (eval/exec, bare/broad except, hard-coded secrets, shell/subprocess usage, TODOs, `== None`, leftover prints), a **suggested refactor plan**, basic **complexity metrics** (lines, functions, long functions, max line length), an **API route map** (from FastAPI-style decorators), a **dependency list** (top-level imports), and a **test coverage summary** (test-function count). Governance-logged.
@@ -633,4 +639,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v74 | Personal Productivity Brain | `/api/productivity` | Priority recommendations, daily focus, blocker detection, overdue review, goal progress, "what now?" pick | Read-only review; no task create/complete; governance-logged |
 | v75 | Document Intelligence 2.0 | `/api/doc-intel` | Document comparison, resume ATS scoring, contract/risk summary, CSV insight, document Q&A | Deterministic + local; no external model calls; read-only; governance-logged |
 | v76 | Code Intelligence 2.0 | `/api/code-intel` | Bug-risk scan, refactor plan, complexity metrics, route map, dependency list, test-coverage summary (on submitted code) | Static read-only analysis of submitted text; no edits/filesystem/execution; governance-logged |
+| v77 | Research Agent 2.0 | `/api/research-agent` | Source comparison, claim/evidence table, contradiction detection, citation quality score, research brief, bias flags | Deterministic + local; no web/model calls; read-only; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |
