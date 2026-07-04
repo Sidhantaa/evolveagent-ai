@@ -3498,3 +3498,15 @@ ul {
   color: var(--color-text-subtle);
   line-height: 1.5;
 }
+
+/* ---- Master Agent Developer-Mode panel ---- */
+.master-panel-caps { margin-top: 4px; }
+.master-panel-caps > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-accent-cyan-soft);
+  padding: 4px 0;
+  list-style: none;
+}
+.master-panel-caps > summary::-webkit-details-marker { display: none; }
+.master-panel-caps[open] > summary { margin-bottom: 6px; }

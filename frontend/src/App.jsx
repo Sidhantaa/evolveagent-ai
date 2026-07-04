@@ -354,6 +354,8 @@ import {
   triggerScheduledTask,
   getDataExportSummary,
   getOs2Dashboard,
+  getMasterAgentSummary,
+  getMasterAgentCapabilities,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -1097,6 +1099,9 @@ function App() {
   const [os2Dashboard, setOs2Dashboard] = useState(null)
   const [os2Report, setOs2Report] = useState(null)
   const [os2Busy, setOs2Busy] = useState(false)
+  const [showMasterPanel, setShowMasterPanel] = useState(false)
+  const [masterSummary, setMasterSummary] = useState(null)
+  const [masterCapabilities, setMasterCapabilities] = useState(null)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -1243,6 +1248,7 @@ function App() {
     refreshScheduled()
     refreshDataExport()
     refreshOs2()
+    refreshMasterPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2951,6 +2957,16 @@ function App() {
   async function refreshOs2() {
     const dashboard = await getOs2Dashboard()
     setOs2Dashboard(dashboard)
+  }
+
+  async function refreshMasterPanel() {
+    try {
+      const [summary, capabilities] = await Promise.all([getMasterAgentSummary(), getMasterAgentCapabilities()])
+      setMasterSummary(summary)
+      setMasterCapabilities(capabilities)
+    } catch {
+      // Master Agent summary is best-effort; ignore transient errors.
+    }
   }
 
   async function handleOs2Snapshot() {
@@ -9105,6 +9121,66 @@ function App() {
                   </div>
                 )}
                 <p className="muted">Local export/import only — no external upload; import merges (never overwrites or deletes).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowMasterPanel((current) => !current)}>
+              <span>
+                <Brain size={15} />
+                Master Agent
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showMasterPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Master Agent · v60.1</strong>
+                  <span>Single top-level AI routing across all of v1–v60. Planning-first &amp; approval-gated — risky actions are always held for approval. Not AGI.</span>
+                </div>
+                {masterSummary && (
+                  <p className="muted">routes: {masterSummary.total_routes} · approvals required: {masterSummary.approvals_required} · capabilities: {masterSummary.capability_count}</p>
+                )}
+                {masterSummary && Object.keys(masterSummary.by_domain || {}).length > 0 && (
+                  <div className="agent-template-list">
+                    {Object.entries(masterSummary.by_domain).map(([domain, count]) => (
+                      <div key={domain} className="agent-template-card">
+                        <strong>{domain}</strong>
+                        <span>{count} route{count === 1 ? '' : 's'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {masterSummary?.recent?.length > 0 && (
+                  <div className="agent-template-list">
+                    {masterSummary.recent.slice(0, 6).map((run) => (
+                      <div key={run.run_id} className="agent-template-card">
+                        <strong>{run.primary_domain || 'Routed'}{run.requires_approval ? ' · needs approval' : ''}</strong>
+                        <span>{run.request}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {masterCapabilities?.capabilities?.length > 0 && (
+                  <details className="master-panel-caps">
+                    <summary>{masterCapabilities.capability_count} capabilities</summary>
+                    <div className="agent-template-list">
+                      {masterCapabilities.capabilities.map((cap) => (
+                        <div key={cap.domain} className="agent-template-card">
+                          <strong>{cap.domain}{cap.risky ? ' · risky' : ''}</strong>
+                          <span>{cap.route} — {(cap.trigger_examples || []).join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshMasterPanel()}>Refresh</button>
+                </div>
+                <p className="muted">{masterSummary?.disclaimer || 'Not AGI — a governed orchestration router over the existing systems. Secret key readiness is boolean-only; risky actions require approval.'}</p>
               </div>
             )}
           </section>
