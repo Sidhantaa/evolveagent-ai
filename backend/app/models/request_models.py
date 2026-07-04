@@ -1416,6 +1416,12 @@ class MasterAgentRouteRequest(BaseModel):
     execute: bool = Field(default=False, description="Only honored for non-risky intents; risky actions still require explicit approval.")
 
 
+class MasterRouteFeedbackRequest(BaseModel):
+    correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
+    correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")
+    note: str = Field(default="", max_length=500)
+
+
 # ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------

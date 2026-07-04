@@ -356,6 +356,7 @@ import {
   getOs2Dashboard,
   getMasterAgentSummary,
   getMasterAgentCapabilities,
+  sendMasterRouteFeedback,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -2966,6 +2967,15 @@ function App() {
       setMasterCapabilities(capabilities)
     } catch {
       // Master Agent summary is best-effort; ignore transient errors.
+    }
+  }
+
+  async function handleMasterRouteFeedback(runId, correct) {
+    try {
+      await sendMasterRouteFeedback(runId, correct)
+      await refreshMasterPanel()
+    } catch {
+      // best-effort feedback
     }
   }
 
@@ -9142,7 +9152,11 @@ function App() {
                   <span>Single top-level AI routing across all of v1–v60. Planning-first &amp; approval-gated — risky actions are always held for approval. Not AGI.</span>
                 </div>
                 {masterSummary && (
-                  <p className="muted">routes: {masterSummary.total_routes} · approvals required: {masterSummary.approvals_required} · capabilities: {masterSummary.capability_count}</p>
+                  <p className="muted">
+                    routes: {masterSummary.total_routes} · approvals: {masterSummary.approvals_required} · fallback: {masterSummary.fallback_routes ?? 0}
+                    {masterSummary.avg_confidence != null && <> · avg conf: {Math.round(masterSummary.avg_confidence * 100)}%</>}
+                    {masterSummary.route_accuracy?.accuracy_pct != null && <> · accuracy: {masterSummary.route_accuracy.accuracy_pct}% ({masterSummary.route_accuracy.rated_routes} rated)</>}
+                  </p>
                 )}
                 {masterSummary && Object.keys(masterSummary.by_domain || {}).length > 0 && (
                   <div className="agent-template-list">
@@ -9158,8 +9172,22 @@ function App() {
                   <div className="agent-template-list">
                     {masterSummary.recent.slice(0, 6).map((run) => (
                       <div key={run.run_id} className="agent-template-card">
-                        <strong>{run.primary_domain || 'Routed'}{run.requires_approval ? ' · needs approval' : ''}</strong>
+                        <strong>
+                          {run.primary_domain || 'Routed'}
+                          {run.fallback_used ? ' · fallback' : run.confidence != null ? ` · ${Math.round(run.confidence * 100)}%` : ''}
+                          {run.requires_approval ? ' · needs approval' : ''}
+                        </strong>
                         <span>{run.request}</span>
+                        <div className="master-fb-row">
+                          {run.feedback ? (
+                            <span className="master-fb-done">{run.feedback.correct ? '✓ marked correct' : '✗ marked wrong'}</span>
+                          ) : (
+                            <>
+                              <button type="button" className="master-fb" onClick={() => handleMasterRouteFeedback(run.run_id, true)}>👍 correct</button>
+                              <button type="button" className="master-fb" onClick={() => handleMasterRouteFeedback(run.run_id, false)}>👎 wrong</button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -10471,10 +10499,21 @@ function App() {
                   )}
                   <div className="master-answer-head">
                     <span className="master-badge">{masterResult.intent?.primary_domain || 'Routed'}</span>
+                    {typeof masterResult.confidence === 'number' && (
+                      <span className={`master-confidence ${masterResult.fallback_used ? 'low' : ''}`}>
+                        {masterResult.fallback_used ? 'fallback' : `${Math.round(masterResult.confidence * 100)}% confident`}
+                      </span>
+                    )}
                     <button type="button" className="master-answer-tts" onClick={() => (speaking ? stopSpeaking() : (setVoiceOutputEnabled(true), speak(masterResult.answer)))}>
                       {speaking ? <><VolumeX size={13} /> Stop</> : <><Volume2 size={13} /> Read aloud</>}
                     </button>
                   </div>
+                  {masterResult.route_explanation && (
+                    <p className="master-why">Why this route: {masterResult.route_explanation}</p>
+                  )}
+                  {masterResult.suggested_workflow && (
+                    <p className="master-workflow">Suggested next: {masterResult.suggested_workflow}</p>
+                  )}
                   <div className="master-answer-body"><MarkdownMessage content={masterResult.answer || '(no answer)'} /></div>
 
                   {askSources.length > 0 && (
