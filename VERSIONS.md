@@ -358,6 +358,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v84 — Import Center
+- **Purpose:** Bring external data into EvolveAgent safely.
+- **How it operates:** `ImportCenterService` parses submitted content by **kind** (document, csv, markdown, chat_history, project_notes) into records, **validates** (allowed kind, size caps) and **sanitizes** (redacts emails / key-like tokens / card-like numbers) **before saving**, offers an **import preview** (shows sanitized records without writing), and a **commit** that appends the sanitized records to a dedicated `imported_records` collection (never into core collections). Additive and governance-logged; secret values are redacted, never stored.
+- **Main API route groups:** `/api/import-center` (+ `/preview`, `/commit`, `/records`, `/summary`).
+- **Safety boundary:** Validate + sanitize before save; secrets redacted (never stored); imports land in a dedicated collection only; governance-logged.
+
 ### v83 — Local Data Manager
 - **Purpose:** Manage JSON storage safely.
 - **How it operates:** `DataManagerService` is a read-only / planning-first view over the local JSON store: a **collection browser** (record counts + byte sizes), **storage usage** (totals + largest collections), **cleanup suggestions** (large/ephemeral collections — advisory only), a **backup** helper (reuses the read-only export path), and a **redaction preview** (counts sensitive matches per collection **without writing**). It never deletes, redacts, or overwrites data autonomously — destructive operations are surfaced as suggestions only. Governance-logged.
@@ -682,4 +688,5 @@ From v15 onward every version follows the governed architecture above: a service
 | v81 | Permission System 3.0 | `/api/permissions` | Permission profiles (global/workspace/agent/tool), most-restrictive evaluation, approval chains by risk, policy preview, blocked-action explanation | Additive advisory layer; can only tighten; allow grants no new power; governance-logged |
 | v82 | Governance Console 3.0 | `/api/governance-console` | Governance dashboard, policy violations, secret redactions, prompt-injection warnings, approval + external-action audit, export report | Read-only aggregation; nothing mutated; governance-logged |
 | v83 | Local Data Manager | `/api/data-manager` | Collection browser, storage usage, cleanup suggestions, redaction preview, backup | Read-only/planning-first; no deletes/redactions/overwrites (advisory only); governance-logged |
+| v84 | Import Center | `/api/import-center` | Import documents/csv/markdown/chat/notes; validate + sanitize + preview before saving to a dedicated collection | Validate + sanitize before save; secrets redacted (never stored); dedicated collection only; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

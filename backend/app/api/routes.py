@@ -152,6 +152,8 @@ from app.models.request_models import (
     PermissionProfileRequest,
     PermissionEvaluateRequest,
     RedactionPreviewRequest,
+    ImportPreviewRequest,
+    ImportCommitRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -332,6 +334,7 @@ from app.services.agent_collaboration_service import AgentCollaborationService
 from app.services.permission_profiles_service import PermissionProfilesService
 from app.services.governance_console_service import GovernanceConsoleService
 from app.services.data_manager_service import DataManagerService
+from app.services.import_center_service import ImportCenterService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -461,6 +464,7 @@ agent_collaboration_service = AgentCollaborationService(storage, governance_serv
 permission_profiles_service = PermissionProfilesService(storage, governance_service)
 governance_console_service = GovernanceConsoleService(storage, governance_service)
 data_manager_service = DataManagerService(storage, governance_service)
+import_center_service = ImportCenterService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1753,6 +1757,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **permission_profiles_service.analytics_summary(),
         **governance_console_service.analytics_summary(),
         **data_manager_service.analytics_summary(),
+        **import_center_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -4678,6 +4683,35 @@ def data_manager_redaction_preview(request: RedactionPreviewRequest) -> dict:
 @router.get("/data-manager/summary")
 def data_manager_summary() -> dict:
     return data_manager_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v84.0 Import Center — validate + sanitize + preview before saving.
+# ----------------------------------------------------------------------
+@router.post("/import-center/preview")
+def import_center_preview(request: ImportPreviewRequest) -> dict:
+    try:
+        return import_center_service.preview(request.kind, request.content)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/import-center/commit")
+def import_center_commit(request: ImportCommitRequest) -> dict:
+    try:
+        return import_center_service.commit(request.kind, request.content, request.workspace_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/import-center/records")
+def import_center_records(kind: str | None = Query(default=None)) -> dict:
+    return import_center_service.list_records(kind=kind)
+
+
+@router.get("/import-center/summary")
+def import_center_summary() -> dict:
+    return import_center_service.summary()
 
 
 @router.get("/activity/export")

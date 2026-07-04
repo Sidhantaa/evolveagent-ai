@@ -1556,6 +1556,20 @@ class RedactionPreviewRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Import Center (v84)
+# ----------------------------------------------------------------------
+class ImportPreviewRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    content: str = Field(..., min_length=1, max_length=500000)
+
+
+class ImportCommitRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    content: str = Field(..., min_length=1, max_length=500000)
+    workspace_id: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
