@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v72 Agent Quality Optimizer · v45.1 MCP Hub UI)
+# EvolveAgent AI — Final Checklist (current completed: v73 Workflow Recommendation Engine · v45.1 MCP Hub UI)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -42,6 +42,7 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v70 — Workspace Operating System 2.0:** per-workspace **dashboard** / **memory graph** (nodes + knowledge-link edges) / **feature-usage** counts / workspace **agents** / workspace **reports** / scoped **timeline** (via v63) / derived **health score** (healthy/developing/sparse) / read-only, workspace-scoped / governance-logged / analytics / Workspace OS Developer-Mode panel / `/api/workspace-os`.
 - [x] **v71 — Smart Context Engine:** read-only **context planner** scoring memory/files/goals by keyword overlap / **selection reason** per item / **context budget** (char cap) / **duplicate removal** / **sensitive-content filtering** (emails / card-like numbers / key-like tokens / secret assignments never included) / Developer-Mode **context trace** (selected + excluded with reasons) / does not alter run pipeline / governance-logged / analytics / Smart Context Developer-Mode panel / `/api/context`.
 - [x] **v72 — Agent Quality Optimizer:** read-only analysis over run analytics + feedback / per-agent **score trends** (avg vs recent, up/down/flat) / **weak-agent detection** (recent < 60/100) / rule-based **prompt improvement suggestions** / **best agent by task type** / **regression checks** (prev vs recent window, >10% drop) / **human-feedback correlation** (ratings vs judge scores) / normalizes 0-1 & 0-100 scales / no prompt changes, nothing executed / governance-logged / analytics / Agent Quality Developer-Mode panel / `/api/agent-quality`.
+- [x] **v73 — Workflow Recommendation Engine:** classifies a goal (coding/research/business/data_analysis/general) / **recommended workflow** (ordered expected steps) / **similar past runs** (Master Agent route history by keyword) / **risk level** + **approval requirements** (risky verbs / sensitive task held for approval) / **time & complexity** estimate / read-only, planning-only / governance-logged / analytics / Workflow Recommender Developer-Mode panel / `/api/workflow-recommend`.
 - [x] Backend tests green and frontend build green after each version.
 - [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42 → v43 → v44) and verified on `main` before marking Linear Done.
 

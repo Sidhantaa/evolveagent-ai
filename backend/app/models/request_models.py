@@ -1452,6 +1452,14 @@ class ContextPlanRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Workflow Recommendation Engine (v73)
+# ----------------------------------------------------------------------
+class WorkflowRecommendRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=2000)
+    task_type: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):
