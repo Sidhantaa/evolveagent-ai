@@ -2536,6 +2536,15 @@ export function discoverGitRepos(path, optIn, workspaceId) {
 export function getGitRepositories(workspaceId) {
   return getJson(workspaceId ? `/api/git-intel/repositories?workspace_id=${workspaceId}` : '/api/git-intel/repositories')
 }
+export function getGitLog(path, limit = 20) {
+  return getJson(`/api/git-intel/log?path=${encodeURIComponent(path)}&limit=${limit}`)
+}
+export function getGitBranchList(path) {
+  return getJson(`/api/git-intel/branches?path=${encodeURIComponent(path)}`)
+}
+export function getGitCommitStat(path, ref = 'HEAD') {
+  return getJson(`/api/git-intel/commit-stat?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`)
+}
 export function getStudioTemplates() {
   return getJson('/api/agent-studio/templates')
 }

@@ -36,6 +36,7 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     # Phase 1 — Git Intelligence
     ("git-intel", "GET", "/api/git-intel/status", None, 200),
     ("git-intel", "GET", "/api/git-intel/repositories", None, 200),
+    ("git-intel", "GET", "/api/git-intel/read-status", None, 200),
     # Phase 2 — Agent Studio
     ("agent-studio", "GET", "/api/agent-studio/templates", None, 200),
     ("agent-studio", "GET", "/api/agent-studio/agents", None, 200),

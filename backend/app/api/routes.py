@@ -336,6 +336,7 @@ from app.services.voice_console_service import VoiceConsoleService
 from app.services.durable_workflow_service import DurableWorkflowService
 from app.services.marketplace_hub_service import MarketplaceHubService
 from app.services.design_agent_service import DesignAgentService
+from app.services.git_reader_service import GitReaderService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -478,6 +479,7 @@ voice_console_service = VoiceConsoleService(storage, governance_service)
 durable_workflow_service = DurableWorkflowService(storage, governance_service)
 marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
 design_agent_service = DesignAgentService(storage, governance_service)
+git_reader_service = GitReaderService(governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1783,6 +1785,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **durable_workflow_service.analytics_summary(),
         **marketplace_hub_service.analytics_summary(),
         **design_agent_service.analytics_summary(),
+        **git_reader_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4545,6 +4548,38 @@ def design_agent_history(limit: int = 20) -> dict:
 @router.get("/design-agent/summary")
 def design_agent_summary() -> dict:
     return design_agent_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Git Intelligence — real read-only reads (log / branches / commit stat).
+# ----------------------------------------------------------------------
+@router.get("/git-intel/read-status")
+def git_reader_status() -> dict:
+    return git_reader_service.status()
+
+
+@router.get("/git-intel/log")
+def git_reader_log(path: str, limit: int = 20) -> dict:
+    try:
+        return git_reader_service.log(path, limit)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/git-intel/branches")
+def git_reader_branches(path: str) -> dict:
+    try:
+        return git_reader_service.branches(path)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/git-intel/commit-stat")
+def git_reader_commit_stat(path: str, ref: str = "HEAD") -> dict:
+    try:
+        return git_reader_service.commit_stat(path, ref)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 # ----------------------------------------------------------------------
