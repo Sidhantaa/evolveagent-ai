@@ -23,11 +23,12 @@ def test_log_returns_commits():
     assert len(top["sha"]) >= 7 and top["subject"]
 
 
-def test_branches_has_current():
+def test_branches_reports_current_ref():
     r = client.get("/api/git-intel/branches", params={"path": REPO}).json()
-    assert r["count"] >= 1
-    assert any(b["current"] for b in r["branches"])
-    assert r["current"]
+    # CI checks out a detached HEAD (current == "HEAD", possibly zero local
+    # branches), so only assert the shape + that a current ref is reported.
+    assert "branches" in r and isinstance(r["branches"], list)
+    assert r["current"]  # a branch name locally, or "HEAD" when detached (both truthy)
 
 
 def test_commit_stat_head():
