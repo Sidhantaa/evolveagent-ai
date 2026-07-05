@@ -369,6 +369,9 @@ import {
   pauseWorkflowRun,
   resumeWorkflowRun,
   cancelWorkflowRun,
+  getMarketplaceListings,
+  installMarketplaceListing,
+  unpublishMarketplaceListing,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -753,6 +756,11 @@ function App() {
   const [workflowTemplates, setWorkflowTemplates] = useState([])
   const [workflowRuns, setWorkflowRuns] = useState([])
   const [durableBusy, setDurableBusy] = useState(false)
+  const [showMarketplaceHub, setShowMarketplaceHub] = useState(false)
+  const [marketplaceListings, setMarketplaceListings] = useState([])
+  const [marketplaceKind, setMarketplaceKind] = useState('')
+  const [marketplaceBusy, setMarketplaceBusy] = useState(false)
+  const [marketplaceNote, setMarketplaceNote] = useState('')
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -1442,6 +1450,7 @@ function App() {
       { id: 'open-master', label: 'Open Master Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowMasterPanel(true) } },
       { id: 'open-voice', label: 'Open Voice Console', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowVoiceConsole(true); refreshVoiceConsole() } },
       { id: 'open-workflows', label: 'Open Durable Workflows', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() } },
+      { id: 'open-marketplace', label: 'Open Marketplace', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('build'); setShowMarketplaceHub(true); refreshMarketplaceHub() } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3336,6 +3345,42 @@ function App() {
       await refreshWorkflows()
     } finally {
       setDurableBusy(false)
+    }
+  }
+
+  async function refreshMarketplaceHub(kind = marketplaceKind) {
+    try {
+      const data = await getMarketplaceListings(kind || undefined)
+      setMarketplaceListings(data?.listings || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleInstallListing(listing) {
+    setMarketplaceBusy(true)
+    setMarketplaceNote('')
+    try {
+      const res = await installMarketplaceListing(listing.listing_id)
+      const where = res.kind === 'agent' ? 'Agent Studio' : 'Durable Workflows'
+      setMarketplaceNote(`Installed “${res.installed?.name}” into ${where}.`)
+      await refreshMarketplaceHub()
+    } catch {
+      setMarketplaceNote('Install failed — is the backend running?')
+    } finally {
+      setMarketplaceBusy(false)
+    }
+  }
+
+  async function handleUnpublishListing(listingId) {
+    setMarketplaceBusy(true)
+    try {
+      await unpublishMarketplaceListing(listingId)
+      await refreshMarketplaceHub()
+    } catch {
+      setMarketplaceNote('Featured starter listings cannot be removed.')
+    } finally {
+      setMarketplaceBusy(false)
     }
   }
 
@@ -11655,6 +11700,51 @@ function App() {
                   )
                 })}
                 <p className="ds-sub">Approval-gated and governance-logged. No step performs a real action — this orchestrates and simulates; wiring real execution would itself require approval.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowMarketplaceHub((c) => !c); if (!marketplaceListings.length) refreshMarketplaceHub() }}>
+              <span>
+                <Store size={15} />
+                Marketplace
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showMarketplaceHub && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Marketplace</p>
+                  <p className="ds-sub">Install agents and workflows as sanitized, local bundles. No network, no accounts — installing re-derives guardrails so risky powers always start held for approval.</p>
+                </Card>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['', 'agent', 'workflow'].map((k) => (
+                    <Button key={k || 'all'} size="sm" variant={marketplaceKind === k ? 'primary' : 'ghost'}
+                      onClick={() => { setMarketplaceKind(k); refreshMarketplaceHub(k) }}>
+                      {k === '' ? 'All' : k === 'agent' ? 'Agents' : 'Workflows'}
+                    </Button>
+                  ))}
+                </div>
+                {marketplaceNote && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{marketplaceNote}</p>}
+                {marketplaceListings.length === 0 && <p className="ds-sub">No listings.</p>}
+                {marketplaceListings.map((l) => (
+                  <Card key={l.listing_id} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      {l.name} <Badge tone={l.kind === 'agent' ? 'accent' : 'default'}>{l.kind}</Badge>
+                      {l.is_featured && <Badge tone="success">featured</Badge>}
+                    </p>
+                    <p className="ds-sub">{l.summary || '—'}</p>
+                    <div className="ds-row"><span>by {l.publisher}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{l.installs} installs</span></div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <Button size="sm" variant="primary" disabled={marketplaceBusy} onClick={() => handleInstallListing(l)}>Install</Button>
+                      {!l.is_featured && <Button size="sm" variant="ghost" disabled={marketplaceBusy} onClick={() => handleUnpublishListing(l.listing_id)}>Remove</Button>}
+                    </div>
+                  </Card>
+                ))}
+                <p className="ds-sub">Installed agents land in Agent Studio; installed workflows land in Durable Workflows. Bundles carry config only — never secrets.</p>
               </div>
             )}
           </section>
