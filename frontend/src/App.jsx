@@ -747,6 +747,9 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [devSection, setDevSection] = useState('agent')
   const [cmdkOpen, setCmdkOpen] = useState(false)
+  const [recentCommandIds, setRecentCommandIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('evolveagent-cmdk-recents') || '[]') } catch { return [] }
+  })
   const [showGitIntel, setShowGitIntel] = useState(false)
   const [gitStatus, setGitStatus] = useState(null)
   const [gitRepos, setGitRepos] = useState([])
@@ -1471,6 +1474,14 @@ function App() {
     return () => synth.removeEventListener?.('voiceschanged', loadVoices)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  function recordRecentCommand(id) {
+    setRecentCommandIds((prev) => {
+      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 6)
+      try { localStorage.setItem('evolveagent-cmdk-recents', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
 
   const commandPaletteCommands = useMemo(() => {
     const gotoSection = (id) => () => { setDeveloperMode(true); setDevSection(id) }
@@ -6340,7 +6351,7 @@ function App() {
 
   return (
     <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'} ${sidebarOpen ? 'sidebar-open' : ''}`}>
-      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} commands={commandPaletteCommands} />
+      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} commands={commandPaletteCommands} recentIds={recentCommandIds} onRun={recordRecentCommand} />
       <button type="button" className="cmdk-trigger" onClick={() => setCmdkOpen(true)} title="Command palette (⌘K)" aria-label="Open command palette">
         <Terminal size={14} /> <span>⌘K</span>
       </button>
