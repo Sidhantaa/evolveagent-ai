@@ -1449,6 +1449,24 @@ class AgentImportRequest(BaseModel):
     profile: dict = Field(default_factory=dict)
 
 
+class VoiceSettingsRequest(BaseModel):
+    workspace_id: str = Field(default="global", max_length=80)
+    voice_name: str | None = Field(default=None, max_length=120)
+    rate: float | None = Field(default=None, ge=0.25, le=3.0)
+    pitch: float | None = Field(default=None, ge=0.0, le=2.0)
+    volume: float | None = Field(default=None, ge=0.0, le=1.0)
+    read_aloud: bool | None = Field(default=None)
+    transcript_enabled: bool | None = Field(default=None)
+    store_transcripts: bool | None = Field(default=None)
+
+
+class VoiceActivityRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    workspace_id: str = Field(default="global", max_length=80)
+    text: str = Field(default="", max_length=8000)
+    meta: dict = Field(default_factory=dict)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

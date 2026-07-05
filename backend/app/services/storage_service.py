@@ -199,6 +199,8 @@ class StorageService:
             "master_agent_runs.json",
             "git_repos.json",
             "agent_profiles.json",
+            "voice_console_settings.json",
+            "voice_console_events.json",
             "permission_profiles.json",
             "imported_records.json",
             "marketplace_plugins.json",

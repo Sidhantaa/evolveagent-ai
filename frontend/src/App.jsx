@@ -356,6 +356,12 @@ import {
   testAgentProfile,
   evaluateAgentProfile,
   publishAgentProfile,
+  getVoiceStatus,
+  getVoiceSettings,
+  updateVoiceSettings,
+  logVoiceActivity,
+  getVoiceEvents,
+  clearVoiceEvents,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -731,6 +737,11 @@ function App() {
   const [agentTestPrompt, setAgentTestPrompt] = useState('')
   const [agentTestResult, setAgentTestResult] = useState(null)
   const [agentBusy, setAgentBusy] = useState(false)
+  const [showVoiceConsole, setShowVoiceConsole] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState(null)
+  const [voiceSettings, setVoiceSettings] = useState(null)
+  const [availableVoices, setAvailableVoices] = useState([])
+  const [voiceEvents, setVoiceEvents] = useState([])
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -1388,6 +1399,19 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Phase 4 Voice Console: enumerate browser voices + load saved preferences once.
+  useEffect(() => {
+    const synth = window.speechSynthesis
+    if (!synth) return
+    const loadVoices = () => setAvailableVoices(synth.getVoices() || [])
+    loadVoices()
+    synth.addEventListener?.('voiceschanged', loadVoices)
+    getVoiceSettings(workspaceId || 'global').then((s) => { if (s) setVoiceSettings(s) }).catch(() => {})
+    getVoiceStatus().then(setVoiceStatus).catch(() => {})
+    return () => synth.removeEventListener?.('voiceschanged', loadVoices)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const commandPaletteCommands = useMemo(() => {
     const gotoSection = (id) => () => { setDeveloperMode(true); setDevSection(id) }
     return [
@@ -1405,6 +1429,7 @@ function App() {
       { id: 'open-git', label: 'Open Git Intelligence', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('workspace'); setShowGitIntel(true); if (!gitStatus) refreshGitIntel() } },
       { id: 'open-studio', label: 'Open Agent Studio', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowAgentStudio(true); if (!studioTemplates.length) refreshAgentStudio() } },
       { id: 'open-master', label: 'Open Master Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowMasterPanel(true) } },
+      { id: 'open-voice', label: 'Open Voice Console', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowVoiceConsole(true); refreshVoiceConsole() } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3247,6 +3272,39 @@ function App() {
     setAgentName(t.name)
     setAgentRole(t.role)
     setAgentTone(t.personality?.tone || 'professional')
+  }
+
+  async function refreshVoiceConsole() {
+    try {
+      const [status, settings, events] = await Promise.all([
+        getVoiceStatus(), getVoiceSettings(workspaceId || 'global'), getVoiceEvents(workspaceId || 'global', 20),
+      ])
+      setVoiceStatus(status)
+      if (settings) setVoiceSettings(settings)
+      setVoiceEvents(events?.events || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function saveVoiceSettings(patch) {
+    const next = { ...(voiceSettings || {}), ...patch, workspace_id: workspaceId || 'global' }
+    setVoiceSettings(next) // optimistic
+    try {
+      const saved = await updateVoiceSettings({ workspace_id: workspaceId || 'global', ...patch })
+      setVoiceSettings(saved)
+    } catch {
+      // keep optimistic value; backend best-effort
+    }
+  }
+
+  async function clearVoiceHistory() {
+    try {
+      await clearVoiceEvents(workspaceId || 'global')
+      setVoiceEvents([])
+    } catch {
+      // best-effort
+    }
   }
 
   async function handleCreateAgent() {
@@ -5779,12 +5837,26 @@ function App() {
     if (!synth) return
     try {
       synth.cancel()
-      const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 1200))
+      const clipped = String(text).slice(0, 1200)
+      const utterance = new SpeechSynthesisUtterance(clipped)
       utterance.lang = 'en-US'
+      // Apply Voice Console preferences when available.
+      const s = voiceSettings
+      if (s) {
+        if (typeof s.rate === 'number') utterance.rate = s.rate
+        if (typeof s.pitch === 'number') utterance.pitch = s.pitch
+        if (typeof s.volume === 'number') utterance.volume = s.volume
+        if (s.voice_name) {
+          const match = (availableVoices.length ? availableVoices : synth.getVoices() || []).find((v) => v.name === s.voice_name)
+          if (match) utterance.voice = match
+        }
+      }
       utterance.onstart = () => setSpeaking(true)
       utterance.onend = () => setSpeaking(false)
       utterance.onerror = () => setSpeaking(false)
       synth.speak(utterance)
+      // Privacy-safe audit: metadata only (char count), never the spoken text.
+      logVoiceActivity('speak', { workspaceId: workspaceId || 'global', meta: { chars: String(clipped.length) } }).catch(() => {})
     } catch {
       setSpeaking(false)
     }
@@ -11414,6 +11486,78 @@ function App() {
                   </Card>
                 ))}
                 <p className="ds-sub">Personalization = config + few-shot examples + evaluation feedback. No base-model training; risky actions always held for approval.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="tools" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowVoiceConsole((c) => !c); if (!voiceSettings) refreshVoiceConsole() }}>
+              <span>
+                <Volume2 size={15} />
+                Voice Console
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showVoiceConsole && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Voice Console</p>
+                  <p className="ds-sub">Tune how spoken answers sound and how push-to-talk behaves. Voice runs in your browser (Web Speech API).</p>
+                  {voiceStatus && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                      <Badge tone="success">push-to-talk only</Badge>
+                      <Badge tone="default">no recording</Badge>
+                      <Badge tone="default">no audio stored</Badge>
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <div className="ds-row"><span>Spoken answers</span>
+                    <Button size="sm" variant={voiceOutputEnabled ? 'primary' : 'ghost'} onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}>{voiceOutputEnabled ? 'On' : 'Off'}</Button>
+                  </div>
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 10 }}>Voice</label>
+                  <select value={voiceSettings?.voice_name || ''} onChange={(e) => saveVoiceSettings({ voice_name: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)', marginTop: 4 }}>
+                    <option value="">Browser default</option>
+                    {availableVoices.map((v) => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+                  </select>
+
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 10 }}>Speed — {(voiceSettings?.rate ?? 1).toFixed(2)}×</label>
+                  <input type="range" min="0.5" max="2" step="0.05" value={voiceSettings?.rate ?? 1} onChange={(e) => saveVoiceSettings({ rate: Number(e.target.value) })} style={{ width: '100%' }} />
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 6 }}>Pitch — {(voiceSettings?.pitch ?? 1).toFixed(2)}</label>
+                  <input type="range" min="0" max="2" step="0.05" value={voiceSettings?.pitch ?? 1} onChange={(e) => saveVoiceSettings({ pitch: Number(e.target.value) })} style={{ width: '100%' }} />
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 6 }}>Volume — {Math.round((voiceSettings?.volume ?? 1) * 100)}%</label>
+                  <input type="range" min="0" max="1" step="0.05" value={voiceSettings?.volume ?? 1} onChange={(e) => saveVoiceSettings({ volume: Number(e.target.value) })} style={{ width: '100%' }} />
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <Button size="sm" variant="primary" onClick={() => { setVoiceOutputEnabled(true); speak('This is how spoken answers will sound.') }}>Test voice</Button>
+                    <Button size="sm" variant="ghost" onClick={stopSpeaking}>Stop</Button>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="ds-row"><span>Show live transcript</span>
+                    <Button size="sm" variant={voiceSettings?.transcript_enabled ? 'primary' : 'ghost'} onClick={() => saveVoiceSettings({ transcript_enabled: !voiceSettings?.transcript_enabled })}>{voiceSettings?.transcript_enabled ? 'On' : 'Off'}</Button>
+                  </div>
+                  <div className="ds-row"><span>Store transcript text <span className="ds-sub">(opt-in)</span></span>
+                    <Button size="sm" variant={voiceSettings?.store_transcripts ? 'primary' : 'ghost'} onClick={() => saveVoiceSettings({ store_transcripts: !voiceSettings?.store_transcripts })}>{voiceSettings?.store_transcripts ? 'On' : 'Off'}</Button>
+                  </div>
+                  <p className="ds-sub" style={{ marginTop: 8 }}>Off by default: only counts and timestamps are recorded, never the words you speak.</p>
+                </Card>
+
+                <Card>
+                  <div className="ds-row"><span>Activity log</span>
+                    <Button size="sm" variant="ghost" onClick={clearVoiceHistory}>Clear</Button>
+                  </div>
+                  {voiceEvents.length === 0 && <p className="ds-sub" style={{ marginTop: 6 }}>No voice activity yet.</p>}
+                  {voiceEvents.slice(0, 8).map((ev) => (
+                    <div key={ev.id} className="ds-row"><span>{ev.kind}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{ev.char_count} chars</span></div>
+                  ))}
+                </Card>
+                <p className="ds-sub">All voice processing stays in your browser. Nothing is recorded, uploaded, or stored as audio.</p>
               </div>
             )}
           </section>
