@@ -10119,9 +10119,28 @@ function App() {
                   <button type="button" onClick={() => runResearchAgent2('brief')} disabled={researchAgentBusy}>Brief</button>
                 </div>
                 {researchAgentResult?.error ? <p className="error">{researchAgentResult.error}</p> : researchAgentResult && (
-                  <div className="agent-template-card">
-                    <strong>{researchAgentResult.mode}</strong>
-                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(researchAgentResult.data, null, 2).slice(0, 1800)}</pre>
+                  <div className="agent-template-card dev-result">
+                    {researchAgentResult.mode === 'bias' && (
+                      <>
+                        <strong>Bias check <span className={`feature-badge ${researchAgentResult.data.risk === 'low' ? 'active' : 'needs_config'}`}>{researchAgentResult.data.risk}</span> · {researchAgentResult.data.count} flag(s)</strong>
+                        <div className="dev-tags">{(researchAgentResult.data.flags || []).map((f) => <span className="dev-tag" key={f}>{f}</span>)}</div>
+                      </>
+                    )}
+                    {researchAgentResult.mode === 'claims' && (
+                      <>
+                        <strong>{researchAgentResult.data.claim_count} claims · {researchAgentResult.data.evidence_count} evidence</strong>
+                        {(researchAgentResult.data.rows || []).slice(0, 6).map((r, i) => (
+                          <p className="dev-line" key={i}><span className={`feature-badge ${r.type === 'evidence' ? 'active' : 'demo_safe'}`}>{r.type}</span> {r.statement}</p>
+                        ))}
+                      </>
+                    )}
+                    {researchAgentResult.mode === 'brief' && (
+                      <>
+                        <strong>Research brief</strong>
+                        <p className="dev-line">Avg citation quality <strong>{researchAgentResult.data.average_citation_quality}/100</strong> · {researchAgentResult.data.contradiction_count} contradiction(s)</p>
+                        <button type="button" className="master-fb" onClick={() => downloadFile('research-brief.md', researchAgentResult.data.content, 'text/markdown')}>Download brief</button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -10180,9 +10199,26 @@ function App() {
                   <button type="button" onClick={() => runMeetingIntel2('goal')} disabled={meetingIntelBusy}>To goal</button>
                 </div>
                 {meetingIntelResult?.error ? <p className="error">{meetingIntelResult.error}</p> : meetingIntelResult && (
-                  <div className="agent-template-card">
-                    <strong>{meetingIntelResult.mode}</strong>
-                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(meetingIntelResult.data, null, 2).slice(0, 1800)}</pre>
+                  <div className="agent-template-card dev-result">
+                    {meetingIntelResult.mode === 'goal' ? (
+                      <>
+                        <strong>Proposed goal: {meetingIntelResult.data.proposed_goal?.title}</strong>
+                        <p className="dev-line">{meetingIntelResult.data.task_count} task(s) proposed (planning-only)</p>
+                        {(meetingIntelResult.data.proposed_tasks || []).slice(0, 6).map((t, i) => (
+                          <p className="dev-line" key={i}>• {t.title}{t.owner ? ` — ${t.owner}` : ''}</p>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        <p className="dev-line"><strong>Summary:</strong> {meetingIntelResult.data.summary}</p>
+                        {meetingIntelResult.data.decisions?.length > 0 && <div className="dev-section-title">Decisions</div>}
+                        {(meetingIntelResult.data.decisions || []).slice(0, 4).map((d, i) => <p className="dev-line" key={i}>• {d}</p>)}
+                        {meetingIntelResult.data.action_items?.length > 0 && <div className="dev-section-title">Action items</div>}
+                        {(meetingIntelResult.data.action_items || []).slice(0, 6).map((a, i) => (
+                          <p className="dev-line" key={i}>• {a.item}{a.owner ? <span className="dev-tag" style={{ marginLeft: 6 }}>{a.owner}</span> : ''}</p>
+                        ))}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -10274,7 +10310,23 @@ function App() {
                   <button type="button" onClick={() => downloadGovConsole('json')}>JSON</button>
                 </div>
                 {govConsole?.error ? <p className="error">{govConsole.error}</p> : govConsole && (
-                  <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '220px', overflow: 'auto' }}>{JSON.stringify(govConsole, null, 2).slice(0, 2200)}</pre>
+                  <div className="dev-result">
+                    <div className="dev-stats">
+                      <div className="dev-stat"><strong>{govConsole.total_events}</strong><span>events</span></div>
+                      <div className="dev-stat"><strong>{govConsole.blocked_events}</strong><span>blocked</span></div>
+                      <div className="dev-stat"><strong>{govConsole.blocked_ratio_pct}%</strong><span>blocked ratio</span></div>
+                    </div>
+                    <div className="dev-row"><span>Risk (high / med / low)</span><span>{govConsole.by_risk?.high} / {govConsole.by_risk?.medium} / {govConsole.by_risk?.low}</span></div>
+                    <div className="dev-row"><span>Policy violations</span><span>{govConsole.policy_violations?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>Prompt-injection warnings</span><span>{govConsole.prompt_injection_warnings?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>Secret/PII events</span><span>{govConsole.secret_redactions?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>Approval audit</span><span>{govConsole.approval_audit?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>External-action audit</span><span>{govConsole.external_action_audit?.count ?? 0}</span></div>
+                    {govConsole.top_actions?.length > 0 && <div className="dev-section-title">Top actions</div>}
+                    {(govConsole.top_actions || []).slice(0, 5).map((a) => (
+                      <div className="dev-row" key={a.action}><span>{a.action}</span><span>{a.count}</span></div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -10299,9 +10351,19 @@ function App() {
                   <button type="button" onClick={runDataManagerPreview} disabled={dataManagerBusy}>Redaction preview</button>
                 </div>
                 {dataManager?.error ? <p className="error">{dataManager.error}</p> : dataManager && (
-                  <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(dataManager, null, 2).slice(0, 1800)}</pre>
+                  <div className="dev-result">
+                    <p className="muted">{dataManager.count} collections</p>
+                    {(dataManager.collections || []).slice(0, 10).map((c) => (
+                      <div className="dev-row" key={c.collection}><span>{c.collection.replace('.json', '')}</span><span>{c.records} · {(c.bytes / 1024).toFixed(1)}KB</span></div>
+                    ))}
+                  </div>
                 )}
-                {dataManagerPreview && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '120px', overflow: 'auto' }}>{JSON.stringify(dataManagerPreview, null, 2).slice(0, 1200)}</pre>}
+                {dataManagerPreview && (
+                  <div className="agent-template-card dev-result">
+                    <strong>Redaction preview: {dataManagerPreview.total_matches} sensitive match(es)</strong>
+                    <div className="dev-tags">{Object.entries(dataManagerPreview.sensitive_matches || {}).map(([k, v]) => <span className="dev-tag" key={k}>{k}: {v}</span>)}</div>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -10327,7 +10389,18 @@ function App() {
                   <button type="button" onClick={() => runImportCenter('preview')} disabled={importCenterBusy}>Preview</button>
                   <button type="button" onClick={() => runImportCenter('commit')} disabled={importCenterBusy}>Commit</button>
                 </div>
-                {importCenterResult && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '160px', overflow: 'auto' }}>{JSON.stringify(importCenterResult, null, 2).slice(0, 1600)}</pre>}
+                {importCenterResult?.error ? <p className="error">{importCenterResult.error}</p> : importCenterResult && (
+                  <div className="agent-template-card dev-result">
+                    {importCenterResult.imported_count != null ? (
+                      <strong>✓ Imported {importCenterResult.imported_count} record(s) · {importCenterResult.redactions} redaction(s)</strong>
+                    ) : (
+                      <>
+                        <strong>Preview: {importCenterResult.record_count} record(s) · {importCenterResult.redactions} redaction(s)</strong>
+                        {(importCenterResult.preview || []).slice(0, 4).map((r, i) => <p className="dev-line" key={i}>• {r.content}</p>)}
+                      </>
+                    )}
+                  </div>
+                )}
                 {importCenterRecords?.records && <p className="muted">records: {importCenterRecords.records.length}</p>}
               </div>
             )}
@@ -10358,7 +10431,9 @@ function App() {
                   <button type="button" onClick={() => runExportCenter2('package')} disabled={exportCenterBusy}>Package</button>
                   <button type="button" onClick={() => runExportCenter2('case')} disabled={exportCenterBusy}>Case study</button>
                 </div>
-                {exportCenterResult && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '160px', overflow: 'auto' }}>{JSON.stringify(exportCenterResult, null, 2).slice(0, 1600)}</pre>}
+                {exportCenterResult?.error ? <p className="error">{exportCenterResult.error}</p> : exportCenterResult && (
+                  <p className="dev-line">✓ Exported <strong>{exportCenterResult.item_count ?? exportCenterResult.total_items ?? ''}</strong> {exportCenterResult.kind || 'item(s)'} as {exportCenterResult.format} — downloaded.</p>
+                )}
               </div>
             )}
           </section>
@@ -10468,7 +10543,20 @@ function App() {
                   <button type="button" onClick={() => runReleaseMgr('pr')} disabled={releaseBusy}>PR summary</button>
                   <button type="button" onClick={() => runReleaseMgr('notes')} disabled={releaseBusy}>Release notes</button>
                 </div>
-                {releaseMgr && <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto' }}>{JSON.stringify(releaseMgr, null, 2).slice(0, 1800)}</pre>}
+                {releaseMgr?.error ? <p className="error">{releaseMgr.error}</p> : releaseMgr && (
+                  <div className="dev-result">
+                    {releaseMgr.tag_planner && (
+                      <div className="dev-tags">
+                        <span className="dev-tag">patch {releaseMgr.tag_planner.suggested_patch}</span>
+                        <span className="dev-tag">minor {releaseMgr.tag_planner.suggested_minor}</span>
+                        <span className="dev-tag">major {releaseMgr.tag_planner.suggested_major}</span>
+                      </div>
+                    )}
+                    <div className="dev-section-title">Version checklist</div>
+                    {(releaseMgr.version_checklist || []).slice(0, 6).map((c, i) => <p className="dev-line" key={i}>☐ {c}</p>)}
+                    <button type="button" className="master-fb" style={{ marginTop: 6 }} onClick={async () => { const cl = await getReleaseManagerChangelog(); downloadFile('changelog.md', cl.content, 'text/markdown') }}>Download changelog</button>
+                  </div>
+                )}
                 {releaseResult && <p className="muted">generated: {releaseResult.title || releaseResult.version || releaseResult.format || 'artifact'}</p>}
               </div>
             )}
@@ -10492,7 +10580,17 @@ function App() {
                   <button type="button" onClick={downloadLaunchReport}>Download report</button>
                 </div>
                 {launchConsole?.error ? <p className="error">{launchConsole.error}</p> : launchConsole && (
-                  <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '220px', overflow: 'auto' }}>{JSON.stringify(launchConsole, null, 2).slice(0, 2200)}</pre>
+                  <div className="dev-result">
+                    <div className="dev-stats">
+                      <div className="dev-stat"><strong>{launchConsole.final_readiness?.score ?? '—'}</strong><span>readiness</span></div>
+                      <div className="dev-stat"><strong>{launchConsole.feature_matrix?.total_features ?? '—'}</strong><span>features</span></div>
+                      <div className="dev-stat"><strong>{launchConsole.milestones?.implementation_versions ?? '—'}</strong><span>versions</span></div>
+                    </div>
+                    <p className="dev-line"><strong>{launchConsole.positioning?.name}</strong> — {launchConsole.positioning?.tagline}</p>
+                    <p className="dev-line">Status: <span className={`feature-badge ${launchConsole.final_readiness?.status === 'launch-ready' ? 'active' : 'demo_safe'}`}>{launchConsole.final_readiness?.status}</span></p>
+                    {launchConsole.positioning?.pillars?.length > 0 && <div className="dev-section-title">Pillars</div>}
+                    {(launchConsole.positioning?.pillars || []).slice(0, 5).map((p, i) => <p className="dev-line" key={i}>• {p}</p>)}
+                  </div>
                 )}
               </div>
             )}
