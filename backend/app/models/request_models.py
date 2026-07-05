@@ -1467,6 +1467,24 @@ class VoiceActivityRequest(BaseModel):
     meta: dict = Field(default_factory=dict)
 
 
+class DurableWorkflowDefRequest(BaseModel):
+    name: str = Field(default="", max_length=120)
+    template: str | None = Field(default=None, max_length=60)
+    steps: list[dict] = Field(default_factory=list)
+
+
+class DurableWorkflowStartRequest(BaseModel):
+    definition_id: str | None = Field(default=None, max_length=80)
+    name: str = Field(default="", max_length=120)
+    steps: list[dict] = Field(default_factory=list)
+    inputs: dict = Field(default_factory=dict)
+
+
+class WorkflowApprovalRequest(BaseModel):
+    approved: bool = Field(default=True)
+    note: str = Field(default="", max_length=500)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

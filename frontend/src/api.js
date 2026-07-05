@@ -2578,6 +2578,31 @@ export function getVoiceEvents(workspaceId = 'global', limit = 50) {
 export function clearVoiceEvents(workspaceId = 'global') {
   return delJson(`/api/voice-console/events?workspace_id=${encodeURIComponent(workspaceId)}`)
 }
+// Phase 6 Durable Workflows
+export function getWorkflowTemplates() {
+  return getJson('/api/durable-workflows/templates')
+}
+export function listWorkflowRuns() {
+  return getJson('/api/durable-workflows/runs')
+}
+export function startWorkflowRun(payload) {
+  return postJson('/api/durable-workflows/runs', payload)
+}
+export function advanceWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/advance`, {})
+}
+export function approveWorkflowStep(runId, approved, note = '') {
+  return postJson(`/api/durable-workflows/runs/${runId}/approve`, { approved: Boolean(approved), note })
+}
+export function pauseWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/pause`, {})
+}
+export function resumeWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/resume`, {})
+}
+export function cancelWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/cancel`, {})
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }

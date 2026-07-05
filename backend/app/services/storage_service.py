@@ -201,6 +201,8 @@ class StorageService:
             "agent_profiles.json",
             "voice_console_settings.json",
             "voice_console_events.json",
+            "durable_workflow_defs.json",
+            "durable_workflow_runs.json",
             "permission_profiles.json",
             "imported_records.json",
             "marketplace_plugins.json",
