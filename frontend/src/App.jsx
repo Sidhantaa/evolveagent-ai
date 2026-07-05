@@ -350,6 +350,8 @@ import {
   getGitStatus,
   discoverGitRepos,
   getGitRepositories,
+  getGitLog,
+  getGitBranchList,
   getStudioTemplates,
   listAgentProfiles,
   createAgentProfile,
@@ -740,6 +742,9 @@ function App() {
   const [gitRepos, setGitRepos] = useState([])
   const [gitPath, setGitPath] = useState('')
   const [gitBusy, setGitBusy] = useState(false)
+  const [gitLog, setGitLog] = useState(null)
+  const [gitBranches, setGitBranches] = useState(null)
+  const [gitReadBusy, setGitReadBusy] = useState(false)
   const [showAgentStudio, setShowAgentStudio] = useState(false)
   const [studioTemplates, setStudioTemplates] = useState([])
   const [agentProfiles, setAgentProfiles] = useState([])
@@ -3288,6 +3293,20 @@ function App() {
       await refreshGitIntel()
     } finally {
       setGitBusy(false)
+    }
+  }
+
+  async function runGitRead(which) {
+    if (!gitPath.trim()) return
+    setGitReadBusy(true)
+    try {
+      if (which === 'log') {
+        setGitLog(await getGitLog(gitPath, 20))
+      } else {
+        setGitBranches(await getGitBranchList(gitPath))
+      }
+    } finally {
+      setGitReadBusy(false)
     }
   }
 
@@ -11554,7 +11573,33 @@ function App() {
                     )}
                   </Card>
                 ))}
-                <p className="ds-sub">Discovery is opt-in and read-only. Any push/merge/PR/deploy would require approval (not built here).</p>
+                <div className="ds-row" style={{ marginTop: 4 }}>
+                  <span className="ds-title" style={{ fontSize: 13 }}>Real reads</span>
+                  <span style={{ display: 'flex', gap: 6 }}>
+                    <Button size="sm" variant="ghost" disabled={gitReadBusy || !gitPath.trim()} onClick={() => runGitRead('log')}>Log</Button>
+                    <Button size="sm" variant="ghost" disabled={gitReadBusy || !gitPath.trim()} onClick={() => runGitRead('branches')}>Branches</Button>
+                  </span>
+                </div>
+                {gitBranches?.branches && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Branches ({gitBranches.count})</p>
+                    {gitBranches.branches.slice(0, 12).map((b) => (
+                      <div key={b.name} className="ds-row"><span>{b.current ? '● ' : ''}{b.name}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{b.head}</span></div>
+                    ))}
+                  </Card>
+                )}
+                {gitLog?.commits && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Recent commits ({gitLog.count})</p>
+                    {gitLog.commits.slice(0, 12).map((c) => (
+                      <div key={c.sha} style={{ marginTop: 4 }}>
+                        <div className="ds-row"><span>{c.subject}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{c.short}</span></div>
+                        <p className="ds-sub" style={{ fontSize: 11 }}>{c.author} · {(c.date || '').slice(0, 10)}</p>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Discovery + reads are opt-in and read-only (fixed argv, no shell). Any push/merge/PR/deploy would require approval (not built here).</p>
               </div>
             )}
           </section>
