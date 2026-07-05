@@ -844,6 +844,9 @@ function App() {
   const [voiceUsed, setVoiceUsed] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [listening, setListening] = useState(false)
+  const [liveTranscript, setLiveTranscript] = useState('')
+  const [pttListening, setPttListening] = useState(false)
+  const pttRecognitionRef = useRef(null)
   // Voice Ask Console (v-voice): speak answers aloud + task-aware MCP suggestions.
   const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
   const [speaking, setSpeaking] = useState(false)
@@ -5917,6 +5920,45 @@ function App() {
     }
     recognition.onend = () => setListening(false)
     recognition.start()
+  }
+
+  // Voice Console push-to-talk with a LIVE transcript (interim results).
+  // Local-only capture; nothing is recorded or uploaded. Honors settings.
+  function pttStart() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) { setError('Voice input is not supported in this browser yet.'); return }
+    if (pttListening) return
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = true
+    recognition.continuous = true
+    setLiveTranscript('')
+    recognition.onstart = () => { setPttListening(true); setError('') }
+    recognition.onresult = (event) => {
+      let text = ''
+      for (let i = 0; i < event.results.length; i += 1) text += event.results[i][0].transcript
+      setLiveTranscript(text)
+    }
+    recognition.onerror = () => { setPttListening(false) }
+    recognition.onend = () => { setPttListening(false) }
+    pttRecognitionRef.current = recognition
+    recognition.start()
+    logVoiceActivity('listen_start', { workspaceId: workspaceId || 'global' }).catch(() => {})
+  }
+
+  function pttStop() {
+    try { pttRecognitionRef.current?.stop() } catch { /* ignore */ }
+    setPttListening(false)
+    const text = liveTranscript.trim()
+    if (text) {
+      logVoiceActivity('transcribe', { workspaceId: workspaceId || 'global', text, meta: { chars: String(text.length) } }).catch(() => {})
+    }
+    logVoiceActivity('listen_stop', { workspaceId: workspaceId || 'global' }).catch(() => {})
+  }
+
+  function useTranscriptInComposer() {
+    const text = liveTranscript.trim()
+    if (text) { setInput(text); setVoiceTranscript(text); setVoiceUsed(true) }
   }
 
   function heroSubmit(event) {
@@ -11808,6 +11850,27 @@ function App() {
                   </div>
                   <p className="ds-sub" style={{ marginTop: 8 }}>Off by default: only counts and timestamps are recorded, never the words you speak.</p>
                 </Card>
+
+                {voiceSettings?.transcript_enabled && (
+                  <Card>
+                    <div className="ds-row"><span className="ds-title" style={{ fontSize: 13 }}>Push-to-talk {pttListening && <Badge tone="accent">listening…</Badge>}</span>
+                      <span style={{ display: 'flex', gap: 6 }}>
+                        {!pttListening
+                          ? <Button size="sm" variant="primary" onClick={pttStart}>Hold to talk</Button>
+                          : <Button size="sm" variant="ghost" onClick={pttStop}>Stop</Button>}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 8, minHeight: 44, padding: '8px 10px', borderRadius: 10, border: '1px dashed var(--ds-line-strong)', background: 'var(--ds-surface-2)', color: 'var(--ds-ink)', fontSize: 13 }}>
+                      {liveTranscript || <span className="ds-sub">Your words appear here live while you speak. Nothing is recorded or uploaded.</span>}
+                    </div>
+                    {liveTranscript && !pttListening && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                        <Button size="sm" variant="primary" onClick={useTranscriptInComposer}>Use in composer</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setLiveTranscript('')}>Clear</Button>
+                      </div>
+                    )}
+                  </Card>
+                )}
 
                 <Card>
                   <div className="ds-row"><span>Activity log</span>
