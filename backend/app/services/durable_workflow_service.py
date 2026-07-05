@@ -10,6 +10,11 @@ from app.services.storage_service import StorageService
 # Words that mark a step as risky — it can never auto-run; the workflow halts for approval.
 RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post", "publish", "transfer", "charge", "refund"]
 
+# Whitelisted INTERNAL, LOCAL, reversible effects a step may actually perform
+# (once approved). These write only to the app's own effect store — never any
+# external service. Anything not in this set is simulated, not executed.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify"}
+
 TERMINAL = {"completed", "cancelled", "failed"}
 
 # Starter durable workflows. Each step: name + optional action verb; risk is derived.
@@ -33,6 +38,14 @@ STARTER_TEMPLATES = [
          {"name": "Gather sources"},
          {"name": "Compare and synthesize findings"},
          {"name": "Write the brief"},
+     ]},
+    {"key": "daily_capture", "name": "Daily Capture",
+     "steps": [
+         {"name": "Review today's notes"},
+         {"name": "Create a follow-up task", "action_type": "create_task",
+          "action_params": {"title": "Follow up from Daily Capture"}},
+         {"name": "Notify me it's done", "action_type": "notify",
+          "action_params": {"message": "Daily Capture complete"}},
      ]},
     {"key": "release_checklist", "name": "Release Checklist",
      "steps": [
@@ -63,6 +76,7 @@ class DurableWorkflowService:
 
     defs_file = "durable_workflow_defs.json"
     runs_file = "durable_workflow_runs.json"
+    effects_file = "durable_workflow_effects.json"
 
     def __init__(self, storage: StorageService, governance_service: GovernanceService):
         self.storage = storage
@@ -97,17 +111,41 @@ class DurableWorkflowService:
             name = str(s.get("name") or f"Step {i + 1}")[:200]
             action = str(s.get("action") or "")[:60]
             step = {"name": name, "action": action}
+            # A whitelisted internal action makes the step perform a REAL local
+            # effect on approval; such steps are always approval-gated.
+            action_type = str(s.get("action_type") or "")[:40]
+            real = action_type in WHITELISTED_ACTIONS
+            params = s.get("action_params") if isinstance(s.get("action_params"), dict) else {}
             steps.append({
                 "id": str(uuid4()),
                 "name": name,
                 "action": action,
-                "requires_approval": _is_risky(step),
+                "action_type": action_type if real else "",
+                "action_params": {str(k)[:40]: str(v)[:200] for k, v in list(params.items())[:10]} if real else {},
+                "requires_approval": _is_risky(step) or real,
                 "status": "pending",
                 "output": "",
                 "started_at": None,
                 "finished_at": None,
             })
         return steps
+
+    def _execute_action(self, run: dict, step: dict) -> str:
+        """Perform a whitelisted internal effect and record it. Local + reversible."""
+        action_type = step.get("action_type") or ""
+        params = step.get("action_params") or {}
+        effect = {
+            "effect_id": str(uuid4()),
+            "run_id": run["run_id"],
+            "step_id": step["id"],
+            "action_type": action_type,
+            "params": params,
+            "created_at": self._now(),
+        }
+        self.storage.append(self.effects_file, effect)
+        self._log("workflow_effect_executed", f"Executed internal action '{action_type}' in run '{run['name']}'", risk=3)
+        label = params.get("title") or params.get("message") or action_type
+        return f"[executed] {action_type}: {label}"
 
     def create_definition(self, data: dict) -> dict:
         data = data or {}
@@ -161,7 +199,11 @@ class DurableWorkflowService:
             definition = next((d for d in self.storage.read_list(self.defs_file) if d.get("definition_id") == definition_id), None)
             if not definition:
                 raise ValueError(f"Definition not found: {definition_id}")
-            steps = self._build_steps([{"name": s["name"], "action": s.get("action", "")} for s in definition["steps"]])
+            steps = self._build_steps([
+                {"name": s["name"], "action": s.get("action", ""),
+                 "action_type": s.get("action_type", ""), "action_params": s.get("action_params", {})}
+                for s in definition["steps"]
+            ])
             name = definition["name"]
         else:
             steps = self._build_steps(data.get("steps") or [])
@@ -233,8 +275,12 @@ class DurableWorkflowService:
             raise ValueError("Run is not waiting for approval")
         step = run["steps"][run["cursor"]]
         if approved:
-            step["status"] = "approved"
-            step["output"] = f"[approved] {step['name']} executed" + (f" — {note}" if note else "")
+            # Whitelisted internal action => perform the REAL local effect.
+            # Anything else stays simulated (as before).
+            if step.get("action_type") in WHITELISTED_ACTIONS:
+                step["output"] = self._execute_action(run, step)
+            else:
+                step["output"] = f"[approved] {step['name']} executed" + (f" — {note}" if note else "")
             step["finished_at"] = self._now()
             step["status"] = "done"
             run["cursor"] += 1
@@ -288,6 +334,17 @@ class DurableWorkflowService:
         runs = sorted(runs, key=lambda r: r.get("updated_at", ""), reverse=True)
         return {"runs": runs, "count": len(runs)}
 
+    def effects(self, run_id: str | None = None, limit: int = 50) -> dict:
+        rows = self.storage.read_list(self.effects_file)
+        if run_id:
+            rows = [e for e in rows if e.get("run_id") == run_id]
+        rows = sorted(rows, key=lambda e: e.get("created_at", ""), reverse=True)
+        try:
+            limit = max(1, min(500, int(limit)))
+        except (TypeError, ValueError):
+            limit = 50
+        return {"effects": rows[:limit], "count": len(rows), "whitelisted_actions": sorted(WHITELISTED_ACTIONS)}
+
     # -- analytics -----------------------------------------------------------
     def analytics_summary(self) -> dict:
         runs = self.storage.read_list(self.runs_file)
@@ -299,6 +356,7 @@ class DurableWorkflowService:
             "durable_workflow_definitions": len(self.storage.read_list(self.defs_file)),
             "durable_workflow_runs": len(runs),
             "durable_workflow_runs_by_status": by_status,
+            "durable_workflow_effects": len(self.storage.read_list(self.effects_file)),
         }
 
     def summary(self) -> dict:

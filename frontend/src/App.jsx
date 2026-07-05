@@ -371,6 +371,7 @@ import {
   pauseWorkflowRun,
   resumeWorkflowRun,
   cancelWorkflowRun,
+  getWorkflowEffects,
   getMarketplaceListings,
   installMarketplaceListing,
   unpublishMarketplaceListing,
@@ -762,6 +763,7 @@ function App() {
   const [showWorkflows, setShowWorkflows] = useState(false)
   const [workflowTemplates, setWorkflowTemplates] = useState([])
   const [workflowRuns, setWorkflowRuns] = useState([])
+  const [workflowEffects, setWorkflowEffects] = useState([])
   const [durableBusy, setDurableBusy] = useState(false)
   const [showMarketplaceHub, setShowMarketplaceHub] = useState(false)
   const [marketplaceListings, setMarketplaceListings] = useState([])
@@ -3361,9 +3363,10 @@ function App() {
 
   async function refreshWorkflows() {
     try {
-      const [tpl, runs] = await Promise.all([getWorkflowTemplates(), listWorkflowRuns()])
+      const [tpl, runs, eff] = await Promise.all([getWorkflowTemplates(), listWorkflowRuns(), getWorkflowEffects()])
       setWorkflowTemplates(tpl?.templates || [])
       setWorkflowRuns(runs?.runs || [])
+      setWorkflowEffects(eff?.effects || [])
     } catch {
       // best-effort
     }
@@ -11866,7 +11869,18 @@ function App() {
                     </Card>
                   )
                 })}
-                <p className="ds-sub">Approval-gated and governance-logged. No step performs a real action — this orchestrates and simulates; wiring real execution would itself require approval.</p>
+                {workflowEffects.length > 0 && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Actions performed ({workflowEffects.length})</p>
+                    {workflowEffects.slice(0, 8).map((e) => (
+                      <div key={e.effect_id} className="ds-row">
+                        <span><Badge tone="success">{e.action_type}</Badge> {e.params?.title || e.params?.message || ''}</span>
+                        <span style={{ fontSize: 11, fontWeight: 400 }}>{(e.created_at || '').slice(0, 10)}</span>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Approval-gated and governance-logged. Most steps simulate; steps with a whitelisted internal action (create_task · create_note · notify) perform a real, local, reversible effect only after you approve — never an external mutation.</p>
               </div>
             )}
           </section>

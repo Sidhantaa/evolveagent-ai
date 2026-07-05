@@ -2612,6 +2612,9 @@ export function resumeWorkflowRun(runId) {
 export function cancelWorkflowRun(runId) {
   return postJson(`/api/durable-workflows/runs/${runId}/cancel`, {})
 }
+export function getWorkflowEffects(runId) {
+  return getJson(runId ? `/api/durable-workflows/effects?run_id=${runId}` : '/api/durable-workflows/effects')
+}
 // Phase 7 Marketplace Hub
 export function getMarketplaceListings(kind) {
   return getJson(kind ? `/api/marketplace-hub/listings?kind=${encodeURIComponent(kind)}` : '/api/marketplace-hub/listings')

@@ -52,6 +52,7 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("durable-workflows", "GET", "/api/durable-workflows/definitions", None, 200),
     ("durable-workflows", "GET", "/api/durable-workflows/runs", None, 200),
     ("durable-workflows", "GET", "/api/durable-workflows/summary", None, 200),
+    ("durable-workflows", "GET", "/api/durable-workflows/effects", None, 200),
     ("durable-workflows", "POST", "/api/durable-workflows/runs", {"steps": [{"name": "smoke step"}]}, 200),
     # Phase 7 — Marketplace Hub
     ("marketplace-hub", "GET", "/api/marketplace-hub/listings", None, 200),

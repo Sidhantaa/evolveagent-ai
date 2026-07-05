@@ -4469,6 +4469,11 @@ def durable_workflow_cancel(run_id: str) -> dict:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
+@router.get("/durable-workflows/effects")
+def durable_workflow_effects(run_id: str | None = None, limit: int = 50) -> dict:
+    return durable_workflow_service.effects(run_id, limit)
+
+
 @router.get("/durable-workflows/summary")
 def durable_workflow_summary() -> dict:
     return durable_workflow_service.summary()
