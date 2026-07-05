@@ -2693,3 +2693,130 @@ export function rejectMcpExecution(requestId) {
 export function runMcpExecution(requestId) {
   return postJson(`/api/mcp/executions/${requestId}/run`, {})
 }
+
+export function researchAgentClaims(text) {
+  return postJson('/api/research-agent/claims', { text })
+}
+export function researchAgentBias(text) {
+  return postJson('/api/research-agent/bias', { text })
+}
+export function researchAgentBrief(topic, sources) {
+  return postJson('/api/research-agent/brief', { topic, sources })
+}
+export function getBusinessIntelDashboard(workspaceId) {
+  return getJson(workspaceId ? `/api/business-intel/dashboard?workspace_id=${workspaceId}` : '/api/business-intel/dashboard')
+}
+export function getBusinessIntelReport(workspaceId) {
+  return getJson(workspaceId ? `/api/business-intel/report?workspace_id=${workspaceId}` : '/api/business-intel/report')
+}
+export function analyzeMeetingTranscript(transcript) {
+  return postJson('/api/meeting-intel/analyze', { transcript })
+}
+export function meetingTranscriptToGoal(transcript, title) {
+  return postJson('/api/meeting-intel/to-goal', { transcript, title })
+}
+export function analyzeCollaboration(topic, contributions) {
+  return postJson('/api/collaboration/analyze', { topic, contributions })
+}
+export function getPermissionProfiles() {
+  return getJson('/api/permissions/profiles')
+}
+export function createPermissionProfile(payload) {
+  return postJson('/api/permissions/profiles', payload)
+}
+export async function deletePermissionProfile(profileId) {
+  const response = await fetch(`${API_BASE}/api/permissions/profiles/${profileId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    throw new Error(`Permission profile delete failed with status ${response.status}`)
+  }
+  return response.json()
+}
+export function evaluatePermission(payload) {
+  return postJson('/api/permissions/evaluate', payload)
+}
+export function getGovernanceConsoleDashboard() {
+  return getJson('/api/governance-console/dashboard')
+}
+export function getGovernanceConsoleReport(format = 'markdown') {
+  return getJson(`/api/governance-console/report?format=${format}`)
+}
+export function getDataManagerBrowse() {
+  return getJson('/api/data-manager/browse')
+}
+export function getDataManagerUsage() {
+  return getJson('/api/data-manager/usage')
+}
+export function getDataManagerCleanup() {
+  return getJson('/api/data-manager/cleanup-suggestions')
+}
+export function previewDataRedaction(collection) {
+  return postJson('/api/data-manager/redaction-preview', { collection })
+}
+export function previewImport(kind, content) {
+  return postJson('/api/import-center/preview', { kind, content })
+}
+export function commitImport(kind, content, workspaceId) {
+  return postJson('/api/import-center/commit', { kind, content, workspace_id: workspaceId || null })
+}
+export function getImportRecords(kind) {
+  return getJson(kind ? `/api/import-center/records?kind=${kind}` : '/api/import-center/records')
+}
+export function exportCenterExport(kind, format, workspaceId) {
+  return postJson('/api/export-center/export', { kind, format, workspace_id: workspaceId || null })
+}
+export function exportCenterPackage(kinds, format, workspaceId) {
+  return postJson('/api/export-center/package', { kinds, format, workspace_id: workspaceId || null })
+}
+export function getExportCenterCaseStudy() {
+  return getJson('/api/export-center/case-study')
+}
+export function getPluginMarketplaceCatalog() {
+  return getJson('/api/plugin-marketplace/catalog')
+}
+export function registerMarketplacePlugin(payload) {
+  return postJson('/api/plugin-marketplace/register', payload)
+}
+export function toggleMarketplacePlugin(pluginId, enabled) {
+  return postJson(`/api/plugin-marketplace/${pluginId}/toggle`, { enabled })
+}
+export function testMarketplacePlugin(pluginId) {
+  return postJson(`/api/plugin-marketplace/${pluginId}/test`, {})
+}
+export function getPluginMarketplaceActivity() {
+  return getJson('/api/plugin-marketplace/activity')
+}
+export function getIntegrationHubCards() {
+  return getJson('/api/integration-hub/cards')
+}
+export function dryRunIntegration(integrationId) {
+  return postJson(`/api/integration-hub/${integrationId}/dry-run`, {})
+}
+export function getQaCenterDashboard() {
+  return getJson('/api/qa-center/dashboard')
+}
+export function getQaCenterMatrix() {
+  return getJson('/api/qa-center/matrix')
+}
+export function recordQaStatus(featureKey, status, note) {
+  return postJson('/api/qa-center/record', { feature_key: featureKey, status, note })
+}
+export function getReleaseManagerDashboard() {
+  return getJson('/api/release-manager/dashboard')
+}
+export function getReleaseManagerChangelog() {
+  return getJson('/api/release-manager/changelog')
+}
+export function generatePrSummary(title, changes) {
+  return postJson('/api/release-manager/pr-summary', { title, changes })
+}
+export function generateReleaseNotes(version, highlights) {
+  return postJson('/api/release-manager/release-notes', { version, highlights })
+}
+export function getLaunchConsoleDashboard() {
+  return getJson('/api/launch-console/dashboard')
+}
+export function getLaunchConsoleReport() {
+  return getJson('/api/launch-console/report')
+}
