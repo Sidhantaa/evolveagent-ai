@@ -137,6 +137,9 @@ from app.models.request_models import (
     AgentImportRequest,
     VoiceSettingsRequest,
     VoiceActivityRequest,
+    DurableWorkflowDefRequest,
+    DurableWorkflowStartRequest,
+    WorkflowApprovalRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -328,6 +331,7 @@ from app.services.master_agent_service import MasterAgentService
 from app.services.git_discovery_service import GitDiscoveryService
 from app.services.agent_profile_service import AgentProfileService
 from app.services.voice_console_service import VoiceConsoleService
+from app.services.durable_workflow_service import DurableWorkflowService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -467,6 +471,7 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1769,6 +1774,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **git_discovery_service.analytics_summary(),
         **agent_profile_service.analytics_summary(),
         **voice_console_service.analytics_summary(),
+        **durable_workflow_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4368,6 +4374,93 @@ def voice_console_clear_events(workspace_id: str = "global") -> dict:
 @router.get("/voice-console/summary")
 def voice_console_summary() -> dict:
     return voice_console_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Phase 6 Durable Workflows — resumable, approval-gated, mock-safe runs.
+# ----------------------------------------------------------------------
+@router.get("/durable-workflows/templates")
+def durable_workflow_templates() -> dict:
+    return durable_workflow_service.templates()
+
+
+@router.get("/durable-workflows/definitions")
+def durable_workflow_definitions() -> dict:
+    return durable_workflow_service.list_definitions()
+
+
+@router.post("/durable-workflows/definitions")
+def durable_workflow_create_def(request: DurableWorkflowDefRequest) -> dict:
+    try:
+        return durable_workflow_service.create_definition(request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/durable-workflows/runs")
+def durable_workflow_list_runs() -> dict:
+    return durable_workflow_service.list_runs()
+
+
+@router.post("/durable-workflows/runs")
+def durable_workflow_start(request: DurableWorkflowStartRequest) -> dict:
+    try:
+        return durable_workflow_service.start_run(request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/durable-workflows/runs/{run_id}")
+def durable_workflow_get_run(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.get_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/advance")
+def durable_workflow_advance(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.advance_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/approve")
+def durable_workflow_approve(run_id: str, request: WorkflowApprovalRequest) -> dict:
+    try:
+        return durable_workflow_service.approve_step(run_id, request.approved, request.note)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/pause")
+def durable_workflow_pause(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.pause_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/resume")
+def durable_workflow_resume(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.resume_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/cancel")
+def durable_workflow_cancel(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.cancel_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/durable-workflows/summary")
+def durable_workflow_summary() -> dict:
+    return durable_workflow_service.summary()
 
 
 # ----------------------------------------------------------------------

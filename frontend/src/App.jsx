@@ -362,6 +362,13 @@ import {
   logVoiceActivity,
   getVoiceEvents,
   clearVoiceEvents,
+  getWorkflowTemplates,
+  listWorkflowRuns,
+  startWorkflowRun,
+  approveWorkflowStep,
+  pauseWorkflowRun,
+  resumeWorkflowRun,
+  cancelWorkflowRun,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -742,6 +749,10 @@ function App() {
   const [voiceSettings, setVoiceSettings] = useState(null)
   const [availableVoices, setAvailableVoices] = useState([])
   const [voiceEvents, setVoiceEvents] = useState([])
+  const [showWorkflows, setShowWorkflows] = useState(false)
+  const [workflowTemplates, setWorkflowTemplates] = useState([])
+  const [workflowRuns, setWorkflowRuns] = useState([])
+  const [durableBusy, setDurableBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -1430,6 +1441,7 @@ function App() {
       { id: 'open-studio', label: 'Open Agent Studio', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowAgentStudio(true); if (!studioTemplates.length) refreshAgentStudio() } },
       { id: 'open-master', label: 'Open Master Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowMasterPanel(true) } },
       { id: 'open-voice', label: 'Open Voice Console', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowVoiceConsole(true); refreshVoiceConsole() } },
+      { id: 'open-workflows', label: 'Open Durable Workflows', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3304,6 +3316,26 @@ function App() {
       setVoiceEvents([])
     } catch {
       // best-effort
+    }
+  }
+
+  async function refreshWorkflows() {
+    try {
+      const [tpl, runs] = await Promise.all([getWorkflowTemplates(), listWorkflowRuns()])
+      setWorkflowTemplates(tpl?.templates || [])
+      setWorkflowRuns(runs?.runs || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function runWorkflowAction(fn) {
+    setDurableBusy(true)
+    try {
+      await fn()
+      await refreshWorkflows()
+    } finally {
+      setDurableBusy(false)
     }
   }
 
@@ -11558,6 +11590,71 @@ function App() {
                   ))}
                 </Card>
                 <p className="ds-sub">All voice processing stays in your browser. Nothing is recorded, uploaded, or stored as audio.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowWorkflows((c) => !c); if (!workflowTemplates.length) refreshWorkflows() }}>
+              <span>
+                <Workflow size={15} />
+                Durable Workflows
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWorkflows && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Durable Workflows</p>
+                  <p className="ds-sub">Long-running, resumable runs. Each step is checkpointed so a run survives restarts; risky steps (send/deploy/pay/…) halt for approval and never auto-run. Execution is simulated (mock-safe).</p>
+                </Card>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {workflowTemplates.map((t) => (
+                    <Button key={t.key} size="sm" variant="ghost" disabled={durableBusy}
+                      onClick={() => runWorkflowAction(() => startWorkflowRun({ template: null, name: t.name, steps: t.steps }))}>
+                      ▶ {t.name}
+                    </Button>
+                  ))}
+                </div>
+                {workflowRuns.length === 0 && <p className="ds-sub">No runs yet — start one from a template above.</p>}
+                {workflowRuns.slice(0, 6).map((run) => {
+                  const tone = run.status === 'completed' ? 'success'
+                    : run.status === 'waiting_approval' ? 'warn'
+                    : run.status === 'cancelled' ? 'default' : 'accent'
+                  const doneCount = (run.steps || []).filter((s) => s.status === 'done' || s.status === 'skipped').length
+                  return (
+                    <Card key={run.run_id} hover>
+                      <p className="ds-title" style={{ fontSize: 14 }}>
+                        {run.name} <Badge tone={tone}>{run.status.replace('_', ' ')}</Badge>
+                        <Badge tone="default">{doneCount}/{(run.steps || []).length}</Badge>
+                      </p>
+                      <div style={{ marginTop: 6 }}>
+                        {(run.steps || []).map((s) => (
+                          <div key={s.id} className="ds-row">
+                            <span style={{ opacity: s.status === 'pending' ? 0.5 : 1 }}>
+                              {s.status === 'done' ? '✓' : s.status === 'skipped' ? '⤼' : s.status === 'waiting_approval' ? '⏸' : '•'} {s.name}
+                            </span>
+                            {s.requires_approval && <Badge tone="warn">approval</Badge>}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                        {run.status === 'waiting_approval' && (
+                          <>
+                            <Button size="sm" variant="primary" disabled={durableBusy} onClick={() => runWorkflowAction(() => approveWorkflowStep(run.run_id, true))}>Approve step</Button>
+                            <Button size="sm" variant="ghost" disabled={durableBusy} onClick={() => runWorkflowAction(() => approveWorkflowStep(run.run_id, false))}>Reject</Button>
+                          </>
+                        )}
+                        {run.status === 'running' && <Button size="sm" variant="ghost" disabled={durableBusy} onClick={() => runWorkflowAction(() => pauseWorkflowRun(run.run_id))}>Pause</Button>}
+                        {run.status === 'paused' && <Button size="sm" variant="primary" disabled={durableBusy} onClick={() => runWorkflowAction(() => resumeWorkflowRun(run.run_id))}>Resume</Button>}
+                        {!['completed', 'cancelled'].includes(run.status) && <Button size="sm" variant="ghost" disabled={durableBusy} onClick={() => runWorkflowAction(() => cancelWorkflowRun(run.run_id))}>Cancel</Button>}
+                      </div>
+                    </Card>
+                  )
+                })}
+                <p className="ds-sub">Approval-gated and governance-logged. No step performs a real action — this orchestrates and simulates; wiring real execution would itself require approval.</p>
               </div>
             )}
           </section>
