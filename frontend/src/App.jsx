@@ -714,6 +714,7 @@ function App() {
   const [developerMode, setDeveloperMode] = useState(false)
   const [theme, setTheme] = useState(() => localStorage.getItem('evolveagent-theme') || 'dark')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [devSection, setDevSection] = useState('agent')
   const [showGitIntel, setShowGitIntel] = useState(false)
   const [gitStatus, setGitStatus] = useState(null)
   const [gitRepos, setGitRepos] = useState([])
@@ -6008,7 +6009,7 @@ function App() {
           </div>
         </div>
       )}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} data-active={developerMode ? devSection : undefined}>
         <div className="sidebar-brand">
           <div className="brand-mark">
             <Brain size={21} />
@@ -6023,6 +6024,28 @@ function App() {
           <MessageSquarePlus size={16} />
           New Chat
         </button>
+
+        {developerMode && (
+          <nav className="dev-nav" aria-label="Sections">
+            {[
+              { id: 'agent', label: 'Agent', icon: <Brain size={14} /> },
+              { id: 'workspace', label: 'Workspace', icon: <Layers3 size={14} /> },
+              { id: 'ops', label: 'Ops', icon: <Gauge size={14} /> },
+              { id: 'tools', label: 'Tools', icon: <Cpu size={14} /> },
+              { id: 'intel', label: 'Intelligence', icon: <Sparkles size={14} /> },
+              { id: 'build', label: 'Build & Ship', icon: <Flag size={14} /> },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`dev-nav-btn ${devSection === s.id ? 'active' : ''}`}
+                onClick={() => setDevSection(s.id)}
+              >
+                {s.icon}<span>{s.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
         <div className="sidebar-dev-only">
         <section className="sidebar-section">
@@ -6057,7 +6080,7 @@ function App() {
           </div>
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowMemoryPanel((current) => !current)}>
             <span>
               <Database size={15} />
@@ -6192,7 +6215,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowKnowledgePanel((current) => !current)}>
             <span>
               <Brain size={15} />
@@ -6261,7 +6284,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="tools" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowIntegrations((current) => !current)}>
             <span>
               <Layers3 size={15} />
@@ -6398,7 +6421,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAutopilot((current) => !current)}>
             <span>
               <Bot size={15} />
@@ -6520,7 +6543,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowToolsPanel((current) => !current)}>
             <span>
               <Terminal size={15} />
@@ -6804,7 +6827,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="ops" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAnalytics((current) => !current)}>
             <span>
               <BarChart3 size={15} />
@@ -6885,7 +6908,7 @@ function App() {
         </section>
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCompliancePanel((current) => !current)}>
               <span>
                 <ShieldAlert size={15} />
@@ -6979,7 +7002,7 @@ function App() {
           </section>
         )}
 
-        <section className="sidebar-section">
+        <section data-group="workspace" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowMissionControl((current) => !current)}>
             <span>
               <Flag size={15} />
@@ -7068,7 +7091,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAppBuilder((current) => !current)}>
             <span>
               <Layers3 size={15} />
@@ -7131,7 +7154,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowDebatePanel((current) => !current)}>
             <span>
               <Route size={15} />
@@ -7207,7 +7230,7 @@ function App() {
         </section>
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowResearchPanel((current) => !current)}>
               <span>
                 <Library size={15} />
@@ -7306,7 +7329,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowQualityPanel((current) => !current)}>
               <span>
                 <Gauge size={15} />
@@ -7368,7 +7391,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowEvaluationLab((current) => !current)}>
               <span>
                 <BarChart3 size={15} />
@@ -7470,7 +7493,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowProjectManager((current) => !current)}>
               <span>
                 <Flag size={15} />
@@ -7565,7 +7588,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowPortfolio((current) => !current)}>
               <span>
                 <Layers3 size={15} />
@@ -7650,7 +7673,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOsPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7730,7 +7753,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOrgPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7887,7 +7910,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowBusinessPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8040,7 +8063,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowChiefPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8140,7 +8163,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSimulatorPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8253,7 +8276,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMultimodalPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8336,7 +8359,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowIndustryPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8411,7 +8434,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowAgentNetworkPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8495,7 +8518,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowHealingPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8574,7 +8597,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCompanyBrainPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8675,7 +8698,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowDevicePanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8766,7 +8789,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowTrainingPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8855,7 +8878,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowAvatarPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8979,7 +9002,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowLifePanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9105,7 +9128,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowUniversalPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9199,7 +9222,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowTeamPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9314,7 +9337,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSaasPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9407,7 +9430,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowBizOpsPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9499,7 +9522,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowComplianceIntelPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9579,7 +9602,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowBoardPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9654,7 +9677,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowInnovationPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9727,7 +9750,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSimWorldPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9801,7 +9824,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOrgOsPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9874,7 +9897,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCompanionPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9955,7 +9978,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOperatingLayerPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -10016,7 +10039,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowDataExport((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -10055,7 +10078,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCodeIntel((current) => !current)}>
               <span>
                 <GitBranch size={15} />
@@ -10101,7 +10124,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowResearchAgent2((current) => !current)}>
               <span><Library size={15} /> Research Agent</span>
               <ChevronDown size={15} />
@@ -10149,7 +10172,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowBizIntel2((current) => !current); if (!bizIntel2) refreshBizIntel2() }}>
               <span><BarChart3 size={15} /> Business Intelligence</span>
               <ChevronDown size={15} />
@@ -10182,7 +10205,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMeetingIntel2((current) => !current)}>
               <span><MessageSquarePlus size={15} /> Meeting Intelligence</span>
               <ChevronDown size={15} />
@@ -10227,7 +10250,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCollab2((current) => !current)}>
               <span><Bot size={15} /> Multi-Agent Collaboration</span>
               <ChevronDown size={15} />
@@ -10262,7 +10285,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowPerm3((current) => !current); if (!permProfiles) refreshPerm3() }}>
               <span><Shield size={15} /> Permission System</span>
               <ChevronDown size={15} />
@@ -10293,7 +10316,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowGovConsole((current) => !current); if (!govConsole) refreshGovConsole() }}>
               <span><ShieldAlert size={15} /> Governance Console</span>
               <ChevronDown size={15} />
@@ -10334,7 +10357,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowDataManager((current) => !current); if (!dataManager) refreshDataManager() }}>
               <span><Database size={15} /> Local Data Manager</span>
               <ChevronDown size={15} />
@@ -10370,7 +10393,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowImportCenter((current) => !current)}>
               <span><Paperclip size={15} /> Import Center</span>
               <ChevronDown size={15} />
@@ -10408,7 +10431,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowExportCenter2((current) => !current)}>
               <span><Download size={15} /> Export Center</span>
               <ChevronDown size={15} />
@@ -10440,7 +10463,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowPluginMarket((current) => !current); if (!pluginMarket) refreshPluginMarket() }}>
               <span><Cpu size={15} /> Plugin Marketplace</span>
               <ChevronDown size={15} />
@@ -10472,7 +10495,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowIntegrationHub2((current) => !current); if (!integrationHub2) refreshIntegrationHub2() }}>
               <span><Route size={15} /> Integration Hub</span>
               <ChevronDown size={15} />
@@ -10498,7 +10521,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowQaCenter2((current) => !current); if (!qaCenter) refreshQaCenter2() }}>
               <span><Gauge size={15} /> QA Center</span>
               <ChevronDown size={15} />
@@ -10527,7 +10550,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowReleaseMgr((current) => !current); if (!releaseMgr) refreshReleaseMgr() }}>
               <span><Flag size={15} /> Release Manager</span>
               <ChevronDown size={15} />
@@ -10564,7 +10587,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowLaunchConsole((current) => !current); if (!launchConsole) refreshLaunchConsole() }}>
               <span><Sparkles size={15} /> Product Launch Console</span>
               <ChevronDown size={15} />
@@ -10598,7 +10621,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowDocIntel((current) => !current)}>
               <span>
                 <FileText size={15} />
@@ -10642,7 +10665,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowProductivity((current) => !current); if (!productivityBrain) refreshProductivity() }}>
               <span>
                 <Flag size={15} />
@@ -10688,7 +10711,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowWorkflowRec((current) => !current)}>
               <span>
                 <Route size={15} />
@@ -10734,7 +10757,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowAgentQuality((current) => !current); if (!agentQuality) refreshAgentQuality() }}>
               <span>
                 <ThumbsUp size={15} />
@@ -10783,7 +10806,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowContext((current) => !current)}>
               <span>
                 <Brain size={15} />
@@ -10830,7 +10853,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowWsOs((current) => !current); if (!wsOsDashboard) refreshWsOs() }}>
               <span>
                 <Layers3 size={15} />
@@ -10881,7 +10904,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowInbox((current) => !current); if (!inboxData) refreshInbox() }}>
               <span>
                 <Flag size={15} />
@@ -10919,7 +10942,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowProviders((current) => !current); if (!providerControl) refreshProviderControl() }}>
               <span>
                 <Gauge size={15} />
@@ -10965,7 +10988,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowSettings((current) => !current); if (!settingsData) refreshSettings() }}>
               <span>
                 <Cpu size={15} />
@@ -11012,7 +11035,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowDemo((current) => !current); if (!demoSummary) refreshDemo() }}>
               <span>
                 <Sparkles size={15} />
@@ -11052,7 +11075,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowFeatures((current) => !current); if (!featuresData) refreshFeatures() }}>
               <span>
                 <Library size={15} />
@@ -11100,7 +11123,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowHome((current) => !current); if (!dashboardHome) refreshHome() }}>
               <span>
                 <Gauge size={15} />
@@ -11156,7 +11179,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => { setShowActivity((current) => !current); if (!activityTimeline) refreshActivity() }}>
               <span>
                 <Route size={15} />
@@ -11202,7 +11225,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowGlobalSearch((current) => !current)}>
               <span>
                 <Layers3 size={15} />
@@ -11358,7 +11381,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMasterPanel((current) => !current)}>
               <span>
                 <Brain size={15} />
@@ -11436,7 +11459,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOs2((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11483,7 +11506,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowScheduled((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11524,7 +11547,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowWsTemplates((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11561,7 +11584,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowNotifications((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11599,7 +11622,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOpLayer2((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11644,7 +11667,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowPlaybooks((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11689,7 +11712,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowEvalHarness((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11732,7 +11755,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowRetrieval((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11771,7 +11794,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowUsageLedger((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11814,7 +11837,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowHealthMonitor((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11854,7 +11877,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowApprovalsCenter((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -11900,7 +11923,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMcpPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -12185,7 +12208,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowApprovals((current) => !current)}>
               <span>
                 <ShieldAlert size={15} />
@@ -12239,7 +12262,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowAgentJobs((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -12336,7 +12359,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCodexJobs((current) => !current)}>
               <span>
                 <GitBranch size={15} />
@@ -12401,7 +12424,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSystemPrompts((current) => !current)}>
               <span>
                 <FileText size={15} />
@@ -12447,7 +12470,7 @@ function App() {
           </section>
         )}
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAgentBuilder((current) => !current)}>
             <span>
               <Layers3 size={15} />
