@@ -11,6 +11,51 @@ def test_templates():
     assert "weekly_report" in {x["key"] for x in t["templates"]}
 
 
+def test_action_step_is_gated_and_executes_real_effect():
+    run = client.post("/api/durable-workflows/runs", json={"steps": [
+        {"name": "prep"},
+        {"name": "make task", "action_type": "create_task", "action_params": {"title": "Ship it"}},
+    ]}).json()
+    # the action step must halt for approval (never auto-run)
+    assert run["status"] == "waiting_approval"
+    assert run["steps"][1]["requires_approval"] is True
+    assert run["steps"][1]["action_type"] == "create_task"
+    done = client.post(f"/api/durable-workflows/runs/{run['run_id']}/approve", json={"approved": True}).json()
+    assert done["status"] == "completed"
+    assert "[executed] create_task" in done["steps"][1]["output"]
+    # a real effect record now exists for this run
+    eff = client.get("/api/durable-workflows/effects", params={"run_id": run["run_id"]}).json()
+    assert eff["count"] == 1
+    assert eff["effects"][0]["action_type"] == "create_task"
+    assert eff["effects"][0]["params"]["title"] == "Ship it"
+
+
+def test_rejecting_action_step_creates_no_effect():
+    run = client.post("/api/durable-workflows/runs", json={"steps": [
+        {"name": "notify me", "action_type": "notify", "action_params": {"message": "hi"}},
+    ]}).json()
+    rid = run["run_id"]
+    res = client.post(f"/api/durable-workflows/runs/{rid}/approve", json={"approved": False}).json()
+    assert res["steps"][0]["status"] == "skipped"
+    assert client.get("/api/durable-workflows/effects", params={"run_id": rid}).json()["count"] == 0
+
+
+def test_non_whitelisted_action_type_is_not_executed():
+    # An unknown action_type must NOT become a real effect; it stays a normal step.
+    run = client.post("/api/durable-workflows/runs", json={"steps": [
+        {"name": "wipe disk", "action_type": "delete_everything"},
+    ]}).json()
+    assert run["steps"][0]["action_type"] == ""  # stripped — not whitelisted
+    assert run["status"] == "completed"  # ran as a plain simulated step
+    assert client.get("/api/durable-workflows/effects", params={"run_id": run["run_id"]}).json()["count"] == 0
+
+
+def test_daily_capture_template_halts_at_action():
+    d = client.post("/api/durable-workflows/definitions", json={"template": "daily_capture"}).json()
+    run = client.post("/api/durable-workflows/runs", json={"definition_id": d["definition_id"]}).json()
+    assert run["status"] == "waiting_approval"  # stops at the create_task step
+
+
 def test_run_halts_at_approval_gate():
     # Weekly report ends with a "send" step -> should halt for approval.
     run = client.post("/api/durable-workflows/runs", json={"template": None, "steps": [
