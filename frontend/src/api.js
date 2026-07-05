@@ -2643,6 +2643,13 @@ export function analyzeDesign({ image, analyses, context, allowLive }) {
 export function getDesignAgentHistory(limit = 20) {
   return getJson(`/api/design-agent/history?limit=${limit}`)
 }
+// Repo Finder (relevant GitHub repositories for a query)
+export function getRepoFinderStatus() {
+  return getJson('/api/repo-finder/status')
+}
+export function searchRepos(query, { limit = 8, sort = 'best' } = {}) {
+  return postJson('/api/repo-finder/search', { query, limit, sort })
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }

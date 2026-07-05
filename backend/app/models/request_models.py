@@ -1501,6 +1501,12 @@ class DesignAnalyzeRequest(BaseModel):
     allow_live: bool = Field(default=False, description="Opt in to a live model call (sends the image to OpenRouter)")
 
 
+class RepoSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=200)
+    limit: int = Field(default=8, ge=1, le=25)
+    sort: str = Field(default="best", max_length=10)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")
