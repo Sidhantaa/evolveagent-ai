@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimal core capabilities for the main window. No shell, filesystem, or arbitrary network permissions are granted — the webview only talks to the local EvolveAgent backend allowed by the app CSP.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}
