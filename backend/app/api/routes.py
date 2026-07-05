@@ -135,6 +135,8 @@ from app.models.request_models import (
     AgentProfileRequest,
     AgentTestRequest,
     AgentImportRequest,
+    VoiceSettingsRequest,
+    VoiceActivityRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -325,6 +327,7 @@ from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.master_agent_service import MasterAgentService
 from app.services.git_discovery_service import GitDiscoveryService
 from app.services.agent_profile_service import AgentProfileService
+from app.services.voice_console_service import VoiceConsoleService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -463,6 +466,7 @@ evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, ope
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
+voice_console_service = VoiceConsoleService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1764,6 +1768,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **master_agent_service.analytics_summary(),
         **git_discovery_service.analytics_summary(),
         **agent_profile_service.analytics_summary(),
+        **voice_console_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4318,6 +4323,51 @@ def agent_studio_import(request: AgentImportRequest) -> dict:
 @router.get("/agent-studio/summary")
 def agent_studio_summary() -> dict:
     return agent_profile_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Phase 4 Voice Console — browser voice preferences + privacy-safe audit.
+# ----------------------------------------------------------------------
+@router.get("/voice-console/status")
+def voice_console_status() -> dict:
+    return voice_console_service.status()
+
+
+@router.get("/voice-console/settings")
+def voice_console_get_settings(workspace_id: str = "global") -> dict:
+    return voice_console_service.get_settings(workspace_id)
+
+
+@router.put("/voice-console/settings")
+def voice_console_update_settings(request: VoiceSettingsRequest) -> dict:
+    patch = request.model_dump(exclude_none=True)
+    workspace_id = patch.pop("workspace_id", "global")
+    return voice_console_service.update_settings(patch, workspace_id)
+
+
+@router.post("/voice-console/activity")
+def voice_console_activity(request: VoiceActivityRequest) -> dict:
+    try:
+        return voice_console_service.log_activity(
+            request.kind, request.workspace_id, request.text, request.meta
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/voice-console/events")
+def voice_console_events(workspace_id: str = "global", limit: int = 50) -> dict:
+    return voice_console_service.events(workspace_id, limit)
+
+
+@router.delete("/voice-console/events")
+def voice_console_clear_events(workspace_id: str = "global") -> dict:
+    return voice_console_service.clear_events(workspace_id)
+
+
+@router.get("/voice-console/summary")
+def voice_console_summary() -> dict:
+    return voice_console_service.summary()
 
 
 # ----------------------------------------------------------------------

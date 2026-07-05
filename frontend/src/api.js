@@ -1717,6 +1717,22 @@ async function patchJson(path, payload) {
   return response.json()
 }
 
+async function putJson(path, payload) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
+  return response.json()
+}
+
+async function delJson(path) {
+  const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
+  return response.json()
+}
+
 export function getBusinessDashboard(workspaceId) {
   return getJson(`/api/business/dashboard${query({ workspace_id: workspaceId })}`)
 }
@@ -2537,6 +2553,30 @@ export function evaluateAgentProfile(agentId) {
 }
 export function publishAgentProfile(agentId) {
   return postJson(`/api/agent-studio/agents/${agentId}/publish-local`, {})
+}
+// Phase 4 Voice Console
+export function getVoiceStatus() {
+  return getJson('/api/voice-console/status')
+}
+export function getVoiceSettings(workspaceId = 'global') {
+  return getJson(`/api/voice-console/settings?workspace_id=${encodeURIComponent(workspaceId)}`)
+}
+export function updateVoiceSettings(patch) {
+  return putJson('/api/voice-console/settings', patch)
+}
+export function logVoiceActivity(kind, opts = {}) {
+  return postJson('/api/voice-console/activity', {
+    kind,
+    workspace_id: opts.workspaceId || 'global',
+    text: opts.text || '',
+    meta: opts.meta || {},
+  })
+}
+export function getVoiceEvents(workspaceId = 'global', limit = 50) {
+  return getJson(`/api/voice-console/events?workspace_id=${encodeURIComponent(workspaceId)}&limit=${limit}`)
+}
+export function clearVoiceEvents(workspaceId = 'global') {
+  return delJson(`/api/voice-console/events?workspace_id=${encodeURIComponent(workspaceId)}`)
 }
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
