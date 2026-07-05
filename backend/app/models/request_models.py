@@ -1425,6 +1425,30 @@ class GitDiscoverRequest(BaseModel):
     workspace_id: str | None = Field(default=None)
 
 
+# ----------------------------------------------------------------------
+# Agent Studio (Phase 2) — build-your-own-agent (config-only, not training)
+# ----------------------------------------------------------------------
+class AgentProfileRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    role: str = Field(default="", max_length=1000)
+    description: str = Field(default="", max_length=1000)
+    personality: dict = Field(default_factory=dict)
+    tools: list[str] = Field(default_factory=list)
+    permissions: dict = Field(default_factory=dict)
+    memory_scope: dict = Field(default_factory=dict)
+    examples: list[dict] = Field(default_factory=list)
+    guardrails: dict = Field(default_factory=dict)
+    test_cases: list[dict] = Field(default_factory=list)
+
+
+class AgentTestRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=2000)
+
+
+class AgentImportRequest(BaseModel):
+    profile: dict = Field(default_factory=dict)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

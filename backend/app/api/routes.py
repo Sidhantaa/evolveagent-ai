@@ -132,6 +132,9 @@ from app.models.request_models import (
     MCPSuggestRequest,
     MasterAgentRouteRequest,
     GitDiscoverRequest,
+    AgentProfileRequest,
+    AgentTestRequest,
+    AgentImportRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -321,6 +324,7 @@ from app.services.data_export_service import DataExportService
 from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.master_agent_service import MasterAgentService
 from app.services.git_discovery_service import GitDiscoveryService
+from app.services.agent_profile_service import AgentProfileService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -458,6 +462,7 @@ data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
 git_discovery_service = GitDiscoveryService(storage, governance_service)
+agent_profile_service = AgentProfileService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1758,6 +1763,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **evolveagent_os2_service.analytics_summary(),
         **master_agent_service.analytics_summary(),
         **git_discovery_service.analytics_summary(),
+        **agent_profile_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4241,6 +4247,77 @@ def git_repository_context(repo_id: str) -> dict:
         return git_discovery_service.context(repo_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# Agent Studio (Phase 2) — build-your-own-agent (config-only, mock test/eval).
+# ----------------------------------------------------------------------
+@router.get("/agent-studio/templates")
+def agent_studio_templates() -> dict:
+    return agent_profile_service.templates()
+
+
+@router.get("/agent-studio/agents")
+def agent_studio_list() -> dict:
+    return agent_profile_service.list_agents()
+
+
+@router.post("/agent-studio/agents")
+def agent_studio_create(request: AgentProfileRequest) -> dict:
+    return agent_profile_service.create(request.model_dump())
+
+
+@router.get("/agent-studio/agents/{agent_id}")
+def agent_studio_get(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.get(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.put("/agent-studio/agents/{agent_id}")
+def agent_studio_update(agent_id: str, request: AgentProfileRequest) -> dict:
+    try:
+        return agent_profile_service.update(agent_id, request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/test")
+def agent_studio_test(agent_id: str, request: AgentTestRequest) -> dict:
+    try:
+        return agent_profile_service.test(agent_id, request.prompt)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/evaluate")
+def agent_studio_evaluate(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.evaluate(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/publish-local")
+def agent_studio_publish(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.publish_local(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/import")
+def agent_studio_import(request: AgentImportRequest) -> dict:
+    try:
+        return agent_profile_service.import_profile(request.profile)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/agent-studio/summary")
+def agent_studio_summary() -> dict:
+    return agent_profile_service.summary()
 
 
 # ----------------------------------------------------------------------

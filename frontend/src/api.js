@@ -2520,6 +2520,24 @@ export function discoverGitRepos(path, optIn, workspaceId) {
 export function getGitRepositories(workspaceId) {
   return getJson(workspaceId ? `/api/git-intel/repositories?workspace_id=${workspaceId}` : '/api/git-intel/repositories')
 }
+export function getStudioTemplates() {
+  return getJson('/api/agent-studio/templates')
+}
+export function listAgentProfiles() {
+  return getJson('/api/agent-studio/agents')
+}
+export function createAgentProfile(payload) {
+  return postJson('/api/agent-studio/agents', payload)
+}
+export function testAgentProfile(agentId, prompt) {
+  return postJson(`/api/agent-studio/agents/${agentId}/test`, { prompt })
+}
+export function evaluateAgentProfile(agentId) {
+  return postJson(`/api/agent-studio/agents/${agentId}/evaluate`, {})
+}
+export function publishAgentProfile(agentId) {
+  return postJson(`/api/agent-studio/agents/${agentId}/publish-local`, {})
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }
