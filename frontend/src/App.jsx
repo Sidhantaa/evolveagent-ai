@@ -5966,6 +5966,29 @@ function App() {
           aria-label="Close sidebar"
         />
       )}
+      {!developerMode && (
+        <nav className="simple-rail" aria-label="EvolveAgent">
+          <div className="simple-rail-avatar" aria-hidden="true" />
+          <button type="button" className="simple-rail-btn active" onClick={newChat} title="New chat"><MessageSquarePlus size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setSelectedRunId(null)} title="History"><Clock size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Tools & panels"><Layers3 size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Library"><Library size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Memory & brain"><Brain size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Data"><Database size={18} /></button>
+          <button
+            type="button"
+            className={`simple-rail-btn ${voiceOutputEnabled ? 'on' : ''}`}
+            onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
+            title={voiceOutputEnabled ? 'Spoken answers on' : 'Spoken answers off'}
+          >
+            {voiceOutputEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+          <div className="simple-rail-spacer" />
+          <button type="button" className="simple-rail-btn" onClick={toggleTheme} title="Toggle theme">
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </nav>
+      )}
       {showOnboarding && (
         <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
           <div className="onboarding-card">
@@ -12510,6 +12533,9 @@ function App() {
                   <span>{imageModeLabel}</span>
                   <span>{workspaces.find((workspace) => workspace.workspace_id === workspaceId)?.name || 'Default Workspace'}</span>
                 </div>
+                <button type="button" className="sa-upgrade" onClick={() => setDeveloperMode(true)} title="Explore all tools">
+                  <Sparkles size={14} /> Upgrade
+                </button>
                 <button
                   type="button"
                   className="theme-toggle-button"
@@ -12537,9 +12563,18 @@ function App() {
         <section className="chat-scroll">
           {messages.length === 0 && !loading && !developerMode && (
             <div className="master-hero">
-              <div className="master-hero-orb"><Brain size={26} /></div>
-              <h2 className="master-hero-title">Master Agent</h2>
-              <p className="master-hero-sub">One AI over everything — speak or type, and it routes across all EvolveAgent systems.</p>
+              <div className="sa-today"><span>Today</span></div>
+              <div className="sa-greeting">
+                <p className="sa-greet-hi">Hey — great to meet you!</p>
+                <p>I'm your <strong>Master Agent</strong> — one AI over everything. I can be your <strong>chief of staff</strong> to run your day, a <strong>research assistant</strong> that digs things up, or an <strong>inbox &amp; ops manager</strong> that keeps you on top of things.</p>
+                <p>Or we can just start chatting and figure out the right agent as we go.</p>
+                <p>So — what can I take off your plate?</p>
+                <div className="sa-msg-actions">
+                  <button type="button" onClick={() => { navigator.clipboard?.writeText('Hey — what can I take off your plate?'); }} aria-label="Copy"><Copy size={14} /></button>
+                  <button type="button" onClick={() => { setVoiceOutputEnabled(true); speak('Hey, great to meet you. What can I take off your plate?') }} aria-label="Read aloud"><Volume2 size={14} /></button>
+                  <span className="sa-msg-time">now</span>
+                </div>
+              </div>
               <form className="master-hero-bar" onSubmit={masterSubmit}>
                 <input
                   type="text"
@@ -12582,9 +12617,16 @@ function App() {
               )}
               {listening && <p className="master-hero-hint listening">Listening… speak your request.</p>}
               {!masterResult && !listening && (
-                <div className="master-hero-chips">
-                  {['Review this Python function', 'Plan a GitHub PR workflow', 'Summarize my compliance policy', 'mcp: connect notion', '/health'].map((chip) => (
-                    <button key={chip} type="button" className="master-chip" onClick={() => askMaster(chip, false)} disabled={masterBusy}>{chip}</button>
+                <div className="master-hero-chips sa-chips">
+                  {[
+                    { icon: <Flag size={14} />, label: 'Run my day as chief of staff', prompt: 'Act as my chief of staff and plan my day.' },
+                    { icon: <Library size={14} />, label: 'Research a topic for me', prompt: 'Be my research assistant and dig up sources on a topic.' },
+                    { icon: <MessageSquarePlus size={14} />, label: 'Set up inbox & ops mode', prompt: 'Set up an inbox and ops manager workflow.' },
+                    { icon: <Route size={14} />, label: 'Plan a GitHub PR workflow', prompt: 'Plan a GitHub PR workflow.' },
+                  ].map((chip) => (
+                    <button key={chip.label} type="button" className="master-chip sa-chip" onClick={() => askMaster(chip.prompt, false)} disabled={masterBusy}>
+                      <span className="sa-chip-icon">{chip.icon}</span>{chip.label}
+                    </button>
                   ))}
                 </div>
               )}
@@ -12987,7 +13029,7 @@ function App() {
           </section>
         )}
 
-        <section className="chat-composer">
+        <section className={`chat-composer ${developerMode ? '' : 'sa-composer'}`}>
           {developerMode && (
           <div className="composer-controls">
             <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
@@ -13070,6 +13112,18 @@ function App() {
               placeholder={developerMode ? 'Ask EvolveAgent AI anything...' : 'Send a command...'}
               rows={1}
             />
+            {!developerMode && <span className="sa-mode-label">Automatic</span>}
+            {!developerMode && (
+              <button
+                type="button"
+                className={`sa-voice-button ${listening ? 'listening' : ''}`}
+                onClick={startMasterVoice}
+                aria-label="Voice mode"
+                title="Push to talk"
+              >
+                <Activity size={16} />
+              </button>
+            )}
             <button className="send-button" onClick={() => submitMessage()} disabled={loading || uploadingFiles || uploadingRecordings || input.trim().length < 1} aria-label="Send message">
               {loading ? <Activity size={18} /> : <Send size={18} />}
             </button>
