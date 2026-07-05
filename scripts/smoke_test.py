@@ -65,6 +65,10 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     # Repo Finder
     ("repo-finder", "GET", "/api/repo-finder/status", None, 200),
     ("repo-finder", "GET", "/api/repo-finder/summary", None, 200),
+    # Adaptive Learning
+    ("adaptive-learning", "GET", "/api/adaptive-learning/status", None, 200),
+    ("adaptive-learning", "GET", "/api/adaptive-learning/summary", None, 200),
+    ("adaptive-learning", "POST", "/api/adaptive-learning/learn", {}, 200),
     # Master Agent
     ("master-agent", "GET", "/api/master-agent/summary", None, 200),
     ("master-agent", "GET", "/api/master-agent/capabilities", None, 200),
