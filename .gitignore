@@ -214,3 +214,6 @@ backend/app/data/*.tmp
 *.log
 logs/
 evolveagent-ai/
+backend/.claude-flow/
+backend/app/data/chief_of_staff_items.json
+backend/app/data/tool_executions.json
