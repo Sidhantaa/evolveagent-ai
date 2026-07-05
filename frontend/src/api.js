@@ -2563,6 +2563,15 @@ export function evaluateAgentProfile(agentId) {
 export function publishAgentProfile(agentId) {
   return postJson(`/api/agent-studio/agents/${agentId}/publish-local`, {})
 }
+export function duplicateAgentProfile(agentId) {
+  return postJson(`/api/agent-studio/agents/${agentId}/duplicate`, {})
+}
+export function getAgentPreview(agentId) {
+  return getJson(`/api/agent-studio/agents/${agentId}/preview`)
+}
+export function rollbackAgentProfile(agentId, version) {
+  return postJson(`/api/agent-studio/agents/${agentId}/rollback`, { version })
+}
 // Phase 4 Voice Console
 export function getVoiceStatus() {
   return getJson('/api/voice-console/status')

@@ -358,6 +358,8 @@ import {
   testAgentProfile,
   evaluateAgentProfile,
   publishAgentProfile,
+  duplicateAgentProfile,
+  getAgentPreview,
   getVoiceStatus,
   getVoiceSettings,
   updateVoiceSettings,
@@ -3506,6 +3508,8 @@ function App() {
     try {
       if (action === 'evaluate') await evaluateAgentProfile(agentId)
       else if (action === 'publish') await publishAgentProfile(agentId)
+      else if (action === 'duplicate') await duplicateAgentProfile(agentId)
+      else if (action === 'preview') { setAgentTestResult({ agent_id: agentId, simulated_response: (await getAgentPreview(agentId)).preview }); return }
       await refreshAgentStudio()
     } finally {
       setAgentBusy(false)
@@ -11665,7 +11669,8 @@ function App() {
                     <p className="ds-title" style={{ fontSize: 14 }}>
                       {a.name} <Badge tone="accent">v{a.version}</Badge>
                       {a.published_local && <Badge tone="success">published</Badge>}
-                      {a.evaluation?.score != null && <Badge tone={a.evaluation.score >= 60 ? 'success' : 'warn'}>score {a.evaluation.score}</Badge>}
+                      {a.evaluation?.score != null && <Badge tone={a.evaluation.score >= 60 ? 'success' : 'warn'}>score {a.evaluation.score}{a.evaluation.grade ? ` · ${a.evaluation.grade}` : ''}</Badge>}
+                      {(a.versions?.length > 0) && <Badge tone="default">{a.versions.length} prior</Badge>}
                     </p>
                     <p className="ds-sub">{a.role || '—'} · {a.personality?.tone}</p>
                     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
@@ -11673,6 +11678,8 @@ function App() {
                         style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 10, border: '1px solid var(--ds-line)', background: 'var(--ds-surface-2)', color: 'var(--ds-ink)', fontSize: 12 }} />
                       <Button size="sm" disabled={agentBusy} onClick={() => handleTestAgent(a.agent_id)}>Test</Button>
                       <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'evaluate')}>Evaluate</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'preview')}>Preview</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'duplicate')}>Fork</Button>
                       <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'publish')}>Publish</Button>
                     </div>
                     {agentTestResult && agentTestResult.agent_id === a.agent_id && (

@@ -135,6 +135,7 @@ from app.models.request_models import (
     AgentProfileRequest,
     AgentTestRequest,
     AgentImportRequest,
+    AgentRollbackRequest,
     VoiceSettingsRequest,
     VoiceActivityRequest,
     DurableWorkflowDefRequest,
@@ -4329,6 +4330,38 @@ def agent_studio_evaluate(agent_id: str) -> dict:
 def agent_studio_publish(agent_id: str) -> dict:
     try:
         return agent_profile_service.publish_local(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/duplicate")
+def agent_studio_duplicate(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.duplicate(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/agent-studio/agents/{agent_id}/versions")
+def agent_studio_versions(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.versions(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/rollback")
+def agent_studio_rollback(agent_id: str, request: AgentRollbackRequest) -> dict:
+    try:
+        return agent_profile_service.rollback(agent_id, request.version)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/agent-studio/agents/{agent_id}/preview")
+def agent_studio_preview(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.preview(agent_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
