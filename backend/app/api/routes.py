@@ -140,6 +140,7 @@ from app.models.request_models import (
     DurableWorkflowDefRequest,
     DurableWorkflowStartRequest,
     WorkflowApprovalRequest,
+    MarketplacePublishRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -332,6 +333,7 @@ from app.services.git_discovery_service import GitDiscoveryService
 from app.services.agent_profile_service import AgentProfileService
 from app.services.voice_console_service import VoiceConsoleService
 from app.services.durable_workflow_service import DurableWorkflowService
+from app.services.marketplace_hub_service import MarketplaceHubService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -472,6 +474,7 @@ git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
 durable_workflow_service = DurableWorkflowService(storage, governance_service)
+marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1775,6 +1778,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **agent_profile_service.analytics_summary(),
         **voice_console_service.analytics_summary(),
         **durable_workflow_service.analytics_summary(),
+        **marketplace_hub_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4461,6 +4465,56 @@ def durable_workflow_cancel(run_id: str) -> dict:
 @router.get("/durable-workflows/summary")
 def durable_workflow_summary() -> dict:
     return durable_workflow_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Phase 7 Marketplace Hub — local, sanitized agent + workflow bundles.
+# ----------------------------------------------------------------------
+@router.get("/marketplace-hub/listings")
+def marketplace_hub_listings(kind: str | None = None) -> dict:
+    return marketplace_hub_service.list_listings(kind)
+
+
+@router.get("/marketplace-hub/listings/{listing_id}")
+def marketplace_hub_get_listing(listing_id: str) -> dict:
+    try:
+        return marketplace_hub_service.get_listing(listing_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/marketplace-hub/listings")
+def marketplace_hub_publish(request: MarketplacePublishRequest) -> dict:
+    try:
+        return marketplace_hub_service.publish(request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/marketplace-hub/listings/{listing_id}/install")
+def marketplace_hub_install(listing_id: str) -> dict:
+    try:
+        return marketplace_hub_service.install(listing_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.delete("/marketplace-hub/listings/{listing_id}")
+def marketplace_hub_unpublish(listing_id: str) -> dict:
+    try:
+        return marketplace_hub_service.unpublish(listing_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/marketplace-hub/installs")
+def marketplace_hub_installs() -> dict:
+    return marketplace_hub_service.installs()
+
+
+@router.get("/marketplace-hub/summary")
+def marketplace_hub_summary() -> dict:
+    return marketplace_hub_service.summary()
 
 
 # ----------------------------------------------------------------------

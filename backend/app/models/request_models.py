@@ -1485,6 +1485,15 @@ class WorkflowApprovalRequest(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
+class MarketplacePublishRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=20)
+    source_id: str | None = Field(default=None, max_length=80)
+    name: str = Field(default="", max_length=120)
+    summary: str = Field(default="", max_length=280)
+    publisher: str = Field(default="local", max_length=80)
+    manifest: dict = Field(default_factory=dict)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

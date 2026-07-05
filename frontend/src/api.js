@@ -2603,6 +2603,19 @@ export function resumeWorkflowRun(runId) {
 export function cancelWorkflowRun(runId) {
   return postJson(`/api/durable-workflows/runs/${runId}/cancel`, {})
 }
+// Phase 7 Marketplace Hub
+export function getMarketplaceListings(kind) {
+  return getJson(kind ? `/api/marketplace-hub/listings?kind=${encodeURIComponent(kind)}` : '/api/marketplace-hub/listings')
+}
+export function installMarketplaceListing(listingId) {
+  return postJson(`/api/marketplace-hub/listings/${listingId}/install`, {})
+}
+export function publishMarketplaceListing(payload) {
+  return postJson('/api/marketplace-hub/listings', payload)
+}
+export function unpublishMarketplaceListing(listingId) {
+  return delJson(`/api/marketplace-hub/listings/${listingId}`)
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }

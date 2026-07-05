@@ -203,6 +203,8 @@ class StorageService:
             "voice_console_events.json",
             "durable_workflow_defs.json",
             "durable_workflow_runs.json",
+            "marketplace_hub_listings.json",
+            "marketplace_hub_installs.json",
             "permission_profiles.json",
             "imported_records.json",
             "marketplace_plugins.json",
