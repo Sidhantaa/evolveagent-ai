@@ -197,6 +197,7 @@ class StorageService:
             "data_export_log.json",
             "os2_snapshots.json",
             "master_agent_runs.json",
+            "git_repos.json",
             "permission_profiles.json",
             "imported_records.json",
             "marketplace_plugins.json",
