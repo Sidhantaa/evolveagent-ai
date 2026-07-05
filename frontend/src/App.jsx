@@ -349,6 +349,12 @@ import {
   getGitStatus,
   discoverGitRepos,
   getGitRepositories,
+  getStudioTemplates,
+  listAgentProfiles,
+  createAgentProfile,
+  testAgentProfile,
+  evaluateAgentProfile,
+  publishAgentProfile,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -713,6 +719,15 @@ function App() {
   const [gitRepos, setGitRepos] = useState([])
   const [gitPath, setGitPath] = useState('')
   const [gitBusy, setGitBusy] = useState(false)
+  const [showAgentStudio, setShowAgentStudio] = useState(false)
+  const [studioTemplates, setStudioTemplates] = useState([])
+  const [agentProfiles, setAgentProfiles] = useState([])
+  const [agentName, setAgentName] = useState('')
+  const [agentRole, setAgentRole] = useState('')
+  const [agentTone, setAgentTone] = useState('professional')
+  const [agentTestPrompt, setAgentTestPrompt] = useState('')
+  const [agentTestResult, setAgentTestResult] = useState(null)
+  const [agentBusy, setAgentBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -3179,6 +3194,55 @@ function App() {
       await refreshGitIntel()
     } finally {
       setGitBusy(false)
+    }
+  }
+
+  async function refreshAgentStudio() {
+    try {
+      const [tpl, list] = await Promise.all([getStudioTemplates(), listAgentProfiles()])
+      setStudioTemplates(tpl.templates || [])
+      setAgentProfiles(list.agents || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  function applyAgentTemplate(t) {
+    setAgentName(t.name)
+    setAgentRole(t.role)
+    setAgentTone(t.personality?.tone || 'professional')
+  }
+
+  async function handleCreateAgent() {
+    if (!agentName.trim()) return
+    setAgentBusy(true)
+    try {
+      await createAgentProfile({ name: agentName, role: agentRole, personality: { tone: agentTone, verbosity: 'medium' } })
+      setAgentName(''); setAgentRole('')
+      await refreshAgentStudio()
+    } finally {
+      setAgentBusy(false)
+    }
+  }
+
+  async function handleTestAgent(agentId) {
+    if (!agentTestPrompt.trim()) return
+    setAgentBusy(true)
+    try {
+      setAgentTestResult(await testAgentProfile(agentId, agentTestPrompt))
+    } finally {
+      setAgentBusy(false)
+    }
+  }
+
+  async function handleAgentAction(agentId, action) {
+    setAgentBusy(true)
+    try {
+      if (action === 'evaluate') await evaluateAgentProfile(agentId)
+      else if (action === 'publish') await publishAgentProfile(agentId)
+      await refreshAgentStudio()
+    } finally {
+      setAgentBusy(false)
     }
   }
 
@@ -11107,6 +11171,66 @@ function App() {
                   </Card>
                 ))}
                 <p className="ds-sub">Discovery is opt-in and read-only. Any push/merge/PR/deploy would require approval (not built here).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="agent" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowAgentStudio((c) => !c); if (!studioTemplates.length) refreshAgentStudio() }}>
+              <span>
+                <Sparkles size={15} />
+                Agent Studio
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentStudio && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Build your own agent</p>
+                  <p className="ds-sub">Configure a custom agent — role, personality, tools, guardrails, examples. This is configuration + examples, not model training. Test/evaluate are mock-safe.</p>
+                </Card>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {studioTemplates.map((t) => (
+                    <Button key={t.key} size="sm" variant="ghost" onClick={() => applyAgentTemplate(t)}>{t.name}</Button>
+                  ))}
+                </div>
+                <input placeholder="Agent name" value={agentName} onChange={(e) => setAgentName(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                <input placeholder="Role — what should it do?" value={agentRole} onChange={(e) => setAgentRole(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select value={agentTone} onChange={(e) => setAgentTone(e.target.value)}
+                    style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }}>
+                    {['professional', 'friendly', 'direct', 'creative'].map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <Button variant="primary" size="sm" disabled={agentBusy || !agentName.trim()} onClick={handleCreateAgent}>Create agent</Button>
+                </div>
+                {agentProfiles.map((a) => (
+                  <Card key={a.agent_id} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      {a.name} <Badge tone="accent">v{a.version}</Badge>
+                      {a.published_local && <Badge tone="success">published</Badge>}
+                      {a.evaluation?.score != null && <Badge tone={a.evaluation.score >= 60 ? 'success' : 'warn'}>score {a.evaluation.score}</Badge>}
+                    </p>
+                    <p className="ds-sub">{a.role || '—'} · {a.personality?.tone}</p>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                      <input placeholder="Test prompt…" value={agentTestPrompt} onChange={(e) => setAgentTestPrompt(e.target.value)}
+                        style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 10, border: '1px solid var(--ds-line)', background: 'var(--ds-surface-2)', color: 'var(--ds-ink)', fontSize: 12 }} />
+                      <Button size="sm" disabled={agentBusy} onClick={() => handleTestAgent(a.agent_id)}>Test</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'evaluate')}>Evaluate</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'publish')}>Publish</Button>
+                    </div>
+                    {agentTestResult && agentTestResult.agent_id === a.agent_id && (
+                      <div style={{ marginTop: 8 }}>
+                        <p className="ds-sub">{agentTestResult.simulated_response}</p>
+                        {agentTestResult.requires_approval && <Badge tone="warn">requires approval</Badge>}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+                <p className="ds-sub">Personalization = config + few-shot examples + evaluation feedback. No base-model training; risky actions always held for approval.</p>
               </div>
             )}
           </section>
