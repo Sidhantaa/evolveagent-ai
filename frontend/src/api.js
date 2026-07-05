@@ -1717,6 +1717,22 @@ async function patchJson(path, payload) {
   return response.json()
 }
 
+async function putJson(path, payload) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
+  return response.json()
+}
+
+async function delJson(path) {
+  const response = await fetch(`${API_BASE}${path}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error(`Request failed (${response.status})`)
+  return response.json()
+}
+
 export function getBusinessDashboard(workspaceId) {
   return getJson(`/api/business/dashboard${query({ workspace_id: workspaceId })}`)
 }
@@ -2500,6 +2516,290 @@ export function generateNotifications() {
 export function acknowledgeNotification(notifId) {
   return postJson(`/api/notifications/${notifId}/ack`, {})
 }
+export function suggestMcp(task) {
+  return postJson('/api/mcp/suggest', { task })
+}
+export function routeMasterAgent(text, opts = {}) {
+  return postJson('/api/master-agent/route', {
+    text,
+    workspace_id: opts.workspaceId || null,
+    voice_used: Boolean(opts.voiceUsed),
+    execute: Boolean(opts.execute),
+  })
+}
+export function getGitStatus() {
+  return getJson('/api/git-intel/status')
+}
+export function discoverGitRepos(path, optIn, workspaceId) {
+  return postJson('/api/git-intel/discover', { path: path || null, opt_in: Boolean(optIn), workspace_id: workspaceId || null })
+}
+export function getGitRepositories(workspaceId) {
+  return getJson(workspaceId ? `/api/git-intel/repositories?workspace_id=${workspaceId}` : '/api/git-intel/repositories')
+}
+export function getGitLog(path, limit = 20) {
+  return getJson(`/api/git-intel/log?path=${encodeURIComponent(path)}&limit=${limit}`)
+}
+export function getGitBranchList(path) {
+  return getJson(`/api/git-intel/branches?path=${encodeURIComponent(path)}`)
+}
+export function getGitCommitStat(path, ref = 'HEAD') {
+  return getJson(`/api/git-intel/commit-stat?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`)
+}
+export function getStudioTemplates() {
+  return getJson('/api/agent-studio/templates')
+}
+export function listAgentProfiles() {
+  return getJson('/api/agent-studio/agents')
+}
+export function createAgentProfile(payload) {
+  return postJson('/api/agent-studio/agents', payload)
+}
+export function testAgentProfile(agentId, prompt) {
+  return postJson(`/api/agent-studio/agents/${agentId}/test`, { prompt })
+}
+export function evaluateAgentProfile(agentId) {
+  return postJson(`/api/agent-studio/agents/${agentId}/evaluate`, {})
+}
+export function publishAgentProfile(agentId) {
+  return postJson(`/api/agent-studio/agents/${agentId}/publish-local`, {})
+}
+export function duplicateAgentProfile(agentId) {
+  return postJson(`/api/agent-studio/agents/${agentId}/duplicate`, {})
+}
+export function getAgentPreview(agentId) {
+  return getJson(`/api/agent-studio/agents/${agentId}/preview`)
+}
+export function rollbackAgentProfile(agentId, version) {
+  return postJson(`/api/agent-studio/agents/${agentId}/rollback`, { version })
+}
+// Phase 4 Voice Console
+export function getVoiceStatus() {
+  return getJson('/api/voice-console/status')
+}
+export function getVoiceSettings(workspaceId = 'global') {
+  return getJson(`/api/voice-console/settings?workspace_id=${encodeURIComponent(workspaceId)}`)
+}
+export function updateVoiceSettings(patch) {
+  return putJson('/api/voice-console/settings', patch)
+}
+export function logVoiceActivity(kind, opts = {}) {
+  return postJson('/api/voice-console/activity', {
+    kind,
+    workspace_id: opts.workspaceId || 'global',
+    text: opts.text || '',
+    meta: opts.meta || {},
+  })
+}
+export function getVoiceEvents(workspaceId = 'global', limit = 50) {
+  return getJson(`/api/voice-console/events?workspace_id=${encodeURIComponent(workspaceId)}&limit=${limit}`)
+}
+export function clearVoiceEvents(workspaceId = 'global') {
+  return delJson(`/api/voice-console/events?workspace_id=${encodeURIComponent(workspaceId)}`)
+}
+// Phase 6 Durable Workflows
+export function getWorkflowTemplates() {
+  return getJson('/api/durable-workflows/templates')
+}
+export function listWorkflowRuns() {
+  return getJson('/api/durable-workflows/runs')
+}
+export function startWorkflowRun(payload) {
+  return postJson('/api/durable-workflows/runs', payload)
+}
+export function advanceWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/advance`, {})
+}
+export function approveWorkflowStep(runId, approved, note = '') {
+  return postJson(`/api/durable-workflows/runs/${runId}/approve`, { approved: Boolean(approved), note })
+}
+export function pauseWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/pause`, {})
+}
+export function resumeWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/resume`, {})
+}
+export function cancelWorkflowRun(runId) {
+  return postJson(`/api/durable-workflows/runs/${runId}/cancel`, {})
+}
+export function getWorkflowEffects(runId) {
+  return getJson(runId ? `/api/durable-workflows/effects?run_id=${runId}` : '/api/durable-workflows/effects')
+}
+// Phase 7 Marketplace Hub
+export function getMarketplaceListings(kind) {
+  return getJson(kind ? `/api/marketplace-hub/listings?kind=${encodeURIComponent(kind)}` : '/api/marketplace-hub/listings')
+}
+export function installMarketplaceListing(listingId) {
+  return postJson(`/api/marketplace-hub/listings/${listingId}/install`, {})
+}
+export function publishMarketplaceListing(payload) {
+  return postJson('/api/marketplace-hub/listings', payload)
+}
+export function unpublishMarketplaceListing(listingId) {
+  return delJson(`/api/marketplace-hub/listings/${listingId}`)
+}
+// Design Agent (in-app multimodal analysis)
+export function getDesignAgentStatus() {
+  return getJson('/api/design-agent/status')
+}
+export function analyzeDesign({ image, analyses, context, allowLive }) {
+  return postJson('/api/design-agent/analyze', {
+    image,
+    analyses: analyses || [],
+    context: context || '',
+    allow_live: Boolean(allowLive),
+  })
+}
+export function getDesignAgentHistory(limit = 20) {
+  return getJson(`/api/design-agent/history?limit=${limit}`)
+}
+// Repo Finder (relevant GitHub repositories for a query)
+export function getRepoFinderStatus() {
+  return getJson('/api/repo-finder/status')
+}
+export function searchRepos(query, { limit = 8, sort = 'best' } = {}) {
+  return postJson('/api/repo-finder/search', { query, limit, sort })
+}
+// Adaptive Learning (safe retrieval memory)
+export function getTodaySummary() {
+  return getJson('/api/today/summary')
+}
+export function getAdaptiveStatus() {
+  return getJson('/api/adaptive-learning/status')
+}
+export function adaptiveLearn() {
+  return postJson('/api/adaptive-learning/learn', {})
+}
+export function adaptiveRecommend(query, limit = 5) {
+  return getJson(`/api/adaptive-learning/recommend?query=${encodeURIComponent(query)}&limit=${limit}`)
+}
+export function getAdaptiveItems(kind) {
+  return getJson(kind ? `/api/adaptive-learning/items?kind=${encodeURIComponent(kind)}` : '/api/adaptive-learning/items')
+}
+export function forgetAdaptiveItem(itemId) {
+  return delJson(`/api/adaptive-learning/items/${itemId}`)
+}
+export function getMasterAgentCapabilities() {
+  return getJson('/api/master-agent/capabilities')
+}
+export function getMasterAgentSummary() {
+  return getJson('/api/master-agent/summary')
+}
+export function sendMasterRouteFeedback(runId, correct, opts = {}) {
+  return postJson(`/api/master-agent/route/${runId}/feedback`, {
+    correct: Boolean(correct),
+    correct_domain: opts.correctDomain || null,
+    note: opts.note || '',
+  })
+}
+export function globalSearch(query, opts = {}) {
+  const params = new URLSearchParams({ q: query })
+  if (opts.workspaceId) params.set('workspace_id', opts.workspaceId)
+  if (opts.types) params.set('types', opts.types)
+  if (opts.since) params.set('since', opts.since)
+  return getJson(`/api/search?${params.toString()}`)
+}
+export function getGlobalSearchSources() {
+  return getJson('/api/search/sources')
+}
+export function getActivityTimeline(opts = {}) {
+  const params = new URLSearchParams()
+  if (opts.workspaceId) params.set('workspace_id', opts.workspaceId)
+  if (opts.types) params.set('types', opts.types)
+  if (opts.status) params.set('status', opts.status)
+  if (opts.limit) params.set('limit', String(opts.limit))
+  const qs = params.toString()
+  return getJson(qs ? `/api/activity?${qs}` : '/api/activity')
+}
+export function exportActivityTimeline(format = 'markdown') {
+  return getJson(`/api/activity/export?format=${format}`)
+}
+export function getDashboardHome(workspaceId) {
+  return getJson(workspaceId ? `/api/home?workspace_id=${workspaceId}` : '/api/home')
+}
+export function getFeatures(opts = {}) {
+  const params = new URLSearchParams()
+  if (opts.q) params.set('q', opts.q)
+  if (opts.status) params.set('status', opts.status)
+  if (opts.category) params.set('category', opts.category)
+  const qs = params.toString()
+  return getJson(qs ? `/api/features?${qs}` : '/api/features')
+}
+export function tryFeature(key) {
+  return postJson(`/api/features/${key}/try`, {})
+}
+export function getDemoSummary() {
+  return getJson('/api/demo/summary')
+}
+export function getDemoScript() {
+  return getJson('/api/demo/script')
+}
+export function getDemoCaseStudy() {
+  return getJson('/api/demo/case-study')
+}
+export function seedDemoData() {
+  return postJson('/api/demo/seed', {})
+}
+export function resetDemoData() {
+  return postJson('/api/demo/reset', {})
+}
+export function getSettings() {
+  return getJson('/api/settings')
+}
+export function updateSettings(settings) {
+  return patchJson('/api/settings', { settings })
+}
+export function resetSettings() {
+  return postJson('/api/settings/reset', {})
+}
+export function getProviderControl() {
+  return getJson('/api/provider-control/dashboard')
+}
+export function updateProviderControl(patch) {
+  return patchJson('/api/provider-control', patch)
+}
+export function generateNotificationsInbox() {
+  return postJson('/api/notifications-inbox/generate', {})
+}
+export function getNotificationsInbox(severity) {
+  return getJson(severity ? `/api/notifications-inbox?severity=${severity}` : '/api/notifications-inbox')
+}
+export function resolveNotificationInbox(id) {
+  return postJson(`/api/notifications-inbox/${id}/resolve`, {})
+}
+export function getWorkspaceOsDashboard(workspaceId) {
+  return getJson(`/api/workspace-os/${workspaceId}/dashboard`)
+}
+export function getWorkspaceOsSummary() {
+  return getJson('/api/workspace-os/summary')
+}
+export function planContext(query, opts = {}) {
+  return postJson('/api/context/plan', {
+    query,
+    workspace_id: opts.workspaceId || null,
+    budget_chars: opts.budgetChars || 4000,
+  })
+}
+export function getAgentQuality() {
+  return getJson('/api/agent-quality/dashboard')
+}
+export function recommendWorkflow(goal, taskType) {
+  return postJson('/api/workflow-recommend', { goal, task_type: taskType || null })
+}
+export function getProductivityBrain(workspaceId) {
+  return getJson(workspaceId ? `/api/productivity?workspace_id=${workspaceId}` : '/api/productivity')
+}
+export function docContractRisk(text) {
+  return postJson('/api/doc-intel/contract-risk', { text })
+}
+export function docCsvInsight(text) {
+  return postJson('/api/doc-intel/csv-insight', { text })
+}
+export function docAtsScore(resumeText, jobKeywords) {
+  return postJson('/api/doc-intel/ats', { resume_text: resumeText, job_keywords: jobKeywords })
+}
+export function analyzeCode(code, language) {
+  return postJson('/api/code-intel/analyze', { code, language: language || 'python' })
+}
 export function getWorkspaceTemplates() {
   return getJson('/api/workspace-templates')
 }
@@ -2559,4 +2859,131 @@ export function rejectMcpExecution(requestId) {
 }
 export function runMcpExecution(requestId) {
   return postJson(`/api/mcp/executions/${requestId}/run`, {})
+}
+
+export function researchAgentClaims(text) {
+  return postJson('/api/research-agent/claims', { text })
+}
+export function researchAgentBias(text) {
+  return postJson('/api/research-agent/bias', { text })
+}
+export function researchAgentBrief(topic, sources) {
+  return postJson('/api/research-agent/brief', { topic, sources })
+}
+export function getBusinessIntelDashboard(workspaceId) {
+  return getJson(workspaceId ? `/api/business-intel/dashboard?workspace_id=${workspaceId}` : '/api/business-intel/dashboard')
+}
+export function getBusinessIntelReport(workspaceId) {
+  return getJson(workspaceId ? `/api/business-intel/report?workspace_id=${workspaceId}` : '/api/business-intel/report')
+}
+export function analyzeMeetingTranscript(transcript) {
+  return postJson('/api/meeting-intel/analyze', { transcript })
+}
+export function meetingTranscriptToGoal(transcript, title) {
+  return postJson('/api/meeting-intel/to-goal', { transcript, title })
+}
+export function analyzeCollaboration(topic, contributions) {
+  return postJson('/api/collaboration/analyze', { topic, contributions })
+}
+export function getPermissionProfiles() {
+  return getJson('/api/permissions/profiles')
+}
+export function createPermissionProfile(payload) {
+  return postJson('/api/permissions/profiles', payload)
+}
+export async function deletePermissionProfile(profileId) {
+  const response = await fetch(`${API_BASE}/api/permissions/profiles/${profileId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    throw new Error(`Permission profile delete failed with status ${response.status}`)
+  }
+  return response.json()
+}
+export function evaluatePermission(payload) {
+  return postJson('/api/permissions/evaluate', payload)
+}
+export function getGovernanceConsoleDashboard() {
+  return getJson('/api/governance-console/dashboard')
+}
+export function getGovernanceConsoleReport(format = 'markdown') {
+  return getJson(`/api/governance-console/report?format=${format}`)
+}
+export function getDataManagerBrowse() {
+  return getJson('/api/data-manager/browse')
+}
+export function getDataManagerUsage() {
+  return getJson('/api/data-manager/usage')
+}
+export function getDataManagerCleanup() {
+  return getJson('/api/data-manager/cleanup-suggestions')
+}
+export function previewDataRedaction(collection) {
+  return postJson('/api/data-manager/redaction-preview', { collection })
+}
+export function previewImport(kind, content) {
+  return postJson('/api/import-center/preview', { kind, content })
+}
+export function commitImport(kind, content, workspaceId) {
+  return postJson('/api/import-center/commit', { kind, content, workspace_id: workspaceId || null })
+}
+export function getImportRecords(kind) {
+  return getJson(kind ? `/api/import-center/records?kind=${kind}` : '/api/import-center/records')
+}
+export function exportCenterExport(kind, format, workspaceId) {
+  return postJson('/api/export-center/export', { kind, format, workspace_id: workspaceId || null })
+}
+export function exportCenterPackage(kinds, format, workspaceId) {
+  return postJson('/api/export-center/package', { kinds, format, workspace_id: workspaceId || null })
+}
+export function getExportCenterCaseStudy() {
+  return getJson('/api/export-center/case-study')
+}
+export function getPluginMarketplaceCatalog() {
+  return getJson('/api/plugin-marketplace/catalog')
+}
+export function registerMarketplacePlugin(payload) {
+  return postJson('/api/plugin-marketplace/register', payload)
+}
+export function toggleMarketplacePlugin(pluginId, enabled) {
+  return postJson(`/api/plugin-marketplace/${pluginId}/toggle`, { enabled })
+}
+export function testMarketplacePlugin(pluginId) {
+  return postJson(`/api/plugin-marketplace/${pluginId}/test`, {})
+}
+export function getPluginMarketplaceActivity() {
+  return getJson('/api/plugin-marketplace/activity')
+}
+export function getIntegrationHubCards() {
+  return getJson('/api/integration-hub/cards')
+}
+export function dryRunIntegration(integrationId) {
+  return postJson(`/api/integration-hub/${integrationId}/dry-run`, {})
+}
+export function getQaCenterDashboard() {
+  return getJson('/api/qa-center/dashboard')
+}
+export function getQaCenterMatrix() {
+  return getJson('/api/qa-center/matrix')
+}
+export function recordQaStatus(featureKey, status, note) {
+  return postJson('/api/qa-center/record', { feature_key: featureKey, status, note })
+}
+export function getReleaseManagerDashboard() {
+  return getJson('/api/release-manager/dashboard')
+}
+export function getReleaseManagerChangelog() {
+  return getJson('/api/release-manager/changelog')
+}
+export function generatePrSummary(title, changes) {
+  return postJson('/api/release-manager/pr-summary', { title, changes })
+}
+export function generateReleaseNotes(version, highlights) {
+  return postJson('/api/release-manager/release-notes', { version, highlights })
+}
+export function getLaunchConsoleDashboard() {
+  return getJson('/api/launch-console/dashboard')
+}
+export function getLaunchConsoleReport() {
+  return getJson('/api/launch-console/report')
 }

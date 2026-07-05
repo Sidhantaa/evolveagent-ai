@@ -1,4 +1,12 @@
-# EvolveAgent AI — Project Summary (current completed: v59.0 Data Export & Backup · v45.1 MCP Hub UI)
+# EvolveAgent AI — Project Summary (current completed: v60.1 Master Agent Voice Console · v45.1 MCP Hub UI)
+
+## v60.1 — Master Agent Voice Console
+
+The Master Agent is now the single top-level routing experience across v1–v60: one clean AI-native hero where the user speaks or types a request and it is classified against a capability registry (11 domains), routed to the right subsystem, and answered via the existing run pipeline — returning Answer + Sources + Follow-ups. It supports push-to-talk voice input (user-activated; no wake word, no recording) and can speak answers back using the browser's speech synthesis. A `mcp:` prefix routes tool-connection-style requests to the connector hub, a CLI palette of governed `/`-commands supports command-style interaction, and task-aware MCP suggestions (with key-readiness booleans, never secret values) appear when relevant. Everything stays planning-first and approval-gated — risky action classes (send / pay / delete / deploy / external post) are always held for human approval and can never be auto-executed by a client flag. Exposed at `/api/master-agent` (route, capabilities, summary), in analytics, and as the AI-native hero in Simple Mode. All routes are governance-logged. It is not AGI and not a retrained model — its "tuning" is an explicit capability registry over the existing systems.
+
+## v60 — EvolveAgent OS 2.0 (capstone)
+
+A single unified command center over every system built across v1–v59, grouped by domain and marked active-by-data with its route and record count, plus a live platform scorecard (reusing the v55 Operating Layer 2.0 grade and the v49 health monitor), milestone stats, and a governance-logged snapshot/report. Read-only aggregation of local state that takes no action beyond storing the snapshot/report. Exposed at `/api/os2` (dashboard, command-center, snapshots, report), in analytics, and as an EvolveAgent OS 2.0 Developer-Mode panel. Explicitly not AGI — a governed orchestration layer.
 
 ## v59 — Data Export & Backup
 

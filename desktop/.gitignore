@@ -1,0 +1,9 @@
+node_modules/
+dist/
+
+# Rust / Tauri build artifacts
+src-tauri/target/
+src-tauri/gen/
+
+# Generated app icons (create with: npm run tauri icon <path-to-logo.png>)
+src-tauri/icons/

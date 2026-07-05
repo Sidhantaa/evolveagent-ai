@@ -1400,6 +1400,327 @@ class PlaybookCreateRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# Task-aware MCP suggestion (voice/ask console)
+# ----------------------------------------------------------------------
+class MCPSuggestRequest(BaseModel):
+    task: str = Field(..., min_length=1, max_length=500)
+
+
+# ----------------------------------------------------------------------
+# Master Agent — single top-level AI surface over all of v1–v60
+# ----------------------------------------------------------------------
+class MasterAgentRouteRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=4000)
+    workspace_id: str | None = Field(default=None)
+    voice_used: bool = Field(default=False)
+    execute: bool = Field(default=False, description="Only honored for non-risky intents; risky actions still require explicit approval.")
+
+
+# ----------------------------------------------------------------------
+# Git Intelligence (Phase 1) — read-only, opt-in discovery
+# ----------------------------------------------------------------------
+class GitDiscoverRequest(BaseModel):
+    path: str | None = Field(default=None, max_length=500, description="Local path to scan for git repos (read-only). Required with opt_in.")
+    opt_in: bool = Field(default=False, description="Must be true to index real local repos; otherwise a sample is returned.")
+    workspace_id: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
+# Agent Studio (Phase 2) — build-your-own-agent (config-only, not training)
+# ----------------------------------------------------------------------
+class AgentProfileRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    role: str = Field(default="", max_length=1000)
+    description: str = Field(default="", max_length=1000)
+    personality: dict = Field(default_factory=dict)
+    tools: list[str] = Field(default_factory=list)
+    permissions: dict = Field(default_factory=dict)
+    memory_scope: dict = Field(default_factory=dict)
+    examples: list[dict] = Field(default_factory=list)
+    guardrails: dict = Field(default_factory=dict)
+    test_cases: list[dict] = Field(default_factory=list)
+
+
+class AgentTestRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=2000)
+
+
+class AgentImportRequest(BaseModel):
+    profile: dict = Field(default_factory=dict)
+
+
+class AgentRollbackRequest(BaseModel):
+    version: int = Field(..., ge=1)
+
+
+class VoiceSettingsRequest(BaseModel):
+    workspace_id: str = Field(default="global", max_length=80)
+    voice_name: str | None = Field(default=None, max_length=120)
+    rate: float | None = Field(default=None, ge=0.25, le=3.0)
+    pitch: float | None = Field(default=None, ge=0.0, le=2.0)
+    volume: float | None = Field(default=None, ge=0.0, le=1.0)
+    read_aloud: bool | None = Field(default=None)
+    transcript_enabled: bool | None = Field(default=None)
+    store_transcripts: bool | None = Field(default=None)
+
+
+class VoiceActivityRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    workspace_id: str = Field(default="global", max_length=80)
+    text: str = Field(default="", max_length=8000)
+    meta: dict = Field(default_factory=dict)
+
+
+class DurableWorkflowDefRequest(BaseModel):
+    name: str = Field(default="", max_length=120)
+    template: str | None = Field(default=None, max_length=60)
+    steps: list[dict] = Field(default_factory=list)
+
+
+class DurableWorkflowStartRequest(BaseModel):
+    definition_id: str | None = Field(default=None, max_length=80)
+    name: str = Field(default="", max_length=120)
+    steps: list[dict] = Field(default_factory=list)
+    inputs: dict = Field(default_factory=dict)
+
+
+class WorkflowApprovalRequest(BaseModel):
+    approved: bool = Field(default=True)
+    note: str = Field(default="", max_length=500)
+
+
+class MarketplacePublishRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=20)
+    source_id: str | None = Field(default=None, max_length=80)
+    name: str = Field(default="", max_length=120)
+    summary: str = Field(default="", max_length=280)
+    publisher: str = Field(default="local", max_length=80)
+    manifest: dict = Field(default_factory=dict)
+
+
+class DesignAnalyzeRequest(BaseModel):
+    image: str = Field(..., min_length=1, max_length=16_000_000, description="Image as a data URL")
+    analyses: list[str] = Field(default_factory=list)
+    context: str = Field(default="", max_length=2000)
+    allow_live: bool = Field(default=False, description="Opt in to a live model call (sends the image to OpenRouter)")
+
+
+class RepoSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=200)
+    limit: int = Field(default=8, ge=1, le=25)
+    sort: str = Field(default="best", max_length=10)
+
+
+class AdaptiveIngestRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=500)
+    kind: str = Field(default="topic", max_length=20)
+    source: str = Field(default="manual", max_length=60)
+
+
+class MasterRouteFeedbackRequest(BaseModel):
+    correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
+    correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")
+    note: str = Field(default="", max_length=500)
+
+
+# ----------------------------------------------------------------------
+# Settings Center (v67)
+# ----------------------------------------------------------------------
+class SettingsUpdateRequest(BaseModel):
+    settings: dict = Field(default_factory=dict, description="Partial settings by category; only allow-listed keys are applied. No secret values.")
+
+
+class SettingsImportRequest(BaseModel):
+    settings: dict = Field(default_factory=dict)
+
+
+# ----------------------------------------------------------------------
+# Provider Control Center (v68)
+# ----------------------------------------------------------------------
+class ProviderControlUpdateRequest(BaseModel):
+    model_by_task: dict | None = Field(default=None, description="task_type → model name preference.")
+    capability_modes: dict | None = Field(default=None, description="capability → 'mock' | 'real' preference.")
+    fallback_enabled: bool | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
+# Smart Context Engine (v71)
+# ----------------------------------------------------------------------
+class ContextPlanRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=2000)
+    workspace_id: str | None = Field(default=None)
+    budget_chars: int = Field(default=4000, ge=200, le=20000)
+
+
+# ----------------------------------------------------------------------
+# Workflow Recommendation Engine (v73)
+# ----------------------------------------------------------------------
+class WorkflowRecommendRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=2000)
+    task_type: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
+# Document Intelligence 2.0 (v75)
+# ----------------------------------------------------------------------
+class DocCompareRequest(BaseModel):
+    text_a: str = Field(..., min_length=1, max_length=50000)
+    text_b: str = Field(..., min_length=1, max_length=50000)
+
+
+class AtsScoreRequest(BaseModel):
+    resume_text: str = Field(..., min_length=1, max_length=50000)
+    job_keywords: list[str] = Field(default_factory=list)
+
+
+class DocTextRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100000)
+
+
+class DocQARequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100000)
+    question: str = Field(..., min_length=1, max_length=1000)
+
+
+# ----------------------------------------------------------------------
+# Code Intelligence 2.0 (v76)
+# ----------------------------------------------------------------------
+class CodeAnalyzeRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=200000)
+    language: str = Field(default="python", max_length=30)
+
+
+class CodeTextRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=200000)
+
+
+# ----------------------------------------------------------------------
+# Research Agent 2.0 (v77)
+# ----------------------------------------------------------------------
+class ResearchSourcesRequest(BaseModel):
+    sources: list[dict] = Field(default_factory=list, description="List of {title, text} sources.")
+
+
+class ResearchBriefRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    sources: list[dict] = Field(default_factory=list)
+
+
+class ResearchTextRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100000)
+
+
+# ----------------------------------------------------------------------
+# Meeting Intelligence 2.0 (v79)
+# ----------------------------------------------------------------------
+class MeetingAnalyzeRequest(BaseModel):
+    transcript: str = Field(..., min_length=1, max_length=200000)
+
+
+class MeetingToGoalRequest(BaseModel):
+    transcript: str = Field(..., min_length=1, max_length=200000)
+    title: str | None = Field(default=None, max_length=200)
+
+
+# ----------------------------------------------------------------------
+# Multi-Agent Collaboration 2.0 (v80)
+# ----------------------------------------------------------------------
+class CollaborationRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    contributions: list[dict] = Field(default_factory=list, description="List of {role, position} agent contributions.")
+
+
+# ----------------------------------------------------------------------
+# Permission System 3.0 (v81)
+# ----------------------------------------------------------------------
+class PermissionProfileRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    scope_type: str = Field(default="global")
+    scope_value: str = Field(default="*", max_length=120)
+    action_pattern: str = Field(default="*", max_length=120)
+    effect: str = Field(default="require_approval")
+    risk_level: str = Field(default="high")
+
+
+class PermissionEvaluateRequest(BaseModel):
+    scope_type: str = Field(default="global")
+    scope_value: str = Field(default="*", max_length=120)
+    action: str = Field(..., min_length=1, max_length=120)
+    risk_level: str = Field(default="medium")
+
+
+# ----------------------------------------------------------------------
+# Local Data Manager (v83)
+# ----------------------------------------------------------------------
+class RedactionPreviewRequest(BaseModel):
+    collection: str = Field(..., min_length=1, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# Import Center (v84)
+# ----------------------------------------------------------------------
+class ImportPreviewRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    content: str = Field(..., min_length=1, max_length=500000)
+
+
+class ImportCommitRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    content: str = Field(..., min_length=1, max_length=500000)
+    workspace_id: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
+# Export Center (v85)
+# ----------------------------------------------------------------------
+class ExportRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    format: str = Field(default="markdown")
+    workspace_id: str | None = Field(default=None)
+
+
+class ExportPackageRequest(BaseModel):
+    kinds: list[str] = Field(default_factory=list)
+    format: str = Field(default="markdown")
+    workspace_id: str | None = Field(default=None)
+
+
+# ----------------------------------------------------------------------
+# Plugin Marketplace 3.0 (v86)
+# ----------------------------------------------------------------------
+class PluginRegisterRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    permissions: list[str] = Field(default_factory=list)
+
+
+class PluginToggleRequest(BaseModel):
+    enabled: bool
+
+
+# ----------------------------------------------------------------------
+# Quality Assurance Center (v88)
+# ----------------------------------------------------------------------
+class QARecordRequest(BaseModel):
+    feature_key: str = Field(..., min_length=1, max_length=80)
+    status: str = Field(default="pass")
+    note: str = Field(default="", max_length=500)
+
+
+# ----------------------------------------------------------------------
+# Release Manager (v89)
+# ----------------------------------------------------------------------
+class PRSummaryRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    changes: list[str] = Field(default_factory=list)
+
+
+class ReleaseNotesRequest(BaseModel):
+    version: str = Field(..., min_length=1, max_length=40)
+    highlights: list[str] = Field(default_factory=list)
+
+
+# ----------------------------------------------------------------------
 # v57.0 Workspace Templates & Cloning
 # ----------------------------------------------------------------------
 class WorkspaceTemplateCreateRequest(BaseModel):

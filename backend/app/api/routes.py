@@ -129,6 +129,52 @@ from app.models.request_models import (
     RetrievalQueryRequest,
     EvalSuiteCreateRequest,
     PlaybookCreateRequest,
+    MCPSuggestRequest,
+    MasterAgentRouteRequest,
+    GitDiscoverRequest,
+    AgentProfileRequest,
+    AgentTestRequest,
+    AgentImportRequest,
+    AgentRollbackRequest,
+    VoiceSettingsRequest,
+    VoiceActivityRequest,
+    DurableWorkflowDefRequest,
+    DurableWorkflowStartRequest,
+    WorkflowApprovalRequest,
+    MarketplacePublishRequest,
+    DesignAnalyzeRequest,
+    RepoSearchRequest,
+    AdaptiveIngestRequest,
+    MasterRouteFeedbackRequest,
+    SettingsUpdateRequest,
+    SettingsImportRequest,
+    ProviderControlUpdateRequest,
+    ContextPlanRequest,
+    WorkflowRecommendRequest,
+    DocCompareRequest,
+    AtsScoreRequest,
+    DocTextRequest,
+    DocQARequest,
+    CodeAnalyzeRequest,
+    CodeTextRequest,
+    ResearchSourcesRequest,
+    ResearchBriefRequest,
+    ResearchTextRequest,
+    MeetingAnalyzeRequest,
+    MeetingToGoalRequest,
+    CollaborationRequest,
+    PermissionProfileRequest,
+    PermissionEvaluateRequest,
+    RedactionPreviewRequest,
+    ImportPreviewRequest,
+    ImportCommitRequest,
+    ExportRequest,
+    ExportPackageRequest,
+    PluginRegisterRequest,
+    PluginToggleRequest,
+    QARecordRequest,
+    PRSummaryRequest,
+    ReleaseNotesRequest,
     WorkspaceTemplateCreateRequest,
     WorkspaceTemplateInstantiateRequest,
     ScheduledTaskCreateRequest,
@@ -268,6 +314,7 @@ from app.services.organization_os_service import OrganizationOSService
 from app.services.hardware_companion_service import HardwareCompanionService
 from app.services.operating_layer_service import OperatingLayerService
 from app.services.mcp_connector_service import MCPConnectorService
+from app.services.mcp_suggestion_service import MCPSuggestionService
 from app.services.mcp_policy_service import MCPPolicyService
 from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
@@ -285,6 +332,46 @@ from app.services.workspace_templates_service import WorkspaceTemplatesService
 from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.data_export_service import DataExportService
 from app.services.evolveagent_os2_service import EvolveAgentOS2Service
+from app.services.master_agent_service import MasterAgentService
+from app.services.git_discovery_service import GitDiscoveryService
+from app.services.agent_profile_service import AgentProfileService
+from app.services.voice_console_service import VoiceConsoleService
+from app.services.durable_workflow_service import DurableWorkflowService
+from app.services.marketplace_hub_service import MarketplaceHubService
+from app.services.design_agent_service import DesignAgentService
+from app.services.git_reader_service import GitReaderService
+from app.services.repo_finder_service import RepoFinderService
+from app.services.adaptive_learning_service import AdaptiveLearningService
+from app.services.home_dashboard_service import HomeDashboardService
+from app.services.global_search_service import GlobalSearchService
+from app.services.activity_timeline_service import ActivityTimelineService
+from app.services.dashboard_home_service import DashboardHomeService
+from app.services.feature_registry_service import FeatureRegistryService
+from app.services.demo_service import DemoService
+from app.services.settings_service import SettingsService
+from app.services.provider_control_service import ProviderControlService
+from app.services.notifications_inbox_service import NotificationsInboxService
+from app.services.workspace_os_service import WorkspaceOSService
+from app.services.smart_context_service import SmartContextService
+from app.services.agent_quality_service import AgentQualityService
+from app.services.workflow_recommendation_service import WorkflowRecommendationService
+from app.services.personal_productivity_service import PersonalProductivityService
+from app.services.document_intelligence_service import DocumentIntelligenceService
+from app.services.code_intelligence_service import CodeIntelligenceService
+from app.services.research_agent_service import ResearchAgentService
+from app.services.business_intelligence_service import BusinessIntelligenceService
+from app.services.meeting_intelligence_service import MeetingIntelligenceService
+from app.services.agent_collaboration_service import AgentCollaborationService
+from app.services.permission_profiles_service import PermissionProfilesService
+from app.services.governance_console_service import GovernanceConsoleService
+from app.services.data_manager_service import DataManagerService
+from app.services.import_center_service import ImportCenterService
+from app.services.export_center_service import ExportCenterService
+from app.services.plugin_marketplace_service import PluginMarketplaceService
+from app.services.integration_hub_service import IntegrationHubService
+from app.services.qa_center_service import QACenterService
+from app.services.release_manager_service import ReleaseManagerService
+from app.services.product_launch_service import ProductLaunchService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -374,6 +461,7 @@ hardware_companion_service = HardwareCompanionService(storage, governance_servic
 operating_layer_service = OperatingLayerService(storage, governance_service)
 mcp_policy_service = MCPPolicyService(storage, governance_service)
 mcp_connector_service = MCPConnectorService(storage, governance_service, policy_service=mcp_policy_service)
+mcp_suggestion_service = MCPSuggestionService(mcp_connector_service, governance_service)
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
 mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
@@ -390,6 +478,46 @@ workspace_templates_service = WorkspaceTemplatesService(storage, governance_serv
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
+master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
+git_discovery_service = GitDiscoveryService(storage, governance_service)
+agent_profile_service = AgentProfileService(storage, governance_service)
+voice_console_service = VoiceConsoleService(storage, governance_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service)
+marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
+design_agent_service = DesignAgentService(storage, governance_service)
+git_reader_service = GitReaderService(governance_service)
+repo_finder_service = RepoFinderService(storage, governance_service)
+adaptive_learning_service = AdaptiveLearningService(storage, governance_service)
+home_dashboard_service = HomeDashboardService(storage, governance_service)
+global_search_service = GlobalSearchService(storage, governance_service)
+activity_timeline_service = ActivityTimelineService(storage, governance_service)
+dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
+feature_registry_service = FeatureRegistryService(storage, governance_service)
+demo_service = DemoService(storage, governance_service)
+settings_service = SettingsService(storage, governance_service)
+provider_control_service = ProviderControlService(storage, governance_service)
+notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
+workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
+smart_context_service = SmartContextService(storage, governance_service)
+agent_quality_service = AgentQualityService(storage, governance_service)
+workflow_recommendation_service = WorkflowRecommendationService(storage, governance_service)
+personal_productivity_service = PersonalProductivityService(storage, governance_service)
+document_intelligence_service = DocumentIntelligenceService(storage, governance_service)
+code_intelligence_service = CodeIntelligenceService(storage, governance_service)
+research_agent_service = ResearchAgentService(storage, governance_service)
+business_intelligence_service = BusinessIntelligenceService(storage, governance_service)
+meeting_intelligence_service = MeetingIntelligenceService(storage, governance_service)
+agent_collaboration_service = AgentCollaborationService(storage, governance_service)
+permission_profiles_service = PermissionProfilesService(storage, governance_service)
+governance_console_service = GovernanceConsoleService(storage, governance_service)
+data_manager_service = DataManagerService(storage, governance_service)
+import_center_service = ImportCenterService(storage, governance_service)
+export_center_service = ExportCenterService(storage, governance_service)
+plugin_marketplace_service = PluginMarketplaceService(storage, governance_service)
+integration_hub_service = IntegrationHubService(storage, governance_service)
+qa_center_service = QACenterService(storage, governance_service, feature_registry_service, health_monitor_service)
+release_manager_service = ReleaseManagerService(storage, governance_service, feature_registry_service)
+product_launch_service = ProductLaunchService(storage, governance_service, feature_registry_service, qa_center_service, export_center_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1659,6 +1787,45 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **scheduled_tasks_service.analytics_summary(),
         **data_export_service.analytics_summary(),
         **evolveagent_os2_service.analytics_summary(),
+        **master_agent_service.analytics_summary(),
+        **git_discovery_service.analytics_summary(),
+        **agent_profile_service.analytics_summary(),
+        **voice_console_service.analytics_summary(),
+        **durable_workflow_service.analytics_summary(),
+        **marketplace_hub_service.analytics_summary(),
+        **design_agent_service.analytics_summary(),
+        **git_reader_service.analytics_summary(),
+        **repo_finder_service.analytics_summary(),
+        **adaptive_learning_service.analytics_summary(),
+        **global_search_service.analytics_summary(),
+        **activity_timeline_service.analytics_summary(),
+        **dashboard_home_service.analytics_summary(),
+        **feature_registry_service.analytics_summary(),
+        **demo_service.analytics_summary(),
+        **settings_service.analytics_summary(),
+        **provider_control_service.analytics_summary(),
+        **notifications_inbox_service.analytics_summary(),
+        **workspace_os_service.analytics_summary(),
+        **smart_context_service.analytics_summary(),
+        **agent_quality_service.analytics_summary(),
+        **workflow_recommendation_service.analytics_summary(),
+        **personal_productivity_service.analytics_summary(),
+        **document_intelligence_service.analytics_summary(),
+        **code_intelligence_service.analytics_summary(),
+        **research_agent_service.analytics_summary(),
+        **business_intelligence_service.analytics_summary(),
+        **meeting_intelligence_service.analytics_summary(),
+        **agent_collaboration_service.analytics_summary(),
+        **permission_profiles_service.analytics_summary(),
+        **governance_console_service.analytics_summary(),
+        **data_manager_service.analytics_summary(),
+        **import_center_service.analytics_summary(),
+        **export_center_service.analytics_summary(),
+        **plugin_marketplace_service.analytics_summary(),
+        **integration_hub_service.analytics_summary(),
+        **qa_center_service.analytics_summary(),
+        **release_manager_service.analytics_summary(),
+        **product_launch_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3412,6 +3579,12 @@ def get_mcp_summary() -> dict:
     return mcp_connector_service.summarize_mcp_hub()
 
 
+# Task-aware MCP suggestion — which connector(s) a task needs + key readiness (never values).
+@router.post("/mcp/suggest")
+def suggest_mcp(request: MCPSuggestRequest) -> dict:
+    return mcp_suggestion_service.suggest(request.task)
+
+
 @router.get("/mcp/templates")
 def get_mcp_templates() -> dict:
     templates = mcp_connector_service.get_default_mcp_templates()
@@ -4034,6 +4207,1081 @@ def import_data_bundle(request: DataImportRequest) -> dict:
         return data_export_service.import_bundle(request.bundle)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# Master Agent — one top-level AI surface routing across all of v1–v60.
+# ----------------------------------------------------------------------
+@router.post("/master-agent/route")
+def master_agent_route(request: MasterAgentRouteRequest) -> dict:
+    return master_agent_service.route(
+        request.text,
+        workspace_id=request.workspace_id,
+        voice_used=request.voice_used,
+        execute=request.execute,
+    )
+
+
+@router.get("/master-agent/capabilities")
+def master_agent_capabilities() -> dict:
+    return master_agent_service.capabilities()
+
+
+@router.post("/master-agent/route/{run_id}/feedback")
+def master_agent_route_feedback(run_id: str, request: MasterRouteFeedbackRequest) -> dict:
+    try:
+        return master_agent_service.record_feedback(run_id, request.correct, request.note, request.correct_domain)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/master-agent/summary")
+def master_agent_summary() -> dict:
+    return master_agent_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Git Intelligence (Phase 1) — read-only, opt-in, mock-safe discovery.
+# ----------------------------------------------------------------------
+@router.get("/git-intel/status")
+def git_status() -> dict:
+    return git_discovery_service.status()
+
+
+@router.post("/git-intel/discover")
+def git_discover(request: GitDiscoverRequest) -> dict:
+    return git_discovery_service.discover(request.path, request.opt_in, request.workspace_id)
+
+
+@router.get("/git-intel/repositories")
+def git_repositories(workspace_id: str | None = Query(default=None)) -> dict:
+    return git_discovery_service.repositories(workspace_id=workspace_id)
+
+
+@router.get("/git-intel/repositories/{repo_id}")
+def git_repository(repo_id: str) -> dict:
+    try:
+        return git_discovery_service.repository(repo_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/git-intel/repositories/{repo_id}/activity")
+def git_repository_activity(repo_id: str) -> dict:
+    try:
+        return git_discovery_service.activity(repo_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/git-intel/repositories/{repo_id}/context")
+def git_repository_context(repo_id: str) -> dict:
+    try:
+        return git_discovery_service.context(repo_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# Agent Studio (Phase 2) — build-your-own-agent (config-only, mock test/eval).
+# ----------------------------------------------------------------------
+@router.get("/agent-studio/templates")
+def agent_studio_templates() -> dict:
+    return agent_profile_service.templates()
+
+
+@router.get("/agent-studio/agents")
+def agent_studio_list() -> dict:
+    return agent_profile_service.list_agents()
+
+
+@router.post("/agent-studio/agents")
+def agent_studio_create(request: AgentProfileRequest) -> dict:
+    return agent_profile_service.create(request.model_dump())
+
+
+@router.get("/agent-studio/agents/{agent_id}")
+def agent_studio_get(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.get(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.put("/agent-studio/agents/{agent_id}")
+def agent_studio_update(agent_id: str, request: AgentProfileRequest) -> dict:
+    try:
+        return agent_profile_service.update(agent_id, request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/test")
+def agent_studio_test(agent_id: str, request: AgentTestRequest) -> dict:
+    try:
+        return agent_profile_service.test(agent_id, request.prompt)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/evaluate")
+def agent_studio_evaluate(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.evaluate(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/publish-local")
+def agent_studio_publish(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.publish_local(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/duplicate")
+def agent_studio_duplicate(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.duplicate(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/agent-studio/agents/{agent_id}/versions")
+def agent_studio_versions(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.versions(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/agents/{agent_id}/rollback")
+def agent_studio_rollback(agent_id: str, request: AgentRollbackRequest) -> dict:
+    try:
+        return agent_profile_service.rollback(agent_id, request.version)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/agent-studio/agents/{agent_id}/preview")
+def agent_studio_preview(agent_id: str) -> dict:
+    try:
+        return agent_profile_service.preview(agent_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/agent-studio/import")
+def agent_studio_import(request: AgentImportRequest) -> dict:
+    try:
+        return agent_profile_service.import_profile(request.profile)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/agent-studio/summary")
+def agent_studio_summary() -> dict:
+    return agent_profile_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Phase 4 Voice Console — browser voice preferences + privacy-safe audit.
+# ----------------------------------------------------------------------
+@router.get("/voice-console/status")
+def voice_console_status() -> dict:
+    return voice_console_service.status()
+
+
+@router.get("/voice-console/settings")
+def voice_console_get_settings(workspace_id: str = "global") -> dict:
+    return voice_console_service.get_settings(workspace_id)
+
+
+@router.put("/voice-console/settings")
+def voice_console_update_settings(request: VoiceSettingsRequest) -> dict:
+    patch = request.model_dump(exclude_none=True)
+    workspace_id = patch.pop("workspace_id", "global")
+    return voice_console_service.update_settings(patch, workspace_id)
+
+
+@router.post("/voice-console/activity")
+def voice_console_activity(request: VoiceActivityRequest) -> dict:
+    try:
+        return voice_console_service.log_activity(
+            request.kind, request.workspace_id, request.text, request.meta
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/voice-console/events")
+def voice_console_events(workspace_id: str = "global", limit: int = 50) -> dict:
+    return voice_console_service.events(workspace_id, limit)
+
+
+@router.delete("/voice-console/events")
+def voice_console_clear_events(workspace_id: str = "global") -> dict:
+    return voice_console_service.clear_events(workspace_id)
+
+
+@router.get("/voice-console/summary")
+def voice_console_summary() -> dict:
+    return voice_console_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Phase 6 Durable Workflows — resumable, approval-gated, mock-safe runs.
+# ----------------------------------------------------------------------
+@router.get("/durable-workflows/templates")
+def durable_workflow_templates() -> dict:
+    return durable_workflow_service.templates()
+
+
+@router.get("/durable-workflows/definitions")
+def durable_workflow_definitions() -> dict:
+    return durable_workflow_service.list_definitions()
+
+
+@router.post("/durable-workflows/definitions")
+def durable_workflow_create_def(request: DurableWorkflowDefRequest) -> dict:
+    try:
+        return durable_workflow_service.create_definition(request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/durable-workflows/runs")
+def durable_workflow_list_runs() -> dict:
+    return durable_workflow_service.list_runs()
+
+
+@router.post("/durable-workflows/runs")
+def durable_workflow_start(request: DurableWorkflowStartRequest) -> dict:
+    try:
+        return durable_workflow_service.start_run(request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/durable-workflows/runs/{run_id}")
+def durable_workflow_get_run(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.get_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/advance")
+def durable_workflow_advance(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.advance_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/approve")
+def durable_workflow_approve(run_id: str, request: WorkflowApprovalRequest) -> dict:
+    try:
+        return durable_workflow_service.approve_step(run_id, request.approved, request.note)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/pause")
+def durable_workflow_pause(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.pause_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/resume")
+def durable_workflow_resume(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.resume_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/durable-workflows/runs/{run_id}/cancel")
+def durable_workflow_cancel(run_id: str) -> dict:
+    try:
+        return durable_workflow_service.cancel_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/durable-workflows/effects")
+def durable_workflow_effects(run_id: str | None = None, limit: int = 50) -> dict:
+    return durable_workflow_service.effects(run_id, limit)
+
+
+@router.get("/durable-workflows/summary")
+def durable_workflow_summary() -> dict:
+    return durable_workflow_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Phase 7 Marketplace Hub — local, sanitized agent + workflow bundles.
+# ----------------------------------------------------------------------
+@router.get("/marketplace-hub/listings")
+def marketplace_hub_listings(kind: str | None = None) -> dict:
+    return marketplace_hub_service.list_listings(kind)
+
+
+@router.get("/marketplace-hub/listings/{listing_id}")
+def marketplace_hub_get_listing(listing_id: str) -> dict:
+    try:
+        return marketplace_hub_service.get_listing(listing_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/marketplace-hub/listings")
+def marketplace_hub_publish(request: MarketplacePublishRequest) -> dict:
+    try:
+        return marketplace_hub_service.publish(request.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/marketplace-hub/listings/{listing_id}/install")
+def marketplace_hub_install(listing_id: str) -> dict:
+    try:
+        return marketplace_hub_service.install(listing_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.delete("/marketplace-hub/listings/{listing_id}")
+def marketplace_hub_unpublish(listing_id: str) -> dict:
+    try:
+        return marketplace_hub_service.unpublish(listing_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/marketplace-hub/installs")
+def marketplace_hub_installs() -> dict:
+    return marketplace_hub_service.installs()
+
+
+@router.get("/marketplace-hub/summary")
+def marketplace_hub_summary() -> dict:
+    return marketplace_hub_service.summary()
+
+
+# NOTE: Design Agent, Git reader, Repo Finder, Adaptive Learning and Today routes
+# were extracted into app/api/discovery_routes.py (services still live here).
+
+
+# ----------------------------------------------------------------------
+# v62.0 Global Search — one read-only search bar across the whole OS.
+# ----------------------------------------------------------------------
+@router.get("/search")
+def global_search(
+    q: str = Query(..., min_length=1),
+    workspace_id: str | None = Query(default=None),
+    types: str | None = Query(default=None, description="Comma-separated result types to filter by."),
+    since: str | None = Query(default=None, description="ISO timestamp; only results created at/after this."),
+) -> dict:
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    return global_search_service.search(q, workspace_id=workspace_id, types=type_list, since=since)
+
+
+@router.get("/search/sources")
+def global_search_sources() -> dict:
+    return global_search_service.sources()
+
+
+# ----------------------------------------------------------------------
+# v63.0 Unified Activity Timeline — chronological view of everything the OS did.
+# ----------------------------------------------------------------------
+@router.get("/activity")
+def activity_timeline(
+    workspace_id: str | None = Query(default=None),
+    types: str | None = Query(default=None, description="Comma-separated event types."),
+    status: str | None = Query(default=None),
+    actor: str | None = Query(default=None),
+    since: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> dict:
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    return activity_timeline_service.timeline(workspace_id=workspace_id, types=type_list, status=status, actor=actor, since=since, limit=limit)
+
+
+@router.get("/activity/summary")
+def activity_timeline_summary() -> dict:
+    return activity_timeline_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v64.0 Dashboard Home 2.0 — one professional homepage over the whole OS.
+# ----------------------------------------------------------------------
+@router.get("/home")
+def dashboard_home(workspace_id: str | None = Query(default=None)) -> dict:
+    return dashboard_home_service.home(workspace_id=workspace_id)
+
+
+# ----------------------------------------------------------------------
+# v65.0 Feature Registry + Capability Map 3.0 — make all 60+ versions discoverable.
+# ----------------------------------------------------------------------
+@router.get("/features")
+def list_features(
+    q: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+) -> dict:
+    return feature_registry_service.list_features(query=q, status=status, category=category)
+
+
+@router.get("/features/route-map")
+def features_route_map() -> dict:
+    return feature_registry_service.route_map()
+
+
+@router.get("/features/summary")
+def features_summary() -> dict:
+    return feature_registry_service.summary()
+
+
+@router.post("/features/{key}/try")
+def try_feature(key: str) -> dict:
+    try:
+        return feature_registry_service.try_feature(key)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v66.0 Demo Mode / Portfolio Mode 2.0 — demo-safe, impressive, resettable.
+# ----------------------------------------------------------------------
+@router.get("/demo/script")
+def demo_script() -> dict:
+    return demo_service.script()
+
+
+@router.get("/demo/walkthrough")
+def demo_walkthrough() -> dict:
+    return demo_service.walkthrough()
+
+
+@router.get("/demo/feature-sequence")
+def demo_feature_sequence() -> dict:
+    return demo_service.feature_sequence()
+
+
+@router.get("/demo/resume-bullets")
+def demo_resume_bullets() -> dict:
+    return demo_service.resume_bullets()
+
+
+@router.get("/demo/case-study")
+def demo_case_study() -> dict:
+    return demo_service.case_study()
+
+
+@router.get("/demo/summary")
+def demo_summary() -> dict:
+    return demo_service.summary()
+
+
+@router.post("/demo/seed")
+def demo_seed() -> dict:
+    return demo_service.seed()
+
+
+@router.post("/demo/reset")
+def demo_reset() -> dict:
+    return demo_service.reset()
+
+
+# ----------------------------------------------------------------------
+# v67.0 Settings Center — central local configuration (no secrets stored).
+# ----------------------------------------------------------------------
+@router.get("/settings")
+def get_settings() -> dict:
+    return settings_service.get_settings()
+
+
+@router.patch("/settings")
+def update_settings(request: SettingsUpdateRequest) -> dict:
+    return settings_service.update_settings(request.settings)
+
+
+@router.post("/settings/reset")
+def reset_settings() -> dict:
+    return settings_service.reset()
+
+
+@router.get("/settings/export")
+def export_settings() -> dict:
+    return settings_service.export_settings()
+
+
+@router.post("/settings/import")
+def import_settings(request: SettingsImportRequest) -> dict:
+    try:
+        return settings_service.import_settings({"settings": request.settings})
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v68.0 Real Provider Control Center 2.0 — readiness, model/mode prefs, cost/latency.
+# ----------------------------------------------------------------------
+@router.get("/provider-control/dashboard")
+def provider_control_dashboard() -> dict:
+    return provider_control_service.dashboard()
+
+
+@router.get("/provider-control/summary")
+def provider_control_summary() -> dict:
+    return provider_control_service.summary()
+
+
+@router.get("/provider-control/key-check")
+def provider_control_key_check() -> dict:
+    return provider_control_service.key_check()
+
+
+@router.patch("/provider-control")
+def provider_control_update(request: ProviderControlUpdateRequest) -> dict:
+    return provider_control_service.update(request.model_by_task, request.capability_modes, request.fallback_enabled)
+
+
+# ----------------------------------------------------------------------
+# v69.0 Unified Notifications Inbox 2.0 — actionable alerts (additive to v56).
+# ----------------------------------------------------------------------
+@router.post("/notifications-inbox/generate")
+def notifications_inbox_generate() -> dict:
+    return notifications_inbox_service.generate()
+
+
+@router.get("/notifications-inbox")
+def notifications_inbox_list(
+    severity: str | None = Query(default=None),
+    include_resolved: bool = Query(default=False),
+) -> dict:
+    return notifications_inbox_service.list_items(severity=severity, include_resolved=include_resolved)
+
+
+@router.get("/notifications-inbox/summary")
+def notifications_inbox_summary() -> dict:
+    return notifications_inbox_service.summary()
+
+
+@router.post("/notifications-inbox/{item_id}/resolve")
+def notifications_inbox_resolve(item_id: str) -> dict:
+    try:
+        return notifications_inbox_service.resolve(item_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v70.0 Workspace Operating System 2.0 — per-workspace AI OS overview.
+# ----------------------------------------------------------------------
+@router.get("/workspace-os/summary")
+def workspace_os_summary() -> dict:
+    return workspace_os_service.summary()
+
+
+@router.get("/workspace-os/{workspace_id}/dashboard")
+def workspace_os_dashboard(workspace_id: str) -> dict:
+    return workspace_os_service.dashboard(workspace_id)
+
+
+# ----------------------------------------------------------------------
+# v71.0 Smart Context Engine — plan context selection (read-only preview).
+# ----------------------------------------------------------------------
+@router.post("/context/plan")
+def context_plan(request: ContextPlanRequest) -> dict:
+    return smart_context_service.plan(request.query, workspace_id=request.workspace_id, budget_chars=request.budget_chars)
+
+
+@router.get("/context/summary")
+def context_summary() -> dict:
+    return smart_context_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v72.0 Agent Quality Optimizer — trends, weak agents, regressions (read-only).
+# ----------------------------------------------------------------------
+@router.get("/agent-quality/dashboard")
+def agent_quality_dashboard() -> dict:
+    return agent_quality_service.dashboard()
+
+
+@router.get("/agent-quality/summary")
+def agent_quality_summary() -> dict:
+    return agent_quality_service.summary()
+
+
+@router.get("/agent-quality/best-by-task")
+def agent_quality_best_by_task() -> dict:
+    return {"best_by_task": agent_quality_service.best_by_task()}
+
+
+# ----------------------------------------------------------------------
+# v73.0 Workflow Recommendation Engine — suggest the best workflow (read-only).
+# ----------------------------------------------------------------------
+@router.post("/workflow-recommend")
+def workflow_recommend(request: WorkflowRecommendRequest) -> dict:
+    return workflow_recommendation_service.recommend(request.goal, task_type=request.task_type)
+
+
+@router.get("/workflow-recommend/summary")
+def workflow_recommend_summary() -> dict:
+    return workflow_recommendation_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v74.0 Personal Productivity Brain — what should I work on now? (read-only).
+# ----------------------------------------------------------------------
+@router.get("/productivity")
+def productivity_brain(workspace_id: str | None = Query(default=None)) -> dict:
+    return personal_productivity_service.brain(workspace_id=workspace_id)
+
+
+@router.get("/productivity/what-now")
+def productivity_what_now(workspace_id: str | None = Query(default=None)) -> dict:
+    return personal_productivity_service.what_now(workspace_id=workspace_id)
+
+
+@router.get("/productivity/summary")
+def productivity_summary() -> dict:
+    return personal_productivity_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v75.0 Document Intelligence 2.0 — deterministic local document toolkit.
+# ----------------------------------------------------------------------
+@router.post("/doc-intel/compare")
+def doc_intel_compare(request: DocCompareRequest) -> dict:
+    return document_intelligence_service.compare(request.text_a, request.text_b)
+
+
+@router.post("/doc-intel/ats")
+def doc_intel_ats(request: AtsScoreRequest) -> dict:
+    return document_intelligence_service.ats_score(request.resume_text, request.job_keywords)
+
+
+@router.post("/doc-intel/contract-risk")
+def doc_intel_contract_risk(request: DocTextRequest) -> dict:
+    return document_intelligence_service.contract_risk(request.text)
+
+
+@router.post("/doc-intel/csv-insight")
+def doc_intel_csv_insight(request: DocTextRequest) -> dict:
+    return document_intelligence_service.csv_insight(request.text)
+
+
+@router.post("/doc-intel/qa")
+def doc_intel_qa(request: DocQARequest) -> dict:
+    return document_intelligence_service.qa(request.text, request.question)
+
+
+@router.get("/doc-intel/summary")
+def doc_intel_summary() -> dict:
+    return document_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v76.0 Code Intelligence 2.0 — static analysis of submitted code (read-only).
+# ----------------------------------------------------------------------
+@router.post("/code-intel/analyze")
+def code_intel_analyze(request: CodeAnalyzeRequest) -> dict:
+    return code_intelligence_service.analyze(request.code, request.language)
+
+
+@router.post("/code-intel/routes")
+def code_intel_routes(request: CodeTextRequest) -> dict:
+    return code_intelligence_service.route_map(request.code)
+
+
+@router.post("/code-intel/dependencies")
+def code_intel_dependencies(request: CodeTextRequest) -> dict:
+    return code_intelligence_service.dependencies(request.code)
+
+
+@router.post("/code-intel/test-coverage")
+def code_intel_test_coverage(request: CodeTextRequest) -> dict:
+    return code_intelligence_service.test_coverage(request.code)
+
+
+@router.get("/code-intel/summary")
+def code_intel_summary() -> dict:
+    return code_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v77.0 Research Agent 2.0 — deterministic local research toolkit (read-only).
+# ----------------------------------------------------------------------
+@router.post("/research-agent/compare")
+def research_compare(request: ResearchSourcesRequest) -> dict:
+    return research_agent_service.compare_sources(request.sources)
+
+
+@router.post("/research-agent/claims")
+def research_claims(request: ResearchTextRequest) -> dict:
+    return research_agent_service.claim_evidence(request.text)
+
+
+@router.post("/research-agent/contradictions")
+def research_contradictions(request: ResearchSourcesRequest) -> dict:
+    return research_agent_service.detect_contradictions(request.sources)
+
+
+@router.post("/research-agent/citation-quality")
+def research_citation_quality(request: ResearchSourcesRequest) -> dict:
+    return research_agent_service.citation_quality(request.sources)
+
+
+@router.post("/research-agent/bias")
+def research_bias(request: ResearchTextRequest) -> dict:
+    return research_agent_service.bias_flags(request.text)
+
+
+@router.post("/research-agent/brief")
+def research_brief(request: ResearchBriefRequest) -> dict:
+    return research_agent_service.brief(request.topic, request.sources)
+
+
+@router.get("/research-agent/summary")
+def research_agent_summary() -> dict:
+    return research_agent_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v78.0 Business Intelligence 2.0 — read-only business analytics (mock forecast).
+# ----------------------------------------------------------------------
+@router.get("/business-intel/dashboard")
+def business_intel_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
+    return business_intelligence_service.dashboard(workspace_id=workspace_id)
+
+
+@router.get("/business-intel/report")
+def business_intel_report(workspace_id: str | None = Query(default=None)) -> dict:
+    return business_intelligence_service.report(workspace_id=workspace_id)
+
+
+@router.get("/business-intel/summary")
+def business_intel_summary() -> dict:
+    return business_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v79.0 Meeting Intelligence 2.0 — deterministic transcript extraction (read-only).
+# ----------------------------------------------------------------------
+@router.post("/meeting-intel/analyze")
+def meeting_intel_analyze(request: MeetingAnalyzeRequest) -> dict:
+    return meeting_intelligence_service.analyze(request.transcript)
+
+
+@router.post("/meeting-intel/to-goal")
+def meeting_intel_to_goal(request: MeetingToGoalRequest) -> dict:
+    return meeting_intelligence_service.to_goal_plan(request.transcript, request.title)
+
+
+@router.get("/meeting-intel/summary")
+def meeting_intel_summary() -> dict:
+    return meeting_intelligence_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v80.0 Multi-Agent Collaboration 2.0 — visible multi-agent analysis (read-only).
+# ----------------------------------------------------------------------
+@router.post("/collaboration/analyze")
+def collaboration_analyze(request: CollaborationRequest) -> dict:
+    return agent_collaboration_service.analyze(request.topic, request.contributions)
+
+
+@router.get("/collaboration/summary")
+def collaboration_summary() -> dict:
+    return agent_collaboration_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v81.0 Permission System 3.0 — profiles + previewable evaluation (advisory layer).
+# ----------------------------------------------------------------------
+@router.get("/permissions/profiles")
+def list_permission_profiles() -> dict:
+    profiles = permission_profiles_service.list_profiles()
+    return {"profiles": profiles, "count": len(profiles)}
+
+
+@router.post("/permissions/profiles")
+def create_permission_profile(request: PermissionProfileRequest) -> dict:
+    return permission_profiles_service.create_profile(request.model_dump())
+
+
+@router.delete("/permissions/profiles/{profile_id}")
+def delete_permission_profile(profile_id: str) -> dict:
+    try:
+        return permission_profiles_service.delete_profile(profile_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/permissions/evaluate")
+def evaluate_permission(request: PermissionEvaluateRequest) -> dict:
+    return permission_profiles_service.evaluate(request.scope_type, request.scope_value, request.action, request.risk_level)
+
+
+@router.post("/permissions/preview")
+def preview_permission(request: PermissionEvaluateRequest) -> dict:
+    return permission_profiles_service.preview(request.scope_type, request.scope_value, request.action, request.risk_level)
+
+
+@router.get("/permissions/summary")
+def permissions_summary() -> dict:
+    return permission_profiles_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v82.0 Governance Console 3.0 — read-only console over the governance log.
+# ----------------------------------------------------------------------
+@router.get("/governance-console/dashboard")
+def governance_console_dashboard() -> dict:
+    return governance_console_service.dashboard()
+
+
+@router.get("/governance-console/report")
+def governance_console_report(format: str = Query(default="markdown", pattern="^(markdown|json)$")) -> dict:
+    return governance_console_service.report(fmt=format)
+
+
+@router.get("/governance-console/summary")
+def governance_console_summary() -> dict:
+    return governance_console_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v83.0 Local Data Manager — read-only/planning-first storage management.
+# ----------------------------------------------------------------------
+@router.get("/data-manager/browse")
+def data_manager_browse() -> dict:
+    return data_manager_service.browse()
+
+
+@router.get("/data-manager/usage")
+def data_manager_usage() -> dict:
+    return data_manager_service.usage()
+
+
+@router.get("/data-manager/cleanup-suggestions")
+def data_manager_cleanup() -> dict:
+    return data_manager_service.cleanup_suggestions()
+
+
+@router.post("/data-manager/redaction-preview")
+def data_manager_redaction_preview(request: RedactionPreviewRequest) -> dict:
+    try:
+        return data_manager_service.redaction_preview(request.collection)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/data-manager/summary")
+def data_manager_summary() -> dict:
+    return data_manager_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v84.0 Import Center — validate + sanitize + preview before saving.
+# ----------------------------------------------------------------------
+@router.post("/import-center/preview")
+def import_center_preview(request: ImportPreviewRequest) -> dict:
+    try:
+        return import_center_service.preview(request.kind, request.content)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/import-center/commit")
+def import_center_commit(request: ImportCommitRequest) -> dict:
+    try:
+        return import_center_service.commit(request.kind, request.content, request.workspace_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/import-center/records")
+def import_center_records(kind: str | None = Query(default=None)) -> dict:
+    return import_center_service.list_records(kind=kind)
+
+
+@router.get("/import-center/summary")
+def import_center_summary() -> dict:
+    return import_center_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v85.0 Export Center — read-only portable exports (markdown/JSON).
+# ----------------------------------------------------------------------
+@router.post("/export-center/export")
+def export_center_export(request: ExportRequest) -> dict:
+    try:
+        return export_center_service.export(request.kind, request.format, request.workspace_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/export-center/package")
+def export_center_package(request: ExportPackageRequest) -> dict:
+    return export_center_service.package(request.kinds, request.format, request.workspace_id)
+
+
+@router.get("/export-center/case-study")
+def export_center_case_study() -> dict:
+    return export_center_service.case_study()
+
+
+@router.get("/export-center/summary")
+def export_center_summary() -> dict:
+    return export_center_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v86.0 Plugin Marketplace 3.0 — safer plugin catalog (additive; mock test runner).
+# ----------------------------------------------------------------------
+@router.get("/plugin-marketplace/catalog")
+def plugin_marketplace_catalog() -> dict:
+    return plugin_marketplace_service.catalog()
+
+
+@router.post("/plugin-marketplace/register")
+def plugin_marketplace_register(request: PluginRegisterRequest) -> dict:
+    return plugin_marketplace_service.register(request.name, request.description, request.permissions)
+
+
+@router.post("/plugin-marketplace/{plugin_id}/toggle")
+def plugin_marketplace_toggle(plugin_id: str, request: PluginToggleRequest) -> dict:
+    try:
+        return plugin_marketplace_service.toggle(plugin_id, request.enabled)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/plugin-marketplace/{plugin_id}/test")
+def plugin_marketplace_test(plugin_id: str) -> dict:
+    try:
+        return plugin_marketplace_service.test_run(plugin_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/plugin-marketplace/activity")
+def plugin_marketplace_activity() -> dict:
+    return plugin_marketplace_service.activity_log()
+
+
+@router.get("/plugin-marketplace/summary")
+def plugin_marketplace_summary() -> dict:
+    return plugin_marketplace_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v87.0 Integration Hub 3.0 — read-only integration cards (no secret display).
+# ----------------------------------------------------------------------
+@router.get("/integration-hub/cards")
+def integration_hub_cards() -> dict:
+    return integration_hub_service.cards()
+
+
+@router.post("/integration-hub/{integration_id}/dry-run")
+def integration_hub_dry_run(integration_id: str) -> dict:
+    try:
+        return integration_hub_service.dry_run(integration_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/integration-hub/summary")
+def integration_hub_summary() -> dict:
+    return integration_hub_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v88.0 Quality Assurance Center — verification matrix + release readiness.
+# ----------------------------------------------------------------------
+@router.get("/qa-center/dashboard")
+def qa_center_dashboard() -> dict:
+    return qa_center_service.dashboard()
+
+
+@router.get("/qa-center/matrix")
+def qa_center_matrix() -> dict:
+    return qa_center_service.verification_matrix()
+
+
+@router.post("/qa-center/record")
+def qa_center_record(request: QARecordRequest) -> dict:
+    return qa_center_service.record(request.feature_key, request.status, request.note)
+
+
+@router.get("/qa-center/summary")
+def qa_center_summary() -> dict:
+    return qa_center_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v89.0 Release Manager — read-only release-prep generators (text only).
+# ----------------------------------------------------------------------
+@router.get("/release-manager/dashboard")
+def release_manager_dashboard() -> dict:
+    return release_manager_service.dashboard()
+
+
+@router.get("/release-manager/changelog")
+def release_manager_changelog() -> dict:
+    return release_manager_service.changelog()
+
+
+@router.post("/release-manager/pr-summary")
+def release_manager_pr_summary(request: PRSummaryRequest) -> dict:
+    return release_manager_service.pr_summary(request.title, request.changes)
+
+
+@router.post("/release-manager/release-notes")
+def release_manager_release_notes(request: ReleaseNotesRequest) -> dict:
+    return release_manager_service.release_notes(request.version, request.highlights)
+
+
+@router.get("/release-manager/summary")
+def release_manager_summary() -> dict:
+    return release_manager_service.summary()
+
+
+# ----------------------------------------------------------------------
+# v90.0 EvolveAgent Product Launch Console (capstone) — launch-readiness overview.
+# ----------------------------------------------------------------------
+@router.get("/launch-console/dashboard")
+def launch_console_dashboard() -> dict:
+    return product_launch_service.dashboard()
+
+
+@router.get("/launch-console/report")
+def launch_console_report() -> dict:
+    return product_launch_service.launch_report()
+
+
+@router.get("/launch-console/summary")
+def launch_console_summary() -> dict:
+    return product_launch_service.summary()
+
+
+@router.get("/activity/export")
+def activity_timeline_export(
+    format: str = Query(default="markdown", pattern="^(markdown|json)$"),
+    workspace_id: str | None = Query(default=None),
+    types: str | None = Query(default=None),
+    since: str | None = Query(default=None),
+) -> dict:
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    return activity_timeline_service.export(fmt=format, workspace_id=workspace_id, types=type_list, since=since)
 
 
 # ----------------------------------------------------------------------

@@ -358,6 +358,192 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp/audit` (+ `/summary`, `/export`, `/replays`, `/replay`).
 - **Safety boundary:** Read-only aggregation + dry replay; no real execution, no secrets. Only write is the stored replay artifact.
 
+### v90 — EvolveAgent Product Launch Console (capstone)
+- **Purpose:** Make the whole project launch-ready — the finale of the v61–v90 arc.
+- **How it operates:** `ProductLaunchService` renders a single read-only **launch dashboard** unifying **product positioning** (name, tagline, one-liner, pillars), a **feature matrix** (from the v65 registry grouped by category + status), **demo-mode** pointers, one-click links to **portfolio / resume / case-study exports** (v66/v85), a **launch report** (markdown), and a **final readiness score** (blending the v88 QA release-readiness with feature demo-safe coverage). It reads existing state only and takes no action beyond a governance-logged view. Explicitly **not AGI**.
+- **Main API route groups:** `/api/launch-console` (+ `/dashboard`, `/report`, `/summary`).
+- **Safety boundary:** Read-only aggregation; nothing created or executed; not AGI; governance-logged.
+
+### v89 — Release Manager
+- **Purpose:** Prepare versions professionally.
+- **How it operates:** `ReleaseManagerService` offers read-only generators for release hygiene: a **version checklist**, a **changelog** (derived from the feature registry, grouped by version), a **PR summary** generator, **release notes**, a **GitHub tag planner** (suggests the next patch/minor/major tag), a **demo checklist**, and a **Linear sync checklist**. It produces text only — it does not tag, push, or call GitHub/Linear. Governance-logged.
+- **Main API route groups:** `/api/release-manager` (+ `/dashboard`, `/changelog`, `/pr-summary`, `/release-notes`, `/summary`).
+- **Safety boundary:** Read-only text generators; no git tag/push, no GitHub/Linear calls; governance-logged.
+
+### v88 — Quality Assurance Center
+- **Purpose:** Make testing/verification first-class.
+- **How it operates:** `QACenterService` aggregates quality signals: a **feature verification matrix** (from the v65 registry, with recorded QA status per feature), a **manual QA checklist**, a **failed-feature tracker**, a **regression dashboard** (recent QA fails), and a **release-readiness score** (feature coverage + demo-safe ratio + QA pass ratio + governance-health). QA results are recorded locally (additive). It does not run tests itself (no shell) — CI/local runs report status and this centralizes it. Governance-logged.
+- **Main API route groups:** `/api/qa-center` (+ `/dashboard`, `/matrix`, `/record`, `/summary`).
+- **Safety boundary:** Read-only aggregation; does not execute tests (no shell); QA results are additive local records; governance-logged.
+
+### v87 — Integration Hub 3.0
+- **Purpose:** Make Slack/Notion/Linear/GitHub-style integrations cleaner.
+- **How it operates:** `IntegrationHubService` renders read-only **integration cards** with **connection status** (is the env key set? **boolean only**), declared **scopes/permissions**, **last sync** (newest local timestamp for that integration), a plain-language **error explanation** when not connected, and a **dry-run test** (checks readiness without any real network call). **Secret values are never displayed** — only whether each key is set. Governance-logged.
+- **Main API route groups:** `/api/integration-hub` (+ `/cards`, `/{id}/dry-run`, `/summary`).
+- **Safety boundary:** Read-only; boolean connection status only (no secret display); dry-run makes no real network call; governance-logged.
+
+### v86 — Plugin Marketplace 3.0
+- **Purpose:** Make plugins safer and easier.
+- **How it operates:** `PluginMarketplaceService` provides a local plugin **catalog** with **validation** (required fields + declared permissions), a **permission review** (flags high-risk permissions: network/write/execute/shell), **enable / disable** toggles, a **plugin activity log**, a **plugin test runner** (dry / mock — nothing executed), and a **plugin health score**. It is additive and separate from the core plugin-manifest loader (dedicated `marketplace_plugins` collection); **high-risk permissions keep a plugin disabled until explicitly reviewed/enabled**, and enabling an invalid/high-risk plugin is blocked. Governance-logged.
+- **Main API route groups:** `/api/plugin-marketplace` (+ `/catalog`, `/register`, `/{id}/toggle`, `/{id}/test`, `/activity`, `/summary`).
+- **Safety boundary:** Additive to core loader; high-risk plugins disabled until reviewed; enabling invalid/high-risk blocked; test runner is mock (nothing executed); governance-logged.
+
+### v85 — Export Center
+- **Purpose:** Make outputs portable.
+- **How it operates:** `ExportCenterService` performs read-only export of selected local data — **chats**, **reports**, **goals**, **memory**, **imported** records — as **markdown** or **JSON**, plus a **portfolio case-study** export and a **package builder** that bundles several kinds into one document. (PDF is produced client-side via print; the API returns markdown/JSON.) It excludes secrets, governance logs, and analytics, and never mutates data. Governance-logged.
+- **Main API route groups:** `/api/export-center` (+ `/export`, `/package`, `/case-study`, `/summary`).
+- **Safety boundary:** Read-only export; excludes secrets/governance/analytics; no mutation; PDF via client print; governance-logged.
+
+### v84 — Import Center
+- **Purpose:** Bring external data into EvolveAgent safely.
+- **How it operates:** `ImportCenterService` parses submitted content by **kind** (document, csv, markdown, chat_history, project_notes) into records, **validates** (allowed kind, size caps) and **sanitizes** (redacts emails / key-like tokens / card-like numbers) **before saving**, offers an **import preview** (shows sanitized records without writing), and a **commit** that appends the sanitized records to a dedicated `imported_records` collection (never into core collections). Additive and governance-logged; secret values are redacted, never stored.
+- **Main API route groups:** `/api/import-center` (+ `/preview`, `/commit`, `/records`, `/summary`).
+- **Safety boundary:** Validate + sanitize before save; secrets redacted (never stored); imports land in a dedicated collection only; governance-logged.
+
+### v83 — Local Data Manager
+- **Purpose:** Manage JSON storage safely.
+- **How it operates:** `DataManagerService` is a read-only / planning-first view over the local JSON store: a **collection browser** (record counts + byte sizes), **storage usage** (totals + largest collections), **cleanup suggestions** (large/ephemeral collections — advisory only), a **backup** helper (reuses the read-only export path), and a **redaction preview** (counts sensitive matches per collection **without writing**). It never deletes, redacts, or overwrites data autonomously — destructive operations are surfaced as suggestions only. Governance-logged.
+- **Main API route groups:** `/api/data-manager` (+ `/browse`, `/usage`, `/cleanup-suggestions`, `/redaction-preview`, `/summary`).
+- **Safety boundary:** Read-only / planning-first; no deletes/redactions/overwrites (suggestions only); secret values counted, never returned; governance-logged.
+
+### v82 — Governance Console 3.0
+- **Purpose:** Make safety visible and trustworthy.
+- **How it operates:** `GovernanceConsoleService` is a read-only console over the governance log: a **governance dashboard** (totals, blocked ratio, by action/risk/permission-level), **policy violations** (blocked events), **secret redactions** (secret/PII/redaction events), **prompt-injection warnings** (firewall/injection events), an **approval audit**, an **external-action audit** (action-level / MCP-execution events), and an **exportable governance report** (markdown/JSON). It reads existing governance events only and never mutates them. Viewing is itself governance-logged.
+- **Main API route groups:** `/api/governance-console` (+ `/dashboard`, `/report`, `/summary`).
+- **Safety boundary:** Read-only aggregation of governance events; nothing mutated; governance-logged.
+
+### v81 — Permission System 3.0
+- **Purpose:** Stronger, previewable control over actions.
+- **How it operates:** `PermissionProfilesService` adds declarative **permission profiles** scoped to global / workspace / agent / tool, matching an action pattern + risk level, with an effect of **deny / require_approval / allow**. Evaluation returns the **most restrictive** matching decision plus a **blocked-action explanation** and the **approval chain** for the risk (low: 0, medium: 1, high: 2 approvers). A **policy preview** evaluates a hypothetical action side-effect-free. It is **additive** to the core `PermissionService` (a separate profile layer) and consistent with planning-first: an `allow` never grants new execution power, and profiles can only tighten. Governance-logged.
+- **Main API route groups:** `/api/permissions` (+ `/profiles`, `/evaluate`, `/preview`, `/summary`).
+- **Safety boundary:** Advisory profile layer; can only tighten (deny/require_approval); `allow` grants no new power; risky unprofiled actions default to approval; governance-logged.
+
+### v80 — Multi-Agent Collaboration 2.0
+- **Purpose:** Make agents collaborate visibly.
+- **How it operates:** `AgentCollaborationService` runs a deterministic, read-only analysis of a set of agent **contributions** (role + position) on a topic: an **agent conversation view**, a **consensus summary** (points shared across a majority), **disagreement notes** (positions that diverge or negate), a **reviewer/auditor pass** (flags contributions lacking evidence/reasoning), and a **final decision** (the most central position) with a **rationale**. No model call; nothing executed. Governance-logged.
+- **Main API route groups:** `/api/collaboration` (+ `/analyze`, `/summary`).
+- **Safety boundary:** Deterministic + local; read-only analysis of submitted positions; no model call, nothing executed; governance-logged.
+
+### v79 — Meeting Intelligence 2.0
+- **Purpose:** Make recordings and meetings useful.
+- **How it operates:** `MeetingIntelligenceService` runs deterministic, read-only extraction over a submitted meeting **transcript**: a **summary**, **decisions**, **action items** with likely **owners**, generated **follow-up drafts** (not sent), and a **timeline view** (sentences with time cues). It can also **propose** a goal + task plan from the meeting — **planning-only**: it returns a proposed structure and does **not** create goals/tasks or send anything. No model call, no web. Governance-logged.
+- **Main API route groups:** `/api/meeting-intel` (+ `/analyze`, `/to-goal`, `/summary`).
+- **Safety boundary:** Deterministic + local; read-only; follow-up drafts are drafts (never sent); goal/task conversion is planning-only (nothing created); governance-logged.
+
+### v78 — Business Intelligence 2.0
+- **Purpose:** Make the business modules more serious.
+- **How it operates:** `BusinessIntelligenceService` is a read-only analytics layer over local business records: a **KPI dashboard** (leads, proposals, win rate), a **lead pipeline summary** (by stage), a **proposal tracker** (by status), a **mock revenue forecast** (illustrative deal size × stage probability — clearly labelled, never real money), a **risk register** (project risks + derived pipeline risks), a **business report generator** (markdown), and an **executive summary export**. Read-only; governance-logged.
+- **Main API route groups:** `/api/business-intel` (+ `/dashboard`, `/report`, `/summary`).
+- **Safety boundary:** Read-only analytics; revenue forecast is mock/illustrative; no billing or payment; governance-logged.
+
+### v77 — Research Agent 2.0
+- **Purpose:** Stronger evidence-based research.
+- **How it operates:** `ResearchAgentService` is a deterministic, local, **read-only** research toolkit over sources you pass in: **source comparison** (pairwise term overlap + agreement level), a **claim/evidence table** (claim-like vs evidence-bearing sentences), **contradiction detection** (shared-subject sentences differing in negation), a **citation quality score** (presence of urls/years/attribution/identifiers), a **research brief generator** (structured markdown packet), and **bias/risk flags** (loaded/absolute language). It never browses the web or calls a model. Governance-logged.
+- **Main API route groups:** `/api/research-agent` (+ `/compare`, `/claims`, `/contradictions`, `/citation-quality`, `/bias`, `/brief`, `/summary`).
+- **Safety boundary:** Deterministic + local; no web browsing, no model calls; read-only; heuristics flagged as "review before relying"; governance-logged.
+
+### v76 — Code Intelligence 2.0
+- **Purpose:** Better code understanding without unsafe edits.
+- **How it operates:** `CodeIntelligenceService` is a deterministic, **read-only static analyzer** that operates on **submitted code text** — it never reads the filesystem or edits code. It produces a **bug-risk scan** (eval/exec, bare/broad except, hard-coded secrets, shell/subprocess usage, TODOs, `== None`, leftover prints), a **suggested refactor plan**, basic **complexity metrics** (lines, functions, long functions, max line length), an **API route map** (from FastAPI-style decorators), a **dependency list** (top-level imports), and a **test coverage summary** (test-function count). Governance-logged.
+- **Main API route groups:** `/api/code-intel` (+ `/analyze`, `/routes`, `/dependencies`, `/test-coverage`, `/summary`).
+- **Safety boundary:** Static analysis of submitted text only — **read-only, no edits, no filesystem access, no execution**; governance-logged.
+
+### v75 — Document Intelligence 2.0
+- **Purpose:** Make document work much stronger.
+- **How it operates:** `DocumentIntelligenceService` is a **deterministic, local, read-only** document toolkit operating on text you pass in: **document comparison** (term overlap + unique terms + verdict), **resume ATS scoring** (keyword coverage vs a job's keywords with matched/missing + recommendation), **contract/risk summary** (flags auto-renewal, liability, termination, non-compete, confidentiality, penalty clauses), **CSV insight report** (rows/columns/headers profiling), and **document Q&A** (keyword sentence retrieval — no LLM). All scoring is deterministic (no external model call). Governance-logged.
+- **Main API route groups:** `/api/doc-intel` (+ `/compare`, `/ats`, `/contract-risk`, `/csv-insight`, `/qa`, `/summary`).
+- **Safety boundary:** Deterministic + local; no external model calls; read-only (text passed in, nothing stored beyond governance logging); "not legal advice" on contract review.
+
+### v74 — Personal Productivity Brain
+- **Purpose:** Help you decide what to do next.
+- **How it operates:** `PersonalProductivityService` reads goals, life tasks, and deadlines to produce **priority recommendations** (overdue-first, then priority, then due date), a **daily focus list** (top 3), **blocker detection**, an **overdue task review**, **upcoming deadlines**, a **goal-progress summary** (open goals + average progress %), and a "**what should I work on now?**" pick with a reason. Read-only — it never creates or completes anything. Governance-logged.
+- **Main API route groups:** `/api/productivity` (+ `/what-now`, `/summary`).
+- **Safety boundary:** Read-only review; no task creation/completion; governance-logged.
+
+### v73 — Workflow Recommendation Engine
+- **Purpose:** Suggest the best workflow for the user's goal.
+- **How it operates:** `WorkflowRecommendationService` classifies a goal into a task type (coding / research / business / data_analysis / general), returns a **recommended workflow** (ordered expected steps from a template), surfaces **similar past runs** (from the Master Agent route history by keyword overlap), and estimates **risk level**, **approval requirements** (risky verbs or sensitive task types held for approval), and **time/complexity**. Read-only and planning-only — it recommends, it does not execute. Governance-logged.
+- **Main API route groups:** `/api/workflow-recommend` (+ `/summary`).
+- **Safety boundary:** Read-only recommendation; nothing executed; risky steps flagged for approval; governance-logged.
+
+### v72 — Agent Quality Optimizer
+- **Purpose:** Improve agent outputs over time.
+- **How it operates:** `AgentQualityService` runs a read-only analysis over recorded run analytics (`per_agent_scores`, `overall_judge_score`, `task_type`) and human feedback: per-agent **score trends** (avg vs recent, up/down/flat), **weak-agent detection** (recent avg < 60/100), rule-based **prompt improvement suggestions**, **best agent by task type**, **regression checks** (previous window vs recent, flag >10% drop), and **human-feedback correlation** (ratings vs judge scores, alignment). It normalizes 0-1 or 0-100 score scales and computes from existing data only — it never changes prompts or runs anything. Governance-logged.
+- **Main API route groups:** `/api/agent-quality` (+ `/dashboard`, `/summary`, `/best-by-task`).
+- **Safety boundary:** Read-only analysis; no prompt changes; nothing executed; governance-logged.
+
+### v71 — Smart Context Engine
+- **Purpose:** Better context selection before every answer.
+- **How it operates:** `SmartContextService` is a read-only **context planner**: given a query + workspace, it scores candidate **memory / files / goals** by keyword overlap, gives a **selection reason** per item, enforces a **context budget** (character cap), **removes duplicate** context, and **filters out sensitive content** (emails, card-like numbers, key-like tokens, secret assignments) so it never enters the context. It returns a Developer-Mode **context trace** of what was included and excluded and why. It previews/plans context — it does not change the run pipeline. Governance-logged.
+- **Main API route groups:** `/api/context` (+ `/context/plan`, `/context/summary`).
+- **Safety boundary:** Read-only planning; sensitive content is filtered out and never included; nothing is executed; governance-logged.
+
+### v70 — Workspace Operating System 2.0
+- **Purpose:** Make each workspace feel like its own AI OS.
+- **How it operates:** `WorkspaceOSService` builds a **per-workspace, read-only overview**: a workspace **dashboard**, a **memory graph** (memory nodes + knowledge-link edges), **feature-usage** counts across the workspace's collections, its **agents**, its **reports**, a recent **timeline** (via the v63 Activity Timeline scoped to the workspace), and a derived **health score** (completeness of goals/memory/agents → healthy/developing/sparse). It reads existing local state only, scoped to one workspace, and is governance-logged.
+- **Main API route groups:** `/api/workspace-os` (+ `/{workspace_id}/dashboard`, `/summary`).
+- **Safety boundary:** Read-only, workspace-scoped aggregation; no writes/actions; governance-logged.
+
+### v69 — Unified Notifications Inbox 2.0
+- **Purpose:** Make alerts actionable.
+- **How it operates:** `NotificationsInboxService` aggregates live signals into one actionable inbox — **approval alerts**, **failed/blocked run alerts** (from the governance log), **provider-fallback alerts**, **scheduled-task reminders**, and **health warnings**. Each item has a **severity**, a **link to its source route**, and a stable key so **generation is idempotent** (an unresolved item is never duplicated). Items can be **marked resolved** and are **grouped by severity**. It is **additive** to the v56 Notifications Center (distinct `/api/notifications-inbox`), read-only against source data; generation/resolution are governance-logged.
+- **Main API route groups:** `/api/notifications-inbox` (+ `/generate`, `/summary`, `/{id}/resolve`).
+- **Safety boundary:** Read-only aggregation; idempotent generation; additive to v56; governance-logged.
+
+### v68 — Real Provider Control Center 2.0
+- **Purpose:** Cleanly manage OpenAI / Claude / Gemini / Mistral / local providers.
+- **How it operates:** `ProviderControlService` gives a **read-only readiness dashboard** per provider (is a required env key set? boolean only), editable **model-per-task** and **real/mock-per-capability** preferences, a **fallback policy** (real when key set + mode real, else local/mock), a **cost estimate** aggregated from the v50 usage ledger, and per-provider **latency** estimates. **API key safety checks report booleans only** — a key's value is never read, logged, or returned. Preference changes are governance-logged; real calls remain env-gated.
+- **Main API route groups:** `/api/provider-control` (+ `/dashboard`, `/summary`, `/key-check`, PATCH).
+- **Safety boundary:** Boolean-only key readiness (no secret values); preferences are local; real calls stay env-gated; governance-logged.
+
+### v67 — Settings Center
+- **Purpose:** A central place for local configuration.
+- **How it operates:** `SettingsService` stores user **preferences** as a single local document across categories — **provider** (default model, prefer-mock), **modes** (developer/deep defaults), **feature toggles**, a **safety preference**, **workspace defaults**, **voice** (spoken answers, push-to-talk), and **theme**. Every update is validated against an allow-list; unknown categories/keys and **any secret-like key** (containing key/token/secret/password/credential) are **rejected**. The hard safety boundaries are surfaced as **read-only/enforced** and cannot be disabled. Supports **export/import** (secrets excluded) and **reset-to-defaults**. Changes are governance-logged.
+- **Main API route groups:** `/api/settings` (+ `/settings/reset`, `/settings/export`, `/settings/import`).
+- **Safety boundary:** Preferences only — **no secret values are ever stored**; hard safety boundaries stay enforced and read-only; a safety preference can only tighten; governance-logged.
+
+### v66 — Demo Mode / Portfolio Mode 2.0
+- **Purpose:** Make the app impressive for interviews and GitHub, and safe to demo.
+- **How it operates:** `DemoService` provides a **one-click demo script** (ordered beats with the prompt/route to show), a **guided walkthrough**, an **auto-open feature sequence**, a refreshed **resume-bullet** set, and a **project case-study export** (markdown) — all read-only, generated content. It can **seed a demo-safe sample workspace** (a workspace + goals + an idea, every record tagged `demo_seed=true` and tracked in a seed log) and **reset demo data** — reset removes **only** demo-tagged records it created and leaves user data untouched. Seeding/reset are explicit and governance-logged.
+- **Main API route groups:** `/api/demo` (+ `/script`, `/walkthrough`, `/feature-sequence`, `/resume-bullets`, `/case-study`, `/summary`, `/seed`, `/reset`).
+- **Safety boundary:** Demo content is read-only; sample data is **scoped and reversible** — reset never deletes user data, only `demo_seed`-tagged records; governance-logged.
+
+### v65 — Feature Registry + Capability Map 3.0
+- **Purpose:** Make all 60+ versions discoverable.
+- **How it operates:** `FeatureRegistryService` holds a **canonical registry** of every major feature with its owning **service**, primary **route**, **category**, and **status tags** (active / demo-safe / mock / needs-config). It supports **feature search**, status/category filters, a **route → feature map** (Developer-Mode route map), a **summary** (counts by category/status), and a **"try this feature"** descriptor that hands back the route to open. Read-only; governance-logged.
+- **Main API route groups:** `/api/features` (+ `/features/route-map`, `/features/summary`, `/features/{key}/try`).
+- **Safety boundary:** Read-only discovery; no writes; governance-logged.
+
+### v64 — Dashboard Home 2.0
+- **Purpose:** Replace scattered panels with one professional homepage.
+- **How it operates:** `DashboardHomeService` assembles a single read-only overview: a **Today** snapshot (events today, pending approvals, upcoming tasks, health status), the **active workspace** summary, **pending approvals** (business + MCP), **recent runs/routes**, **system health** (reusing the v49 monitor + top recommendations), **upcoming tasks** (scheduled + Life OS), rule-based **suggested next actions**, and **quick-launch cards** to every major surface. It only reads existing local state — nothing is created or executed — and is governance-logged.
+- **Main API route groups:** `/api/home`.
+- **Safety boundary:** Read-only aggregation; no writes/actions; governance-logged.
+
+### v63 — Unified Activity Timeline
+- **Purpose:** Show everything the OS has done, in one place.
+- **How it operates:** `ActivityTimelineService` merges events from the governance log, Master Agent routes, goals, files, reports (portfolio + business), memory, MCP tool executions, and approvals into a single **chronological** timeline (newest first). Filterable by **workspace, type, actor, status, and date**; each event can be **expanded** for detail (title, status, actor, source collection, timestamp); governance events are flagged as **governance-linked**. The whole timeline can be **exported** as markdown or JSON. Strictly read-only, no secrets. Views are governance-logged.
+- **Main API route groups:** `/api/activity` (+ `/activity/summary`, `/activity/export`).
+- **Safety boundary:** Read-only aggregation of existing local events; no writes; secrets excluded; governance-logged.
+
+### v62 — Global Search Across Everything
+- **Purpose:** One search bar for the whole OS.
+- **How it operates:** `GlobalSearchService` runs a **read-only** keyword search across a curated set of local collections — chats, messages, files, goals, agents, memory, workflows (playbooks), reports (portfolio + business), simulations, schedules, ideas, and documents — scoring by keyword overlap and returning ranked results with a short **preview**, the **source collection** (a Developer-Mode source trace), workspace, and timestamp. Results can be **filtered by type, workspace, and date (`since`)**, and any result can seed the composer via **"use as context."** It never mutates data and excludes secrets, governance logs, and analytics. Searches are governance-logged.
+- **Main API route groups:** `/api/search` (+ `/search/sources`).
+- **Safety boundary:** Strictly read-only local search; no writes; secrets/governance/analytics excluded; governance-logged.
+
+### v61 — Unified Command Router 2.0
+- **Purpose:** Make the Master Agent route every request more reliably, and make each routing decision explainable and measurable.
+- **How it operates:** `MasterAgentService` now scores each candidate domain and derives a normalized **confidence**, an explicit **"why this route"** explanation (the keywords that matched), and a **suggested workflow/tool to reach for before execution**. When no capability matches strongly (confidence below a threshold), it uses a **safe fallback route** (Research & Retrieval) instead of silently guessing a specific system. Users can rate a route (correct / wrong) via feedback, which drives **route-accuracy analytics** (accuracy %, rated count, average confidence, fallback count). All additions are backward-compatible — the existing route response only gains fields. A **"Why this route?"** view is surfaced in the Simple-Mode hero and the Developer-Mode Master Agent panel.
+- **Main API route groups:** `/api/master-agent` (+ `/route/{run_id}/feedback`; existing `/route`, `/capabilities`, `/summary` extended).
+- **Safety boundary:** Read-only routing + planning-first (unchanged v60.1 contract — risky actions still always require approval); feedback is a rating only and takes no action; governance-logged.
+
+### v60.1 — Master Agent Voice Console
+- **Purpose:** Turn the whole platform into a single AI you talk to — one top-level surface that routes any request across v1–v60.
+- **How it operates:** `MasterAgentService` classifies a spoken or typed request against a capability registry (11 domains spanning coding, research, project, business, compliance, personal, innovation, MCP, approvals, health, and playbooks), produces an answer via the existing run pipeline, and returns **Answer + Sources + Follow-ups** alongside **task-aware MCP suggestions** with key-readiness (booleans only — never secret values). The UI is a clean **AI-native hero**: **push-to-talk voice input** (user-activated, no wake word / no recording), **spoken answers** via the browser's speech synthesis, a **`mcp:` prefix** that routes tool-connection requests to the connector hub, and a **CLI palette** of governed `/`-commands for command-style interaction. It is **planning-first and approval-gated** — risky action classes (send / pay / delete / deploy / external post) are always held for human approval and can never be auto-executed by a client flag. Every route is governance-logged.
+- **Main API route groups:** `/api/master-agent` (+ `/route`, `/capabilities`, `/summary`).
+- **Safety boundary:** Read-only routing + planning-first orchestration; no unrestricted shell; risky actions require approval; secret key readiness is boolean-only; not AGI and not a retrained model — its "tuning" is an explicit capability registry over the existing systems.
+
 ### v60 — EvolveAgent OS 2.0 (capstone)
 - **Purpose:** A single unified command center over every system built across v1–v59, plus a final platform scorecard and report.
 - **How it operates:** `EvolveAgentOS2Service` indexes ~30 major systems grouped by domain (Core, Project & Portfolio, Business, Personal & Org, Research & Simulation, MCP Arc, Ops & Observability), marking each active-by-data with its API route and record count. It reuses the v55 Operating Layer 2.0 scorecard and the v49 health monitor for a live grade, exposes milestone stats (60 versions), and can persist a governance-logged snapshot or generate a final platform report. It reads existing local state only and takes no action beyond storing the snapshot/report. It is explicitly **not AGI** — a governed orchestration layer, not an autonomous general intelligence.
@@ -514,4 +700,35 @@ From v15 onward every version follows the governed architecture above: a service
 | v58 | Scheduled Tasks | `/api/scheduled-tasks` | Local scheduled-task registry; planning-first triggers | No daemon/timer execution; risky steps need approval |
 | v59 | Data Export & Backup | `/api/data-export` | Local JSON bundle export + non-destructive import | Local only; no upload; merge-only; no secrets in bundle |
 | v60 | EvolveAgent OS 2.0 (capstone) | `/api/os2` | Unified command center over v1–v59 + platform scorecard/report | Read-only local aggregation; not AGI; approvals + governance preserved |
+| v60.1 | Master Agent Voice Console | `/api/master-agent` | Single top-level AI routing across v1–v60; AI-native hero, push-to-talk voice, spoken answers, `mcp:`/CLI palette, task-aware MCP suggestions | Planning-first; approval-gated risky actions; boolean-only key readiness; governance-logged; not AGI |
+| v61 | Unified Command Router 2.0 | `/api/master-agent` | Route confidence + "why this route" explanation, suggested workflow before execution, safe fallback when uncertain, route-accuracy feedback/analytics | Read-only routing; planning-first unchanged; feedback is rating-only; governance-logged |
+| v62 | Global Search Across Everything | `/api/search` | One read-only keyword search across chats/files/goals/agents/memory/workflows/reports/simulations/schedules; type/workspace/date filters; preview; source trace; use-as-context | Strictly read-only; no writes; secrets/governance/analytics excluded; governance-logged |
+| v63 | Unified Activity Timeline | `/api/activity` | Chronological merge of runs/approvals/tool-executions/memory/files/reports/goals; type/workspace/actor/status/date filters; expandable detail; markdown/JSON export; governance-linked | Read-only aggregation; no writes; secrets excluded; governance-logged |
+| v64 | Dashboard Home 2.0 | `/api/home` | One homepage: Today overview, active workspace, pending approvals, recent runs, system health, upcoming tasks, suggested actions, quick-launch cards | Read-only aggregation; no writes/actions; governance-logged |
+| v65 | Feature Registry + Capability Map 3.0 | `/api/features` | Canonical searchable registry of every feature (service/route/category/status), route→feature map, "try this feature" launcher | Read-only discovery; no writes; governance-logged |
+| v66 | Demo Mode / Portfolio Mode 2.0 | `/api/demo` | One-click demo script, walkthrough, feature sequence, resume bullets, case-study export; demo-safe seed + scoped reset | Read-only content; sample data scoped/reversible; reset only removes demo-tagged records; governance-logged |
+| v67 | Settings Center | `/api/settings` | Central local preferences (provider/modes/features/safety/workspace/voice/theme), allow-list validated, export/import, reset | No secret values stored; secret-like keys rejected; hard safety enforced read-only; governance-logged |
+| v68 | Real Provider Control Center 2.0 | `/api/provider-control` | Provider readiness dashboard, model-per-task + real/mock-per-capability prefs, cost estimate, latency stats, fallback policy, boolean-only key checks | Boolean-only key readiness; real calls env-gated; no secrets exposed; governance-logged |
+| v69 | Unified Notifications Inbox 2.0 | `/api/notifications-inbox` | Actionable inbox: approval/failed-run/provider-fallback/reminder/health alerts, severity grouping, mark-resolved, source links, idempotent generation | Read-only aggregation; additive to v56; governance-logged |
+| v70 | Workspace Operating System 2.0 | `/api/workspace-os` | Per-workspace dashboard: memory graph, feature usage, agents, reports, timeline, health score | Read-only workspace-scoped aggregation; no writes; governance-logged |
+| v71 | Smart Context Engine | `/api/context` | Context planner: memory/file/goal selection with reasons, budget control, dedup, sensitive-content filtering, context trace | Read-only preview; sensitive content filtered out; nothing executed; governance-logged |
+| v72 | Agent Quality Optimizer | `/api/agent-quality` | Per-agent score trends, weak-agent detection, prompt suggestions, best-by-task, regression checks, feedback correlation | Read-only analysis; no prompt changes; nothing executed; governance-logged |
+| v73 | Workflow Recommendation Engine | `/api/workflow-recommend` | Recommended workflow (expected steps), similar past runs, risk level, approval needs, time/complexity estimate | Read-only recommendation; nothing executed; risky steps flagged for approval; governance-logged |
+| v74 | Personal Productivity Brain | `/api/productivity` | Priority recommendations, daily focus, blocker detection, overdue review, goal progress, "what now?" pick | Read-only review; no task create/complete; governance-logged |
+| v75 | Document Intelligence 2.0 | `/api/doc-intel` | Document comparison, resume ATS scoring, contract/risk summary, CSV insight, document Q&A | Deterministic + local; no external model calls; read-only; governance-logged |
+| v76 | Code Intelligence 2.0 | `/api/code-intel` | Bug-risk scan, refactor plan, complexity metrics, route map, dependency list, test-coverage summary (on submitted code) | Static read-only analysis of submitted text; no edits/filesystem/execution; governance-logged |
+| v77 | Research Agent 2.0 | `/api/research-agent` | Source comparison, claim/evidence table, contradiction detection, citation quality score, research brief, bias flags | Deterministic + local; no web/model calls; read-only; governance-logged |
+| v78 | Business Intelligence 2.0 | `/api/business-intel` | KPI dashboard, lead pipeline, proposal tracker, mock revenue forecast, risk register, business report | Read-only; mock forecast; no billing/payment; governance-logged |
+| v79 | Meeting Intelligence 2.0 | `/api/meeting-intel` | Summary, decisions, action items + owners, follow-up drafts, timeline, propose goal/tasks | Deterministic + local; read-only; drafts never sent; goal conversion planning-only; governance-logged |
+| v80 | Multi-Agent Collaboration 2.0 | `/api/collaboration` | Conversation view, consensus summary, disagreement notes, reviewer pass, final decision + rationale | Deterministic + local; read-only; no model call; nothing executed; governance-logged |
+| v81 | Permission System 3.0 | `/api/permissions` | Permission profiles (global/workspace/agent/tool), most-restrictive evaluation, approval chains by risk, policy preview, blocked-action explanation | Additive advisory layer; can only tighten; allow grants no new power; governance-logged |
+| v82 | Governance Console 3.0 | `/api/governance-console` | Governance dashboard, policy violations, secret redactions, prompt-injection warnings, approval + external-action audit, export report | Read-only aggregation; nothing mutated; governance-logged |
+| v83 | Local Data Manager | `/api/data-manager` | Collection browser, storage usage, cleanup suggestions, redaction preview, backup | Read-only/planning-first; no deletes/redactions/overwrites (advisory only); governance-logged |
+| v84 | Import Center | `/api/import-center` | Import documents/csv/markdown/chat/notes; validate + sanitize + preview before saving to a dedicated collection | Validate + sanitize before save; secrets redacted (never stored); dedicated collection only; governance-logged |
+| v85 | Export Center | `/api/export-center` | Export chats/reports/goals/memory/imported as markdown/JSON; case study; package builder | Read-only; excludes secrets/governance/analytics; PDF via client print; governance-logged |
+| v86 | Plugin Marketplace 3.0 | `/api/plugin-marketplace` | Plugin catalog, validation, permission review, enable/disable, activity log, mock test runner, health score | Additive; high-risk disabled until reviewed; enabling invalid/high-risk blocked; mock test runner; governance-logged |
+| v87 | Integration Hub 3.0 | `/api/integration-hub` | Integration cards (Slack/Notion/Linear/GitHub), connection status, scopes, last sync, error explanation, dry-run test | Read-only; boolean status only (no secret display); dry-run makes no real network call; governance-logged |
+| v88 | Quality Assurance Center | `/api/qa-center` | Feature verification matrix, manual QA checklist, failed-feature tracker, regression dashboard, release-readiness score | Read-only aggregation; does not run tests (no shell); additive QA records; governance-logged |
+| v89 | Release Manager | `/api/release-manager` | Version checklist, changelog, PR summary, release notes, tag planner, demo + Linear checklists | Read-only text generators; no git tag/push; no GitHub/Linear calls; governance-logged |
+| v90 | EvolveAgent Product Launch Console (capstone) | `/api/launch-console` | Launch dashboard: positioning, feature matrix, demo mode, portfolio/resume/case-study exports, final readiness score | Read-only aggregation; nothing created/executed; not AGI; governance-logged |
 | v44.5 | Portfolio & Demo Pack | (docs only) | Consolidation: portfolio pack, screenshots, demo, release notes | No new code/exec surface; docs only; safety unchanged |

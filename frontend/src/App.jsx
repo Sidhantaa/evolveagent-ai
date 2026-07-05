@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { Card } from './components/ui/Card.jsx'
+import { Button } from './components/ui/Button.jsx'
+import { Badge } from './components/ui/Badge.jsx'
+import { CommandPalette } from './components/layout/CommandPalette.jsx'
 import {
   Activity,
   BarChart3,
@@ -29,8 +33,11 @@ import {
   Route,
   RefreshCw,
   Send,
+  Shield,
   ShieldAlert,
   Sparkles,
+  Volume2,
+  VolumeX,
   Sun,
   Terminal,
   ThumbsDown,
@@ -338,6 +345,48 @@ import {
   getNotifications,
   generateNotifications,
   acknowledgeNotification,
+  suggestMcp,
+  routeMasterAgent,
+  getGitStatus,
+  discoverGitRepos,
+  getGitRepositories,
+  getGitLog,
+  getGitBranchList,
+  getStudioTemplates,
+  listAgentProfiles,
+  createAgentProfile,
+  testAgentProfile,
+  evaluateAgentProfile,
+  publishAgentProfile,
+  duplicateAgentProfile,
+  getAgentPreview,
+  getVoiceStatus,
+  getVoiceSettings,
+  updateVoiceSettings,
+  logVoiceActivity,
+  getVoiceEvents,
+  clearVoiceEvents,
+  getWorkflowTemplates,
+  listWorkflowRuns,
+  startWorkflowRun,
+  approveWorkflowStep,
+  pauseWorkflowRun,
+  resumeWorkflowRun,
+  cancelWorkflowRun,
+  getWorkflowEffects,
+  getMarketplaceListings,
+  installMarketplaceListing,
+  unpublishMarketplaceListing,
+  getDesignAgentStatus,
+  analyzeDesign,
+  getRepoFinderStatus,
+  searchRepos,
+  getTodaySummary,
+  getAdaptiveStatus,
+  adaptiveLearn,
+  adaptiveRecommend,
+  getAdaptiveItems,
+  forgetAdaptiveItem,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -349,6 +398,77 @@ import {
   triggerScheduledTask,
   getDataExportSummary,
   getOs2Dashboard,
+  getMasterAgentSummary,
+  getMasterAgentCapabilities,
+  sendMasterRouteFeedback,
+  globalSearch,
+  getGlobalSearchSources,
+  getActivityTimeline,
+  exportActivityTimeline,
+  getDashboardHome,
+  getFeatures,
+  tryFeature,
+  getDemoSummary,
+  getDemoScript,
+  getDemoCaseStudy,
+  seedDemoData,
+  resetDemoData,
+  getSettings,
+  updateSettings,
+  resetSettings,
+  getProviderControl,
+  updateProviderControl,
+  generateNotificationsInbox,
+  getNotificationsInbox,
+  resolveNotificationInbox,
+  getWorkspaceOsDashboard,
+  planContext,
+  getAgentQuality,
+  recommendWorkflow,
+  getProductivityBrain,
+  docContractRisk,
+  docAtsScore,
+  analyzeCode,
+  researchAgentClaims,
+  researchAgentBias,
+  researchAgentBrief,
+  getBusinessIntelDashboard,
+  getBusinessIntelReport,
+  analyzeMeetingTranscript,
+  meetingTranscriptToGoal,
+  analyzeCollaboration,
+  getPermissionProfiles,
+  createPermissionProfile,
+  deletePermissionProfile,
+  evaluatePermission,
+  getGovernanceConsoleDashboard,
+  getGovernanceConsoleReport,
+  getDataManagerBrowse,
+  getDataManagerUsage,
+  getDataManagerCleanup,
+  previewDataRedaction,
+  previewImport,
+  commitImport,
+  getImportRecords,
+  exportCenterExport,
+  exportCenterPackage,
+  getExportCenterCaseStudy,
+  getPluginMarketplaceCatalog,
+  registerMarketplacePlugin,
+  toggleMarketplacePlugin,
+  testMarketplacePlugin,
+  getPluginMarketplaceActivity,
+  getIntegrationHubCards,
+  dryRunIntegration,
+  getQaCenterDashboard,
+  getQaCenterMatrix,
+  recordQaStatus,
+  getReleaseManagerDashboard,
+  getReleaseManagerChangelog,
+  generatePrSummary,
+  generateReleaseNotes,
+  getLaunchConsoleDashboard,
+  getLaunchConsoleReport,
   createOs2Snapshot,
   createOs2Report,
   exportDataBundle,
@@ -626,6 +746,65 @@ function App() {
   const [developerMode, setDeveloperMode] = useState(false)
   const [theme, setTheme] = useState(() => localStorage.getItem('evolveagent-theme') || 'dark')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [devSection, setDevSection] = useState('agent')
+  const [cmdkOpen, setCmdkOpen] = useState(false)
+  const [recentCommandIds, setRecentCommandIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('evolveagent-cmdk-recents') || '[]') } catch { return [] }
+  })
+  const [showGitIntel, setShowGitIntel] = useState(false)
+  const [gitStatus, setGitStatus] = useState(null)
+  const [gitRepos, setGitRepos] = useState([])
+  const [gitPath, setGitPath] = useState('')
+  const [gitBusy, setGitBusy] = useState(false)
+  const [gitLog, setGitLog] = useState(null)
+  const [gitBranches, setGitBranches] = useState(null)
+  const [gitReadBusy, setGitReadBusy] = useState(false)
+  const [showAgentStudio, setShowAgentStudio] = useState(false)
+  const [studioTemplates, setStudioTemplates] = useState([])
+  const [agentProfiles, setAgentProfiles] = useState([])
+  const [agentName, setAgentName] = useState('')
+  const [agentRole, setAgentRole] = useState('')
+  const [agentTone, setAgentTone] = useState('professional')
+  const [agentTestPrompt, setAgentTestPrompt] = useState('')
+  const [agentTestResult, setAgentTestResult] = useState(null)
+  const [agentBusy, setAgentBusy] = useState(false)
+  const [showVoiceConsole, setShowVoiceConsole] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState(null)
+  const [voiceSettings, setVoiceSettings] = useState(null)
+  const [availableVoices, setAvailableVoices] = useState([])
+  const [voiceEvents, setVoiceEvents] = useState([])
+  const [showWorkflows, setShowWorkflows] = useState(false)
+  const [workflowTemplates, setWorkflowTemplates] = useState([])
+  const [workflowRuns, setWorkflowRuns] = useState([])
+  const [workflowEffects, setWorkflowEffects] = useState([])
+  const [durableBusy, setDurableBusy] = useState(false)
+  const [showMarketplaceHub, setShowMarketplaceHub] = useState(false)
+  const [marketplaceListings, setMarketplaceListings] = useState([])
+  const [marketplaceKind, setMarketplaceKind] = useState('')
+  const [marketplaceBusy, setMarketplaceBusy] = useState(false)
+  const [marketplaceNote, setMarketplaceNote] = useState('')
+  const [showDesignAgent, setShowDesignAgent] = useState(false)
+  const [designStatus, setDesignStatus] = useState(null)
+  const [designImage, setDesignImage] = useState(null)
+  const [designImageName, setDesignImageName] = useState('')
+  const [designLenses, setDesignLenses] = useState(['visual', 'ux', 'market'])
+  const [designContext, setDesignContext] = useState('')
+  const [designLive, setDesignLive] = useState(false)
+  const [designResult, setDesignResult] = useState(null)
+  const [designBusy, setDesignBusy] = useState(false)
+  const [showRepoFinder, setShowRepoFinder] = useState(false)
+  const [repoQuery, setRepoQuery] = useState('')
+  const [repoResult, setRepoResult] = useState(null)
+  const [repoBusy, setRepoBusy] = useState(false)
+  const [showToday, setShowToday] = useState(false)
+  const [todayData, setTodayData] = useState(null)
+  const [showAdaptive, setShowAdaptive] = useState(false)
+  const [adaptiveStatus, setAdaptiveStatus] = useState(null)
+  const [adaptiveItems, setAdaptiveItems] = useState([])
+  const [adaptiveQuery, setAdaptiveQuery] = useState('')
+  const [adaptiveRecs, setAdaptiveRecs] = useState(null)
+  const [adaptiveNote, setAdaptiveNote] = useState('')
+  const [adaptiveBusy, setAdaptiveBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -671,6 +850,21 @@ function App() {
   const [voiceUsed, setVoiceUsed] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [listening, setListening] = useState(false)
+  const [liveTranscript, setLiveTranscript] = useState('')
+  const [pttListening, setPttListening] = useState(false)
+  const pttRecognitionRef = useRef(null)
+  // Voice Ask Console (v-voice): speak answers aloud + task-aware MCP suggestions.
+  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
+  const [mcpSuggestions, setMcpSuggestions] = useState([])
+  const [askSources, setAskSources] = useState([])
+  const [askFollowups, setAskFollowups] = useState([])
+  const [heroInput, setHeroInput] = useState('')
+  const [cliBusy, setCliBusy] = useState(false)
+  // Master Agent (single top-level AI over all of v1–v60).
+  const [masterText, setMasterText] = useState('')
+  const [masterResult, setMasterResult] = useState(null)
+  const [masterBusy, setMasterBusy] = useState(false)
   const [automationResults, setAutomationResults] = useState({})
   const [goals, setGoals] = useState([])
   const [selectedGoal, setSelectedGoal] = useState(null)
@@ -1080,6 +1274,122 @@ function App() {
   const [os2Dashboard, setOs2Dashboard] = useState(null)
   const [os2Report, setOs2Report] = useState(null)
   const [os2Busy, setOs2Busy] = useState(false)
+  const [showMasterPanel, setShowMasterPanel] = useState(false)
+  const [masterSummary, setMasterSummary] = useState(null)
+  const [masterCapabilities, setMasterCapabilities] = useState(null)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('')
+  const [globalSearchResults, setGlobalSearchResults] = useState(null)
+  const [globalSearchSources, setGlobalSearchSources] = useState(null)
+  const [globalSearchBusy, setGlobalSearchBusy] = useState(false)
+  const [showActivity, setShowActivity] = useState(false)
+  const [activityTimeline, setActivityTimeline] = useState(null)
+  const [activityType, setActivityType] = useState('')
+  const [activityBusy, setActivityBusy] = useState(false)
+  const [showHome, setShowHome] = useState(false)
+  const [dashboardHome, setDashboardHome] = useState(null)
+  const [showFeatures, setShowFeatures] = useState(false)
+  const [featuresData, setFeaturesData] = useState(null)
+  const [featuresQuery, setFeaturesQuery] = useState('')
+  const [featuresStatus, setFeaturesStatus] = useState('')
+  const [showDemo, setShowDemo] = useState(false)
+  const [demoSummary, setDemoSummary] = useState(null)
+  const [demoScript, setDemoScript] = useState(null)
+  const [demoBusy, setDemoBusy] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [settingsData, setSettingsData] = useState(null)
+  const [settingsBusy, setSettingsBusy] = useState(false)
+  const [showProviders, setShowProviders] = useState(false)
+  const [providerControl, setProviderControl] = useState(null)
+  const [providerBusy, setProviderBusy] = useState(false)
+  const [showInbox, setShowInbox] = useState(false)
+  const [inboxData, setInboxData] = useState(null)
+  const [inboxBusy, setInboxBusy] = useState(false)
+  const [showWsOs, setShowWsOs] = useState(false)
+  const [wsOsDashboard, setWsOsDashboard] = useState(null)
+  const [showContext, setShowContext] = useState(false)
+  const [contextQuery, setContextQuery] = useState('')
+  const [contextPlan, setContextPlan] = useState(null)
+  const [contextBusy, setContextBusy] = useState(false)
+  const [showAgentQuality, setShowAgentQuality] = useState(false)
+  const [agentQuality, setAgentQuality] = useState(null)
+  const [showWorkflowRec, setShowWorkflowRec] = useState(false)
+  const [workflowGoal, setWorkflowGoal] = useState('')
+  const [workflowRec, setWorkflowRec] = useState(null)
+  const [workflowBusy, setWorkflowBusy] = useState(false)
+  const [showProductivity, setShowProductivity] = useState(false)
+  const [productivityBrain, setProductivityBrain] = useState(null)
+  const [showDocIntel, setShowDocIntel] = useState(false)
+  const [docIntelText, setDocIntelText] = useState('')
+  const [docIntelResult, setDocIntelResult] = useState(null)
+  const [docIntelBusy, setDocIntelBusy] = useState(false)
+  const [showCodeIntel, setShowCodeIntel] = useState(false)
+  const [codeIntelText, setCodeIntelText] = useState('')
+  const [codeIntelResult, setCodeIntelResult] = useState(null)
+  const [codeIntelBusy, setCodeIntelBusy] = useState(false)
+  const [showResearchAgent2, setShowResearchAgent2] = useState(false)
+  const [researchAgentText, setResearchAgentText] = useState('This market is clearly the best opportunity. According to a 2025 report, adoption rose 38%.')
+  const [researchAgentResult, setResearchAgentResult] = useState(null)
+  const [researchAgentBusy, setResearchAgentBusy] = useState(false)
+  const [showBizIntel2, setShowBizIntel2] = useState(false)
+  const [bizIntel2, setBizIntel2] = useState(null)
+  const [bizIntelBusy, setBizIntelBusy] = useState(false)
+  const [showMeetingIntel2, setShowMeetingIntel2] = useState(false)
+  const [meetingIntelText, setMeetingIntelText] = useState('Monday 10:00 team decided we will launch the demo next week. Alex will update the backend tests. Priya will prepare the follow-up deck.')
+  const [meetingIntelResult, setMeetingIntelResult] = useState(null)
+  const [meetingIntelBusy, setMeetingIntelBusy] = useState(false)
+  const [showCollab2, setShowCollab2] = useState(false)
+  const [collabTopic, setCollabTopic] = useState('Should we automate this workflow now?')
+  const [collabRoleA, setCollabRoleA] = useState('Strategy Agent')
+  const [collabPositionA, setCollabPositionA] = useState('Automate the read-only planning steps because they reduce repeated manual work.')
+  const [collabRoleB, setCollabRoleB] = useState('Risk Agent')
+  const [collabPositionB, setCollabPositionB] = useState('Do not automate external sending or destructive actions without approval.')
+  const [collabResult, setCollabResult] = useState(null)
+  const [collabBusy, setCollabBusy] = useState(false)
+  const [showPerm3, setShowPerm3] = useState(false)
+  const [permProfiles, setPermProfiles] = useState(null)
+  const [permEval, setPermEval] = useState(null)
+  const [permBusy, setPermBusy] = useState(false)
+  const [permAction, setPermAction] = useState('send_email')
+  const [showGovConsole, setShowGovConsole] = useState(false)
+  const [govConsole, setGovConsole] = useState(null)
+  const [govBusy, setGovBusy] = useState(false)
+  const [showDataManager, setShowDataManager] = useState(false)
+  const [dataManager, setDataManager] = useState(null)
+  const [dataManagerPreview, setDataManagerPreview] = useState(null)
+  const [dataManagerBusy, setDataManagerBusy] = useState(false)
+  const [dataManagerCollection, setDataManagerCollection] = useState('chat_sessions.json')
+  const [showImportCenter, setShowImportCenter] = useState(false)
+  const [importCenterKind, setImportCenterKind] = useState('markdown')
+  const [importCenterContent, setImportCenterContent] = useState('# Project note\nImportant follow-up item.')
+  const [importCenterResult, setImportCenterResult] = useState(null)
+  const [importCenterRecords, setImportCenterRecords] = useState(null)
+  const [importCenterBusy, setImportCenterBusy] = useState(false)
+  const [showExportCenter2, setShowExportCenter2] = useState(false)
+  const [exportCenterKind, setExportCenterKind] = useState('chats')
+  const [exportCenterFormat, setExportCenterFormat] = useState('markdown')
+  const [exportCenterResult, setExportCenterResult] = useState(null)
+  const [exportCenterBusy, setExportCenterBusy] = useState(false)
+  const [showPluginMarket, setShowPluginMarket] = useState(false)
+  const [pluginMarket, setPluginMarket] = useState(null)
+  const [pluginActivity, setPluginActivity] = useState(null)
+  const [pluginBusy, setPluginBusy] = useState(false)
+  const [pluginName, setPluginName] = useState('Demo Safe Plugin')
+  const [showIntegrationHub2, setShowIntegrationHub2] = useState(false)
+  const [integrationHub2, setIntegrationHub2] = useState(null)
+  const [integrationBusy, setIntegrationBusy] = useState(false)
+  const [showQaCenter2, setShowQaCenter2] = useState(false)
+  const [qaCenter, setQaCenter] = useState(null)
+  const [qaMatrix, setQaMatrix] = useState(null)
+  const [qaBusy, setQaBusy] = useState(false)
+  const [showReleaseMgr, setShowReleaseMgr] = useState(false)
+  const [releaseMgr, setReleaseMgr] = useState(null)
+  const [releaseResult, setReleaseResult] = useState(null)
+  const [releaseBusy, setReleaseBusy] = useState(false)
+  const [showLaunchConsole, setShowLaunchConsole] = useState(false)
+  const [launchConsole, setLaunchConsole] = useState(null)
+  const [launchReport, setLaunchReport] = useState(null)
+  const [launchBusy, setLaunchBusy] = useState(false)
   const [importText, setImportText] = useState('')
   const [importResult, setImportResult] = useState(null)
   const [mcpExecutions, setMcpExecutions] = useState([])
@@ -1142,6 +1452,67 @@ function App() {
   useEffect(() => {
     if (!developerMode) setSidebarOpen(false)
   }, [developerMode])
+
+  // ⌘K / Ctrl+K opens the command palette.
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        setCmdkOpen((o) => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Phase 4 Voice Console: enumerate browser voices + load saved preferences once.
+  useEffect(() => {
+    const synth = window.speechSynthesis
+    if (!synth) return
+    const loadVoices = () => setAvailableVoices(synth.getVoices() || [])
+    loadVoices()
+    synth.addEventListener?.('voiceschanged', loadVoices)
+    getVoiceSettings(workspaceId || 'global').then((s) => { if (s) setVoiceSettings(s) }).catch(() => {})
+    getVoiceStatus().then(setVoiceStatus).catch(() => {})
+    return () => synth.removeEventListener?.('voiceschanged', loadVoices)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function recordRecentCommand(id) {
+    setRecentCommandIds((prev) => {
+      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 6)
+      try { localStorage.setItem('evolveagent-cmdk-recents', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  const commandPaletteCommands = useMemo(() => {
+    const gotoSection = (id) => () => { setDeveloperMode(true); setDevSection(id) }
+    return [
+      { id: 'mode-simple', label: 'Switch to Simple Mode', group: 'Mode', run: () => setDeveloperMode(false) },
+      { id: 'mode-dev', label: 'Switch to Developer Mode', group: 'Mode', run: () => setDeveloperMode(true) },
+      { id: 'new-chat', label: 'New chat', group: 'Chat', run: () => newChat() },
+      { id: 'theme', label: 'Toggle light / dark theme', group: 'Appearance', run: () => toggleTheme() },
+      { id: 'voice', label: 'Toggle spoken answers', group: 'Voice', run: () => setVoiceOutputEnabled((v) => !v) },
+      { id: 'sec-agent', label: 'Go to Agent', group: 'Section', run: gotoSection('agent') },
+      { id: 'sec-workspace', label: 'Go to Workspace', group: 'Section', run: gotoSection('workspace') },
+      { id: 'sec-ops', label: 'Go to Ops', group: 'Section', run: gotoSection('ops') },
+      { id: 'sec-tools', label: 'Go to Tools', group: 'Section', run: gotoSection('tools') },
+      { id: 'sec-intel', label: 'Go to Intelligence', group: 'Section', run: gotoSection('intel') },
+      { id: 'sec-build', label: 'Go to Build & Ship', group: 'Section', run: gotoSection('build') },
+      { id: 'open-git', label: 'Open Git Intelligence', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('workspace'); setShowGitIntel(true); if (!gitStatus) refreshGitIntel() } },
+      { id: 'open-studio', label: 'Open Agent Studio', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowAgentStudio(true); if (!studioTemplates.length) refreshAgentStudio() } },
+      { id: 'open-master', label: 'Open Master Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowMasterPanel(true) } },
+      { id: 'open-voice', label: 'Open Voice Console', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowVoiceConsole(true); refreshVoiceConsole() } },
+      { id: 'open-workflows', label: 'Open Durable Workflows', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() } },
+      { id: 'open-marketplace', label: 'Open Marketplace', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('build'); setShowMarketplaceHub(true); refreshMarketplaceHub() } },
+      { id: 'open-design', label: 'Open Design Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowDesignAgent(true); refreshDesignAgent() } },
+      { id: 'open-repo-finder', label: 'Open Repo Finder', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowRepoFinder(true) } },
+      { id: 'open-adaptive', label: 'Open Adaptive Learning', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowAdaptive(true); refreshAdaptive() } },
+      { id: 'open-today', label: 'Open Today dashboard', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowToday(true); refreshToday() } },
+    ]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gitStatus, studioTemplates])
 
   useEffect(() => {
     refreshWorkspaces()
@@ -1226,6 +1597,7 @@ function App() {
     refreshScheduled()
     refreshDataExport()
     refreshOs2()
+    refreshMasterPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2936,6 +3308,925 @@ function App() {
     setOs2Dashboard(dashboard)
   }
 
+  async function refreshMasterPanel() {
+    try {
+      const [summary, capabilities] = await Promise.all([getMasterAgentSummary(), getMasterAgentCapabilities()])
+      setMasterSummary(summary)
+      setMasterCapabilities(capabilities)
+    } catch {
+      // Master Agent summary is best-effort; ignore transient errors.
+    }
+  }
+
+  async function refreshGitIntel() {
+    try {
+      const [status, repos] = await Promise.all([getGitStatus(), getGitRepositories(workspaceId)])
+      setGitStatus(status)
+      setGitRepos(repos.repositories || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function runGitDiscover(optIn) {
+    setGitBusy(true)
+    try {
+      await discoverGitRepos(optIn ? gitPath : null, optIn, workspaceId)
+      await refreshGitIntel()
+    } finally {
+      setGitBusy(false)
+    }
+  }
+
+  async function runGitRead(which) {
+    if (!gitPath.trim()) return
+    setGitReadBusy(true)
+    try {
+      if (which === 'log') {
+        setGitLog(await getGitLog(gitPath, 20))
+      } else {
+        setGitBranches(await getGitBranchList(gitPath))
+      }
+    } finally {
+      setGitReadBusy(false)
+    }
+  }
+
+  async function refreshAgentStudio() {
+    try {
+      const [tpl, list] = await Promise.all([getStudioTemplates(), listAgentProfiles()])
+      setStudioTemplates(tpl.templates || [])
+      setAgentProfiles(list.agents || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  function applyAgentTemplate(t) {
+    setAgentName(t.name)
+    setAgentRole(t.role)
+    setAgentTone(t.personality?.tone || 'professional')
+  }
+
+  async function refreshVoiceConsole() {
+    try {
+      const [status, settings, events] = await Promise.all([
+        getVoiceStatus(), getVoiceSettings(workspaceId || 'global'), getVoiceEvents(workspaceId || 'global', 20),
+      ])
+      setVoiceStatus(status)
+      if (settings) setVoiceSettings(settings)
+      setVoiceEvents(events?.events || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function saveVoiceSettings(patch) {
+    const next = { ...(voiceSettings || {}), ...patch, workspace_id: workspaceId || 'global' }
+    setVoiceSettings(next) // optimistic
+    try {
+      const saved = await updateVoiceSettings({ workspace_id: workspaceId || 'global', ...patch })
+      setVoiceSettings(saved)
+    } catch {
+      // keep optimistic value; backend best-effort
+    }
+  }
+
+  async function clearVoiceHistory() {
+    try {
+      await clearVoiceEvents(workspaceId || 'global')
+      setVoiceEvents([])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshWorkflows() {
+    try {
+      const [tpl, runs, eff] = await Promise.all([getWorkflowTemplates(), listWorkflowRuns(), getWorkflowEffects()])
+      setWorkflowTemplates(tpl?.templates || [])
+      setWorkflowRuns(runs?.runs || [])
+      setWorkflowEffects(eff?.effects || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function runWorkflowAction(fn) {
+    setDurableBusy(true)
+    try {
+      await fn()
+      await refreshWorkflows()
+    } finally {
+      setDurableBusy(false)
+    }
+  }
+
+  async function refreshMarketplaceHub(kind = marketplaceKind) {
+    try {
+      const data = await getMarketplaceListings(kind || undefined)
+      setMarketplaceListings(data?.listings || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleInstallListing(listing) {
+    setMarketplaceBusy(true)
+    setMarketplaceNote('')
+    try {
+      const res = await installMarketplaceListing(listing.listing_id)
+      const where = res.kind === 'agent' ? 'Agent Studio' : 'Durable Workflows'
+      setMarketplaceNote(`Installed “${res.installed?.name}” into ${where}.`)
+      await refreshMarketplaceHub()
+    } catch {
+      setMarketplaceNote('Install failed — is the backend running?')
+    } finally {
+      setMarketplaceBusy(false)
+    }
+  }
+
+  async function handleUnpublishListing(listingId) {
+    setMarketplaceBusy(true)
+    try {
+      await unpublishMarketplaceListing(listingId)
+      await refreshMarketplaceHub()
+    } catch {
+      setMarketplaceNote('Featured starter listings cannot be removed.')
+    } finally {
+      setMarketplaceBusy(false)
+    }
+  }
+
+  async function refreshDesignAgent() {
+    try {
+      setDesignStatus(await getDesignAgentStatus())
+    } catch {
+      // best-effort
+    }
+  }
+
+  function onDesignFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDesignImageName(file.name)
+    const reader = new FileReader()
+    reader.onload = () => setDesignImage(reader.result) // data URL
+    reader.readAsDataURL(file)
+  }
+
+  function toggleDesignLens(lens) {
+    setDesignLenses((cur) => (cur.includes(lens) ? cur.filter((l) => l !== lens) : [...cur, lens]))
+  }
+
+  async function handleAnalyzeDesign() {
+    if (!designImage) return
+    setDesignBusy(true)
+    setDesignResult(null)
+    try {
+      const res = await analyzeDesign({
+        image: designImage,
+        analyses: designLenses,
+        context: designContext,
+        allowLive: designLive && designStatus?.key_configured,
+      })
+      setDesignResult(res)
+    } catch {
+      setDesignResult({ mode: 'error', sections: [], note: 'Analysis failed — is the backend running?' })
+    } finally {
+      setDesignBusy(false)
+    }
+  }
+
+  async function handleRepoSearch(q) {
+    const query = (q ?? repoQuery).trim()
+    if (!query) return
+    if (q) setRepoQuery(q)
+    setRepoBusy(true)
+    try {
+      setRepoResult(await searchRepos(query, { limit: 8, sort: 'best' }))
+    } catch {
+      setRepoResult({ count: 0, results: [], related_topics: [], note: 'Search failed — is the backend running?' })
+    } finally {
+      setRepoBusy(false)
+    }
+  }
+
+  async function refreshToday() {
+    try { setTodayData(await getTodaySummary()) } catch { /* best-effort */ }
+  }
+
+  function runQuickAction(id) {
+    if (id === 'new-chat') newChat()
+    else if (id === 'open-workflows') { setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() }
+    else if (id === 'open-repo-finder') { setDevSection('intel'); setShowRepoFinder(true) }
+    else if (id === 'open-adaptive') { setDevSection('intel'); setShowAdaptive(true); refreshAdaptive() }
+  }
+
+  async function refreshAdaptive() {
+    try {
+      const [status, items] = await Promise.all([getAdaptiveStatus(), getAdaptiveItems()])
+      setAdaptiveStatus(status)
+      setAdaptiveItems(items?.items || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleAdaptiveLearn() {
+    setAdaptiveBusy(true)
+    setAdaptiveNote('')
+    try {
+      const res = await adaptiveLearn()
+      setAdaptiveNote(`Learned +${res.ingested} new (${res.total} total) — retrieval memory, no model trained.`)
+      await refreshAdaptive()
+    } catch {
+      setAdaptiveNote('Learn failed — is the backend running?')
+    } finally {
+      setAdaptiveBusy(false)
+    }
+  }
+
+  async function handleAdaptiveRecommend() {
+    if (!adaptiveQuery.trim()) return
+    setAdaptiveBusy(true)
+    try {
+      setAdaptiveRecs(await adaptiveRecommend(adaptiveQuery.trim()))
+    } finally {
+      setAdaptiveBusy(false)
+    }
+  }
+
+  async function handleAdaptiveForget(itemId) {
+    try {
+      await forgetAdaptiveItem(itemId)
+      await refreshAdaptive()
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleCreateAgent() {
+    if (!agentName.trim()) return
+    setAgentBusy(true)
+    try {
+      await createAgentProfile({ name: agentName, role: agentRole, personality: { tone: agentTone, verbosity: 'medium' } })
+      setAgentName(''); setAgentRole('')
+      await refreshAgentStudio()
+    } finally {
+      setAgentBusy(false)
+    }
+  }
+
+  async function handleTestAgent(agentId) {
+    if (!agentTestPrompt.trim()) return
+    setAgentBusy(true)
+    try {
+      setAgentTestResult(await testAgentProfile(agentId, agentTestPrompt))
+    } finally {
+      setAgentBusy(false)
+    }
+  }
+
+  async function handleAgentAction(agentId, action) {
+    setAgentBusy(true)
+    try {
+      if (action === 'evaluate') await evaluateAgentProfile(agentId)
+      else if (action === 'publish') await publishAgentProfile(agentId)
+      else if (action === 'duplicate') await duplicateAgentProfile(agentId)
+      else if (action === 'preview') { setAgentTestResult({ agent_id: agentId, simulated_response: (await getAgentPreview(agentId)).preview }); return }
+      await refreshAgentStudio()
+    } finally {
+      setAgentBusy(false)
+    }
+  }
+
+  async function handleMasterRouteFeedback(runId, correct) {
+    try {
+      await sendMasterRouteFeedback(runId, correct)
+      await refreshMasterPanel()
+    } catch {
+      // best-effort feedback
+    }
+  }
+
+  async function runGlobalSearch(event) {
+    if (event) event.preventDefault()
+    const q = globalSearchQuery.trim()
+    if (!q) return
+    setGlobalSearchBusy(true)
+    try {
+      const [results, sources] = await Promise.all([
+        globalSearch(q, { workspaceId }),
+        globalSearchSources ? Promise.resolve(globalSearchSources) : getGlobalSearchSources(),
+      ])
+      setGlobalSearchResults(results)
+      setGlobalSearchSources(sources)
+    } catch (err) {
+      setGlobalSearchResults({ error: err.message, results: [] })
+    } finally {
+      setGlobalSearchBusy(false)
+    }
+  }
+
+  function useSearchResultAsContext(result) {
+    const seed = `Context from ${result.label} — "${result.title}": ${result.preview}\n\n`
+    setInput((current) => seed + (current || ''))
+    setDeveloperMode(true)
+    composerRef.current?.focus()
+  }
+
+  async function refreshActivity(type = activityType) {
+    setActivityBusy(true)
+    try {
+      const data = await getActivityTimeline({ workspaceId, types: type || undefined, limit: 40 })
+      setActivityTimeline(data)
+    } catch {
+      setActivityTimeline({ events: [], event_count: 0 })
+    } finally {
+      setActivityBusy(false)
+    }
+  }
+
+  async function refreshHome() {
+    try {
+      setDashboardHome(await getDashboardHome(workspaceId))
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshFeatures() {
+    try {
+      setFeaturesData(await getFeatures({ q: featuresQuery || undefined, status: featuresStatus || undefined }))
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleTryFeature(key) {
+    try {
+      const data = await tryFeature(key)
+      setCopied(data.launch_note || `Open ${data.open_route}`)
+      setTimeout(() => setCopied(''), 3500)
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshDemo() {
+    try {
+      const [summary, script] = await Promise.all([getDemoSummary(), demoScript ? Promise.resolve(demoScript) : getDemoScript()])
+      setDemoSummary(summary)
+      setDemoScript(script)
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleDemoSeed() {
+    setDemoBusy(true)
+    try {
+      const data = await seedDemoData()
+      setCopied(`Seeded demo workspace (${data.seeded_count} records).`)
+      setTimeout(() => setCopied(''), 3500)
+      await refreshDemo()
+    } finally {
+      setDemoBusy(false)
+    }
+  }
+
+  async function handleDemoReset() {
+    setDemoBusy(true)
+    try {
+      const data = await resetDemoData()
+      setCopied(`Reset demo data — removed ${data.removed_count} demo record(s). User data untouched.`)
+      setTimeout(() => setCopied(''), 4000)
+      await refreshDemo()
+    } finally {
+      setDemoBusy(false)
+    }
+  }
+
+  async function refreshSettings() {
+    try {
+      setSettingsData(await getSettings())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshProviderControl() {
+    try {
+      setProviderControl(await getProviderControl())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshInbox() {
+    setInboxBusy(true)
+    try {
+      await generateNotificationsInbox()
+      setInboxData(await getNotificationsInbox())
+    } catch {
+      // best-effort
+    } finally {
+      setInboxBusy(false)
+    }
+  }
+
+  async function handleInboxResolve(id) {
+    try {
+      await resolveNotificationInbox(id)
+      setInboxData(await getNotificationsInbox())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshWsOs() {
+    if (!workspaceId) { setWsOsDashboard({ error: 'No active workspace selected.' }); return }
+    try {
+      setWsOsDashboard(await getWorkspaceOsDashboard(workspaceId))
+    } catch {
+      setWsOsDashboard(null)
+    }
+  }
+
+  async function refreshAgentQuality() {
+    try {
+      setAgentQuality(await getAgentQuality())
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function refreshProductivity() {
+    try {
+      setProductivityBrain(await getProductivityBrain(workspaceId))
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function runCodeAnalyze() {
+    if (!codeIntelText.trim()) return
+    setCodeIntelBusy(true)
+    try {
+      setCodeIntelResult(await analyzeCode(codeIntelText))
+    } catch (err) {
+      setCodeIntelResult({ error: err.message })
+    } finally {
+      setCodeIntelBusy(false)
+    }
+  }
+
+  async function runResearchAgent2(mode) {
+    if (!researchAgentText.trim()) return
+    setResearchAgentBusy(true)
+    try {
+      const data = mode === 'bias'
+        ? await researchAgentBias(researchAgentText)
+        : mode === 'brief'
+          ? await researchAgentBrief(researchAgentText, [])
+          : await researchAgentClaims(researchAgentText)
+      setResearchAgentResult({ mode, data })
+    } catch (err) {
+      setResearchAgentResult({ error: err.message })
+    } finally {
+      setResearchAgentBusy(false)
+    }
+  }
+
+  async function refreshBizIntel2() {
+    setBizIntelBusy(true)
+    try {
+      setBizIntel2(await getBusinessIntelDashboard(workspaceId))
+    } catch (err) {
+      setBizIntel2({ error: err.message })
+    } finally {
+      setBizIntelBusy(false)
+    }
+  }
+
+  async function downloadBizIntelReport() {
+    const report = await getBusinessIntelReport(workspaceId)
+    downloadFile('business-intelligence-report.md', report.content || JSON.stringify(report, null, 2), 'text/markdown')
+  }
+
+  async function runMeetingIntel2(mode) {
+    if (!meetingIntelText.trim()) return
+    setMeetingIntelBusy(true)
+    try {
+      const data = mode === 'goal'
+        ? await meetingTranscriptToGoal(meetingIntelText, 'Meeting follow-up goal')
+        : await analyzeMeetingTranscript(meetingIntelText)
+      setMeetingIntelResult({ mode, data })
+    } catch (err) {
+      setMeetingIntelResult({ error: err.message })
+    } finally {
+      setMeetingIntelBusy(false)
+    }
+  }
+
+  async function runCollab2(event) {
+    if (event) event.preventDefault()
+    if (!collabTopic.trim()) return
+    setCollabBusy(true)
+    try {
+      setCollabResult(await analyzeCollaboration(collabTopic, [
+        { role: collabRoleA, position: collabPositionA },
+        { role: collabRoleB, position: collabPositionB },
+      ]))
+    } catch (err) {
+      setCollabResult({ error: err.message })
+    } finally {
+      setCollabBusy(false)
+    }
+  }
+
+  async function refreshPerm3() {
+    setPermBusy(true)
+    try {
+      setPermProfiles(await getPermissionProfiles())
+    } catch (err) {
+      setPermProfiles({ error: err.message })
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function createPermProfile() {
+    setPermBusy(true)
+    try {
+      await createPermissionProfile({
+        name: `Approval gate ${Date.now().toString().slice(-4)}`,
+        action_pattern: permAction || '*',
+        effect: 'require_approval',
+        risk_level: 'high',
+      })
+      await refreshPerm3()
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function deletePermProfile(profileId) {
+    setPermBusy(true)
+    try {
+      await deletePermissionProfile(profileId)
+      await refreshPerm3()
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function runPermEval() {
+    if (!permAction.trim()) return
+    setPermBusy(true)
+    try {
+      setPermEval(await evaluatePermission({ action: permAction, risk_level: 'high' }))
+    } catch (err) {
+      setPermEval({ error: err.message })
+    } finally {
+      setPermBusy(false)
+    }
+  }
+
+  async function refreshGovConsole() {
+    setGovBusy(true)
+    try {
+      setGovConsole(await getGovernanceConsoleDashboard())
+    } catch (err) {
+      setGovConsole({ error: err.message })
+    } finally {
+      setGovBusy(false)
+    }
+  }
+
+  async function downloadGovConsole(format = 'markdown') {
+    const report = await getGovernanceConsoleReport(format)
+    downloadFile(`governance-console-report.${format === 'json' ? 'json' : 'md'}`, report.content || JSON.stringify(report, null, 2), format === 'json' ? 'application/json' : 'text/markdown')
+  }
+
+  async function refreshDataManager() {
+    setDataManagerBusy(true)
+    try {
+      const [browse, usage, cleanup] = await Promise.all([
+        getDataManagerBrowse(),
+        getDataManagerUsage(),
+        getDataManagerCleanup(),
+      ])
+      setDataManager({ browse, usage, cleanup })
+      const collections = browse?.collections || []
+      if (collections.length && !collections.some((item) => item.collection === dataManagerCollection)) {
+        setDataManagerCollection(collections[0].collection)
+      }
+    } catch (err) {
+      setDataManager({ error: err.message })
+    } finally {
+      setDataManagerBusy(false)
+    }
+  }
+
+  async function runDataManagerPreview() {
+    if (!dataManagerCollection.trim()) return
+    setDataManagerBusy(true)
+    try {
+      setDataManagerPreview(await previewDataRedaction(dataManagerCollection))
+    } catch (err) {
+      setDataManagerPreview({ error: err.message })
+    } finally {
+      setDataManagerBusy(false)
+    }
+  }
+
+  async function runImportCenter(mode) {
+    if (!importCenterContent.trim()) return
+    setImportCenterBusy(true)
+    try {
+      const result = mode === 'commit'
+        ? await commitImport(importCenterKind, importCenterContent, workspaceId)
+        : await previewImport(importCenterKind, importCenterContent)
+      setImportCenterResult(result)
+      setImportCenterRecords(await getImportRecords(importCenterKind))
+    } catch (err) {
+      setImportCenterResult({ error: err.message })
+    } finally {
+      setImportCenterBusy(false)
+    }
+  }
+
+  async function runExportCenter2(mode) {
+    setExportCenterBusy(true)
+    try {
+      const result = mode === 'package'
+        ? await exportCenterPackage([exportCenterKind], exportCenterFormat, workspaceId)
+        : mode === 'case'
+          ? await getExportCenterCaseStudy()
+          : await exportCenterExport(exportCenterKind, exportCenterFormat, workspaceId)
+      setExportCenterResult(result)
+      const content = result.content || result.package_content || JSON.stringify(result, null, 2)
+      downloadFile(`evolveagent-${mode}.${exportCenterFormat === 'json' ? 'json' : 'md'}`, content, exportCenterFormat === 'json' ? 'application/json' : 'text/markdown')
+    } catch (err) {
+      setExportCenterResult({ error: err.message })
+    } finally {
+      setExportCenterBusy(false)
+    }
+  }
+
+  async function refreshPluginMarket() {
+    setPluginBusy(true)
+    try {
+      const [catalog, activity] = await Promise.all([
+        getPluginMarketplaceCatalog(),
+        getPluginMarketplaceActivity(),
+      ])
+      setPluginMarket(catalog)
+      setPluginActivity(activity)
+    } catch (err) {
+      setPluginMarket({ error: err.message })
+    } finally {
+      setPluginBusy(false)
+    }
+  }
+
+  async function registerPluginMarket(event) {
+    if (event) event.preventDefault()
+    if (!pluginName.trim()) return
+    setPluginBusy(true)
+    try {
+      await registerMarketplacePlugin({ name: pluginName, description: 'Registered from Developer Mode', permissions: ['read'] })
+      setPluginName('')
+      await refreshPluginMarket()
+    } finally {
+      setPluginBusy(false)
+    }
+  }
+
+  async function runPluginAction(pluginId, action, enabled) {
+    setPluginBusy(true)
+    try {
+      if (action === 'toggle') await toggleMarketplacePlugin(pluginId, enabled)
+      if (action === 'test') await testMarketplacePlugin(pluginId)
+      await refreshPluginMarket()
+    } finally {
+      setPluginBusy(false)
+    }
+  }
+
+  async function refreshIntegrationHub2() {
+    setIntegrationBusy(true)
+    try {
+      setIntegrationHub2(await getIntegrationHubCards())
+    } catch (err) {
+      setIntegrationHub2({ error: err.message })
+    } finally {
+      setIntegrationBusy(false)
+    }
+  }
+
+  async function runIntegrationDry(integrationId) {
+    setIntegrationBusy(true)
+    try {
+      const dryRun = await dryRunIntegration(integrationId)
+      setIntegrationHub2((current) => ({ ...(current || {}), dry_run: dryRun }))
+    } finally {
+      setIntegrationBusy(false)
+    }
+  }
+
+  async function refreshQaCenter2() {
+    setQaBusy(true)
+    try {
+      const [dashboard, matrix] = await Promise.all([
+        getQaCenterDashboard(),
+        getQaCenterMatrix(),
+      ])
+      setQaCenter(dashboard)
+      setQaMatrix(matrix)
+    } catch (err) {
+      setQaCenter({ error: err.message })
+    } finally {
+      setQaBusy(false)
+    }
+  }
+
+  async function recordQaItem(featureKey, status) {
+    setQaBusy(true)
+    try {
+      await recordQaStatus(featureKey, status, `Marked ${status} from Developer Mode`)
+      await refreshQaCenter2()
+    } finally {
+      setQaBusy(false)
+    }
+  }
+
+  async function refreshReleaseMgr() {
+    setReleaseBusy(true)
+    try {
+      const [dashboard, changelog] = await Promise.all([
+        getReleaseManagerDashboard(),
+        getReleaseManagerChangelog(),
+      ])
+      setReleaseMgr({ dashboard, changelog })
+    } catch (err) {
+      setReleaseMgr({ error: err.message })
+    } finally {
+      setReleaseBusy(false)
+    }
+  }
+
+  async function runReleaseMgr(mode) {
+    setReleaseBusy(true)
+    try {
+      const result = mode === 'notes'
+        ? await generateReleaseNotes('v90.0', ['Developer Mode panels connected', 'Launch console ready'])
+        : await generatePrSummary('Developer-Mode panels for v77-v90', ['Research, BI, meetings, governance, QA, release, and launch panels'])
+      setReleaseResult(result)
+      downloadFile(`release-manager-${mode}.md`, result.content || JSON.stringify(result, null, 2), 'text/markdown')
+    } catch (err) {
+      setReleaseResult({ error: err.message })
+    } finally {
+      setReleaseBusy(false)
+    }
+  }
+
+  async function refreshLaunchConsole() {
+    setLaunchBusy(true)
+    try {
+      const [dashboard, report] = await Promise.all([
+        getLaunchConsoleDashboard(),
+        getLaunchConsoleReport(),
+      ])
+      setLaunchConsole(dashboard)
+      setLaunchReport(report)
+    } catch (err) {
+      setLaunchConsole({ error: err.message })
+    } finally {
+      setLaunchBusy(false)
+    }
+  }
+
+  async function downloadLaunchReport() {
+    const report = launchReport || await getLaunchConsoleReport()
+    downloadFile('evolveagent-launch-report.md', report.content || JSON.stringify(report, null, 2), 'text/markdown')
+    setLaunchReport(report)
+  }
+
+  async function runDocContractRisk() {
+    if (!docIntelText.trim()) return
+    setDocIntelBusy(true)
+    try {
+      const r = await docContractRisk(docIntelText)
+      setDocIntelResult({ mode: 'contract', data: r })
+    } catch (err) {
+      setDocIntelResult({ error: err.message })
+    } finally {
+      setDocIntelBusy(false)
+    }
+  }
+
+  async function runDocAts() {
+    if (!docIntelText.trim()) return
+    setDocIntelBusy(true)
+    try {
+      const [resume, ...kw] = docIntelText.split('---')
+      const keywords = (kw.join('---') || '').split(',').map((s) => s.trim()).filter(Boolean)
+      const r = await docAtsScore(resume, keywords)
+      setDocIntelResult({ mode: 'ats', data: r })
+    } catch (err) {
+      setDocIntelResult({ error: err.message })
+    } finally {
+      setDocIntelBusy(false)
+    }
+  }
+
+  async function runWorkflowRec(event) {
+    if (event) event.preventDefault()
+    const goal = workflowGoal.trim()
+    if (!goal) return
+    setWorkflowBusy(true)
+    try {
+      setWorkflowRec(await recommendWorkflow(goal))
+    } catch (err) {
+      setWorkflowRec({ error: err.message })
+    } finally {
+      setWorkflowBusy(false)
+    }
+  }
+
+  async function runContextPlan(event) {
+    if (event) event.preventDefault()
+    const q = contextQuery.trim()
+    if (!q) return
+    setContextBusy(true)
+    try {
+      setContextPlan(await planContext(q, { workspaceId }))
+    } catch (err) {
+      setContextPlan({ error: err.message })
+    } finally {
+      setContextBusy(false)
+    }
+  }
+
+  async function handleCapabilityMode(capability, mode) {
+    setProviderBusy(true)
+    try {
+      await updateProviderControl({ capability_modes: { [capability]: mode } })
+      await refreshProviderControl()
+    } finally {
+      setProviderBusy(false)
+    }
+  }
+
+  async function handleSettingToggle(category, key, value) {
+    setSettingsBusy(true)
+    try {
+      const data = await updateSettings({ [category]: { [key]: value } })
+      setSettingsData((current) => ({ ...(current || {}), settings: data.settings }))
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
+
+  async function handleSettingsReset() {
+    setSettingsBusy(true)
+    try {
+      const data = await resetSettings()
+      setSettingsData((current) => ({ ...(current || {}), settings: data.settings }))
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
+
+  async function handleDemoCaseStudy() {
+    const data = await getDemoCaseStudy()
+    const blob = new Blob([data.content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'evolveagent-case-study.md'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleActivityExport() {
+    const data = await exportActivityTimeline('markdown')
+    const blob = new Blob([data.content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `evolveagent-activity-${new Date().toISOString().slice(0, 10)}.md`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   async function handleOs2Snapshot() {
     setOs2Busy(true)
     try {
@@ -4470,6 +5761,16 @@ function App() {
   async function submitMessage(text = input) {
     const prompt = text.trim()
     if (!prompt || loading) return
+    // `mcp:` prefix routes into the MCP hub instead of the full workflow.
+    if (/^mcp:/i.test(prompt)) {
+      await handleMcpCommand(prompt)
+      return
+    }
+    // `/`-commands route to the governed CLI palette (no raw shell).
+    if (prompt.startsWith('/')) {
+      await runSlashCommand(prompt)
+      return
+    }
     const processedFiles = attachedFiles.filter((file) => file.status === 'processed')
     const processedRecordings = attachedRecordings.filter((recording) => recording.status === 'processed')
 
@@ -4511,6 +5812,10 @@ function App() {
       setMessages((current) => [...current, assistantMessage])
       setSessionId(data.session_id)
       setSelectedRunId(assistantMessage.id)
+      // Voice Ask Console: speak the answer aloud + Perplexity-style sources/follow-ups + MCP suggestions.
+      speak(assistantMessage.content)
+      refreshAskSources(prompt)
+      refreshMcpSuggestions(prompt).then((suggestions) => buildFollowups(prompt, suggestions))
       await refreshHistory()
       await refreshChats()
       await refreshProviderStatus()
@@ -4631,12 +5936,295 @@ function App() {
       setInput(transcript)
       setVoiceTranscript(transcript)
       setVoiceUsed(Boolean(transcript))
+      // Push-to-talk, auto-submit: speaking a request runs it immediately.
+      if (transcript.trim()) {
+        submitMessage(transcript)
+      }
     }
     recognition.onerror = () => {
       setError('Voice input could not be transcribed. Try again or type your message.')
     }
     recognition.onend = () => setListening(false)
     recognition.start()
+  }
+
+  // Voice Console push-to-talk with a LIVE transcript (interim results).
+  // Local-only capture; nothing is recorded or uploaded. Honors settings.
+  function pttStart() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) { setError('Voice input is not supported in this browser yet.'); return }
+    if (pttListening) return
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = true
+    recognition.continuous = true
+    setLiveTranscript('')
+    recognition.onstart = () => { setPttListening(true); setError('') }
+    recognition.onresult = (event) => {
+      let text = ''
+      for (let i = 0; i < event.results.length; i += 1) text += event.results[i][0].transcript
+      setLiveTranscript(text)
+    }
+    recognition.onerror = () => { setPttListening(false) }
+    recognition.onend = () => { setPttListening(false) }
+    pttRecognitionRef.current = recognition
+    recognition.start()
+    logVoiceActivity('listen_start', { workspaceId: workspaceId || 'global' }).catch(() => {})
+  }
+
+  function pttStop() {
+    try { pttRecognitionRef.current?.stop() } catch { /* ignore */ }
+    setPttListening(false)
+    const text = liveTranscript.trim()
+    if (text) {
+      logVoiceActivity('transcribe', { workspaceId: workspaceId || 'global', text, meta: { chars: String(text.length) } }).catch(() => {})
+    }
+    logVoiceActivity('listen_stop', { workspaceId: workspaceId || 'global' }).catch(() => {})
+  }
+
+  function useTranscriptInComposer() {
+    const text = liveTranscript.trim()
+    if (text) { setInput(text); setVoiceTranscript(text); setVoiceUsed(true) }
+  }
+
+  function heroSubmit(event) {
+    event.preventDefault()
+    const value = heroInput.trim()
+    if (!value || loading) return
+    setHeroInput('')
+    submitMessage(value)
+  }
+
+  // ---- Master Agent: one AI surface that routes across all of v1–v60 ----
+  async function askMaster(rawText, voiceUsed = false) {
+    const text = (rawText ?? masterText).trim()
+    if (!text || masterBusy) return
+    // Command prefixes route to their governed surfaces instead of the router.
+    if (/^mcp:/i.test(text)) { setMasterText(''); return handleMcpCommand(text) }
+    if (text.startsWith('/')) { setMasterText(''); return runSlashCommand(text) }
+    setMasterBusy(true)
+    setError('')
+    try {
+      const result = await routeMasterAgent(text, { workspaceId, voiceUsed })
+      setMasterResult(result)
+      setAskSources(result.sources || [])
+      setAskFollowups(result.followups || [])
+      setMcpSuggestions(result.mcp_suggestions || [])
+      setMasterText('')
+      // Two-way voice: read the answer aloud (voice requests always speak; typed obeys the toggle).
+      if (voiceUsed && !voiceOutputEnabled) setVoiceOutputEnabled(true)
+      speak(result.requires_approval
+        ? `${result.answer}. Heads up — this needs your approval before anything runs.`
+        : result.answer)
+    } catch (err) {
+      setError(`Master Agent could not route that: ${err.message}`)
+    } finally {
+      setMasterBusy(false)
+    }
+  }
+
+  function masterSubmit(event) {
+    event.preventDefault()
+    askMaster(masterText, false)
+  }
+
+  // Push-to-talk for the Master Agent: speak → auto-route → spoken answer.
+  function startMasterVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setError('Voice input is not supported in this browser yet.')
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.onstart = () => { setListening(true); setError('') }
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || ''
+      if (transcript.trim()) askMaster(transcript, true)
+    }
+    recognition.onerror = () => setError('Voice input could not be transcribed. Try again or type.')
+    recognition.onend = () => setListening(false)
+    recognition.start()
+  }
+
+  // ---- CLI command palette (governed /-commands; no raw shell) ----
+  const SLASH_COMMANDS = [
+    { cmd: '/help', desc: 'List available commands' },
+    { cmd: '/mcp', desc: 'Suggest MCP tools for a task (e.g. /mcp connect github)' },
+    { cmd: '/connectors', desc: 'List MCP connectors' },
+    { cmd: '/health', desc: 'Show platform health score' },
+    { cmd: '/approvals', desc: 'Show pending approvals across sources' },
+    { cmd: '/notifications', desc: 'Generate & show alerts' },
+    { cmd: '/playbooks', desc: 'List saved playbooks' },
+    { cmd: '/run-playbook', desc: 'Run a playbook by name (planning-first)' },
+    { cmd: '/scorecard', desc: 'Operating Layer 2.0 readiness scorecard' },
+    { cmd: '/snapshot', desc: 'Capture an operating-layer snapshot' },
+  ]
+
+  function postCliResult(command, text, spokenSummary) {
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: 'user', content: command },
+      { id: crypto.randomUUID(), role: 'assistant', content: text, cli_command: true },
+    ])
+    if (spokenSummary) speak(spokenSummary)
+  }
+
+  async function runSlashCommand(raw) {
+    const parts = raw.trim().split(/\s+/)
+    const cmd = parts[0].toLowerCase()
+    const arg = parts.slice(1).join(' ').trim()
+    setInput('')
+    setHeroInput('')
+    setCliBusy(true)
+    try {
+      if (cmd === '/help') {
+        postCliResult(raw, 'Available commands:\n' + SLASH_COMMANDS.map((c) => `${c.cmd} — ${c.desc}`).join('\n'), 'Here are the available commands.')
+      } else if (cmd === '/mcp') {
+        await handleMcpCommand(`mcp: ${arg || 'general task'}`)
+      } else if (cmd === '/connectors') {
+        const data = await getMcpConnectors()
+        const list = (data.connectors || []).map((c) => `• ${c.name} — ${c.status} · ${c.enabled ? 'enabled' : 'disabled'}`).join('\n') || 'No connectors registered yet.'
+        postCliResult(raw, `MCP connectors:\n${list}`, `${data.count || 0} connectors registered.`)
+      } else if (cmd === '/health') {
+        const h = await getHealthMonitorDashboard()
+        const checks = (h.checks || []).map((c) => `• [${c.status}] ${c.name} — ${c.detail}`).join('\n')
+        postCliResult(raw, `Health: ${h.status} (score ${h.health_score})\n${checks}`, `Platform health is ${h.status}, score ${h.health_score}.`)
+      } else if (cmd === '/approvals') {
+        const a = await getApprovalsCenterSummary()
+        postCliResult(raw, `Pending approvals: ${a.pending_count} (high-risk ${a.high_risk_pending}). Sources: ${JSON.stringify(a.by_source)}`, `${a.pending_count} approvals pending.`)
+      } else if (cmd === '/notifications') {
+        await generateNotifications()
+        const s = await getNotificationsSummary()
+        postCliResult(raw, `Notifications — unread ${s.unread} (critical ${s.critical_unread}).`, `${s.unread} unread notifications.`)
+        refreshNotifications()
+      } else if (cmd === '/playbooks') {
+        const p = await getPlaybooks()
+        const list = (p.playbooks || []).map((pb) => `• ${pb.name} (${pb.step_count} steps)`).join('\n') || 'No playbooks saved.'
+        postCliResult(raw, `Playbooks:\n${list}`, `${p.count || 0} playbooks saved.`)
+      } else if (cmd === '/run-playbook') {
+        const p = await getPlaybooks()
+        const match = (p.playbooks || []).find((pb) => pb.name.toLowerCase().includes(arg.toLowerCase())) || (p.playbooks || [])[0]
+        if (!match) { postCliResult(raw, 'No playbooks to run. Create one first.', 'No playbooks to run.') }
+        else {
+          const run = await runPlaybook(match.playbook_id)
+          postCliResult(raw, `Ran "${match.name}" (planning-first): ${run.planned_count} planned, ${run.approval_required_count} need approval. Nothing was executed.`, `Ran ${match.name}. ${run.approval_required_count} steps need approval.`)
+        }
+      } else if (cmd === '/scorecard') {
+        const d = await getOperatingLayerV2Dashboard()
+        postCliResult(raw, `Operating Layer 2.0 — grade ${d.overall_grade} (${d.overall_score}/100), coverage ${d.coverage_pct}%.`, `Overall grade ${d.overall_grade}.`)
+        refreshOpLayer2()
+      } else if (cmd === '/snapshot') {
+        await createOperatingLayerV2Snapshot()
+        postCliResult(raw, 'Captured an Operating Layer 2.0 snapshot.', 'Snapshot captured.')
+        refreshOpLayer2()
+      } else {
+        postCliResult(raw, `Unknown command "${cmd}". Type /help for the list.`, 'Unknown command.')
+      }
+    } catch (err) {
+      postCliResult(raw, `Command failed: ${err.message}`, 'The command failed.')
+    } finally {
+      setCliBusy(false)
+    }
+  }
+
+  // Speak an answer aloud via the browser (local text-to-speech; no external service).
+  function speak(text) {
+    if (!voiceOutputEnabled || !text) return
+    const synth = window.speechSynthesis
+    if (!synth) return
+    try {
+      synth.cancel()
+      const clipped = String(text).slice(0, 1200)
+      const utterance = new SpeechSynthesisUtterance(clipped)
+      utterance.lang = 'en-US'
+      // Apply Voice Console preferences when available.
+      const s = voiceSettings
+      if (s) {
+        if (typeof s.rate === 'number') utterance.rate = s.rate
+        if (typeof s.pitch === 'number') utterance.pitch = s.pitch
+        if (typeof s.volume === 'number') utterance.volume = s.volume
+        if (s.voice_name) {
+          const match = (availableVoices.length ? availableVoices : synth.getVoices() || []).find((v) => v.name === s.voice_name)
+          if (match) utterance.voice = match
+        }
+      }
+      utterance.onstart = () => setSpeaking(true)
+      utterance.onend = () => setSpeaking(false)
+      utterance.onerror = () => setSpeaking(false)
+      synth.speak(utterance)
+      // Privacy-safe audit: metadata only (char count), never the spoken text.
+      logVoiceActivity('speak', { workspaceId: workspaceId || 'global', meta: { chars: String(clipped.length) } }).catch(() => {})
+    } catch {
+      setSpeaking(false)
+    }
+  }
+
+  function stopSpeaking() {
+    window.speechSynthesis?.cancel()
+    setSpeaking(false)
+  }
+
+  // Task-aware MCP suggestions: which connector(s) a request needs + key readiness (never values).
+  async function refreshMcpSuggestions(prompt) {
+    if (!prompt || !prompt.trim()) {
+      setMcpSuggestions([])
+      return
+    }
+    try {
+      const result = await suggestMcp(prompt.trim())
+      setMcpSuggestions(result?.suggestions || [])
+      return result?.suggestions || []
+    } catch {
+      setMcpSuggestions([])
+      return []
+    }
+  }
+
+  // Perplexity-style sources: ground the answer in indexed workspace docs (local retrieval, v51).
+  async function refreshAskSources(prompt) {
+    if (!prompt || !prompt.trim()) {
+      setAskSources([])
+      return
+    }
+    try {
+      const result = await queryRetrieval({ workspace_id: workspaceId, query: prompt.trim(), top_k: 4 })
+      setAskSources(result?.results || [])
+    } catch {
+      setAskSources([])
+    }
+  }
+
+  // Build clickable follow-up questions from the task + suggested tools.
+  function buildFollowups(prompt, suggestions) {
+    const followups = []
+    for (const s of (suggestions || []).slice(0, 2)) {
+      followups.push(s.missing_keys.length > 0 ? `How do I set ${s.missing_keys[0]} for ${s.name}?` : `Connect ${s.name}`)
+    }
+    followups.push('Explain this in more detail', 'What are the risks and approvals involved?')
+    setAskFollowups(followups.slice(0, 5))
+  }
+
+  // `mcp:` / `/mcp` command prefix → route straight into the MCP hub (suggest + open panel).
+  async function handleMcpCommand(rawPrompt) {
+    const task = rawPrompt.replace(/^\/?mcp:?\s*/i, '').trim() || rawPrompt
+    const userMessage = { id: crypto.randomUUID(), role: 'user', content: rawPrompt }
+    setInput('')
+    const suggestions = await refreshMcpSuggestions(task)
+    setShowMcpPanel(true)
+    const lines = suggestions.length
+      ? suggestions.map((s) => `• ${s.name} — ${s.recommended_action}`).join('\n')
+      : 'No specific MCP connector matched that task.'
+    const answer = `MCP command routed to the Connector Hub.\n\n${lines}\n\nOpen Developer Mode → MCP Hub to register/enable and manage keys. (Key values are never shown — only whether each required key is set.)`
+    setMessages((current) => [
+      ...current,
+      userMessage,
+      { id: crypto.randomUUID(), role: 'assistant', content: answer, mcp_command: true },
+    ])
+    buildFollowups(task, suggestions)
+    speak('Opened the MCP connector hub with tool suggestions for your task.')
   }
 
   function focusComposer() {
@@ -4741,7 +6329,9 @@ function App() {
     const link = document.createElement('a')
     link.href = url
     link.download = filename
+    document.body.appendChild(link)
     link.click()
+    link.remove()
     URL.revokeObjectURL(url)
   }
 
@@ -4776,6 +6366,10 @@ function App() {
 
   return (
     <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'} ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} commands={commandPaletteCommands} recentIds={recentCommandIds} onRun={recordRecentCommand} />
+      <button type="button" className="cmdk-trigger" onClick={() => setCmdkOpen(true)} title="Command palette (⌘K)" aria-label="Open command palette">
+        <Terminal size={14} /> <span>⌘K</span>
+      </button>
       {developerMode && sidebarOpen && (
         <button
           type="button"
@@ -4783,6 +6377,29 @@ function App() {
           onClick={() => setSidebarOpen(false)}
           aria-label="Close sidebar"
         />
+      )}
+      {!developerMode && (
+        <nav className="simple-rail" aria-label="EvolveAgent">
+          <div className="simple-rail-avatar" aria-hidden="true" />
+          <button type="button" className="simple-rail-btn active" onClick={newChat} title="New chat"><MessageSquarePlus size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setSelectedRunId(null)} title="History"><Clock size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Tools & panels"><Layers3 size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Library"><Library size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Memory & brain"><Brain size={18} /></button>
+          <button type="button" className="simple-rail-btn" onClick={() => setDeveloperMode(true)} title="Data"><Database size={18} /></button>
+          <button
+            type="button"
+            className={`simple-rail-btn ${voiceOutputEnabled ? 'on' : ''}`}
+            onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
+            title={voiceOutputEnabled ? 'Spoken answers on' : 'Spoken answers off'}
+          >
+            {voiceOutputEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+          <div className="simple-rail-spacer" />
+          <button type="button" className="simple-rail-btn" onClick={toggleTheme} title="Toggle theme">
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </nav>
       )}
       {showOnboarding && (
         <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
@@ -4803,7 +6420,7 @@ function App() {
           </div>
         </div>
       )}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} data-active={developerMode ? devSection : undefined}>
         <div className="sidebar-brand">
           <div className="brand-mark">
             <Brain size={21} />
@@ -4818,6 +6435,28 @@ function App() {
           <MessageSquarePlus size={16} />
           New Chat
         </button>
+
+        {developerMode && (
+          <nav className="dev-nav" aria-label="Sections">
+            {[
+              { id: 'agent', label: 'Agent', icon: <Brain size={14} /> },
+              { id: 'workspace', label: 'Workspace', icon: <Layers3 size={14} /> },
+              { id: 'ops', label: 'Ops', icon: <Gauge size={14} /> },
+              { id: 'tools', label: 'Tools', icon: <Cpu size={14} /> },
+              { id: 'intel', label: 'Intelligence', icon: <Sparkles size={14} /> },
+              { id: 'build', label: 'Build & Ship', icon: <Flag size={14} /> },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`dev-nav-btn ${devSection === s.id ? 'active' : ''}`}
+                onClick={() => setDevSection(s.id)}
+              >
+                {s.icon}<span>{s.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
         <div className="sidebar-dev-only">
         <section className="sidebar-section">
@@ -4852,7 +6491,7 @@ function App() {
           </div>
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowMemoryPanel((current) => !current)}>
             <span>
               <Database size={15} />
@@ -4987,7 +6626,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowKnowledgePanel((current) => !current)}>
             <span>
               <Brain size={15} />
@@ -5056,7 +6695,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="tools" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowIntegrations((current) => !current)}>
             <span>
               <Layers3 size={15} />
@@ -5193,7 +6832,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAutopilot((current) => !current)}>
             <span>
               <Bot size={15} />
@@ -5315,7 +6954,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowToolsPanel((current) => !current)}>
             <span>
               <Terminal size={15} />
@@ -5599,7 +7238,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="ops" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAnalytics((current) => !current)}>
             <span>
               <BarChart3 size={15} />
@@ -5680,7 +7319,7 @@ function App() {
         </section>
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCompliancePanel((current) => !current)}>
               <span>
                 <ShieldAlert size={15} />
@@ -5774,7 +7413,7 @@ function App() {
           </section>
         )}
 
-        <section className="sidebar-section">
+        <section data-group="workspace" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowMissionControl((current) => !current)}>
             <span>
               <Flag size={15} />
@@ -5863,7 +7502,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAppBuilder((current) => !current)}>
             <span>
               <Layers3 size={15} />
@@ -5926,7 +7565,7 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowDebatePanel((current) => !current)}>
             <span>
               <Route size={15} />
@@ -6002,7 +7641,7 @@ function App() {
         </section>
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowResearchPanel((current) => !current)}>
               <span>
                 <Library size={15} />
@@ -6101,7 +7740,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowQualityPanel((current) => !current)}>
               <span>
                 <Gauge size={15} />
@@ -6163,7 +7802,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowEvaluationLab((current) => !current)}>
               <span>
                 <BarChart3 size={15} />
@@ -6265,7 +7904,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowProjectManager((current) => !current)}>
               <span>
                 <Flag size={15} />
@@ -6360,7 +7999,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowPortfolio((current) => !current)}>
               <span>
                 <Layers3 size={15} />
@@ -6445,7 +8084,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOsPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -6525,7 +8164,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOrgPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -6682,7 +8321,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowBusinessPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -6835,7 +8474,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowChiefPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -6935,7 +8574,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSimulatorPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7048,7 +8687,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMultimodalPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7131,7 +8770,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowIndustryPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7206,7 +8845,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowAgentNetworkPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7290,7 +8929,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowHealingPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7369,7 +9008,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCompanyBrainPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7470,7 +9109,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowDevicePanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7561,7 +9200,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowTrainingPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7650,7 +9289,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowAvatarPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7774,7 +9413,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowLifePanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7900,7 +9539,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowUniversalPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -7994,7 +9633,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowTeamPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8109,7 +9748,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSaasPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8202,7 +9841,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowBizOpsPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8294,7 +9933,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowComplianceIntelPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8374,7 +10013,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowBoardPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8449,7 +10088,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowInnovationPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8522,7 +10161,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSimWorldPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8596,7 +10235,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOrgOsPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8669,7 +10308,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCompanionPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8750,7 +10389,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOperatingLayerPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8811,7 +10450,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="build" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowDataExport((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8850,7 +10489,1844 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCodeIntel((current) => !current)}>
+              <span>
+                <GitBranch size={15} />
+                Code Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCodeIntel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Code Intelligence · v76.0</strong>
+                  <span>Static, read-only analysis of pasted code — bug-risk scan, refactor plan, metrics, route map, dependencies. Never reads the filesystem or edits code.</span>
+                </div>
+                <form className="stacked-form" onSubmit={(event) => { event.preventDefault(); runCodeAnalyze() }}>
+                  <textarea placeholder="Paste code to analyze…" value={codeIntelText} onChange={(event) => setCodeIntelText(event.target.value)} rows={4} />
+                  <button type="submit" disabled={codeIntelBusy || !codeIntelText.trim()}>{codeIntelBusy ? 'Analyzing…' : 'Analyze code'}</button>
+                </form>
+                {codeIntelResult?.error ? (
+                  <p className="error">{codeIntelResult.error}</p>
+                ) : codeIntelResult && (
+                  <>
+                    <p className="muted">
+                      risk <span className={`feature-badge ${codeIntelResult.risk_level === 'low' ? 'active' : 'needs_config'}`}>{codeIntelResult.risk_level}</span> · {codeIntelResult.risk_count} findings · {codeIntelResult.metrics?.lines} lines · {codeIntelResult.metrics?.functions} fns
+                    </p>
+                    <div className="agent-template-list">
+                      {codeIntelResult.bug_risks?.slice(0, 8).map((f, i) => (
+                        <div key={i} className="agent-template-card">
+                          <strong><span className={`feature-badge ${f.severity === 'high' ? 'needs_config' : f.severity === 'medium' ? 'demo_safe' : 'active'}`}>{f.severity}</span> line {f.line}</strong>
+                          <span className="gs-trace">{f.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="agent-template-card">
+                      <strong>Refactor plan</strong>
+                      {codeIntelResult.suggested_refactors?.map((s, i) => (<span key={i} className="home-action">• {s}</span>))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">Static analysis of submitted text only — read-only, no edits, no filesystem access.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowResearchAgent2((current) => !current)}>
+              <span><Library size={15} /> Research Agent</span>
+              <ChevronDown size={15} />
+            </button>
+            {showResearchAgent2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Research Agent · v77.0</strong>
+                  <span>Claim extraction, citation-quality brief, and bias flagging for research text.</span>
+                </div>
+                <textarea value={researchAgentText} onChange={(event) => setResearchAgentText(event.target.value)} rows={3} />
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runResearchAgent2('claims')} disabled={researchAgentBusy}>Claims</button>
+                  <button type="button" onClick={() => runResearchAgent2('bias')} disabled={researchAgentBusy}>Bias flags</button>
+                  <button type="button" onClick={() => runResearchAgent2('brief')} disabled={researchAgentBusy}>Brief</button>
+                </div>
+                {researchAgentResult?.error ? <p className="error">{researchAgentResult.error}</p> : researchAgentResult && (
+                  <div className="agent-template-card dev-result">
+                    {researchAgentResult.mode === 'bias' && (
+                      <>
+                        <strong>Bias check <span className={`feature-badge ${researchAgentResult.data.risk === 'low' ? 'active' : 'needs_config'}`}>{researchAgentResult.data.risk}</span> · {researchAgentResult.data.count} flag(s)</strong>
+                        <div className="dev-tags">{(researchAgentResult.data.flags || []).map((f) => <span className="dev-tag" key={f}>{f}</span>)}</div>
+                      </>
+                    )}
+                    {researchAgentResult.mode === 'claims' && (
+                      <>
+                        <strong>{researchAgentResult.data.claim_count} claims · {researchAgentResult.data.evidence_count} evidence</strong>
+                        {(researchAgentResult.data.rows || []).slice(0, 6).map((r, i) => (
+                          <p className="dev-line" key={i}><span className={`feature-badge ${r.type === 'evidence' ? 'active' : 'demo_safe'}`}>{r.type}</span> {r.statement}</p>
+                        ))}
+                      </>
+                    )}
+                    {researchAgentResult.mode === 'brief' && (
+                      <>
+                        <strong>Research brief</strong>
+                        <p className="dev-line">Avg citation quality <strong>{researchAgentResult.data.average_citation_quality}/100</strong> · {researchAgentResult.data.contradiction_count} contradiction(s)</p>
+                        <button type="button" className="master-fb" onClick={() => downloadFile('research-brief.md', researchAgentResult.data.content, 'text/markdown')}>Download brief</button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowBizIntel2((current) => !current); if (!bizIntel2) refreshBizIntel2() }}>
+              <span><BarChart3 size={15} /> Business Intelligence</span>
+              <ChevronDown size={15} />
+            </button>
+            {showBizIntel2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Business Intelligence · v78.0</strong>
+                  <span>KPIs, pipeline, proposal tracking, mock forecast, and business risk register.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshBizIntel2} disabled={bizIntelBusy}>Refresh</button>
+                  <button type="button" onClick={downloadBizIntelReport}>Download report</button>
+                </div>
+                {bizIntel2?.error ? <p className="error">{bizIntel2.error}</p> : bizIntel2 && (
+                  <>
+                    <div className="analytics-mini-grid">
+                      {Object.entries(bizIntel2.kpis || {}).slice(0, 6).map(([key, value]) => (
+                        <div key={key}><span>{key.replaceAll('_', ' ')}</span><strong>{String(value)}</strong></div>
+                      ))}
+                    </div>
+                    {(bizIntel2.risk_register?.risks || []).slice(0, 4).map((risk, index) => (
+                      <p className="muted" key={index}>• {typeof risk === 'string' ? risk : JSON.stringify(risk)}</p>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowMeetingIntel2((current) => !current)}>
+              <span><MessageSquarePlus size={15} /> Meeting Intelligence</span>
+              <ChevronDown size={15} />
+            </button>
+            {showMeetingIntel2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Meeting Intelligence · v79.0</strong>
+                  <span>Transcript summary, decisions, action items, follow-up drafts, and goal conversion.</span>
+                </div>
+                <textarea value={meetingIntelText} onChange={(event) => setMeetingIntelText(event.target.value)} rows={3} />
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runMeetingIntel2('analyze')} disabled={meetingIntelBusy}>Analyze</button>
+                  <button type="button" onClick={() => runMeetingIntel2('goal')} disabled={meetingIntelBusy}>To goal</button>
+                </div>
+                {meetingIntelResult?.error ? <p className="error">{meetingIntelResult.error}</p> : meetingIntelResult && (
+                  <div className="agent-template-card dev-result">
+                    {meetingIntelResult.mode === 'goal' ? (
+                      <>
+                        <strong>Proposed goal: {meetingIntelResult.data.proposed_goal?.title}</strong>
+                        <p className="dev-line">{meetingIntelResult.data.task_count} task(s) proposed (planning-only)</p>
+                        {(meetingIntelResult.data.proposed_tasks || []).slice(0, 6).map((t, i) => (
+                          <p className="dev-line" key={i}>• {t.title}{t.owner ? ` — ${t.owner}` : ''}</p>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        <p className="dev-line"><strong>Summary:</strong> {meetingIntelResult.data.summary}</p>
+                        {meetingIntelResult.data.decisions?.length > 0 && <div className="dev-section-title">Decisions</div>}
+                        {(meetingIntelResult.data.decisions || []).slice(0, 4).map((d, i) => <p className="dev-line" key={i}>• {d}</p>)}
+                        {meetingIntelResult.data.action_items?.length > 0 && <div className="dev-section-title">Action items</div>}
+                        {(meetingIntelResult.data.action_items || []).slice(0, 6).map((a, i) => (
+                          <p className="dev-line" key={i}>• {a.item}{a.owner ? <span className="dev-tag" style={{ marginLeft: 6 }}>{a.owner}</span> : ''}</p>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCollab2((current) => !current)}>
+              <span><Bot size={15} /> Multi-Agent Collaboration</span>
+              <ChevronDown size={15} />
+            </button>
+            {showCollab2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Multi-Agent Collaboration · v80.0</strong>
+                  <span>Compare agent positions, disagreements, reviewer pass, consensus, and final decision.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runCollab2}>
+                  <input value={collabTopic} onChange={(event) => setCollabTopic(event.target.value)} placeholder="Topic" />
+                  <input value={collabRoleA} onChange={(event) => setCollabRoleA(event.target.value)} placeholder="Role A" />
+                  <textarea value={collabPositionA} onChange={(event) => setCollabPositionA(event.target.value)} rows={2} />
+                  <input value={collabRoleB} onChange={(event) => setCollabRoleB(event.target.value)} placeholder="Role B" />
+                  <textarea value={collabPositionB} onChange={(event) => setCollabPositionB(event.target.value)} rows={2} />
+                  <button type="submit" disabled={collabBusy}>Analyze collaboration</button>
+                </form>
+                {collabResult?.error ? <p className="error">{collabResult.error}</p> : collabResult && (
+                  <div className="agent-template-card">
+                    <strong>{collabResult.final_decision?.recommended_by ? `Recommended by ${collabResult.final_decision.recommended_by}` : 'Collaboration result'}</strong>
+                    <span className="gs-trace">{Array.isArray(collabResult.consensus_summary) ? collabResult.consensus_summary.join(', ') : collabResult.consensus_summary}</span>
+                    {collabResult.final_decision?.position && <span className="home-action">{collabResult.final_decision.position}</span>}
+                    {(collabResult.disagreement_notes || []).slice(0, 4).map((note, index) => (
+                      <span className="home-action" key={index}>• {typeof note === 'string' ? note : `${(note.between || []).join(' vs ') || 'agents'}: ${note.reason || JSON.stringify(note)}`}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowPerm3((current) => !current); if (!permProfiles) refreshPerm3() }}>
+              <span><Shield size={15} /> Permission System</span>
+              <ChevronDown size={15} />
+            </button>
+            {showPerm3 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Permission System · v81.0</strong>
+                  <span>Permission profiles, action evaluation, and approval decisions before risky work.</span>
+                </div>
+                <input value={permAction} onChange={(event) => setPermAction(event.target.value)} placeholder="Action to evaluate" />
+                <div className="inline-actions">
+                  <button type="button" onClick={runPermEval} disabled={permBusy}>Evaluate</button>
+                  <button type="button" onClick={createPermProfile} disabled={permBusy}>Create profile</button>
+                  <button type="button" onClick={refreshPerm3} disabled={permBusy}>Refresh</button>
+                </div>
+                {permEval && <p className="muted">decision: <strong>{permEval.decision || permEval.effect}</strong> · {permEval.explanation || permEval.reason}</p>}
+                {(permProfiles?.profiles || []).slice(0, 5).map((profile) => (
+                  <div className="agent-template-card" key={profile.profile_id}>
+                    <strong>{profile.name}</strong>
+                    <span className="gs-trace">{profile.action_pattern} · {profile.effect} · {profile.risk_level}</span>
+                    <button type="button" onClick={() => deletePermProfile(profile.profile_id)} disabled={permBusy}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowGovConsole((current) => !current); if (!govConsole) refreshGovConsole() }}>
+              <span><ShieldAlert size={15} /> Governance Console</span>
+              <ChevronDown size={15} />
+            </button>
+            {showGovConsole && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Governance Console · v82.0</strong>
+                  <span>Blocked ratio, risk summaries, policy violations, injection warnings, approval and external audit.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshGovConsole} disabled={govBusy}>Refresh</button>
+                  <button type="button" onClick={() => downloadGovConsole('markdown')}>Markdown</button>
+                  <button type="button" onClick={() => downloadGovConsole('json')}>JSON</button>
+                </div>
+                {govConsole?.error ? <p className="error">{govConsole.error}</p> : govConsole && (
+                  <div className="dev-result">
+                    <div className="dev-stats">
+                      <div className="dev-stat"><strong>{govConsole.total_events}</strong><span>events</span></div>
+                      <div className="dev-stat"><strong>{govConsole.blocked_events}</strong><span>blocked</span></div>
+                      <div className="dev-stat"><strong>{govConsole.blocked_ratio_pct}%</strong><span>blocked ratio</span></div>
+                    </div>
+                    <div className="dev-row"><span>Risk (high / med / low)</span><span>{govConsole.by_risk?.high} / {govConsole.by_risk?.medium} / {govConsole.by_risk?.low}</span></div>
+                    <div className="dev-row"><span>Policy violations</span><span>{govConsole.policy_violations?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>Prompt-injection warnings</span><span>{govConsole.prompt_injection_warnings?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>Secret/PII events</span><span>{govConsole.secret_redactions?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>Approval audit</span><span>{govConsole.approval_audit?.count ?? 0}</span></div>
+                    <div className="dev-row"><span>External-action audit</span><span>{govConsole.external_action_audit?.count ?? 0}</span></div>
+                    {govConsole.top_actions?.length > 0 && <div className="dev-section-title">Top actions</div>}
+                    {(govConsole.top_actions || []).slice(0, 5).map((a) => (
+                      <div className="dev-row" key={a.action}><span>{a.action}</span><span>{a.count}</span></div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowDataManager((current) => !current); if (!dataManager) refreshDataManager() }}>
+              <span><Database size={15} /> Local Data Manager</span>
+              <ChevronDown size={15} />
+            </button>
+            {showDataManager && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Local Data Manager · v83.0</strong>
+                  <span>Browse local collections, usage totals, cleanup suggestions, and redaction previews.</span>
+                </div>
+                <input value={dataManagerCollection} onChange={(event) => setDataManagerCollection(event.target.value)} placeholder="collection name" />
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshDataManager} disabled={dataManagerBusy}>Refresh</button>
+                  <button type="button" onClick={runDataManagerPreview} disabled={dataManagerBusy}>Redaction preview</button>
+                </div>
+                {dataManager?.error ? <p className="error">{dataManager.error}</p> : dataManager && (
+                  <div className="dev-result">
+                    <p className="muted">{dataManager.count} collections</p>
+                    {(dataManager.collections || []).slice(0, 10).map((c) => (
+                      <div className="dev-row" key={c.collection}><span>{c.collection.replace('.json', '')}</span><span>{c.records} · {(c.bytes / 1024).toFixed(1)}KB</span></div>
+                    ))}
+                  </div>
+                )}
+                {dataManagerPreview && (
+                  <div className="agent-template-card dev-result">
+                    <strong>Redaction preview: {dataManagerPreview.total_matches} sensitive match(es)</strong>
+                    <div className="dev-tags">{Object.entries(dataManagerPreview.sensitive_matches || {}).map(([k, v]) => <span className="dev-tag" key={k}>{k}: {v}</span>)}</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowImportCenter((current) => !current)}>
+              <span><Paperclip size={15} /> Import Center</span>
+              <ChevronDown size={15} />
+            </button>
+            {showImportCenter && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Import Center · v84.0</strong>
+                  <span>Preview, sanitize, and commit imported document, CSV, markdown, chat, or project notes.</span>
+                </div>
+                <select value={importCenterKind} onChange={(event) => setImportCenterKind(event.target.value)}>
+                  {['document', 'csv', 'markdown', 'chat_history', 'project_notes'].map((kind) => <option key={kind}>{kind}</option>)}
+                </select>
+                <textarea value={importCenterContent} onChange={(event) => setImportCenterContent(event.target.value)} rows={3} />
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runImportCenter('preview')} disabled={importCenterBusy}>Preview</button>
+                  <button type="button" onClick={() => runImportCenter('commit')} disabled={importCenterBusy}>Commit</button>
+                </div>
+                {importCenterResult?.error ? <p className="error">{importCenterResult.error}</p> : importCenterResult && (
+                  <div className="agent-template-card dev-result">
+                    {importCenterResult.imported_count != null ? (
+                      <strong>✓ Imported {importCenterResult.imported_count} record(s) · {importCenterResult.redactions} redaction(s)</strong>
+                    ) : (
+                      <>
+                        <strong>Preview: {importCenterResult.record_count} record(s) · {importCenterResult.redactions} redaction(s)</strong>
+                        {(importCenterResult.preview || []).slice(0, 4).map((r, i) => <p className="dev-line" key={i}>• {r.content}</p>)}
+                      </>
+                    )}
+                  </div>
+                )}
+                {importCenterRecords?.records && <p className="muted">records: {importCenterRecords.records.length}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowExportCenter2((current) => !current)}>
+              <span><Download size={15} /> Export Center</span>
+              <ChevronDown size={15} />
+            </button>
+            {showExportCenter2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Export Center · v85.0</strong>
+                  <span>Portable markdown/JSON exports, package generation, and project case-study export.</span>
+                </div>
+                <select value={exportCenterKind} onChange={(event) => setExportCenterKind(event.target.value)}>
+                  {['chats', 'reports', 'goals', 'memory', 'imported'].map((kind) => <option key={kind}>{kind}</option>)}
+                </select>
+                <select value={exportCenterFormat} onChange={(event) => setExportCenterFormat(event.target.value)}>
+                  <option>markdown</option>
+                  <option>json</option>
+                </select>
+                <div className="inline-actions">
+                  <button type="button" onClick={() => runExportCenter2('export')} disabled={exportCenterBusy}>Export</button>
+                  <button type="button" onClick={() => runExportCenter2('package')} disabled={exportCenterBusy}>Package</button>
+                  <button type="button" onClick={() => runExportCenter2('case')} disabled={exportCenterBusy}>Case study</button>
+                </div>
+                {exportCenterResult?.error ? <p className="error">{exportCenterResult.error}</p> : exportCenterResult && (
+                  <p className="dev-line">✓ Exported <strong>{exportCenterResult.item_count ?? exportCenterResult.total_items ?? ''}</strong> {exportCenterResult.kind || 'item(s)'} as {exportCenterResult.format} — downloaded.</p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="tools" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowPluginMarket((current) => !current); if (!pluginMarket) refreshPluginMarket() }}>
+              <span><Cpu size={15} /> Plugin Marketplace</span>
+              <ChevronDown size={15} />
+            </button>
+            {showPluginMarket && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Plugin Marketplace · v86.0</strong>
+                  <span>Safe plugin catalog with health badges, registration, enable toggles, and mock tests.</span>
+                </div>
+                <form className="stacked-form" onSubmit={registerPluginMarket}>
+                  <input value={pluginName} onChange={(event) => setPluginName(event.target.value)} placeholder="Plugin name" />
+                  <button type="submit" disabled={pluginBusy || !pluginName.trim()}>Register</button>
+                </form>
+                {(pluginMarket?.plugins || pluginMarket?.catalog || []).slice(0, 6).map((plugin) => (
+                  <div className="agent-template-card" key={plugin.plugin_id || plugin.id || plugin.name}>
+                    <strong>{plugin.name} <span className={`feature-badge ${plugin.enabled ? 'active' : 'demo_safe'}`}>{plugin.enabled ? 'enabled' : 'disabled'}</span></strong>
+                    <span className="gs-trace">{plugin.description || plugin.health?.status || 'safe marketplace plugin'} · health {plugin.health?.score ?? 'n/a'}</span>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => runPluginAction(plugin.plugin_id || plugin.id, 'toggle', !plugin.enabled)} disabled={pluginBusy}>Toggle</button>
+                      <button type="button" onClick={() => runPluginAction(plugin.plugin_id || plugin.id, 'test')} disabled={pluginBusy}>Test</button>
+                    </div>
+                  </div>
+                ))}
+                {pluginActivity?.events && <p className="muted">activity events: {pluginActivity.events.length}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="tools" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowIntegrationHub2((current) => !current); if (!integrationHub2) refreshIntegrationHub2() }}>
+              <span><Route size={15} /> Integration Hub</span>
+              <ChevronDown size={15} />
+            </button>
+            {showIntegrationHub2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Integration Hub · v87.0</strong>
+                  <span>Integration readiness cards, connected scopes, last sync, and dry-run checks.</span>
+                </div>
+                <div className="inline-actions"><button type="button" onClick={refreshIntegrationHub2} disabled={integrationBusy}>Refresh</button></div>
+                {(integrationHub2?.cards || integrationHub2?.integrations || []).map((card) => (
+                  <div className="agent-template-card" key={card.integration_id || card.id || card.name}>
+                    <strong>{card.name} <span className={`feature-badge ${card.connected ? 'active' : 'needs_config'}`}>{card.connected ? 'connected' : 'not connected'}</span></strong>
+                    <span className="gs-trace">scopes: {(card.scopes || []).join(', ') || 'none'} · last sync: {card.last_sync || 'never'}</span>
+                    <button type="button" onClick={() => runIntegrationDry(card.integration_id || card.id)} disabled={integrationBusy}>Dry run</button>
+                  </div>
+                ))}
+                {integrationHub2?.dry_run && <p className="muted">dry run: {integrationHub2.dry_run.status || integrationHub2.dry_run.result}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowQaCenter2((current) => !current); if (!qaCenter) refreshQaCenter2() }}>
+              <span><Gauge size={15} /> QA Center</span>
+              <ChevronDown size={15} />
+            </button>
+            {showQaCenter2 && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>QA Center · v88.0</strong>
+                  <span>Release readiness score, verification matrix, failed tracker, and QA record controls.</span>
+                </div>
+                <div className="inline-actions"><button type="button" onClick={refreshQaCenter2} disabled={qaBusy}>Refresh</button></div>
+                {qaCenter && <p className="muted">readiness: <strong>{qaCenter.release_readiness_score ?? qaCenter.readiness_score ?? 'n/a'}</strong></p>}
+                {(qaMatrix?.features || qaMatrix?.matrix || []).slice(0, 8).map((item) => (
+                  <div className="agent-template-card" key={item.feature_key || item.key || item.name}>
+                    <strong>{item.feature_key || item.key || item.name}</strong>
+                    <span className="gs-trace">{item.status || item.result || 'unchecked'}</span>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => recordQaItem(item.feature_key || item.key || item.name, 'pass')} disabled={qaBusy}>Pass</button>
+                      <button type="button" onClick={() => recordQaItem(item.feature_key || item.key || item.name, 'fail')} disabled={qaBusy}>Fail</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowReleaseMgr((current) => !current); if (!releaseMgr) refreshReleaseMgr() }}>
+              <span><Flag size={15} /> Release Manager</span>
+              <ChevronDown size={15} />
+            </button>
+            {showReleaseMgr && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Release Manager · v89.0</strong>
+                  <span>Release checklist, changelog, tag planning, PR summary, and release notes generators.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshReleaseMgr} disabled={releaseBusy}>Refresh</button>
+                  <button type="button" onClick={() => runReleaseMgr('pr')} disabled={releaseBusy}>PR summary</button>
+                  <button type="button" onClick={() => runReleaseMgr('notes')} disabled={releaseBusy}>Release notes</button>
+                </div>
+                {releaseMgr?.error ? <p className="error">{releaseMgr.error}</p> : releaseMgr && (
+                  <div className="dev-result">
+                    {releaseMgr.tag_planner && (
+                      <div className="dev-tags">
+                        <span className="dev-tag">patch {releaseMgr.tag_planner.suggested_patch}</span>
+                        <span className="dev-tag">minor {releaseMgr.tag_planner.suggested_minor}</span>
+                        <span className="dev-tag">major {releaseMgr.tag_planner.suggested_major}</span>
+                      </div>
+                    )}
+                    <div className="dev-section-title">Version checklist</div>
+                    {(releaseMgr.version_checklist || []).slice(0, 6).map((c, i) => <p className="dev-line" key={i}>☐ {c}</p>)}
+                    <button type="button" className="master-fb" style={{ marginTop: 6 }} onClick={async () => { const cl = await getReleaseManagerChangelog(); downloadFile('changelog.md', cl.content, 'text/markdown') }}>Download changelog</button>
+                  </div>
+                )}
+                {releaseResult && <p className="muted">generated: {releaseResult.title || releaseResult.version || releaseResult.format || 'artifact'}</p>}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowLaunchConsole((current) => !current); if (!launchConsole) refreshLaunchConsole() }}>
+              <span><Sparkles size={15} /> Product Launch Console</span>
+              <ChevronDown size={15} />
+            </button>
+            {showLaunchConsole && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Product Launch Console · v90.0</strong>
+                  <span>Capstone readiness dashboard with positioning, feature matrix, demo mode, exports, and launch report.</span>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={refreshLaunchConsole} disabled={launchBusy}>Refresh</button>
+                  <button type="button" onClick={downloadLaunchReport}>Download report</button>
+                </div>
+                {launchConsole?.error ? <p className="error">{launchConsole.error}</p> : launchConsole && (
+                  <div className="dev-result">
+                    <div className="dev-stats">
+                      <div className="dev-stat"><strong>{launchConsole.final_readiness?.score ?? '—'}</strong><span>readiness</span></div>
+                      <div className="dev-stat"><strong>{launchConsole.feature_matrix?.total_features ?? '—'}</strong><span>features</span></div>
+                      <div className="dev-stat"><strong>{launchConsole.milestones?.implementation_versions ?? '—'}</strong><span>versions</span></div>
+                    </div>
+                    <p className="dev-line"><strong>{launchConsole.positioning?.name}</strong> — {launchConsole.positioning?.tagline}</p>
+                    <p className="dev-line">Status: <span className={`feature-badge ${launchConsole.final_readiness?.status === 'launch-ready' ? 'active' : 'demo_safe'}`}>{launchConsole.final_readiness?.status}</span></p>
+                    {launchConsole.positioning?.pillars?.length > 0 && <div className="dev-section-title">Pillars</div>}
+                    {(launchConsole.positioning?.pillars || []).slice(0, 5).map((p, i) => <p className="dev-line" key={i}>• {p}</p>)}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowDocIntel((current) => !current)}>
+              <span>
+                <FileText size={15} />
+                Document Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDocIntel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Document Intelligence · v75.0</strong>
+                  <span>Deterministic, local document tools — contract/risk summary, resume ATS scoring, CSV insight, comparison, Q&A. No external model calls.</span>
+                </div>
+                <form className="stacked-form" onSubmit={(event) => event.preventDefault()}>
+                  <textarea placeholder="Paste text… (for ATS: resume --- keyword1, keyword2)" value={docIntelText} onChange={(event) => setDocIntelText(event.target.value)} rows={3} />
+                  <div className="inline-actions">
+                    <button type="button" onClick={runDocContractRisk} disabled={docIntelBusy || !docIntelText.trim()}>Contract risk</button>
+                    <button type="button" onClick={runDocAts} disabled={docIntelBusy || !docIntelText.trim()}>ATS score</button>
+                  </div>
+                </form>
+                {docIntelResult?.error ? (
+                  <p className="error">{docIntelResult.error}</p>
+                ) : docIntelResult?.mode === 'contract' ? (
+                  <div className="agent-template-card">
+                    <strong>Contract risk: <span className={`feature-badge ${docIntelResult.data.risk_level === 'low' ? 'active' : 'needs_config'}`}>{docIntelResult.data.risk_level}</span></strong>
+                    {docIntelResult.data.flagged_clauses.map((f, i) => (<span key={i} className="gs-trace">• {f.clause}: {f.matched.join(', ')}</span>))}
+                    <span className="gs-trace">{docIntelResult.data.note}</span>
+                  </div>
+                ) : docIntelResult?.mode === 'ats' ? (
+                  <div className="agent-template-card">
+                    <strong>ATS score: {docIntelResult.data.ats_score}%</strong>
+                    <span className="gs-trace">matched: {docIntelResult.data.matched_keywords.join(', ') || 'none'}</span>
+                    <span className="gs-trace">missing: {docIntelResult.data.missing_keywords.join(', ') || 'none'}</span>
+                    <span className="home-action">{docIntelResult.data.recommendation}</span>
+                  </div>
+                ) : null}
+                <p className="muted">Deterministic + local — no external model calls; nothing is stored beyond governance logging.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowProductivity((current) => !current); if (!productivityBrain) refreshProductivity() }}>
+              <span>
+                <Flag size={15} />
+                Productivity Brain
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showProductivity && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Productivity Brain · v74.0</strong>
+                  <span>Priority recommendations, daily focus, blockers, overdue review, goal progress, and "what should I work on now?" — read-only.</span>
+                </div>
+                {productivityBrain && (
+                  <>
+                    {productivityBrain.what_now?.pick && (
+                      <div className="agent-template-card">
+                        <strong>▶ What now: {productivityBrain.what_now.pick}</strong>
+                        <span className="gs-trace">{productivityBrain.what_now.reason}</span>
+                      </div>
+                    )}
+                    <p className="muted">{productivityBrain.open_task_count} open · {productivityBrain.overdue?.length} overdue · {productivityBrain.blockers?.length} blocked · goals {productivityBrain.goal_progress?.avg_progress_pct}%</p>
+                    <div className="agent-template-card">
+                      <strong>Daily focus</strong>
+                      {(productivityBrain.daily_focus || []).map((t, i) => (<span key={i} className="home-action">• {t.title}{t.due_date ? ` (due ${String(t.due_date).slice(0, 10)})` : ''}</span>))}
+                      {(!productivityBrain.daily_focus || productivityBrain.daily_focus.length === 0) && <span className="gs-trace">No open tasks.</span>}
+                    </div>
+                    {productivityBrain.upcoming_deadlines?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Upcoming deadlines</strong>
+                        {productivityBrain.upcoming_deadlines.map((d, i) => (<span key={i} className="gs-trace">• {d.title} — {String(d.due_date).slice(0, 10)}</span>))}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshProductivity()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only — nothing is created or completed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowWorkflowRec((current) => !current)}>
+              <span>
+                <Route size={15} />
+                Workflow Recommender
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWorkflowRec && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Workflow Recommender · v73.0</strong>
+                  <span>Recommends the best workflow for a goal — expected steps, risk level, approval needs, time/complexity, and similar past runs. Planning-only.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runWorkflowRec}>
+                  <input type="text" placeholder="Describe a goal…" value={workflowGoal} onChange={(event) => setWorkflowGoal(event.target.value)} />
+                  <button type="submit" disabled={workflowBusy || !workflowGoal.trim()}>{workflowBusy ? 'Thinking…' : 'Recommend'}</button>
+                </form>
+                {workflowRec?.error ? (
+                  <p className="error">{workflowRec.error}</p>
+                ) : workflowRec && (
+                  <>
+                    <p className="muted">
+                      {workflowRec.task_type} · risk {workflowRec.risk_level} · ~{workflowRec.estimated_minutes}min · {workflowRec.complexity}
+                      {workflowRec.requires_approval ? ' · needs approval' : ''}
+                    </p>
+                    <div className="agent-template-card">
+                      <strong>Recommended steps</strong>
+                      {workflowRec.recommended_workflow?.map((step, i) => (<span key={i} className="home-action">{i + 1}. {step}</span>))}
+                    </div>
+                    {workflowRec.approval_reason && <p className="gs-trace">🔒 {workflowRec.approval_reason}</p>}
+                    {workflowRec.similar_past_runs?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Similar past runs</strong>
+                        {workflowRec.similar_past_runs.map((r, i) => (<span key={i} className="gs-trace">• [{r.domain}] {r.request}</span>))}
+                      </div>
+                    )}
+                  </>
+                )}
+                <p className="muted">Read-only recommendation — nothing is executed; risky steps require approval.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowAgentQuality((current) => !current); if (!agentQuality) refreshAgentQuality() }}>
+              <span>
+                <ThumbsUp size={15} />
+                Agent Quality
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentQuality && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Agent Quality Optimizer · v72.0</strong>
+                  <span>Score trends, weak-agent detection, regression checks, best-agent-by-task, and human-feedback correlation. Read-only analysis.</span>
+                </div>
+                {agentQuality && (
+                  <>
+                    <p className="muted">{agentQuality.agents_tracked} agents · {agentQuality.weak_agents?.length} weak · {agentQuality.regressions?.length} regressed · scale {agentQuality.score_scale}</p>
+                    <div className="agent-template-list">
+                      {agentQuality.score_trends?.slice(0, 8).map((t) => (
+                        <div key={t.agent} className="agent-template-card">
+                          <strong>{t.agent} <span className={`feature-badge ${t.avg_score >= 60 ? 'active' : 'needs_config'}`}>{t.avg_score}</span> {t.trend === 'up' ? '↑' : t.trend === 'down' ? '↓' : '→'}</strong>
+                          <span className="gs-trace">{t.runs} runs · recent {t.recent_avg}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {agentQuality.weak_agents?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Suggestions</strong>
+                        {agentQuality.weak_agents.slice(0, 3).map((w) => (<span key={w.agent} className="home-action">• {w.agent}: {w.suggestion}</span>))}
+                      </div>
+                    )}
+                    {agentQuality.best_by_task?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Best agent by task</strong>
+                        <span className="gs-trace">{agentQuality.best_by_task.slice(0, 6).map((b) => `${b.task_type}:${b.best_agent}(${b.avg_score})`).join(' · ')}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshAgentQuality()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only — no prompts are changed and nothing is executed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="agent" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowContext((current) => !current)}>
+              <span>
+                <Brain size={15} />
+                Smart Context
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showContext && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Smart Context Engine · v71.0</strong>
+                  <span>Plan which memory/files/goals feed an answer — with reasons, budget, dedup, and sensitive-content filtering. Read-only preview.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runContextPlan}>
+                  <input type="text" placeholder="Plan context for a query…" value={contextQuery} onChange={(event) => setContextQuery(event.target.value)} />
+                  <button type="submit" disabled={contextBusy || !contextQuery.trim()}>{contextBusy ? 'Planning…' : 'Plan context'}</button>
+                </form>
+                {contextPlan?.error ? (
+                  <p className="error">{contextPlan.error}</p>
+                ) : contextPlan && (
+                  <>
+                    <p className="muted">{contextPlan.selected_count} selected · {contextPlan.excluded_count} excluded · {contextPlan.used_chars}/{contextPlan.budget_chars} chars</p>
+                    <div className="agent-template-list">
+                      {contextPlan.selected?.map((item, i) => (
+                        <div key={`s${i}`} className="agent-template-card">
+                          <strong>✓ [{item.kind}] <span className="feature-badge active">score {item.score}</span></strong>
+                          <span>{item.preview}</span>
+                          <span className="gs-trace">{item.reason}</span>
+                        </div>
+                      ))}
+                      {contextPlan.excluded?.slice(0, 6).map((item, i) => (
+                        <div key={`e${i}`} className="agent-template-card">
+                          <strong>✗ [{item.kind}]</strong>
+                          <span className="gs-trace">{item.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">Read-only plan — sensitive content is filtered out and never included.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowWsOs((current) => !current); if (!wsOsDashboard) refreshWsOs() }}>
+              <span>
+                <Layers3 size={15} />
+                Workspace OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWsOs && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Workspace OS · v70.0</strong>
+                  <span>Per-workspace overview — dashboard, memory graph, feature usage, agents, reports, timeline, and a health score.</span>
+                </div>
+                {wsOsDashboard?.error ? (
+                  <p className="muted">{wsOsDashboard.error}</p>
+                ) : wsOsDashboard && (
+                  <>
+                    <div className="home-grid">
+                      <div className="home-stat"><strong>{wsOsDashboard.health?.score ?? '—'}</strong><span>health {wsOsDashboard.health?.status}</span></div>
+                      <div className="home-stat"><strong>{wsOsDashboard.memory_graph?.node_count ?? 0}</strong><span>memory nodes</span></div>
+                      <div className="home-stat"><strong>{wsOsDashboard.memory_graph?.edge_count ?? 0}</strong><span>memory edges</span></div>
+                      <div className="home-stat"><strong>{wsOsDashboard.agents?.length ?? 0}</strong><span>agents</span></div>
+                    </div>
+                    <p className="muted">{wsOsDashboard.workspace_name}</p>
+                    <div className="agent-template-card">
+                      <strong>Feature usage</strong>
+                      <span className="gs-trace">{Object.entries(wsOsDashboard.feature_usage || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
+                    </div>
+                    {wsOsDashboard.timeline?.length > 0 && (
+                      <div className="agent-template-list">
+                        {wsOsDashboard.timeline.slice(0, 6).map((event, i) => (
+                          <div key={i} className="agent-template-card">
+                            <strong>[{event.type}] {event.title}</strong>
+                            <span className="gs-trace">{event.timestamp}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshWsOs()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only, workspace-scoped — nothing is created or executed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowInbox((current) => !current); if (!inboxData) refreshInbox() }}>
+              <span>
+                <Flag size={15} />
+                Notifications Inbox
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showInbox && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Notifications Inbox · v69.0</strong>
+                  <span>Actionable alerts — approvals, failed runs, provider fallback, reminders, health — grouped by severity with mark-resolved and source links.</span>
+                </div>
+                {inboxData && (
+                  <p className="muted">{inboxData.count} open{inboxData.by_severity ? ` · ${Object.entries(inboxData.by_severity).map(([s, n]) => `${s}:${n}`).join(' ')}` : ''}</p>
+                )}
+                <div className="agent-template-list">
+                  {(inboxData?.items || []).map((item) => (
+                    <div key={item.id} className="agent-template-card">
+                      <strong><span className={`feature-badge ${item.severity === 'critical' ? 'needs_config' : item.severity === 'warning' ? 'demo_safe' : 'active'}`}>{item.severity}</span> {item.title}</strong>
+                      <span className="gs-trace">{item.type} · {item.source_route}</span>
+                      <div className="master-fb-row">
+                        <button type="button" className="master-fb" onClick={() => handleInboxResolve(item.id)}>Mark resolved</button>
+                      </div>
+                    </div>
+                  ))}
+                  {inboxData && inboxData.count === 0 && <p className="muted">All clear — no open alerts.</p>}
+                </div>
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshInbox()} disabled={inboxBusy}>Refresh</button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowProviders((current) => !current); if (!providerControl) refreshProviderControl() }}>
+              <span>
+                <Gauge size={15} />
+                Provider Control
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showProviders && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Provider Control · v68.0</strong>
+                  <span>Readiness for OpenAI / Claude / Gemini / Mistral / local, model-per-task + real/mock preferences, cost & latency. Key readiness is boolean-only.</span>
+                </div>
+                {providerControl && (
+                  <>
+                    <p className="muted">{providerControl.ready_count}/{providerControl.providers?.length} ready · est cost ${providerControl.cost_estimate_usd}</p>
+                    <div className="agent-template-list">
+                      {providerControl.providers?.map((p) => (
+                        <div key={p.id} className="agent-template-card">
+                          <strong>{p.name} <span className={`feature-badge ${p.ready ? 'active' : 'needs_config'}`}>{p.ready ? 'ready' : 'needs key'}</span></strong>
+                          <span className="gs-trace">~{p.est_latency_ms}ms · ${p.est_cost_per_1k_usd}/1k · keys: {p.required_keys.join(', ') || 'none'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="agent-template-card">
+                      <strong>Capability mode (mock/real)</strong>
+                      {Object.entries(providerControl.capability_modes || {}).map(([cap, mode]) => (
+                        <label key={cap} className="settings-row">
+                          <span>{cap}</span>
+                          <select value={mode} disabled={providerBusy} onChange={(event) => handleCapabilityMode(cap, event.target.value)}>
+                            <option value="mock">mock</option>
+                            <option value="real">real</option>
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">{providerControl?.fallback_policy?.chain || 'Fallback: real when key set + mode real; else mock.'} No secret values are shown.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowSettings((current) => !current); if (!settingsData) refreshSettings() }}>
+              <span>
+                <Cpu size={15} />
+                Settings Center
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSettings && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Settings Center · v67.0</strong>
+                  <span>Central local configuration — provider, modes, features, safety, voice, theme. No secret values are ever stored here.</span>
+                </div>
+                {settingsData?.settings && Object.entries(settingsData.settings).map(([category, keys]) => (
+                  <div key={category} className="agent-template-card">
+                    <strong>{category}</strong>
+                    {Object.entries(keys).map(([key, value]) => (
+                      <label key={key} className="settings-row">
+                        <span>{key}</span>
+                        {typeof value === 'boolean' ? (
+                          <input type="checkbox" checked={value} disabled={settingsBusy} onChange={(event) => handleSettingToggle(category, key, event.target.checked)} />
+                        ) : (
+                          <span className="settings-val">{String(value)}</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                ))}
+                {settingsData?.enforced_safety && (
+                  <details className="master-panel-caps">
+                    <summary>Enforced safety (read-only)</summary>
+                    <div className="agent-template-list">
+                      {settingsData.enforced_safety.map((s, i) => (<div key={i} className="agent-template-card"><span>🔒 {s}</span></div>))}
+                    </div>
+                  </details>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleSettingsReset} disabled={settingsBusy}>Reset to defaults</button>
+                </div>
+                <p className="muted">Preferences only — hard safety boundaries are enforced and cannot be disabled here.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowDemo((current) => !current); if (!demoSummary) refreshDemo() }}>
+              <span>
+                <Sparkles size={15} />
+                Demo / Portfolio Mode
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDemo && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Demo / Portfolio Mode · v66.0</strong>
+                  <span>One-click demo script, guided walkthrough, demo-safe sample data (scoped + resettable), resume bullets, and case-study export.</span>
+                </div>
+                {demoScript?.script?.length > 0 && (
+                  <div className="agent-template-list">
+                    {demoScript.script.map((step) => (
+                      <div key={step.step} className="agent-template-card">
+                        <strong>{step.step}. {step.title}</strong>
+                        <span>{step.action}</span>
+                        <span className="gs-trace">{step.route} · {step.why}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {demoSummary && (
+                  <p className="muted">active demo batches: {demoSummary.active_demo_batches}</p>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleDemoSeed} disabled={demoBusy}>Seed demo data</button>
+                  <button type="button" onClick={handleDemoReset} disabled={demoBusy}>Reset demo data</button>
+                  <button type="button" onClick={handleDemoCaseStudy}>Export case study</button>
+                </div>
+                <p className="muted">Demo content is read-only. Seed/reset only touch demo-tagged records — your data is never removed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowFeatures((current) => !current); if (!featuresData) refreshFeatures() }}>
+              <span>
+                <Library size={15} />
+                Feature Registry
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showFeatures && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Feature Registry · v65.0</strong>
+                  <span>Canonical, searchable map of every feature — service, route, category, and status (active / demo-safe / mock / needs-config).</span>
+                </div>
+                <form className="stacked-form" onSubmit={(event) => { event.preventDefault(); refreshFeatures() }}>
+                  <input type="text" placeholder="Search features…" value={featuresQuery} onChange={(event) => setFeaturesQuery(event.target.value)} />
+                  <div className="inline-actions">
+                    <select value={featuresStatus} onChange={(event) => { setFeaturesStatus(event.target.value); }} aria-label="Status filter">
+                      <option value="">All statuses</option>
+                      {(featuresData?.statuses || ['active', 'demo_safe', 'mock', 'needs_config']).map((s) => (<option key={s} value={s}>{s}</option>))}
+                    </select>
+                    <button type="submit">Search</button>
+                  </div>
+                </form>
+                {featuresData && (
+                  <p className="muted">{featuresData.feature_count} of {featuresData.total_features} features · {featuresData.categories?.length} categories</p>
+                )}
+                <div className="agent-template-list">
+                  {(featuresData?.features || []).map((feature) => (
+                    <div key={feature.key} className="agent-template-card">
+                      <strong>{feature.name} <span className="feature-version">{feature.version}</span></strong>
+                      <span>{feature.category} · {feature.route}</span>
+                      <div className="feature-status-row">
+                        {feature.status.map((s) => (<span key={s} className={`feature-badge ${s}`}>{s}</span>))}
+                      </div>
+                      <div className="master-fb-row">
+                        <button type="button" className="master-fb" onClick={() => handleTryFeature(feature.key)}>Try this feature</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="muted">Read-only discovery — "Try" shows the route to open.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowHome((current) => !current); if (!dashboardHome) refreshHome() }}>
+              <span>
+                <Gauge size={15} />
+                Dashboard Home
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showHome && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Dashboard Home · v64.0</strong>
+                  <span>One professional homepage — Today, active workspace, approvals, recent runs, health, upcoming tasks, and suggested actions.</span>
+                </div>
+                {dashboardHome && (
+                  <>
+                    <div className="home-grid">
+                      <div className="home-stat"><strong>{dashboardHome.today?.events_today ?? 0}</strong><span>events today</span></div>
+                      <div className="home-stat"><strong>{dashboardHome.today?.pending_approvals ?? 0}</strong><span>approvals</span></div>
+                      <div className="home-stat"><strong>{dashboardHome.today?.upcoming_tasks ?? 0}</strong><span>upcoming</span></div>
+                      <div className="home-stat"><strong>{dashboardHome.system_health?.score ?? '—'}</strong><span>health {dashboardHome.system_health?.status}</span></div>
+                    </div>
+                    <p className="muted">workspace: {dashboardHome.active_workspace?.name}</p>
+                    {dashboardHome.suggested_actions?.length > 0 && (
+                      <div className="agent-template-card">
+                        <strong>Suggested next</strong>
+                        <span>{dashboardHome.suggested_actions.map((a, i) => <span key={i} className="home-action">• {a}</span>)}</span>
+                      </div>
+                    )}
+                    {dashboardHome.recent_runs?.length > 0 && (
+                      <div className="agent-template-list">
+                        {dashboardHome.recent_runs.map((run, i) => (
+                          <div key={i} className="agent-template-card">
+                            <strong>{run.domain || 'Routed'}{run.requires_approval ? ' · needs approval' : ''}</strong>
+                            <span>{run.request}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="home-launch">
+                      {dashboardHome.quick_launch?.map((card) => (
+                        <span key={card.route} className="home-launch-card">{card.label}</span>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshHome()}>Refresh</button>
+                </div>
+                <p className="muted">Read-only overview — nothing is created or executed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowActivity((current) => !current); if (!activityTimeline) refreshActivity() }}>
+              <span>
+                <Route size={15} />
+                Activity Timeline
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showActivity && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Activity Timeline · v63.0</strong>
+                  <span>One chronological view of everything the OS did — runs, approvals, tool executions, memory, files, reports, goals. Read-only.</span>
+                </div>
+                <div className="inline-actions">
+                  <select value={activityType} onChange={(event) => { setActivityType(event.target.value); refreshActivity(event.target.value) }} aria-label="Filter by type">
+                    <option value="">All types</option>
+                    {(activityTimeline?.types || []).map((t) => (<option key={t} value={t}>{t}</option>))}
+                  </select>
+                  <button type="button" onClick={() => refreshActivity()} disabled={activityBusy}>Refresh</button>
+                  <button type="button" onClick={handleActivityExport}>Export</button>
+                </div>
+                {activityTimeline && (
+                  <p className="muted">{activityTimeline.event_count} of {activityTimeline.total_available} events{activityTimeline.by_type ? ` · ${Object.entries(activityTimeline.by_type).map(([t, n]) => `${t}:${n}`).join(' ')}` : ''}</p>
+                )}
+                <div className="agent-template-list">
+                  {(activityTimeline?.events || []).map((event, index) => (
+                    <details key={`${event.source_collection}-${index}`} className="activity-event">
+                      <summary>
+                        <span className={`activity-dot ${event.governance_linked ? 'gov' : ''}`} />
+                        [{event.type}] {event.title}{event.status ? ` · ${event.status}` : ''}
+                      </summary>
+                      <div className="activity-detail">
+                        {event.detail && <p>{event.detail}</p>}
+                        <p className="gs-trace">{event.timestamp || 'n/a'} · source: {event.source_collection}{event.actor ? ` · ${event.actor}` : ''}</p>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+                <p className="muted">Read-only chronological aggregation — no secrets, no writes.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowGlobalSearch((current) => !current)}>
+              <span>
+                <Layers3 size={15} />
+                Global Search
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showGlobalSearch && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Global Search · v62.0</strong>
+                  <span>One read-only search across chats, files, goals, agents, memory, workflows, reports, simulations, schedules, and more.</span>
+                </div>
+                <form className="stacked-form" onSubmit={runGlobalSearch}>
+                  <input type="text" placeholder="Search everything…" value={globalSearchQuery} onChange={(event) => setGlobalSearchQuery(event.target.value)} />
+                  <button type="submit" disabled={globalSearchBusy || !globalSearchQuery.trim()}>{globalSearchBusy ? 'Searching…' : 'Search'}</button>
+                </form>
+                {globalSearchSources && (
+                  <p className="muted">{globalSearchSources.total_indexed_items} items across {globalSearchSources.sources?.length} sources</p>
+                )}
+                {globalSearchResults && (
+                  <>
+                    {globalSearchResults.error ? (
+                      <p className="error">{globalSearchResults.error}</p>
+                    ) : (
+                      <p className="muted">{globalSearchResults.result_count} result{globalSearchResults.result_count === 1 ? '' : 's'}{globalSearchResults.by_type && Object.keys(globalSearchResults.by_type).length > 0 ? ` · ${Object.entries(globalSearchResults.by_type).map(([t, n]) => `${t}:${n}`).join(' ')}` : ''}</p>
+                    )}
+                    <div className="agent-template-list">
+                      {(globalSearchResults.results || []).map((result) => (
+                        <div key={`${result.source_collection}-${result.id}-${result.score}`} className="agent-template-card">
+                          <strong>[{result.type}] {result.title}</strong>
+                          <span>{result.preview}</span>
+                          <span className="gs-trace">source: {result.source_collection} · score {result.score}</span>
+                          <div className="master-fb-row">
+                            <button type="button" className="master-fb" onClick={() => useSearchResultAsContext(result)}>Use as context</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="muted">Read-only — nothing is modified. "Use as context" seeds the composer.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowGitIntel((c) => !c); if (!gitStatus) refreshGitIntel() }}>
+              <span>
+                <GitBranch size={15} />
+                Git Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showGitIntel && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Git Intelligence</p>
+                  <p className="ds-sub">Read-only, opt-in repo discovery — reads git metadata only (no code, no secrets, no git commands).</p>
+                  {gitStatus && (
+                    <div style={{ marginTop: 8 }}>
+                      <Badge tone={gitStatus.enabled ? 'success' : 'default'}>{gitStatus.enabled ? `${gitStatus.indexed_repos} repos indexed` : 'not enabled'}</Badge>
+                    </div>
+                  )}
+                </Card>
+                <input className="ds-input" placeholder="Local path to scan (e.g. ~/Projects)" value={gitPath} onChange={(e) => setGitPath(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="primary" size="sm" disabled={gitBusy || !gitPath.trim()} onClick={() => runGitDiscover(true)}>{gitBusy ? 'Scanning…' : 'Discover repos'}</Button>
+                  <Button size="sm" disabled={gitBusy} onClick={() => runGitDiscover(false)}>Load sample</Button>
+                  <Button variant="ghost" size="sm" onClick={refreshGitIntel}>Refresh</Button>
+                </div>
+                {gitRepos.map((repo) => (
+                  <Card key={repo.repo_id} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      {repo.name} <Badge tone={repo.provider === 'local' ? 'default' : 'accent'}>{repo.provider}</Badge>
+                      {repo.is_sample && <Badge tone="warn">sample</Badge>}
+                    </p>
+                    <div className="ds-row"><span>Default branch</span><span>{repo.default_branch || '—'}</span></div>
+                    <div className="ds-row"><span>Branches</span><span>{(repo.branches || []).length}</span></div>
+                    <div className="ds-row"><span>Remote</span><span style={{ fontSize: 11, fontWeight: 400 }}>{repo.remote_url_sanitized || 'none'}</span></div>
+                    {repo.recent_activity?.length > 0 && (
+                      <p className="ds-sub" style={{ marginTop: 8 }}>Latest: {repo.recent_activity[0].message}</p>
+                    )}
+                  </Card>
+                ))}
+                <div className="ds-row" style={{ marginTop: 4 }}>
+                  <span className="ds-title" style={{ fontSize: 13 }}>Real reads</span>
+                  <span style={{ display: 'flex', gap: 6 }}>
+                    <Button size="sm" variant="ghost" disabled={gitReadBusy || !gitPath.trim()} onClick={() => runGitRead('log')}>Log</Button>
+                    <Button size="sm" variant="ghost" disabled={gitReadBusy || !gitPath.trim()} onClick={() => runGitRead('branches')}>Branches</Button>
+                  </span>
+                </div>
+                {gitBranches?.branches && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Branches ({gitBranches.count})</p>
+                    {gitBranches.branches.slice(0, 12).map((b) => (
+                      <div key={b.name} className="ds-row"><span>{b.current ? '● ' : ''}{b.name}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{b.head}</span></div>
+                    ))}
+                  </Card>
+                )}
+                {gitLog?.commits && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Recent commits ({gitLog.count})</p>
+                    {gitLog.commits.slice(0, 12).map((c) => (
+                      <div key={c.sha} style={{ marginTop: 4 }}>
+                        <div className="ds-row"><span>{c.subject}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{c.short}</span></div>
+                        <p className="ds-sub" style={{ fontSize: 11 }}>{c.author} · {(c.date || '').slice(0, 10)}</p>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Discovery + reads are opt-in and read-only (fixed argv, no shell). Any push/merge/PR/deploy would require approval (not built here).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="agent" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowAgentStudio((c) => !c); if (!studioTemplates.length) refreshAgentStudio() }}>
+              <span>
+                <Sparkles size={15} />
+                Agent Studio
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentStudio && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Build your own agent</p>
+                  <p className="ds-sub">Configure a custom agent — role, personality, tools, guardrails, examples. This is configuration + examples, not model training. Test/evaluate are mock-safe.</p>
+                </Card>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {studioTemplates.map((t) => (
+                    <Button key={t.key} size="sm" variant="ghost" onClick={() => applyAgentTemplate(t)}>{t.name}</Button>
+                  ))}
+                </div>
+                <input placeholder="Agent name" value={agentName} onChange={(e) => setAgentName(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                <input placeholder="Role — what should it do?" value={agentRole} onChange={(e) => setAgentRole(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select value={agentTone} onChange={(e) => setAgentTone(e.target.value)}
+                    style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }}>
+                    {['professional', 'friendly', 'direct', 'creative'].map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <Button variant="primary" size="sm" disabled={agentBusy || !agentName.trim()} onClick={handleCreateAgent}>Create agent</Button>
+                </div>
+                {agentProfiles.map((a) => (
+                  <Card key={a.agent_id} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      {a.name} <Badge tone="accent">v{a.version}</Badge>
+                      {a.published_local && <Badge tone="success">published</Badge>}
+                      {a.evaluation?.score != null && <Badge tone={a.evaluation.score >= 60 ? 'success' : 'warn'}>score {a.evaluation.score}{a.evaluation.grade ? ` · ${a.evaluation.grade}` : ''}</Badge>}
+                      {(a.versions?.length > 0) && <Badge tone="default">{a.versions.length} prior</Badge>}
+                    </p>
+                    <p className="ds-sub">{a.role || '—'} · {a.personality?.tone}</p>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                      <input placeholder="Test prompt…" value={agentTestPrompt} onChange={(e) => setAgentTestPrompt(e.target.value)}
+                        style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 10, border: '1px solid var(--ds-line)', background: 'var(--ds-surface-2)', color: 'var(--ds-ink)', fontSize: 12 }} />
+                      <Button size="sm" disabled={agentBusy} onClick={() => handleTestAgent(a.agent_id)}>Test</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'evaluate')}>Evaluate</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'preview')}>Preview</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'duplicate')}>Fork</Button>
+                      <Button size="sm" variant="ghost" disabled={agentBusy} onClick={() => handleAgentAction(a.agent_id, 'publish')}>Publish</Button>
+                    </div>
+                    {agentTestResult && agentTestResult.agent_id === a.agent_id && (
+                      <div style={{ marginTop: 8 }}>
+                        <p className="ds-sub">{agentTestResult.simulated_response}</p>
+                        {agentTestResult.requires_approval && <Badge tone="warn">requires approval</Badge>}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+                <p className="ds-sub">Personalization = config + few-shot examples + evaluation feedback. No base-model training; risky actions always held for approval.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="tools" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowVoiceConsole((c) => !c); if (!voiceSettings) refreshVoiceConsole() }}>
+              <span>
+                <Volume2 size={15} />
+                Voice Console
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showVoiceConsole && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Voice Console</p>
+                  <p className="ds-sub">Tune how spoken answers sound and how push-to-talk behaves. Voice runs in your browser (Web Speech API).</p>
+                  {voiceStatus && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                      <Badge tone="success">push-to-talk only</Badge>
+                      <Badge tone="default">no recording</Badge>
+                      <Badge tone="default">no audio stored</Badge>
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <div className="ds-row"><span>Spoken answers</span>
+                    <Button size="sm" variant={voiceOutputEnabled ? 'primary' : 'ghost'} onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}>{voiceOutputEnabled ? 'On' : 'Off'}</Button>
+                  </div>
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 10 }}>Voice</label>
+                  <select value={voiceSettings?.voice_name || ''} onChange={(e) => saveVoiceSettings({ voice_name: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)', marginTop: 4 }}>
+                    <option value="">Browser default</option>
+                    {availableVoices.map((v) => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+                  </select>
+
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 10 }}>Speed — {(voiceSettings?.rate ?? 1).toFixed(2)}×</label>
+                  <input type="range" min="0.5" max="2" step="0.05" value={voiceSettings?.rate ?? 1} onChange={(e) => saveVoiceSettings({ rate: Number(e.target.value) })} style={{ width: '100%' }} />
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 6 }}>Pitch — {(voiceSettings?.pitch ?? 1).toFixed(2)}</label>
+                  <input type="range" min="0" max="2" step="0.05" value={voiceSettings?.pitch ?? 1} onChange={(e) => saveVoiceSettings({ pitch: Number(e.target.value) })} style={{ width: '100%' }} />
+                  <label className="ds-sub" style={{ display: 'block', marginTop: 6 }}>Volume — {Math.round((voiceSettings?.volume ?? 1) * 100)}%</label>
+                  <input type="range" min="0" max="1" step="0.05" value={voiceSettings?.volume ?? 1} onChange={(e) => saveVoiceSettings({ volume: Number(e.target.value) })} style={{ width: '100%' }} />
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <Button size="sm" variant="primary" onClick={() => { setVoiceOutputEnabled(true); speak('This is how spoken answers will sound.') }}>Test voice</Button>
+                    <Button size="sm" variant="ghost" onClick={stopSpeaking}>Stop</Button>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="ds-row"><span>Show live transcript</span>
+                    <Button size="sm" variant={voiceSettings?.transcript_enabled ? 'primary' : 'ghost'} onClick={() => saveVoiceSettings({ transcript_enabled: !voiceSettings?.transcript_enabled })}>{voiceSettings?.transcript_enabled ? 'On' : 'Off'}</Button>
+                  </div>
+                  <div className="ds-row"><span>Store transcript text <span className="ds-sub">(opt-in)</span></span>
+                    <Button size="sm" variant={voiceSettings?.store_transcripts ? 'primary' : 'ghost'} onClick={() => saveVoiceSettings({ store_transcripts: !voiceSettings?.store_transcripts })}>{voiceSettings?.store_transcripts ? 'On' : 'Off'}</Button>
+                  </div>
+                  <p className="ds-sub" style={{ marginTop: 8 }}>Off by default: only counts and timestamps are recorded, never the words you speak.</p>
+                </Card>
+
+                {voiceSettings?.transcript_enabled && (
+                  <Card>
+                    <div className="ds-row"><span className="ds-title" style={{ fontSize: 13 }}>Push-to-talk {pttListening && <Badge tone="accent">listening…</Badge>}</span>
+                      <span style={{ display: 'flex', gap: 6 }}>
+                        {!pttListening
+                          ? <Button size="sm" variant="primary" onClick={pttStart}>Hold to talk</Button>
+                          : <Button size="sm" variant="ghost" onClick={pttStop}>Stop</Button>}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 8, minHeight: 44, padding: '8px 10px', borderRadius: 10, border: '1px dashed var(--ds-line-strong)', background: 'var(--ds-surface-2)', color: 'var(--ds-ink)', fontSize: 13 }}>
+                      {liveTranscript || <span className="ds-sub">Your words appear here live while you speak. Nothing is recorded or uploaded.</span>}
+                    </div>
+                    {liveTranscript && !pttListening && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                        <Button size="sm" variant="primary" onClick={useTranscriptInComposer}>Use in composer</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setLiveTranscript('')}>Clear</Button>
+                      </div>
+                    )}
+                  </Card>
+                )}
+
+                <Card>
+                  <div className="ds-row"><span>Activity log</span>
+                    <Button size="sm" variant="ghost" onClick={clearVoiceHistory}>Clear</Button>
+                  </div>
+                  {voiceEvents.length === 0 && <p className="ds-sub" style={{ marginTop: 6 }}>No voice activity yet.</p>}
+                  {voiceEvents.slice(0, 8).map((ev) => (
+                    <div key={ev.id} className="ds-row"><span>{ev.kind}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{ev.char_count} chars</span></div>
+                  ))}
+                </Card>
+                <p className="ds-sub">All voice processing stays in your browser. Nothing is recorded, uploaded, or stored as audio.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="tools" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowDesignAgent((c) => !c); if (!designStatus) refreshDesignAgent() }}>
+              <span>
+                <Image size={15} />
+                Design Agent
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDesignAgent && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Design Agent</p>
+                  <p className="ds-sub">Upload a UI/UX screenshot and get Visual · UX · Market analysis. Mock-safe by default; a live model run is opt-in and only sends the image when you enable it.</p>
+                  {designStatus && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                      <Badge tone={designStatus.key_configured ? 'success' : 'default'}>{designStatus.key_configured ? 'live model ready' : 'no key — heuristic mode'}</Badge>
+                      <Badge tone="default">{designStatus.model}</Badge>
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <label className="ds-btn" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                    {designImageName ? `📎 ${designImageName}` : 'Choose image…'}
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onDesignFile} style={{ display: 'none' }} />
+                  </label>
+                  {designImage && <img src={designImage} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 10, marginTop: 8, border: '1px solid var(--ds-line)' }} />}
+
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                    {['visual', 'ux', 'market'].map((lens) => (
+                      <Button key={lens} size="sm" variant={designLenses.includes(lens) ? 'primary' : 'ghost'} onClick={() => toggleDesignLens(lens)}>{lens}</Button>
+                    ))}
+                  </div>
+                  <textarea placeholder="Optional context — product, audience, a specific question…" value={designContext} onChange={(e) => setDesignContext(e.target.value)}
+                    style={{ width: '100%', marginTop: 8, minHeight: 54, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)', resize: 'vertical' }} />
+
+                  <div className="ds-row" style={{ marginTop: 8 }}>
+                    <span>Use live model {!designStatus?.key_configured && <span className="ds-sub">(set OPENROUTER_API_KEY)</span>}</span>
+                    <Button size="sm" variant={designLive ? 'primary' : 'ghost'} disabled={!designStatus?.key_configured} onClick={() => setDesignLive((v) => !v)}>{designLive ? 'On' : 'Off'}</Button>
+                  </div>
+                  {designLive && <p className="ds-sub">⚠ Live run sends this image to {designStatus?.model} via OpenRouter.</p>}
+
+                  <div style={{ marginTop: 10 }}>
+                    <Button variant="primary" size="sm" disabled={designBusy || !designImage || designLenses.length === 0} onClick={handleAnalyzeDesign}>
+                      {designBusy ? 'Analyzing…' : 'Analyze design'}
+                    </Button>
+                  </div>
+                </Card>
+
+                {designResult && (
+                  <Card>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                      <Badge tone={designResult.mode === 'live' ? 'accent' : designResult.mode === 'error' ? 'warn' : 'default'}>{designResult.mode}</Badge>
+                    </div>
+                    {designResult.note && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{designResult.note}</p>}
+                    {designResult.sections.map((s) => (
+                      <div key={s.lens} style={{ marginTop: 8 }}>
+                        <p className="ds-title" style={{ fontSize: 13 }}>{s.title}</p>
+                        <div className="ds-sub" style={{ fontSize: 12 }}><ReactMarkdown remarkPlugins={[remarkGfm]}>{s.body}</ReactMarkdown></div>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Ported from the Multimodal Design Agent. Key is read from the environment (never stored/logged); image bytes are never persisted.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowRepoFinder((c) => !c)}>
+              <span>
+                <GitBranch size={15} />
+                Repo Finder
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showRepoFinder && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Repo Finder</p>
+                  <p className="ds-sub">Describe what you need (e.g. “multi-agent framework”, “voice assistant”) and get relevant GitHub repos to compare — with stars, language, and topics.</p>
+                </Card>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input placeholder="What are you looking for?" value={repoQuery} onChange={(e) => setRepoQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleRepoSearch() }}
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                  <Button variant="primary" size="sm" disabled={repoBusy || !repoQuery.trim()} onClick={() => handleRepoSearch()}>{repoBusy ? '…' : 'Find'}</Button>
+                </div>
+                {repoResult?.related_topics?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {repoResult.related_topics.map((t) => (
+                      <Button key={t} size="sm" variant="ghost" disabled={repoBusy} onClick={() => handleRepoSearch(t)}>{t}</Button>
+                    ))}
+                  </div>
+                )}
+                {repoResult?.note && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{repoResult.note}</p>}
+                {repoResult && repoResult.count === 0 && !repoResult.note && <p className="ds-sub">No repositories found.</p>}
+                {repoResult?.results?.map((r) => (
+                  <Card key={r.full_name} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      <a href={r.url} target="_blank" rel="noreferrer" style={{ color: 'var(--ds-accent)', textDecoration: 'none' }}>{r.full_name}</a>
+                      {' '}<Badge tone="default">★ {r.stars.toLocaleString()}</Badge>
+                      {r.language && <Badge tone="accent">{r.language}</Badge>}
+                    </p>
+                    <p className="ds-sub">{r.description || '—'}</p>
+                    {r.topics?.length > 0 && <p className="ds-sub" style={{ fontSize: 11 }}>{r.topics.slice(0, 6).map((t) => `#${t}`).join(' ')}</p>}
+                  </Card>
+                ))}
+                <p className="ds-sub">Read-only search of public GitHub. Set GITHUB_TOKEN in the backend env for higher rate limits (token is never stored or shown).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowAdaptive((c) => !c); if (!adaptiveStatus) refreshAdaptive() }}>
+              <span>
+                <Brain size={15} />
+                Adaptive Learning
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAdaptive && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Adaptive Learning</p>
+                  <p className="ds-sub">Learns from your history + repo data to surface relevant context and few-shot examples. This is retrieval memory (RAG) — it does <b>not</b> train or fine-tune any model, and stores no secrets.</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                    <Badge tone="success">no model training</Badge>
+                    <Badge tone="default">local · reversible</Badge>
+                    {adaptiveStatus && <Badge tone="accent">{adaptiveItems.length} learned</Badge>}
+                  </div>
+                </Card>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="primary" size="sm" disabled={adaptiveBusy} onClick={handleAdaptiveLearn}>{adaptiveBusy ? 'Learning…' : 'Auto-learn now'}</Button>
+                </div>
+                {adaptiveNote && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{adaptiveNote}</p>}
+
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input placeholder="Ask what it learned…" value={adaptiveQuery} onChange={(e) => setAdaptiveQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAdaptiveRecommend() }}
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                  <Button size="sm" disabled={adaptiveBusy || !adaptiveQuery.trim()} onClick={handleAdaptiveRecommend}>Recall</Button>
+                </div>
+                {adaptiveRecs && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Relevant learned context ({adaptiveRecs.count})</p>
+                    {adaptiveRecs.count === 0 && <p className="ds-sub">Nothing learned matches yet — try Auto-learn.</p>}
+                    {adaptiveRecs.recommendations?.map((r, i) => (
+                      <div key={i} className="ds-row"><span><Badge tone="default">{r.kind}</Badge> {r.text}</span><span style={{ fontSize: 11, fontWeight: 400 }}>×{r.weight}</span></div>
+                    ))}
+                  </Card>
+                )}
+                {adaptiveItems.length > 0 && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Memory ({adaptiveItems.length})</p>
+                    {adaptiveItems.slice(0, 10).map((it) => (
+                      <div key={it.id} className="ds-row">
+                        <span><Badge tone="default">{it.kind}</Badge> {it.text.slice(0, 60)}</span>
+                        <Button size="sm" variant="ghost" onClick={() => handleAdaptiveForget(it.id)}>Forget</Button>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Personalization = retrieval + few-shot + preference feedback. No base-model retraining, ever.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowToday((c) => !c); if (!todayData) refreshToday() }}>
+              <span>
+                <Sparkles size={15} />
+                Today
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showToday && todayData && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Today</p>
+                  <p className="ds-sub">{todayData.highlights?.join(' · ')}</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                    {Object.entries(todayData.metrics || {}).map(([k, v]) => (
+                      <Badge key={k} tone="default">{v} {k.replace(/_/g, ' ')}</Badge>
+                    ))}
+                  </div>
+                </Card>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {todayData.quick_actions?.map((a) => (
+                    <Button key={a.id} size="sm" variant="ghost" onClick={() => runQuickAction(a.id)}>{a.label}</Button>
+                  ))}
+                  <Button size="sm" variant="ghost" onClick={refreshToday}>Refresh</Button>
+                </div>
+                {todayData.recent_activity?.length > 0 && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Recent activity</p>
+                    {todayData.recent_activity.slice(0, 8).map((e, i) => (
+                      <div key={i} className="ds-row"><span>{e.agent || e.action_type}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{e.action_type}</span></div>
+                    ))}
+                  </Card>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowWorkflows((c) => !c); if (!workflowTemplates.length) refreshWorkflows() }}>
+              <span>
+                <Workflow size={15} />
+                Durable Workflows
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showWorkflows && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Durable Workflows</p>
+                  <p className="ds-sub">Long-running, resumable runs. Each step is checkpointed so a run survives restarts; risky steps (send/deploy/pay/…) halt for approval and never auto-run. Execution is simulated (mock-safe).</p>
+                </Card>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {workflowTemplates.map((t) => (
+                    <Button key={t.key} size="sm" variant="ghost" disabled={durableBusy}
+                      onClick={() => runWorkflowAction(() => startWorkflowRun({ template: null, name: t.name, steps: t.steps }))}>
+                      ▶ {t.name}
+                    </Button>
+                  ))}
+                </div>
+                {workflowRuns.length === 0 && <p className="ds-sub">No runs yet — start one from a template above.</p>}
+                {workflowRuns.slice(0, 6).map((run) => {
+                  const tone = run.status === 'completed' ? 'success'
+                    : run.status === 'waiting_approval' ? 'warn'
+                    : run.status === 'cancelled' ? 'default' : 'accent'
+                  const doneCount = (run.steps || []).filter((s) => s.status === 'done' || s.status === 'skipped').length
+                  return (
+                    <Card key={run.run_id} hover>
+                      <p className="ds-title" style={{ fontSize: 14 }}>
+                        {run.name} <Badge tone={tone}>{run.status.replace('_', ' ')}</Badge>
+                        <Badge tone="default">{doneCount}/{(run.steps || []).length}</Badge>
+                      </p>
+                      <div style={{ marginTop: 6 }}>
+                        {(run.steps || []).map((s) => (
+                          <div key={s.id} className="ds-row">
+                            <span style={{ opacity: s.status === 'pending' ? 0.5 : 1 }}>
+                              {s.status === 'done' ? '✓' : s.status === 'skipped' ? '⤼' : s.status === 'waiting_approval' ? '⏸' : '•'} {s.name}
+                            </span>
+                            {s.requires_approval && <Badge tone="warn">approval</Badge>}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                        {run.status === 'waiting_approval' && (
+                          <>
+                            <Button size="sm" variant="primary" disabled={durableBusy} onClick={() => runWorkflowAction(() => approveWorkflowStep(run.run_id, true))}>Approve step</Button>
+                            <Button size="sm" variant="ghost" disabled={durableBusy} onClick={() => runWorkflowAction(() => approveWorkflowStep(run.run_id, false))}>Reject</Button>
+                          </>
+                        )}
+                        {run.status === 'running' && <Button size="sm" variant="ghost" disabled={durableBusy} onClick={() => runWorkflowAction(() => pauseWorkflowRun(run.run_id))}>Pause</Button>}
+                        {run.status === 'paused' && <Button size="sm" variant="primary" disabled={durableBusy} onClick={() => runWorkflowAction(() => resumeWorkflowRun(run.run_id))}>Resume</Button>}
+                        {!['completed', 'cancelled'].includes(run.status) && <Button size="sm" variant="ghost" disabled={durableBusy} onClick={() => runWorkflowAction(() => cancelWorkflowRun(run.run_id))}>Cancel</Button>}
+                      </div>
+                    </Card>
+                  )
+                })}
+                {workflowEffects.length > 0 && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Actions performed ({workflowEffects.length})</p>
+                    {workflowEffects.slice(0, 8).map((e) => (
+                      <div key={e.effect_id} className="ds-row">
+                        <span><Badge tone="success">{e.action_type}</Badge> {e.params?.title || e.params?.message || ''}</span>
+                        <span style={{ fontSize: 11, fontWeight: 400 }}>{(e.created_at || '').slice(0, 10)}</span>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Approval-gated and governance-logged. Most steps simulate; steps with a whitelisted internal action (create_task · create_note · notify) perform a real, local, reversible effect only after you approve — never an external mutation.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="build" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowMarketplaceHub((c) => !c); if (!marketplaceListings.length) refreshMarketplaceHub() }}>
+              <span>
+                <Store size={15} />
+                Marketplace
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showMarketplaceHub && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Marketplace</p>
+                  <p className="ds-sub">Install agents and workflows as sanitized, local bundles. No network, no accounts — installing re-derives guardrails so risky powers always start held for approval.</p>
+                </Card>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['', 'agent', 'workflow'].map((k) => (
+                    <Button key={k || 'all'} size="sm" variant={marketplaceKind === k ? 'primary' : 'ghost'}
+                      onClick={() => { setMarketplaceKind(k); refreshMarketplaceHub(k) }}>
+                      {k === '' ? 'All' : k === 'agent' ? 'Agents' : 'Workflows'}
+                    </Button>
+                  ))}
+                </div>
+                {marketplaceNote && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{marketplaceNote}</p>}
+                {marketplaceListings.length === 0 && <p className="ds-sub">No listings.</p>}
+                {marketplaceListings.map((l) => (
+                  <Card key={l.listing_id} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      {l.name} <Badge tone={l.kind === 'agent' ? 'accent' : 'default'}>{l.kind}</Badge>
+                      {l.is_featured && <Badge tone="success">featured</Badge>}
+                    </p>
+                    <p className="ds-sub">{l.summary || '—'}</p>
+                    <div className="ds-row"><span>by {l.publisher}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{l.installs} installs</span></div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <Button size="sm" variant="primary" disabled={marketplaceBusy} onClick={() => handleInstallListing(l)}>Install</Button>
+                      {!l.is_featured && <Button size="sm" variant="ghost" disabled={marketplaceBusy} onClick={() => handleUnpublishListing(l.listing_id)}>Remove</Button>}
+                    </div>
+                  </Card>
+                ))}
+                <p className="ds-sub">Installed agents land in Agent Studio; installed workflows land in Durable Workflows. Bundles carry config only — never secrets.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="agent" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowMasterPanel((current) => !current)}>
+              <span>
+                <Brain size={15} />
+                Master Agent
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showMasterPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Master Agent · v60.1</strong>
+                  <span>Single top-level AI routing across all of v1–v60. Planning-first &amp; approval-gated — risky actions are always held for approval. Not AGI.</span>
+                </div>
+                {masterSummary && (
+                  <p className="muted">
+                    routes: {masterSummary.total_routes} · approvals: {masterSummary.approvals_required} · fallback: {masterSummary.fallback_routes ?? 0}
+                    {masterSummary.avg_confidence != null && <> · avg conf: {Math.round(masterSummary.avg_confidence * 100)}%</>}
+                    {masterSummary.route_accuracy?.accuracy_pct != null && <> · accuracy: {masterSummary.route_accuracy.accuracy_pct}% ({masterSummary.route_accuracy.rated_routes} rated)</>}
+                  </p>
+                )}
+                {masterSummary && Object.keys(masterSummary.by_domain || {}).length > 0 && (
+                  <div className="agent-template-list">
+                    {Object.entries(masterSummary.by_domain).map(([domain, count]) => (
+                      <div key={domain} className="agent-template-card">
+                        <strong>{domain}</strong>
+                        <span>{count} route{count === 1 ? '' : 's'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {masterSummary?.recent?.length > 0 && (
+                  <div className="agent-template-list">
+                    {masterSummary.recent.slice(0, 6).map((run) => (
+                      <div key={run.run_id} className="agent-template-card">
+                        <strong>
+                          {run.primary_domain || 'Routed'}
+                          {run.fallback_used ? ' · fallback' : run.confidence != null ? ` · ${Math.round(run.confidence * 100)}%` : ''}
+                          {run.requires_approval ? ' · needs approval' : ''}
+                        </strong>
+                        <span>{run.request}</span>
+                        <div className="master-fb-row">
+                          {run.feedback ? (
+                            <span className="master-fb-done">{run.feedback.correct ? '✓ marked correct' : '✗ marked wrong'}</span>
+                          ) : (
+                            <>
+                              <button type="button" className="master-fb" onClick={() => handleMasterRouteFeedback(run.run_id, true)}>👍 correct</button>
+                              <button type="button" className="master-fb" onClick={() => handleMasterRouteFeedback(run.run_id, false)}>👎 wrong</button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {masterCapabilities?.capabilities?.length > 0 && (
+                  <details className="master-panel-caps">
+                    <summary>{masterCapabilities.capability_count} capabilities</summary>
+                    <div className="agent-template-list">
+                      {masterCapabilities.capabilities.map((cap) => (
+                        <div key={cap.domain} className="agent-template-card">
+                          <strong>{cap.domain}{cap.risky ? ' · risky' : ''}</strong>
+                          <span>{cap.route} — {(cap.trigger_examples || []).join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshMasterPanel()}>Refresh</button>
+                </div>
+                <p className="muted">{masterSummary?.disclaimer || 'Not AGI — a governed orchestration router over the existing systems. Secret key readiness is boolean-only; risky actions require approval.'}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOs2((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8897,7 +12373,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowScheduled((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8938,7 +12414,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="workspace" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowWsTemplates((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -8975,7 +12451,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowNotifications((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9013,7 +12489,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowOpLayer2((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9058,7 +12534,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowPlaybooks((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9103,7 +12579,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="intel" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowEvalHarness((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9146,7 +12622,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowRetrieval((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9185,7 +12661,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowUsageLedger((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9228,7 +12704,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowHealthMonitor((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9268,7 +12744,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowApprovalsCenter((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9314,7 +12790,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="tools" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowMcpPanel((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9599,7 +13075,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="ops" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowApprovals((current) => !current)}>
               <span>
                 <ShieldAlert size={15} />
@@ -9653,7 +13129,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowAgentJobs((current) => !current)}>
               <span>
                 <Cpu size={15} />
@@ -9750,7 +13226,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowCodexJobs((current) => !current)}>
               <span>
                 <GitBranch size={15} />
@@ -9815,7 +13291,7 @@ function App() {
         )}
 
         {developerMode && (
-          <section className="sidebar-section">
+          <section data-group="agent" className="sidebar-section">
             <button className="analytics-toggle" type="button" onClick={() => setShowSystemPrompts((current) => !current)}>
               <span>
                 <FileText size={15} />
@@ -9861,7 +13337,7 @@ function App() {
           </section>
         )}
 
-        <section className="sidebar-section">
+        <section data-group="agent" className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAgentBuilder((current) => !current)}>
             <span>
               <Layers3 size={15} />
@@ -10045,6 +13521,9 @@ function App() {
                   <span>{imageModeLabel}</span>
                   <span>{workspaces.find((workspace) => workspace.workspace_id === workspaceId)?.name || 'Default Workspace'}</span>
                 </div>
+                <button type="button" className="sa-upgrade" onClick={() => setDeveloperMode(true)} title="Explore all tools">
+                  <Sparkles size={14} /> Upgrade
+                </button>
                 <button
                   type="button"
                   className="theme-toggle-button"
@@ -10069,44 +13548,143 @@ function App() {
           )}
         </header>
 
-        <section className={`chat-scroll ${!developerMode ? 'jarvis-scroll' : ''}`}>
+        <section className="chat-scroll">
           {messages.length === 0 && !loading && !developerMode && (
-            <div className="jarvis-command-center">
-              <div className="jarvis-glow" aria-hidden="true" />
-              <div className="jarvis-ring" aria-hidden="true" />
-              <div className="jarvis-command-header">
-                <h2>EvolveAgent AI</h2>
-                <p>Speak a command or type a mission</p>
+            <div className="master-hero">
+              <div className="sa-today"><span>Today</span></div>
+              <div className="sa-greeting">
+                <p className="sa-greet-hi">Hey — great to meet you!</p>
+                <p>I'm your <strong>Master Agent</strong> — one AI over everything. I can be your <strong>chief of staff</strong> to run your day, a <strong>research assistant</strong> that digs things up, or an <strong>inbox &amp; ops manager</strong> that keeps you on top of things.</p>
+                <p>Or we can just start chatting and figure out the right agent as we go.</p>
+                <p>So — what can I take off your plate?</p>
+                <div className="sa-msg-actions">
+                  <button type="button" onClick={() => { navigator.clipboard?.writeText('Hey — what can I take off your plate?'); }} aria-label="Copy"><Copy size={14} /></button>
+                  <button type="button" onClick={() => { setVoiceOutputEnabled(true); speak('Hey, great to meet you. What can I take off your plate?') }} aria-label="Read aloud"><Volume2 size={14} /></button>
+                  <span className="sa-msg-time">now</span>
+                </div>
               </div>
-              <div className="jarvis-system-readout" aria-label="Capabilities">
-                <span>Agents online</span>
-                <span>Memory active</span>
-                <span>Tools governed</span>
-              </div>
-              <div className="jarvis-command-options">
+              <form className="master-hero-bar" onSubmit={masterSubmit}>
+                <input
+                  type="text"
+                  className="master-hero-input"
+                  placeholder="Ask anything, or say a command… (mcp: … or /help)"
+                  value={masterText}
+                  onChange={(event) => setMasterText(event.target.value)}
+                  disabled={masterBusy}
+                />
                 <button
                   type="button"
-                  className={`jarvis-command-option speak ${listening ? 'active' : ''}`}
-                  onClick={handleJarvisSpeak}
+                  className={`master-hero-mic ${listening ? 'listening' : ''}`}
+                  onClick={startMasterVoice}
+                  aria-label="Push to talk"
+                  title="Push to talk — speak and it routes automatically"
                 >
-                  <span className="jarvis-option-icon">
-                    <Mic size={28} />
-                  </span>
-                  <strong>Speak</strong>
-                  <span className="jarvis-option-subtitle">Start with voice and edit before sending.</span>
+                  <Mic size={18} />
                 </button>
-                <button type="button" className="jarvis-command-option type" onClick={focusComposer}>
-                  <span className="jarvis-option-icon">
-                    <Keyboard size={28} />
-                  </span>
-                  <strong>Type</strong>
-                  <span className="jarvis-option-subtitle">Open the command line for text, files, or goals.</span>
+                <button
+                  type="button"
+                  className={`master-hero-tts ${voiceOutputEnabled ? 'on' : ''} ${speaking ? 'speaking' : ''}`}
+                  onClick={() => { if (speaking) stopSpeaking(); setVoiceOutputEnabled((v) => !v) }}
+                  aria-label="Toggle spoken answers"
+                  title={voiceOutputEnabled ? 'Spoken answers ON — tap to mute' : 'Spoken answers OFF — tap to hear answers'}
+                >
+                  {voiceOutputEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                 </button>
-              </div>
-              {listening && <p className="jarvis-listening">Listening for your command...</p>}
+                <button type="submit" className="master-hero-go" disabled={masterBusy || !masterText.trim()}>
+                  {masterBusy ? <Activity size={16} /> : 'Ask'}
+                </button>
+              </form>
+              {masterText.startsWith('/') && (
+                <div className="master-cli">
+                  {SLASH_COMMANDS.filter((c) => c.cmd.startsWith(masterText.split(' ')[0].toLowerCase())).map((c) => (
+                    <button key={c.cmd} type="button" className="master-cli-cmd" onClick={() => setMasterText(c.cmd + ' ')}>
+                      <strong>{c.cmd}</strong><span>{c.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {listening && <p className="master-hero-hint listening">Listening… speak your request.</p>}
+              {!masterResult && !listening && (
+                <div className="master-hero-chips sa-chips">
+                  {[
+                    { icon: <Flag size={14} />, label: 'Run my day as chief of staff', prompt: 'Act as my chief of staff and plan my day.' },
+                    { icon: <Library size={14} />, label: 'Research a topic for me', prompt: 'Be my research assistant and dig up sources on a topic.' },
+                    { icon: <MessageSquarePlus size={14} />, label: 'Set up inbox & ops mode', prompt: 'Set up an inbox and ops manager workflow.' },
+                    { icon: <Route size={14} />, label: 'Plan a GitHub PR workflow', prompt: 'Plan a GitHub PR workflow.' },
+                  ].map((chip) => (
+                    <button key={chip.label} type="button" className="master-chip sa-chip" onClick={() => askMaster(chip.prompt, false)} disabled={masterBusy}>
+                      <span className="sa-chip-icon">{chip.icon}</span>{chip.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {masterResult && (
+                <div className="master-answer">
+                  {masterResult.requires_approval && (
+                    <div className="master-approval">
+                      <Shield size={15} />
+                      <span>Approval required before anything runs. {masterResult.approval_reasons?.join(' ')}</span>
+                    </div>
+                  )}
+                  <div className="master-answer-head">
+                    <span className="master-badge">{masterResult.intent?.primary_domain || 'Routed'}</span>
+                    {typeof masterResult.confidence === 'number' && (
+                      <span className={`master-confidence ${masterResult.fallback_used ? 'low' : ''}`}>
+                        {masterResult.fallback_used ? 'fallback' : `${Math.round(masterResult.confidence * 100)}% confident`}
+                      </span>
+                    )}
+                    <button type="button" className="master-answer-tts" onClick={() => (speaking ? stopSpeaking() : (setVoiceOutputEnabled(true), speak(masterResult.answer)))}>
+                      {speaking ? <><VolumeX size={13} /> Stop</> : <><Volume2 size={13} /> Read aloud</>}
+                    </button>
+                  </div>
+                  {masterResult.route_explanation && (
+                    <p className="master-why">Why this route: {masterResult.route_explanation}</p>
+                  )}
+                  {masterResult.suggested_workflow && (
+                    <p className="master-workflow">Suggested next: {masterResult.suggested_workflow}</p>
+                  )}
+                  <div className="master-answer-body"><MarkdownMessage content={masterResult.answer || '(no answer)'} /></div>
+
+                  {askSources.length > 0 && (
+                    <div className="master-block">
+                      <h4>Sources</h4>
+                      <div className="master-source-list">
+                        {askSources.map((s, i) => (
+                          <span key={i} className="master-source">{s.label}{s.why ? ` · ${s.why}` : ''}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mcpSuggestions.length > 0 && (
+                    <div className="master-block">
+                      <h4>MCP tools</h4>
+                      <div className="master-source-list">
+                        {mcpSuggestions.map((m) => (
+                          <span key={m.slug} className={`master-mcp ${m.keys_ready ? 'ready' : 'missing'}`}>
+                            {m.name} · {m.keys_ready ? 'keys ready' : `needs ${m.missing_keys.join(', ')}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {askFollowups.length > 0 && (
+                    <div className="master-block">
+                      <h4>Follow-ups</h4>
+                      <div className="master-followups">
+                        {askFollowups.map((q, i) => (
+                          <button key={i} type="button" className="master-followup" onClick={() => askMaster(q, false)} disabled={masterBusy}>{q}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="master-disclaimer">{masterResult.disclaimer}</p>
+                </div>
+              )}
             </div>
           )}
-
           {messages.length === 0 && !loading && developerMode && (
               <div className="chat-empty">
               <div className="empty-orb">
@@ -10395,7 +13973,51 @@ function App() {
           )}
         </section>
 
-        <section className={`chat-composer ${developerMode ? '' : 'jarvis-composer'}`}>
+        {(askSources.length > 0 || askFollowups.length > 0 || mcpSuggestions.length > 0) && (
+          <section className="ask-panel">
+            {askSources.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">Sources</span>
+                <div className="ask-sources">
+                  {askSources.map((src, index) => (
+                    <span key={index} className="ask-source-chip" title={src.text?.slice(0, 200)}>
+                      [{index + 1}] {src.citation}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {mcpSuggestions.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">🔌 Tools this task may need</span>
+                <div className="ask-sources">
+                  {mcpSuggestions.map((s) => (
+                    <span key={s.slug} className={`mcp-suggest-chip ${s.keys_ready ? 'ready' : 'needs-key'}`} title={s.recommended_action}>
+                      {s.name}
+                      {s.missing_keys.length > 0
+                        ? ` · needs ${s.missing_keys.join(', ')} ✗`
+                        : s.already_enabled ? ' · enabled ✓' : ' · key ready ✓'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {askFollowups.length > 0 && (
+              <div className="ask-block">
+                <span className="ask-block-label">Follow-ups</span>
+                <div className="ask-followups">
+                  {askFollowups.map((q, index) => (
+                    <button key={index} type="button" className="ask-followup-chip" onClick={() => submitMessage(q)} disabled={loading}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className={`chat-composer ${developerMode ? '' : 'sa-composer'}`}>
           {developerMode && (
           <div className="composer-controls">
             <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
@@ -10478,6 +14100,18 @@ function App() {
               placeholder={developerMode ? 'Ask EvolveAgent AI anything...' : 'Send a command...'}
               rows={1}
             />
+            {!developerMode && <span className="sa-mode-label">Automatic</span>}
+            {!developerMode && (
+              <button
+                type="button"
+                className={`sa-voice-button ${listening ? 'listening' : ''}`}
+                onClick={startMasterVoice}
+                aria-label="Voice mode"
+                title="Push to talk"
+              >
+                <Activity size={16} />
+              </button>
+            )}
             <button className="send-button" onClick={() => submitMessage()} disabled={loading || uploadingFiles || uploadingRecordings || input.trim().length < 1} aria-label="Send message">
               {loading ? <Activity size={18} /> : <Send size={18} />}
             </button>

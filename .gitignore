@@ -193,6 +193,17 @@ backend/app/data/scheduled_tasks.json
 backend/app/data/scheduled_task_runs.json
 backend/app/data/data_export_log.json
 backend/app/data/os2_snapshots.json
+backend/app/data/master_agent_runs.json
+backend/app/data/git_repos.json
+backend/app/data/agent_profiles.json
+backend/app/data/permission_profiles.json
+backend/app/data/imported_records.json
+backend/app/data/marketplace_plugins.json
+backend/app/data/qa_results.json
+backend/app/data/demo_seed_log.json
+backend/app/data/settings_center.json
+backend/app/data/provider_control.json
+backend/app/data/notifications_inbox.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json
@@ -203,3 +214,6 @@ backend/app/data/*.tmp
 *.log
 logs/
 evolveagent-ai/
+backend/.claude-flow/
+backend/app/data/chief_of_staff_items.json
+backend/app/data/tool_executions.json
