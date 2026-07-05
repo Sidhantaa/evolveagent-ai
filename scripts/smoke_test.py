@@ -56,6 +56,10 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("marketplace-hub", "GET", "/api/marketplace-hub/listings", None, 200),
     ("marketplace-hub", "GET", "/api/marketplace-hub/summary", None, 200),
     ("marketplace-hub", "GET", "/api/marketplace-hub/installs", None, 200),
+    # Design Agent (in-app multimodal analysis)
+    ("design-agent", "GET", "/api/design-agent/status", None, 200),
+    ("design-agent", "GET", "/api/design-agent/summary", None, 200),
+    ("design-agent", "GET", "/api/design-agent/history", None, 200),
     # Master Agent
     ("master-agent", "GET", "/api/master-agent/summary", None, 200),
     ("master-agent", "GET", "/api/master-agent/capabilities", None, 200),

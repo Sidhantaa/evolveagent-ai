@@ -2616,6 +2616,21 @@ export function publishMarketplaceListing(payload) {
 export function unpublishMarketplaceListing(listingId) {
   return delJson(`/api/marketplace-hub/listings/${listingId}`)
 }
+// Design Agent (in-app multimodal analysis)
+export function getDesignAgentStatus() {
+  return getJson('/api/design-agent/status')
+}
+export function analyzeDesign({ image, analyses, context, allowLive }) {
+  return postJson('/api/design-agent/analyze', {
+    image,
+    analyses: analyses || [],
+    context: context || '',
+    allow_live: Boolean(allowLive),
+  })
+}
+export function getDesignAgentHistory(limit = 20) {
+  return getJson(`/api/design-agent/history?limit=${limit}`)
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }

@@ -372,6 +372,8 @@ import {
   getMarketplaceListings,
   installMarketplaceListing,
   unpublishMarketplaceListing,
+  getDesignAgentStatus,
+  analyzeDesign,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -761,6 +763,15 @@ function App() {
   const [marketplaceKind, setMarketplaceKind] = useState('')
   const [marketplaceBusy, setMarketplaceBusy] = useState(false)
   const [marketplaceNote, setMarketplaceNote] = useState('')
+  const [showDesignAgent, setShowDesignAgent] = useState(false)
+  const [designStatus, setDesignStatus] = useState(null)
+  const [designImage, setDesignImage] = useState(null)
+  const [designImageName, setDesignImageName] = useState('')
+  const [designLenses, setDesignLenses] = useState(['visual', 'ux', 'market'])
+  const [designContext, setDesignContext] = useState('')
+  const [designLive, setDesignLive] = useState(false)
+  const [designResult, setDesignResult] = useState(null)
+  const [designBusy, setDesignBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -1451,6 +1462,7 @@ function App() {
       { id: 'open-voice', label: 'Open Voice Console', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowVoiceConsole(true); refreshVoiceConsole() } },
       { id: 'open-workflows', label: 'Open Durable Workflows', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() } },
       { id: 'open-marketplace', label: 'Open Marketplace', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('build'); setShowMarketplaceHub(true); refreshMarketplaceHub() } },
+      { id: 'open-design', label: 'Open Design Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowDesignAgent(true); refreshDesignAgent() } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3381,6 +3393,46 @@ function App() {
       setMarketplaceNote('Featured starter listings cannot be removed.')
     } finally {
       setMarketplaceBusy(false)
+    }
+  }
+
+  async function refreshDesignAgent() {
+    try {
+      setDesignStatus(await getDesignAgentStatus())
+    } catch {
+      // best-effort
+    }
+  }
+
+  function onDesignFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDesignImageName(file.name)
+    const reader = new FileReader()
+    reader.onload = () => setDesignImage(reader.result) // data URL
+    reader.readAsDataURL(file)
+  }
+
+  function toggleDesignLens(lens) {
+    setDesignLenses((cur) => (cur.includes(lens) ? cur.filter((l) => l !== lens) : [...cur, lens]))
+  }
+
+  async function handleAnalyzeDesign() {
+    if (!designImage) return
+    setDesignBusy(true)
+    setDesignResult(null)
+    try {
+      const res = await analyzeDesign({
+        image: designImage,
+        analyses: designLenses,
+        context: designContext,
+        allowLive: designLive && designStatus?.key_configured,
+      })
+      setDesignResult(res)
+    } catch {
+      setDesignResult({ mode: 'error', sections: [], note: 'Analysis failed — is the backend running?' })
+    } finally {
+      setDesignBusy(false)
     }
   }
 
@@ -11635,6 +11687,76 @@ function App() {
                   ))}
                 </Card>
                 <p className="ds-sub">All voice processing stays in your browser. Nothing is recorded, uploaded, or stored as audio.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="tools" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowDesignAgent((c) => !c); if (!designStatus) refreshDesignAgent() }}>
+              <span>
+                <Image size={15} />
+                Design Agent
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showDesignAgent && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Design Agent</p>
+                  <p className="ds-sub">Upload a UI/UX screenshot and get Visual · UX · Market analysis. Mock-safe by default; a live model run is opt-in and only sends the image when you enable it.</p>
+                  {designStatus && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                      <Badge tone={designStatus.key_configured ? 'success' : 'default'}>{designStatus.key_configured ? 'live model ready' : 'no key — heuristic mode'}</Badge>
+                      <Badge tone="default">{designStatus.model}</Badge>
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <label className="ds-btn" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                    {designImageName ? `📎 ${designImageName}` : 'Choose image…'}
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onDesignFile} style={{ display: 'none' }} />
+                  </label>
+                  {designImage && <img src={designImage} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 10, marginTop: 8, border: '1px solid var(--ds-line)' }} />}
+
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                    {['visual', 'ux', 'market'].map((lens) => (
+                      <Button key={lens} size="sm" variant={designLenses.includes(lens) ? 'primary' : 'ghost'} onClick={() => toggleDesignLens(lens)}>{lens}</Button>
+                    ))}
+                  </div>
+                  <textarea placeholder="Optional context — product, audience, a specific question…" value={designContext} onChange={(e) => setDesignContext(e.target.value)}
+                    style={{ width: '100%', marginTop: 8, minHeight: 54, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)', resize: 'vertical' }} />
+
+                  <div className="ds-row" style={{ marginTop: 8 }}>
+                    <span>Use live model {!designStatus?.key_configured && <span className="ds-sub">(set OPENROUTER_API_KEY)</span>}</span>
+                    <Button size="sm" variant={designLive ? 'primary' : 'ghost'} disabled={!designStatus?.key_configured} onClick={() => setDesignLive((v) => !v)}>{designLive ? 'On' : 'Off'}</Button>
+                  </div>
+                  {designLive && <p className="ds-sub">⚠ Live run sends this image to {designStatus?.model} via OpenRouter.</p>}
+
+                  <div style={{ marginTop: 10 }}>
+                    <Button variant="primary" size="sm" disabled={designBusy || !designImage || designLenses.length === 0} onClick={handleAnalyzeDesign}>
+                      {designBusy ? 'Analyzing…' : 'Analyze design'}
+                    </Button>
+                  </div>
+                </Card>
+
+                {designResult && (
+                  <Card>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                      <Badge tone={designResult.mode === 'live' ? 'accent' : designResult.mode === 'error' ? 'warn' : 'default'}>{designResult.mode}</Badge>
+                    </div>
+                    {designResult.note && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{designResult.note}</p>}
+                    {designResult.sections.map((s) => (
+                      <div key={s.lens} style={{ marginTop: 8 }}>
+                        <p className="ds-title" style={{ fontSize: 13 }}>{s.title}</p>
+                        <div className="ds-sub" style={{ fontSize: 12 }}><ReactMarkdown remarkPlugins={[remarkGfm]}>{s.body}</ReactMarkdown></div>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Ported from the Multimodal Design Agent. Key is read from the environment (never stored/logged); image bytes are never persisted.</p>
               </div>
             )}
           </section>
