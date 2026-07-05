@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import { Card } from './components/ui/Card.jsx'
 import { Button } from './components/ui/Button.jsx'
 import { Badge } from './components/ui/Badge.jsx'
+import { CommandPalette } from './components/layout/CommandPalette.jsx'
 import {
   Activity,
   BarChart3,
@@ -715,6 +716,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('evolveagent-theme') || 'dark')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [devSection, setDevSection] = useState('agent')
+  const [cmdkOpen, setCmdkOpen] = useState(false)
   const [showGitIntel, setShowGitIntel] = useState(false)
   const [gitStatus, setGitStatus] = useState(null)
   const [gitRepos, setGitRepos] = useState([])
@@ -1373,6 +1375,39 @@ function App() {
   useEffect(() => {
     if (!developerMode) setSidebarOpen(false)
   }, [developerMode])
+
+  // ⌘K / Ctrl+K opens the command palette.
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        setCmdkOpen((o) => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const commandPaletteCommands = useMemo(() => {
+    const gotoSection = (id) => () => { setDeveloperMode(true); setDevSection(id) }
+    return [
+      { id: 'mode-simple', label: 'Switch to Simple Mode', group: 'Mode', run: () => setDeveloperMode(false) },
+      { id: 'mode-dev', label: 'Switch to Developer Mode', group: 'Mode', run: () => setDeveloperMode(true) },
+      { id: 'new-chat', label: 'New chat', group: 'Chat', run: () => newChat() },
+      { id: 'theme', label: 'Toggle light / dark theme', group: 'Appearance', run: () => toggleTheme() },
+      { id: 'voice', label: 'Toggle spoken answers', group: 'Voice', run: () => setVoiceOutputEnabled((v) => !v) },
+      { id: 'sec-agent', label: 'Go to Agent', group: 'Section', run: gotoSection('agent') },
+      { id: 'sec-workspace', label: 'Go to Workspace', group: 'Section', run: gotoSection('workspace') },
+      { id: 'sec-ops', label: 'Go to Ops', group: 'Section', run: gotoSection('ops') },
+      { id: 'sec-tools', label: 'Go to Tools', group: 'Section', run: gotoSection('tools') },
+      { id: 'sec-intel', label: 'Go to Intelligence', group: 'Section', run: gotoSection('intel') },
+      { id: 'sec-build', label: 'Go to Build & Ship', group: 'Section', run: gotoSection('build') },
+      { id: 'open-git', label: 'Open Git Intelligence', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('workspace'); setShowGitIntel(true); if (!gitStatus) refreshGitIntel() } },
+      { id: 'open-studio', label: 'Open Agent Studio', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowAgentStudio(true); if (!studioTemplates.length) refreshAgentStudio() } },
+      { id: 'open-master', label: 'Open Master Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('agent'); setShowMasterPanel(true) } },
+    ]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gitStatus, studioTemplates])
 
   useEffect(() => {
     refreshWorkspaces()
@@ -5959,6 +5994,10 @@ function App() {
 
   return (
     <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'} ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <CommandPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} commands={commandPaletteCommands} />
+      <button type="button" className="cmdk-trigger" onClick={() => setCmdkOpen(true)} title="Command palette (⌘K)" aria-label="Open command palette">
+        <Terminal size={14} /> <span>⌘K</span>
+      </button>
       {developerMode && sidebarOpen && (
         <button
           type="button"

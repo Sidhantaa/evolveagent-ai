@@ -118,3 +118,66 @@
   .ds-card, .ds-btn { transition: none; }
   .ds-card--hover:hover { transform: none; }
 }
+
+/* ---- Phase 3: ⌘K command palette ---- */
+.cmdk-overlay {
+  position: fixed; inset: 0; z-index: var(--ds-z-command);
+  background: rgba(20, 18, 30, 0.34);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 14vh;
+  animation: cmdkFade var(--ds-dur) var(--ds-ease);
+}
+.cmdk {
+  width: min(620px, 92vw);
+  background: var(--ds-glass);
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--ds-r-xl);
+  box-shadow: var(--ds-shadow-lg);
+  overflow: hidden;
+  animation: cmdkRise var(--ds-dur) var(--ds-ease);
+}
+.cmdk-input {
+  width: 100%; box-sizing: border-box;
+  padding: 18px 20px; border: none; outline: none;
+  background: transparent; color: var(--ds-ink);
+  font-family: var(--ds-font); font-size: 17px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.cmdk-input::placeholder { color: var(--ds-ink-muted); }
+.cmdk-list { max-height: 46vh; overflow-y: auto; padding: 6px; }
+.cmdk-empty { padding: 22px; text-align: center; color: var(--ds-ink-muted); font-size: var(--ds-fs-md); }
+.cmdk-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 14px; border: none; border-radius: var(--ds-r-md);
+  background: transparent; color: var(--ds-ink); cursor: pointer;
+  font-family: var(--ds-font); font-size: var(--ds-fs-md); text-align: left;
+}
+.cmdk-item.active { background: var(--ds-accent); color: var(--ds-accent-ink); }
+.cmdk-item.active .cmdk-group { color: rgba(255, 255, 255, 0.8); }
+.cmdk-icon { display: inline-flex; opacity: 0.85; }
+.cmdk-label { flex: 1; }
+.cmdk-group { font-size: var(--ds-fs-xs); color: var(--ds-ink-muted); }
+.cmdk-footer {
+  display: flex; gap: 16px; padding: 10px 18px;
+  border-top: 1px solid var(--ds-line); background: var(--ds-surface-2);
+  font-size: var(--ds-fs-xs); color: var(--ds-ink-muted);
+}
+@keyframes cmdkFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cmdkRise { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .cmdk-overlay, .cmdk { animation: none; }
+}
+
+/* ⌘K trigger affordance */
+.cmdk-trigger {
+  position: fixed; right: 18px; bottom: 18px; z-index: var(--ds-z-overlay);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: var(--ds-r-pill);
+  background: var(--ds-glass); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border: 1px solid var(--ds-line-strong); color: var(--ds-ink-soft);
+  font-family: var(--ds-font); font-size: var(--ds-fs-sm); cursor: pointer;
+  box-shadow: var(--ds-shadow-md);
+}
+.cmdk-trigger:hover { color: var(--ds-ink); border-color: var(--ds-accent); }
