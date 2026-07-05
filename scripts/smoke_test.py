@@ -62,6 +62,9 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("design-agent", "GET", "/api/design-agent/status", None, 200),
     ("design-agent", "GET", "/api/design-agent/summary", None, 200),
     ("design-agent", "GET", "/api/design-agent/history", None, 200),
+    # Repo Finder
+    ("repo-finder", "GET", "/api/repo-finder/status", None, 200),
+    ("repo-finder", "GET", "/api/repo-finder/summary", None, 200),
     # Master Agent
     ("master-agent", "GET", "/api/master-agent/summary", None, 200),
     ("master-agent", "GET", "/api/master-agent/capabilities", None, 200),

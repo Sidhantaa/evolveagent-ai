@@ -377,6 +377,8 @@ import {
   unpublishMarketplaceListing,
   getDesignAgentStatus,
   analyzeDesign,
+  getRepoFinderStatus,
+  searchRepos,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -779,6 +781,10 @@ function App() {
   const [designLive, setDesignLive] = useState(false)
   const [designResult, setDesignResult] = useState(null)
   const [designBusy, setDesignBusy] = useState(false)
+  const [showRepoFinder, setShowRepoFinder] = useState(false)
+  const [repoQuery, setRepoQuery] = useState('')
+  const [repoResult, setRepoResult] = useState(null)
+  const [repoBusy, setRepoBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -1470,6 +1476,7 @@ function App() {
       { id: 'open-workflows', label: 'Open Durable Workflows', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() } },
       { id: 'open-marketplace', label: 'Open Marketplace', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('build'); setShowMarketplaceHub(true); refreshMarketplaceHub() } },
       { id: 'open-design', label: 'Open Design Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowDesignAgent(true); refreshDesignAgent() } },
+      { id: 'open-repo-finder', label: 'Open Repo Finder', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowRepoFinder(true) } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3455,6 +3462,20 @@ function App() {
       setDesignResult({ mode: 'error', sections: [], note: 'Analysis failed — is the backend running?' })
     } finally {
       setDesignBusy(false)
+    }
+  }
+
+  async function handleRepoSearch(q) {
+    const query = (q ?? repoQuery).trim()
+    if (!query) return
+    if (q) setRepoQuery(q)
+    setRepoBusy(true)
+    try {
+      setRepoResult(await searchRepos(query, { limit: 8, sort: 'best' }))
+    } catch {
+      setRepoResult({ count: 0, results: [], related_topics: [], note: 'Search failed — is the backend running?' })
+    } finally {
+      setRepoBusy(false)
     }
   }
 
@@ -11805,6 +11826,53 @@ function App() {
                   </Card>
                 )}
                 <p className="ds-sub">Ported from the Multimodal Design Agent. Key is read from the environment (never stored/logged); image bytes are never persisted.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowRepoFinder((c) => !c)}>
+              <span>
+                <GitBranch size={15} />
+                Repo Finder
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showRepoFinder && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Repo Finder</p>
+                  <p className="ds-sub">Describe what you need (e.g. “multi-agent framework”, “voice assistant”) and get relevant GitHub repos to compare — with stars, language, and topics.</p>
+                </Card>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input placeholder="What are you looking for?" value={repoQuery} onChange={(e) => setRepoQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleRepoSearch() }}
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                  <Button variant="primary" size="sm" disabled={repoBusy || !repoQuery.trim()} onClick={() => handleRepoSearch()}>{repoBusy ? '…' : 'Find'}</Button>
+                </div>
+                {repoResult?.related_topics?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {repoResult.related_topics.map((t) => (
+                      <Button key={t} size="sm" variant="ghost" disabled={repoBusy} onClick={() => handleRepoSearch(t)}>{t}</Button>
+                    ))}
+                  </div>
+                )}
+                {repoResult?.note && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{repoResult.note}</p>}
+                {repoResult && repoResult.count === 0 && !repoResult.note && <p className="ds-sub">No repositories found.</p>}
+                {repoResult?.results?.map((r) => (
+                  <Card key={r.full_name} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      <a href={r.url} target="_blank" rel="noreferrer" style={{ color: 'var(--ds-accent)', textDecoration: 'none' }}>{r.full_name}</a>
+                      {' '}<Badge tone="default">★ {r.stars.toLocaleString()}</Badge>
+                      {r.language && <Badge tone="accent">{r.language}</Badge>}
+                    </p>
+                    <p className="ds-sub">{r.description || '—'}</p>
+                    {r.topics?.length > 0 && <p className="ds-sub" style={{ fontSize: 11 }}>{r.topics.slice(0, 6).map((t) => `#${t}`).join(' ')}</p>}
+                  </Card>
+                ))}
+                <p className="ds-sub">Read-only search of public GitHub. Set GITHUB_TOKEN in the backend env for higher rate limits (token is never stored or shown).</p>
               </div>
             )}
           </section>
