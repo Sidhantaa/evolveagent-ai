@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { Card } from './components/ui/Card.jsx'
+import { Button } from './components/ui/Button.jsx'
+import { Badge } from './components/ui/Badge.jsx'
 import {
   Activity,
   BarChart3,
@@ -343,6 +346,9 @@ import {
   acknowledgeNotification,
   suggestMcp,
   routeMasterAgent,
+  getGitStatus,
+  discoverGitRepos,
+  getGitRepositories,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -702,6 +708,11 @@ function App() {
   const [developerMode, setDeveloperMode] = useState(false)
   const [theme, setTheme] = useState(() => localStorage.getItem('evolveagent-theme') || 'dark')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showGitIntel, setShowGitIntel] = useState(false)
+  const [gitStatus, setGitStatus] = useState(null)
+  const [gitRepos, setGitRepos] = useState([])
+  const [gitPath, setGitPath] = useState('')
+  const [gitBusy, setGitBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -3148,6 +3159,26 @@ function App() {
       setMasterCapabilities(capabilities)
     } catch {
       // Master Agent summary is best-effort; ignore transient errors.
+    }
+  }
+
+  async function refreshGitIntel() {
+    try {
+      const [status, repos] = await Promise.all([getGitStatus(), getGitRepositories(workspaceId)])
+      setGitStatus(status)
+      setGitRepos(repos.repositories || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function runGitDiscover(optIn) {
+    setGitBusy(true)
+    try {
+      await discoverGitRepos(optIn ? gitPath : null, optIn, workspaceId)
+      await refreshGitIntel()
+    } finally {
+      setGitBusy(false)
     }
   }
 
@@ -11029,6 +11060,53 @@ function App() {
                   </>
                 )}
                 <p className="muted">Read-only — nothing is modified. "Use as context" seeds the composer.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="workspace" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowGitIntel((c) => !c); if (!gitStatus) refreshGitIntel() }}>
+              <span>
+                <GitBranch size={15} />
+                Git Intelligence
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showGitIntel && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Git Intelligence</p>
+                  <p className="ds-sub">Read-only, opt-in repo discovery — reads git metadata only (no code, no secrets, no git commands).</p>
+                  {gitStatus && (
+                    <div style={{ marginTop: 8 }}>
+                      <Badge tone={gitStatus.enabled ? 'success' : 'default'}>{gitStatus.enabled ? `${gitStatus.indexed_repos} repos indexed` : 'not enabled'}</Badge>
+                    </div>
+                  )}
+                </Card>
+                <input className="ds-input" placeholder="Local path to scan (e.g. ~/Projects)" value={gitPath} onChange={(e) => setGitPath(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="primary" size="sm" disabled={gitBusy || !gitPath.trim()} onClick={() => runGitDiscover(true)}>{gitBusy ? 'Scanning…' : 'Discover repos'}</Button>
+                  <Button size="sm" disabled={gitBusy} onClick={() => runGitDiscover(false)}>Load sample</Button>
+                  <Button variant="ghost" size="sm" onClick={refreshGitIntel}>Refresh</Button>
+                </div>
+                {gitRepos.map((repo) => (
+                  <Card key={repo.repo_id} hover>
+                    <p className="ds-title" style={{ fontSize: 14 }}>
+                      {repo.name} <Badge tone={repo.provider === 'local' ? 'default' : 'accent'}>{repo.provider}</Badge>
+                      {repo.is_sample && <Badge tone="warn">sample</Badge>}
+                    </p>
+                    <div className="ds-row"><span>Default branch</span><span>{repo.default_branch || '—'}</span></div>
+                    <div className="ds-row"><span>Branches</span><span>{(repo.branches || []).length}</span></div>
+                    <div className="ds-row"><span>Remote</span><span style={{ fontSize: 11, fontWeight: 400 }}>{repo.remote_url_sanitized || 'none'}</span></div>
+                    {repo.recent_activity?.length > 0 && (
+                      <p className="ds-sub" style={{ marginTop: 8 }}>Latest: {repo.recent_activity[0].message}</p>
+                    )}
+                  </Card>
+                ))}
+                <p className="ds-sub">Discovery is opt-in and read-only. Any push/merge/PR/deploy would require approval (not built here).</p>
               </div>
             )}
           </section>

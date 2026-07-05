@@ -131,6 +131,7 @@ from app.models.request_models import (
     PlaybookCreateRequest,
     MCPSuggestRequest,
     MasterAgentRouteRequest,
+    GitDiscoverRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -319,6 +320,7 @@ from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.data_export_service import DataExportService
 from app.services.evolveagent_os2_service import EvolveAgentOS2Service
 from app.services.master_agent_service import MasterAgentService
+from app.services.git_discovery_service import GitDiscoveryService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -455,6 +457,7 @@ scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
+git_discovery_service = GitDiscoveryService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1754,6 +1757,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **data_export_service.analytics_summary(),
         **evolveagent_os2_service.analytics_summary(),
         **master_agent_service.analytics_summary(),
+        **git_discovery_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4195,6 +4199,48 @@ def master_agent_route_feedback(run_id: str, request: MasterRouteFeedbackRequest
 @router.get("/master-agent/summary")
 def master_agent_summary() -> dict:
     return master_agent_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Git Intelligence (Phase 1) — read-only, opt-in, mock-safe discovery.
+# ----------------------------------------------------------------------
+@router.get("/git-intel/status")
+def git_status() -> dict:
+    return git_discovery_service.status()
+
+
+@router.post("/git-intel/discover")
+def git_discover(request: GitDiscoverRequest) -> dict:
+    return git_discovery_service.discover(request.path, request.opt_in, request.workspace_id)
+
+
+@router.get("/git-intel/repositories")
+def git_repositories(workspace_id: str | None = Query(default=None)) -> dict:
+    return git_discovery_service.repositories(workspace_id=workspace_id)
+
+
+@router.get("/git-intel/repositories/{repo_id}")
+def git_repository(repo_id: str) -> dict:
+    try:
+        return git_discovery_service.repository(repo_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/git-intel/repositories/{repo_id}/activity")
+def git_repository_activity(repo_id: str) -> dict:
+    try:
+        return git_discovery_service.activity(repo_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/git-intel/repositories/{repo_id}/context")
+def git_repository_context(repo_id: str) -> dict:
+    try:
+        return git_discovery_service.context(repo_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 # ----------------------------------------------------------------------

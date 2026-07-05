@@ -1416,6 +1416,15 @@ class MasterAgentRouteRequest(BaseModel):
     execute: bool = Field(default=False, description="Only honored for non-risky intents; risky actions still require explicit approval.")
 
 
+# ----------------------------------------------------------------------
+# Git Intelligence (Phase 1) — read-only, opt-in discovery
+# ----------------------------------------------------------------------
+class GitDiscoverRequest(BaseModel):
+    path: str | None = Field(default=None, max_length=500, description="Local path to scan for git repos (read-only). Required with opt_in.")
+    opt_in: bool = Field(default=False, description="Must be true to index real local repos; otherwise a sample is returned.")
+    workspace_id: str | None = Field(default=None)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

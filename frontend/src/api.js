@@ -2511,6 +2511,15 @@ export function routeMasterAgent(text, opts = {}) {
     execute: Boolean(opts.execute),
   })
 }
+export function getGitStatus() {
+  return getJson('/api/git-intel/status')
+}
+export function discoverGitRepos(path, optIn, workspaceId) {
+  return postJson('/api/git-intel/discover', { path: path || null, opt_in: Boolean(optIn), workspace_id: workspaceId || null })
+}
+export function getGitRepositories(workspaceId) {
+  return getJson(workspaceId ? `/api/git-intel/repositories?workspace_id=${workspaceId}` : '/api/git-intel/repositories')
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }
