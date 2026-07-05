@@ -205,6 +205,7 @@ class StorageService:
             "durable_workflow_runs.json",
             "marketplace_hub_listings.json",
             "marketplace_hub_installs.json",
+            "design_agent_analyses.json",
             "permission_profiles.json",
             "imported_records.json",
             "marketplace_plugins.json",

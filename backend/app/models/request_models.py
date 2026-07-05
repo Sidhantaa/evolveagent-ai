@@ -1494,6 +1494,13 @@ class MarketplacePublishRequest(BaseModel):
     manifest: dict = Field(default_factory=dict)
 
 
+class DesignAnalyzeRequest(BaseModel):
+    image: str = Field(..., min_length=1, max_length=16_000_000, description="Image as a data URL")
+    analyses: list[str] = Field(default_factory=list)
+    context: str = Field(default="", max_length=2000)
+    allow_live: bool = Field(default=False, description="Opt in to a live model call (sends the image to OpenRouter)")
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

@@ -141,6 +141,7 @@ from app.models.request_models import (
     DurableWorkflowStartRequest,
     WorkflowApprovalRequest,
     MarketplacePublishRequest,
+    DesignAnalyzeRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -334,6 +335,7 @@ from app.services.agent_profile_service import AgentProfileService
 from app.services.voice_console_service import VoiceConsoleService
 from app.services.durable_workflow_service import DurableWorkflowService
 from app.services.marketplace_hub_service import MarketplaceHubService
+from app.services.design_agent_service import DesignAgentService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -475,6 +477,7 @@ agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
 durable_workflow_service = DurableWorkflowService(storage, governance_service)
 marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
+design_agent_service = DesignAgentService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1779,6 +1782,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **voice_console_service.analytics_summary(),
         **durable_workflow_service.analytics_summary(),
         **marketplace_hub_service.analytics_summary(),
+        **design_agent_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4515,6 +4519,32 @@ def marketplace_hub_installs() -> dict:
 @router.get("/marketplace-hub/summary")
 def marketplace_hub_summary() -> dict:
     return marketplace_hub_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Design Agent — in-app multimodal UI/UX analysis (mock-safe; live opt-in).
+# ----------------------------------------------------------------------
+@router.get("/design-agent/status")
+def design_agent_status() -> dict:
+    return design_agent_service.status()
+
+
+@router.post("/design-agent/analyze")
+def design_agent_analyze(request: DesignAnalyzeRequest) -> dict:
+    try:
+        return design_agent_service.analyze(request.image, request.analyses, request.context, request.allow_live)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/design-agent/history")
+def design_agent_history(limit: int = 20) -> dict:
+    return design_agent_service.history(limit)
+
+
+@router.get("/design-agent/summary")
+def design_agent_summary() -> dict:
+    return design_agent_service.summary()
 
 
 # ----------------------------------------------------------------------
