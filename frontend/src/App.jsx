@@ -381,6 +381,11 @@ import {
   analyzeDesign,
   getRepoFinderStatus,
   searchRepos,
+  getAdaptiveStatus,
+  adaptiveLearn,
+  adaptiveRecommend,
+  getAdaptiveItems,
+  forgetAdaptiveItem,
   getWorkspaceTemplates,
   getWorkspaceTemplatesSummary,
   createWorkspaceTemplate,
@@ -787,6 +792,13 @@ function App() {
   const [repoQuery, setRepoQuery] = useState('')
   const [repoResult, setRepoResult] = useState(null)
   const [repoBusy, setRepoBusy] = useState(false)
+  const [showAdaptive, setShowAdaptive] = useState(false)
+  const [adaptiveStatus, setAdaptiveStatus] = useState(null)
+  const [adaptiveItems, setAdaptiveItems] = useState([])
+  const [adaptiveQuery, setAdaptiveQuery] = useState('')
+  const [adaptiveRecs, setAdaptiveRecs] = useState(null)
+  const [adaptiveNote, setAdaptiveNote] = useState('')
+  const [adaptiveBusy, setAdaptiveBusy] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
@@ -1479,6 +1491,7 @@ function App() {
       { id: 'open-marketplace', label: 'Open Marketplace', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('build'); setShowMarketplaceHub(true); refreshMarketplaceHub() } },
       { id: 'open-design', label: 'Open Design Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowDesignAgent(true); refreshDesignAgent() } },
       { id: 'open-repo-finder', label: 'Open Repo Finder', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowRepoFinder(true) } },
+      { id: 'open-adaptive', label: 'Open Adaptive Learning', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowAdaptive(true); refreshAdaptive() } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3478,6 +3491,49 @@ function App() {
       setRepoResult({ count: 0, results: [], related_topics: [], note: 'Search failed — is the backend running?' })
     } finally {
       setRepoBusy(false)
+    }
+  }
+
+  async function refreshAdaptive() {
+    try {
+      const [status, items] = await Promise.all([getAdaptiveStatus(), getAdaptiveItems()])
+      setAdaptiveStatus(status)
+      setAdaptiveItems(items?.items || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  async function handleAdaptiveLearn() {
+    setAdaptiveBusy(true)
+    setAdaptiveNote('')
+    try {
+      const res = await adaptiveLearn()
+      setAdaptiveNote(`Learned +${res.ingested} new (${res.total} total) — retrieval memory, no model trained.`)
+      await refreshAdaptive()
+    } catch {
+      setAdaptiveNote('Learn failed — is the backend running?')
+    } finally {
+      setAdaptiveBusy(false)
+    }
+  }
+
+  async function handleAdaptiveRecommend() {
+    if (!adaptiveQuery.trim()) return
+    setAdaptiveBusy(true)
+    try {
+      setAdaptiveRecs(await adaptiveRecommend(adaptiveQuery.trim()))
+    } finally {
+      setAdaptiveBusy(false)
+    }
+  }
+
+  async function handleAdaptiveForget(itemId) {
+    try {
+      await forgetAdaptiveItem(itemId)
+      await refreshAdaptive()
+    } catch {
+      // best-effort
     }
   }
 
@@ -11880,6 +11936,63 @@ function App() {
                   </Card>
                 ))}
                 <p className="ds-sub">Read-only search of public GitHub. Set GITHUB_TOKEN in the backend env for higher rate limits (token is never stored or shown).</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="intel" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowAdaptive((c) => !c); if (!adaptiveStatus) refreshAdaptive() }}>
+              <span>
+                <Brain size={15} />
+                Adaptive Learning
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAdaptive && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Adaptive Learning</p>
+                  <p className="ds-sub">Learns from your history + repo data to surface relevant context and few-shot examples. This is retrieval memory (RAG) — it does <b>not</b> train or fine-tune any model, and stores no secrets.</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                    <Badge tone="success">no model training</Badge>
+                    <Badge tone="default">local · reversible</Badge>
+                    {adaptiveStatus && <Badge tone="accent">{adaptiveItems.length} learned</Badge>}
+                  </div>
+                </Card>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="primary" size="sm" disabled={adaptiveBusy} onClick={handleAdaptiveLearn}>{adaptiveBusy ? 'Learning…' : 'Auto-learn now'}</Button>
+                </div>
+                {adaptiveNote && <p className="ds-sub" style={{ color: 'var(--ds-accent)' }}>{adaptiveNote}</p>}
+
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input placeholder="Ask what it learned…" value={adaptiveQuery} onChange={(e) => setAdaptiveQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAdaptiveRecommend() }}
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: 12, border: '1px solid var(--ds-line-strong)', background: 'var(--ds-surface)', color: 'var(--ds-ink)' }} />
+                  <Button size="sm" disabled={adaptiveBusy || !adaptiveQuery.trim()} onClick={handleAdaptiveRecommend}>Recall</Button>
+                </div>
+                {adaptiveRecs && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Relevant learned context ({adaptiveRecs.count})</p>
+                    {adaptiveRecs.count === 0 && <p className="ds-sub">Nothing learned matches yet — try Auto-learn.</p>}
+                    {adaptiveRecs.recommendations?.map((r, i) => (
+                      <div key={i} className="ds-row"><span><Badge tone="default">{r.kind}</Badge> {r.text}</span><span style={{ fontSize: 11, fontWeight: 400 }}>×{r.weight}</span></div>
+                    ))}
+                  </Card>
+                )}
+                {adaptiveItems.length > 0 && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Memory ({adaptiveItems.length})</p>
+                    {adaptiveItems.slice(0, 10).map((it) => (
+                      <div key={it.id} className="ds-row">
+                        <span><Badge tone="default">{it.kind}</Badge> {it.text.slice(0, 60)}</span>
+                        <Button size="sm" variant="ghost" onClick={() => handleAdaptiveForget(it.id)}>Forget</Button>
+                      </div>
+                    ))}
+                  </Card>
+                )}
+                <p className="ds-sub">Personalization = retrieval + few-shot + preference feedback. No base-model retraining, ever.</p>
               </div>
             )}
           </section>

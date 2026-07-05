@@ -144,6 +144,7 @@ from app.models.request_models import (
     MarketplacePublishRequest,
     DesignAnalyzeRequest,
     RepoSearchRequest,
+    AdaptiveIngestRequest,
     MasterRouteFeedbackRequest,
     SettingsUpdateRequest,
     SettingsImportRequest,
@@ -340,6 +341,7 @@ from app.services.marketplace_hub_service import MarketplaceHubService
 from app.services.design_agent_service import DesignAgentService
 from app.services.git_reader_service import GitReaderService
 from app.services.repo_finder_service import RepoFinderService
+from app.services.adaptive_learning_service import AdaptiveLearningService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -484,6 +486,7 @@ marketplace_hub_service = MarketplaceHubService(storage, governance_service, age
 design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
 repo_finder_service = RepoFinderService(storage, governance_service)
+adaptive_learning_service = AdaptiveLearningService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -1791,6 +1794,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **design_agent_service.analytics_summary(),
         **git_reader_service.analytics_summary(),
         **repo_finder_service.analytics_summary(),
+        **adaptive_learning_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
         **dashboard_home_service.analytics_summary(),
@@ -4648,6 +4652,50 @@ def repo_finder_history(limit: int = 20) -> dict:
 @router.get("/repo-finder/summary")
 def repo_finder_summary() -> dict:
     return repo_finder_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Adaptive Learning — safe self-improving retrieval memory (NOT training).
+# ----------------------------------------------------------------------
+@router.get("/adaptive-learning/status")
+def adaptive_learning_status() -> dict:
+    return adaptive_learning_service.status()
+
+
+@router.post("/adaptive-learning/learn")
+def adaptive_learning_learn() -> dict:
+    return adaptive_learning_service.learn()
+
+
+@router.get("/adaptive-learning/recommend")
+def adaptive_learning_recommend(query: str, limit: int = 5) -> dict:
+    return adaptive_learning_service.recommend(query, limit)
+
+
+@router.get("/adaptive-learning/items")
+def adaptive_learning_items(kind: str | None = None, limit: int = 50) -> dict:
+    return adaptive_learning_service.items(kind, limit)
+
+
+@router.post("/adaptive-learning/items")
+def adaptive_learning_ingest(request: AdaptiveIngestRequest) -> dict:
+    try:
+        return adaptive_learning_service.ingest(request.text, request.kind, request.source)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.delete("/adaptive-learning/items/{item_id}")
+def adaptive_learning_forget(item_id: str) -> dict:
+    try:
+        return adaptive_learning_service.forget(item_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/adaptive-learning/summary")
+def adaptive_learning_summary() -> dict:
+    return adaptive_learning_service.summary()
 
 
 # ----------------------------------------------------------------------

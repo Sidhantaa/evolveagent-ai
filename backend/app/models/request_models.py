@@ -1511,6 +1511,12 @@ class RepoSearchRequest(BaseModel):
     sort: str = Field(default="best", max_length=10)
 
 
+class AdaptiveIngestRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=500)
+    kind: str = Field(default="topic", max_length=20)
+    source: str = Field(default="manual", max_length=60)
+
+
 class MasterRouteFeedbackRequest(BaseModel):
     correct: bool = Field(..., description="Was the Master Agent's route correct for this request?")
     correct_domain: str | None = Field(default=None, max_length=80, description="If incorrect, the domain it should have routed to.")

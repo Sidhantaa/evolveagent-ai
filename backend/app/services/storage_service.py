@@ -208,6 +208,7 @@ class StorageService:
             "marketplace_hub_installs.json",
             "design_agent_analyses.json",
             "repo_finder_searches.json",
+            "adaptive_learning_items.json",
             "permission_profiles.json",
             "imported_records.json",
             "marketplace_plugins.json",

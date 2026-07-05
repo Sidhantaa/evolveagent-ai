@@ -2659,6 +2659,22 @@ export function getRepoFinderStatus() {
 export function searchRepos(query, { limit = 8, sort = 'best' } = {}) {
   return postJson('/api/repo-finder/search', { query, limit, sort })
 }
+// Adaptive Learning (safe retrieval memory)
+export function getAdaptiveStatus() {
+  return getJson('/api/adaptive-learning/status')
+}
+export function adaptiveLearn() {
+  return postJson('/api/adaptive-learning/learn', {})
+}
+export function adaptiveRecommend(query, limit = 5) {
+  return getJson(`/api/adaptive-learning/recommend?query=${encodeURIComponent(query)}&limit=${limit}`)
+}
+export function getAdaptiveItems(kind) {
+  return getJson(kind ? `/api/adaptive-learning/items?kind=${encodeURIComponent(kind)}` : '/api/adaptive-learning/items')
+}
+export function forgetAdaptiveItem(itemId) {
+  return delJson(`/api/adaptive-learning/items/${itemId}`)
+}
 export function getMasterAgentCapabilities() {
   return getJson('/api/master-agent/capabilities')
 }
