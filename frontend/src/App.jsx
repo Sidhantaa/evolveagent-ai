@@ -381,6 +381,7 @@ import {
   analyzeDesign,
   getRepoFinderStatus,
   searchRepos,
+  getTodaySummary,
   getAdaptiveStatus,
   adaptiveLearn,
   adaptiveRecommend,
@@ -795,6 +796,8 @@ function App() {
   const [repoQuery, setRepoQuery] = useState('')
   const [repoResult, setRepoResult] = useState(null)
   const [repoBusy, setRepoBusy] = useState(false)
+  const [showToday, setShowToday] = useState(false)
+  const [todayData, setTodayData] = useState(null)
   const [showAdaptive, setShowAdaptive] = useState(false)
   const [adaptiveStatus, setAdaptiveStatus] = useState(null)
   const [adaptiveItems, setAdaptiveItems] = useState([])
@@ -1506,6 +1509,7 @@ function App() {
       { id: 'open-design', label: 'Open Design Agent', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('tools'); setShowDesignAgent(true); refreshDesignAgent() } },
       { id: 'open-repo-finder', label: 'Open Repo Finder', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowRepoFinder(true) } },
       { id: 'open-adaptive', label: 'Open Adaptive Learning', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('intel'); setShowAdaptive(true); refreshAdaptive() } },
+      { id: 'open-today', label: 'Open Today dashboard', group: 'Open', run: () => { setDeveloperMode(true); setDevSection('ops'); setShowToday(true); refreshToday() } },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gitStatus, studioTemplates])
@@ -3506,6 +3510,17 @@ function App() {
     } finally {
       setRepoBusy(false)
     }
+  }
+
+  async function refreshToday() {
+    try { setTodayData(await getTodaySummary()) } catch { /* best-effort */ }
+  }
+
+  function runQuickAction(id) {
+    if (id === 'new-chat') newChat()
+    else if (id === 'open-workflows') { setDevSection('ops'); setShowWorkflows(true); refreshWorkflows() }
+    else if (id === 'open-repo-finder') { setDevSection('intel'); setShowRepoFinder(true) }
+    else if (id === 'open-adaptive') { setDevSection('intel'); setShowAdaptive(true); refreshAdaptive() }
   }
 
   async function refreshAdaptive() {
@@ -12067,6 +12082,45 @@ function App() {
                   </Card>
                 )}
                 <p className="ds-sub">Personalization = retrieval + few-shot + preference feedback. No base-model retraining, ever.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section data-group="ops" className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => { setShowToday((c) => !c); if (!todayData) refreshToday() }}>
+              <span>
+                <Sparkles size={15} />
+                Today
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showToday && todayData && (
+              <div className="mission-panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Card>
+                  <p className="ds-title">Today</p>
+                  <p className="ds-sub">{todayData.highlights?.join(' · ')}</p>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                    {Object.entries(todayData.metrics || {}).map(([k, v]) => (
+                      <Badge key={k} tone="default">{v} {k.replace(/_/g, ' ')}</Badge>
+                    ))}
+                  </div>
+                </Card>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {todayData.quick_actions?.map((a) => (
+                    <Button key={a.id} size="sm" variant="ghost" onClick={() => runQuickAction(a.id)}>{a.label}</Button>
+                  ))}
+                  <Button size="sm" variant="ghost" onClick={refreshToday}>Refresh</Button>
+                </div>
+                {todayData.recent_activity?.length > 0 && (
+                  <Card>
+                    <p className="ds-title" style={{ fontSize: 13 }}>Recent activity</p>
+                    {todayData.recent_activity.slice(0, 8).map((e, i) => (
+                      <div key={i} className="ds-row"><span>{e.agent || e.action_type}</span><span style={{ fontSize: 11, fontWeight: 400 }}>{e.action_type}</span></div>
+                    ))}
+                  </Card>
+                )}
               </div>
             )}
           </section>

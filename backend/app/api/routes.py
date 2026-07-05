@@ -342,6 +342,7 @@ from app.services.design_agent_service import DesignAgentService
 from app.services.git_reader_service import GitReaderService
 from app.services.repo_finder_service import RepoFinderService
 from app.services.adaptive_learning_service import AdaptiveLearningService
+from app.services.home_dashboard_service import HomeDashboardService
 from app.services.global_search_service import GlobalSearchService
 from app.services.activity_timeline_service import ActivityTimelineService
 from app.services.dashboard_home_service import DashboardHomeService
@@ -487,6 +488,7 @@ design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
 repo_finder_service = RepoFinderService(storage, governance_service)
 adaptive_learning_service = AdaptiveLearningService(storage, governance_service)
+home_dashboard_service = HomeDashboardService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
 dashboard_home_service = DashboardHomeService(storage, governance_service, health_monitor_service)
@@ -4696,6 +4698,14 @@ def adaptive_learning_forget(item_id: str) -> dict:
 @router.get("/adaptive-learning/summary")
 def adaptive_learning_summary() -> dict:
     return adaptive_learning_service.summary()
+
+
+# ----------------------------------------------------------------------
+# Today — a read-only home dashboard aggregating activity across the app.
+# ----------------------------------------------------------------------
+@router.get("/today/summary")
+def today_summary() -> dict:
+    return home_dashboard_service.today()
 
 
 # ----------------------------------------------------------------------

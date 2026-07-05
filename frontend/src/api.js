@@ -2660,6 +2660,9 @@ export function searchRepos(query, { limit = 8, sort = 'best' } = {}) {
   return postJson('/api/repo-finder/search', { query, limit, sort })
 }
 // Adaptive Learning (safe retrieval memory)
+export function getTodaySummary() {
+  return getJson('/api/today/summary')
+}
 export function getAdaptiveStatus() {
   return getJson('/api/adaptive-learning/status')
 }
