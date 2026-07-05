@@ -3776,3 +3776,101 @@ ul {
   padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 13px;
   color: #e8722b; background: linear-gradient(90deg,#fff3e9,#ffe6d3); border: 1px solid #ffd9bd; cursor: pointer;
 }
+
+/* ============================================================
+   Base44 warm skin — Developer Mode (.chat-shell.developer-mode)
+   Remaps the design tokens to a light/cream palette so every
+   token-driven component (sidebar, panels, cards, inspector,
+   composer) re-themes automatically. A few targeted fixes below.
+   ============================================================ */
+.chat-shell.developer-mode {
+  --color-bg-base: #f0ece4;
+  --color-bg-surface: #f6f3ee;
+  --color-bg-elevated: #ffffff;
+  --color-bg-panel: #faf8f4;
+  --color-bg-glass: rgba(250, 248, 244, 0.92);
+  --color-bg-jarvis: #f6f3ee;
+  --color-text-primary: #1f2328;
+  --color-text-secondary: #3f454d;
+  --color-text-muted: #6b7280;
+  --color-text-subtle: #9099a3;
+  --color-border: rgba(28, 26, 22, 0.10);
+  --color-border-strong: rgba(28, 26, 22, 0.16);
+  --color-accent-cyan: #6a5acd;
+  --color-accent-cyan-soft: #7c6cff;
+  --color-focus-ring: rgba(124, 108, 255, 0.5);
+  --sa-accent: #7c6cff;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+}
+
+/* Containers */
+.developer-mode .sidebar,
+.developer-mode .inspector { background: var(--color-bg-base); border-color: var(--color-border); }
+.developer-mode .chat-workspace,
+.developer-mode .chat-scroll { background: var(--color-bg-surface); }
+
+/* Topbar (dev) */
+.developer-mode .chat-topbar {
+  background: var(--color-bg-glass); border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(12px); color: var(--color-text-primary);
+}
+.developer-mode .chat-topbar h2,
+.developer-mode .chat-topbar h1 { color: var(--color-text-primary); }
+
+/* Panel toggles + cards */
+.developer-mode .analytics-toggle {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border); color: var(--color-text-primary);
+}
+.developer-mode .analytics-toggle:hover { border-color: var(--color-border-strong); }
+.developer-mode .mission-panel { background: transparent; }
+.developer-mode .agent-template-card {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border); color: var(--color-text-primary);
+}
+.developer-mode .agent-template-card span,
+.developer-mode .agent-template-card p { color: var(--color-text-muted); }
+.developer-mode .side-heading { color: var(--color-text-secondary); }
+.developer-mode .muted { color: var(--color-text-muted); }
+.developer-mode .gs-trace { color: var(--color-text-subtle); }
+
+/* Form controls */
+.developer-mode input,
+.developer-mode textarea,
+.developer-mode select {
+  background: var(--color-bg-elevated); color: var(--color-text-primary); border: 1px solid var(--color-border);
+}
+.developer-mode input::placeholder,
+.developer-mode textarea::placeholder { color: var(--color-text-subtle); }
+.developer-mode button.inline-actions,
+.developer-mode .inline-actions button,
+.developer-mode .stacked-form button,
+.developer-mode .master-fb {
+  background: var(--color-bg-elevated); color: var(--color-text-primary); border: 1px solid var(--color-border);
+}
+.developer-mode .inline-actions button:hover,
+.developer-mode .master-fb:hover { border-color: var(--sa-accent); color: var(--sa-accent); }
+
+/* Messages */
+.developer-mode .chat-message { background: var(--color-bg-elevated); border: 1px solid var(--color-border); }
+.developer-mode .message-content { color: var(--color-text-primary); }
+.developer-mode .message-label { color: var(--color-text-muted); }
+
+/* Composer (dev) */
+.developer-mode .chat-composer { background: var(--color-bg-base); border-top: 1px solid var(--color-border); }
+.developer-mode .input-shell {
+  background: var(--color-bg-elevated); border: 1.5px solid var(--color-border-strong); border-radius: 16px;
+}
+.developer-mode .input-shell textarea { color: var(--color-text-primary); }
+.developer-mode .send-button { background: var(--sa-accent); color: #fff; }
+.developer-mode .send-button:disabled { background: #cfc8f0; }
+
+/* Code / pre blocks stay readable on light */
+.developer-mode pre,
+.developer-mode code { background: #efeae1; color: #26303a; }
+
+/* Analytics + misc surfaces */
+.developer-mode .analytics-panel,
+.developer-mode .home-stat,
+.developer-mode .master-answer,
+.developer-mode .cli-palette,
+.developer-mode .master-cli { background: var(--color-bg-elevated); border-color: var(--color-border); color: var(--color-text-primary); }
