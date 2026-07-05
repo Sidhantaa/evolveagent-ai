@@ -1449,6 +1449,10 @@ class AgentImportRequest(BaseModel):
     profile: dict = Field(default_factory=dict)
 
 
+class AgentRollbackRequest(BaseModel):
+    version: int = Field(..., ge=1)
+
+
 class VoiceSettingsRequest(BaseModel):
     workspace_id: str = Field(default="global", max_length=80)
     voice_name: str | None = Field(default=None, max_length=120)

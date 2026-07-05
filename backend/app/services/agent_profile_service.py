@@ -101,6 +101,7 @@ class AgentProfileService:
             "evaluation": (existing or {}).get("evaluation") or {"score": None, "test_cases": data.get("test_cases") or []},
             "published_local": (existing or {}).get("published_local", False),
             "version": ((existing or {}).get("version") or 0) + 1,
+            "versions": (existing or {}).get("versions") or [],
             "created_at": (existing or {}).get("created_at") or self._now(),
             "updated_at": self._now(),
         }
@@ -122,16 +123,69 @@ class AgentProfileService:
             raise ValueError("Agent not found")
         return agent
 
+    _SNAP_FIELDS = ("version", "name", "role", "description", "personality", "tools", "guardrails", "examples")
+
+    def _snapshot(self, agent: dict) -> dict:
+        snap = {k: agent.get(k) for k in self._SNAP_FIELDS}
+        snap["snapshot_at"] = self._now()
+        return snap
+
     def update(self, agent_id: str, data: dict) -> dict:
         agents = self.storage.read_list(self.profiles_file)
         idx = next((i for i, a in enumerate(agents) if a.get("agent_id") == agent_id), None)
         if idx is None:
             raise ValueError("Agent not found")
-        merged = {**agents[idx], **data}
-        agents[idx] = self._build(merged, existing=agents[idx])
+        existing = agents[idx]
+        merged = {**existing, **data}
+        rebuilt = self._build(merged, existing=existing)
+        # Keep a rolling history of prior versions so changes can be rolled back.
+        rebuilt["versions"] = ([*(existing.get("versions") or []), self._snapshot(existing)])[-10:]
+        agents[idx] = rebuilt
         self.storage.write_list(self.profiles_file, agents)
-        self._log("agent_updated", f"Updated agent '{agents[idx]['name']}' → v{agents[idx]['version']}.")
-        return agents[idx]
+        self._log("agent_updated", f"Updated agent '{rebuilt['name']}' → v{rebuilt['version']}.")
+        return rebuilt
+
+    def duplicate(self, agent_id: str) -> dict:
+        src = self.get(agent_id)
+        data = {k: src.get(k) for k in ("name", "role", "description", "personality", "tools", "memory_scope", "examples", "guardrails")}
+        data["name"] = f"{src.get('name', 'Agent')} (copy)"[:120]
+        profile = self._build(data)
+        self.storage.append(self.profiles_file, profile)
+        self._log("agent_duplicated", f"Forked agent '{src.get('name')}' → '{profile['name']}'.")
+        return profile
+
+    def versions(self, agent_id: str) -> dict:
+        agent = self.get(agent_id)
+        return {"agent_id": agent_id, "current_version": agent.get("version"),
+                "versions": agent.get("versions") or [], "count": len(agent.get("versions") or [])}
+
+    def rollback(self, agent_id: str, version: int) -> dict:
+        agent = self.get(agent_id)
+        snap = next((v for v in (agent.get("versions") or []) if v.get("version") == version), None)
+        if snap is None:
+            raise ValueError(f"No prior version {version} to roll back to")
+        data = {k: snap.get(k) for k in ("name", "role", "description", "personality", "tools", "guardrails", "examples")}
+        result = self.update(agent_id, data)  # snapshots current, applies old config as a new version
+        self._log("agent_rolledback", f"Rolled agent '{agent.get('name')}' back to v{version} (now v{result['version']}).")
+        return result
+
+    def preview(self, agent_id: str) -> dict:
+        """Assemble a read-only preview of the agent's context — what it would 'see'."""
+        a = self.get(agent_id)
+        lines = [
+            f"# {a['name']}",
+            f"Role: {a['role'] or '(none)'}",
+            f"Style: {a['personality']['tone']}, {a['personality']['verbosity']} verbosity",
+            f"Tools: {', '.join(a['tools']) or 'general reasoning'}",
+        ]
+        req = a["guardrails"].get("requires_approval") or []
+        if req:
+            lines.append(f"Held for approval: {', '.join(req)}")
+        if a["examples"]:
+            lines.append("\nFew-shot examples:")
+            for i, e in enumerate(a["examples"][:5], 1):
+                lines.append(f"  {i}. IN: {str(e.get('input',''))[:120]}\n     OUT: {str(e.get('output',''))[:160]}")
+        return {"agent_id": agent_id, "preview": "\n".join(lines), "example_count": len(a["examples"])}
 
     @staticmethod
     def _tokens(text: str) -> set[str]:
@@ -160,23 +214,34 @@ class AgentProfileService:
     def evaluate(self, agent_id: str) -> dict:
         agent = self.get(agent_id)
         cases = agent["evaluation"].get("test_cases") or []
+        corpus = " ".join([agent["role"], agent["description"]] + [e.get("output", "") for e in agent["examples"]])
+        got = self._tokens(corpus)
         scored = []
         for case in cases:
             expected = self._tokens(str(case.get("expected", "")))
-            # Score the agent's few-shot/example coverage of the expected keywords (deterministic).
-            corpus = " ".join([agent["role"], agent["description"]] + [e.get("output", "") for e in agent["examples"]])
-            got = self._tokens(corpus)
-            hit = len(expected & got)
-            scored.append({"case": str(case.get("input", ""))[:120], "score": round((hit / len(expected)) * 100) if expected else 0})
+            hit = expected & got
+            scored.append({
+                "case": str(case.get("input", ""))[:120],
+                "score": round((len(hit) / len(expected)) * 100) if expected else 0,
+                "missing_keywords": sorted(expected - got)[:10],
+            })
         avg = round(sum(s["score"] for s in scored) / len(scored)) if scored else None
+        grade = self._grade(avg)
         agents = self.storage.read_list(self.profiles_file)
         for a in agents:
             if a.get("agent_id") == agent_id:
                 a["evaluation"]["score"] = avg
+                a["evaluation"]["grade"] = grade
         self.storage.write_list(self.profiles_file, agents)
-        self._log("agent_evaluated", f"Evaluated agent '{agent['name']}' → score {avg}.")
-        return {"agent_id": agent_id, "score": avg, "case_scores": scored,
+        self._log("agent_evaluated", f"Evaluated agent '{agent['name']}' → score {avg} ({grade}).")
+        return {"agent_id": agent_id, "score": avg, "grade": grade, "case_scores": scored,
                 "note": "Deterministic mock evaluation over declared examples/test cases — no real LLM."}
+
+    @staticmethod
+    def _grade(score: int | None) -> str:
+        if score is None:
+            return "n/a"
+        return "A" if score >= 85 else "B" if score >= 70 else "C" if score >= 55 else "D" if score >= 40 else "F"
 
     def publish_local(self, agent_id: str) -> dict:
         agents = self.storage.read_list(self.profiles_file)
