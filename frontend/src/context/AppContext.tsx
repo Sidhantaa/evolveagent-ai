@@ -247,12 +247,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setChatMessages(prev => [...prev, userMsg]);
 
-    // Route through the real Master Agent; fall back to a local reply if offline.
+    // Route through the real Master Agent. When Mock-Safe is OFF we ask the
+    // backend to execute (execute:true) — but it only runs NON-risky intents;
+    // risky ones stay approval-gated no matter what.
     (async () => {
-      const routed = await routeMessage(text);
+      const routed = await routeMessage(text, !safetySettings.mockSafe);
       const isDeploy = text.toLowerCase().includes('deploy') || text.toLowerCase().includes('run');
+      const ranForReal = routed && !safetySettings.mockSafe && !routed.requiresApproval && !routed.blockedExecution;
       const replyText = routed
-        ? `${routed.answer}${routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — it has been held for explicit approval (nothing was executed).' : ''}${routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : ''}`
+        ? `${routed.answer}`
+          + (routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — held for explicit approval (nothing was executed).' : '')
+          + (ranForReal ? '\n\n✅ Mock-Safe is off — this non-risky action was executed for real.' : '')
+          + (routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : '')
         : `I couldn't reach the backend just now, so I'm replying in offline mode. Under Planning-First Mode I'd route this to the right agent and prepare a dry-run before any real action.`;
 
       const agentMsg: ChatMessage = {

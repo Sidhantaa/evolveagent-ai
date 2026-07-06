@@ -44,15 +44,21 @@ async function postJson<T>(path: string, body: any): Promise<T | null> {
 }
 
 // ---- Actions ---------------------------------------------------------------
-/** Route a chat message through the Master Agent. Returns the reply + metadata. */
-export async function routeMessage(text: string): Promise<
-  { answer: string; requiresApproval: boolean; intent: string; suggestedWorkflow: string | null } | null
+/** Route a chat message through the Master Agent. Returns the reply + metadata.
+ *  `execute` is only honored by the backend for NON-risky intents; risky actions
+ *  are always held for approval regardless. */
+export async function routeMessage(
+  text: string,
+  execute = false,
+): Promise<
+  { answer: string; requiresApproval: boolean; blockedExecution: boolean; intent: string; suggestedWorkflow: string | null } | null
 > {
-  const d = await postJson<any>('/api/master-agent/route', { text, execute: false });
+  const d = await postJson<any>('/api/master-agent/route', { text, execute });
   if (!d) return null;
   return {
     answer: d.answer || d.route_explanation || 'Routed your request.',
     requiresApproval: Boolean(d.requires_approval),
+    blockedExecution: Boolean(d.blocked_execution),
     intent: d.intent || '',
     suggestedWorkflow: d.suggested_workflow || null,
   };
