@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { planConnectorAction } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -31,6 +32,21 @@ export const ToolsMcpHub: React.FC = () => {
   const { connectors, toggleToolConnection, governanceLogs, showToast } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedConnectorId, setSelectedConnectorId] = useState<string>('conn-github');
+  const [planResult, setPlanResult] = useState<Awaited<ReturnType<typeof planConnectorAction>>>(null);
+  const [planBusy, setPlanBusy] = useState(false);
+
+  const handlePreviewAction = async (connectorId: string, permissions: string[]) => {
+    const action = permissions[0] || 'status';
+    setPlanBusy(true);
+    setPlanResult(null);
+    try {
+      const res = await planConnectorAction(connectorId, action);
+      if (res) { setPlanResult(res); showToast(`Dry-run planned for "${action}" — nothing executed`, 'info'); }
+      else showToast('This is a sample connector — connect a real one to plan actions', 'warning');
+    } finally {
+      setPlanBusy(false);
+    }
+  };
 
   const featuredTool = connectors.find(c => c.id === selectedConnectorId) || connectors[0];
 
@@ -133,6 +149,14 @@ export const ToolsMcpHub: React.FC = () => {
                 <span>{featuredTool.status === 'connected' || featuredTool.status === 'approval-gated' ? 'Disconnect Tool' : 'Connect MCP Tool'}</span>
               </button>
               <button
+                onClick={() => handlePreviewAction(featuredTool.id, featuredTool.permissions)}
+                disabled={planBusy}
+                className="px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Settings className="w-3.5 h-3.5 text-purple-300" />
+                <span>{planBusy ? 'Planning…' : `Preview action: ${featuredTool.permissions[0] || 'status'}`}</span>
+              </button>
+              <button
                 onClick={() => showToast(`Opening OAuth scope settings for ${featuredTool.name}...`, 'info')}
                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-medium transition-colors flex items-center justify-center gap-2"
               >
@@ -142,6 +166,27 @@ export const ToolsMcpHub: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Real dry-run plan preview (mock-safe — nothing is executed) */}
+        {planResult && (
+          <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-purple-500/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-white">Dry-run plan · <span className="font-mono text-purple-300">{planResult.actionName}</span></span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${planResult.riskLevel === 'high' ? 'bg-rose-500/15 text-rose-300' : planResult.riskLevel === 'medium' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>risk: {planResult.riskLevel}</span>
+                {planResult.requiresApproval && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">needs approval</span>}
+                {!planResult.allowed && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300">blocked</span>}
+              </div>
+            </div>
+            <ol className="list-decimal list-inside space-y-1">
+              {planResult.plan.map((step, i) => (
+                <li key={i} className="text-[11px] text-gray-300">{step}</li>
+              ))}
+            </ol>
+            {planResult.blockedReason && <p className="text-[11px] text-rose-300 mt-2">Blocked: {planResult.blockedReason}</p>}
+            <p className="text-[10px] text-gray-500 mt-2">This is a planned dry-run only — no action was executed. Running it for real would require approval.</p>
+          </div>
+        )}
       </div>
 
       {/* 3. Category Filter & Connectors Grid (6 cards) */}
