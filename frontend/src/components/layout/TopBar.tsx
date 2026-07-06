@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ setMobileOpen }) => {
-  const { activePage, setActivePage, setIsCommandModalOpen, approvals, safetySettings, showToast, liveConnected, refreshLive } = useApp();
+  const { activePage, setActivePage, setIsCommandModalOpen, approvals, safetySettings, toggleSafetySetting, showToast, liveConnected, refreshLive } = useApp();
 
   const pendingApprovalsCount = approvals.filter(a => a.status === 'pending').length;
 
@@ -124,14 +124,23 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Sample Data'}</span>
         </button>
 
-        {/* Mock-Safe status badge */}
-        <div
-          onClick={() => { setActivePage('governance'); showToast('Viewing Governance & Safety defaults', 'info'); }}
-          className="cursor-pointer flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-300 text-xs font-mono transition-colors shrink-0"
+        {/* Safety-mode badge — reflects Mock-Safe and toggles it on click */}
+        <button
+          onClick={() => toggleSafetySetting('mockSafe')}
+          title={safetySettings.mockSafe
+            ? 'Mock-Safe ON: risky actions are simulated & held for approval. Click to allow real (non-risky) execution.'
+            : 'Real Actions ON: non-risky intents execute for real; risky ones are still approval-gated by the backend. Click to re-enable Mock-Safe.'}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
+            safetySettings.mockSafe
+              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
+              : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300'
+          }`}
         >
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden md:inline">Mock-Safe</span>
-        </div>
+          {safetySettings.mockSafe
+            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            : <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />}
+          <span className="hidden md:inline">{safetySettings.mockSafe ? 'Mock-Safe' : 'Real Actions'}</span>
+        </button>
       </div>
     </header>
   );
