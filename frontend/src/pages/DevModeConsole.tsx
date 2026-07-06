@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { fetchSystemHealth, SystemHealth } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -43,7 +44,10 @@ export const DevModeConsole: React.FC = () => {
     showToast('Exported trace & governance logs to JSON', 'success');
   };
 
-  const filteredLogs = governanceLogs.filter(l => 
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  useEffect(() => { fetchSystemHealth().then(setHealth); }, []);
+
+  const filteredLogs = governanceLogs.filter(l =>
     l.agentName.toLowerCase().includes(logFilter.toLowerCase()) || 
     l.action.toLowerCase().includes(logFilter.toLowerCase()) ||
     l.type.toLowerCase().includes(logFilter.toLowerCase())
@@ -54,12 +58,12 @@ export const DevModeConsole: React.FC = () => {
       {/* 1. System Health Bar (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'API Routes', value: '480', sub: 'All 200 OK', color: 'text-emerald-400' },
-          { label: 'Backend Svcs', value: '85', sub: 'FastAPI / Node', color: 'text-blue-400' },
-          { label: 'Tests Passing', value: '494', sub: '100% green', color: 'text-emerald-400' },
-          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/07`, sub: 'Orchestrating', color: 'text-purple-400' },
-          { label: 'Tool Calls', value: '32', sub: 'Today (Mock-Safe)', color: 'text-amber-400' },
-          { label: 'Gov Events', value: `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-indigo-400' },
+          { label: 'Backend', value: health ? (health.online ? 'Online' : 'Down') : '—', sub: health ? 'health :8000' : 'checking…', color: health?.online ? 'text-emerald-400' : 'text-gray-400' },
+          { label: 'Gov Events', value: health ? `${health.totalEvents}` : `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-indigo-400' },
+          { label: 'Blocked', value: health ? `${health.blocked}` : '0', sub: 'Safety blocks', color: 'text-rose-400' },
+          { label: 'Approvals', value: health ? `${health.approvals}` : '0', sub: 'Granted', color: 'text-emerald-400' },
+          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-purple-400' },
+          { label: 'Workflow Runs', value: health ? `${health.workflowRuns}` : '0', sub: 'Durable', color: 'text-amber-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
             <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>
