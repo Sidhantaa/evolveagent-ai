@@ -355,6 +355,53 @@ export async function fetchProviderStatus(): Promise<ProviderStatus | null> {
   };
 }
 
+// ---- System health (Dev Console) ------------------------------------------
+export interface SystemHealth {
+  online: boolean;
+  totalEvents: number;
+  blocked: number;
+  approvals: number;
+  workflowRuns: number;
+  learnedItems: number;
+}
+
+export interface LiveWorkflowRun {
+  id: string;
+  name: string;
+  status: string;
+  done: number;
+  total: number;
+}
+
+export async function fetchWorkflowRuns(): Promise<LiveWorkflowRun[] | null> {
+  const data = await getJson<{ runs: any[] }>('/api/durable-workflows/runs');
+  if (!data?.runs) return null;
+  return data.runs.slice(0, 8).map((r): LiveWorkflowRun => ({
+    id: r.run_id,
+    name: r.name || 'Workflow',
+    status: r.status || 'unknown',
+    done: (r.steps || []).filter((s: any) => s.status === 'done' || s.status === 'skipped').length,
+    total: (r.steps || []).length,
+  }));
+}
+
+export async function fetchSystemHealth(): Promise<SystemHealth | null> {
+  const [health, gov, today] = await Promise.all([
+    getJson<any>('/health'),
+    getJson<any>('/api/governance'),
+    getJson<any>('/api/today/summary'),
+  ]);
+  if (!health && !gov && !today) return null;
+  return {
+    online: health?.status === 'ok',
+    totalEvents: gov?.total_events ?? 0,
+    blocked: gov?.blocked_actions ?? 0,
+    approvals: gov?.approvals ?? 0,
+    workflowRuns: today?.metrics?.workflow_runs ?? 0,
+    learnedItems: today?.metrics?.learned_items ?? 0,
+  };
+}
+
 export async function fetchLiveData(): Promise<{
   agents: Agent[] | null;
   governanceLogs: GovernanceEvent[] | null;

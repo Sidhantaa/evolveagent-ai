@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { fetchWorkflowRuns, LiveWorkflowRun } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -23,6 +24,8 @@ import { TaskStatus } from '../types';
 
 export const MissionControl: React.FC = () => {
   const { mission, tasks, agents, approvals, runMockWorkflowStep, showToast } = useApp();
+  const [liveRuns, setLiveRuns] = useState<LiveWorkflowRun[] | null>(null);
+  useEffect(() => { fetchWorkflowRuns().then(setLiveRuns); }, []);
 
   const handleApproveNext = () => {
     runMockWorkflowStep();
@@ -88,6 +91,36 @@ export const MissionControl: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Live durable-workflow runs (real backend data) */}
+      {liveRuns && liveRuns.length > 0 && (
+        <GlassCard>
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <span className="text-sm font-bold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live Workflow Runs
+            </span>
+            <span className="text-[11px] font-mono text-gray-400">{liveRuns.length} recent</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
+            {liveRuns.map(run => {
+              const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
+              const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-purple-300';
+              return (
+                <div key={run.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-gray-200 truncate">{run.name}</span>
+                    <span className={`text-[10px] font-mono ${tone}`}>{run.status.replace('_', ' ')}</span>
+                  </div>
+                  <div className="mt-2 w-full h-1.5 rounded-full bg-black/50 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-mono mt-1">{run.done}/{run.total} steps</div>
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+      )}
 
       {/* 2. Next Best Action Recommendation Banner */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-blue-900/30 border border-purple-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
