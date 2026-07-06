@@ -116,6 +116,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (live.agents && live.agents.length) setAgents(live.agents);
     if (live.governanceLogs && live.governanceLogs.length) setGovernanceLogs(live.governanceLogs);
     if (live.systemMetrics && live.systemMetrics.length) setSystemMetrics(live.systemMetrics);
+    if (live.memories && live.memories.length) setMemories(live.memories);
+    if (live.connectors && live.connectors.length) setConnectors(live.connectors);
+    if (live.approvals && live.approvals.length) setApprovals(live.approvals);
   };
 
   useEffect(() => {
