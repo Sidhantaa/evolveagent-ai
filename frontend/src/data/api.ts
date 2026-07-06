@@ -64,6 +64,25 @@ export async function routeMessage(
   };
 }
 
+/** Dry-run (plan) a connector action — real preview, NO execution. Mock-safe. */
+export async function planConnectorAction(
+  connectorId: string,
+  actionName: string,
+): Promise<
+  { allowed: boolean; requiresApproval: boolean; riskLevel: string; plan: string[]; blockedReason: string | null; actionName: string } | null
+> {
+  const d = await postJson<any>(`/api/mcp/connectors/${connectorId}/plan-action`, { action_name: actionName, payload: {} });
+  if (!d) return null;
+  return {
+    allowed: Boolean(d.allowed),
+    requiresApproval: Boolean(d.requires_approval),
+    riskLevel: d.risk_level || 'medium',
+    plan: Array.isArray(d.plan) ? d.plan : [],
+    blockedReason: d.blocked_reason || null,
+    actionName,
+  };
+}
+
 /** Enable/disable a real MCP connector. Best-effort; false if it 404s (sample item). */
 export async function setConnectorEnabled(connectorId: string, enabled: boolean): Promise<boolean> {
   const d = await postJson<any>(`/api/mcp/connectors/${connectorId}/${enabled ? 'enable' : 'disable'}`, {});
