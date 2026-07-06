@@ -6,7 +6,15 @@
  * keep the mock data (the UI never breaks if the backend is down).
  */
 
-import { Agent, GovernanceEvent, SystemMetric, RiskLevel } from '../types';
+import {
+  Agent,
+  GovernanceEvent,
+  SystemMetric,
+  RiskLevel,
+  MemoryItem,
+  ToolConnector,
+  ApprovalRequest,
+} from '../types';
 
 export const API_BASE =
   (import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000';
@@ -26,6 +34,16 @@ function riskFromScore(score: number): RiskLevel {
   if (score >= 4) return 'medium';
   return 'low';
 }
+
+function riskFromLevel(level: string): RiskLevel {
+  const l = String(level || '').toLowerCase();
+  if (l === 'high' || l === 'critical') return 'high';
+  if (l === 'medium' || l === 'moderate') return 'medium';
+  if (l === 'low') return 'low';
+  return 'medium';
+}
+
+const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 
 // ---- Agents (Agent Studio) --------------------------------------------------
 export async function fetchAgents(): Promise<Agent[] | null> {
@@ -90,16 +108,101 @@ export async function fetchSystemMetrics(): Promise<SystemMetric[] | null> {
   }));
 }
 
+// ---- Project Brain memories (task memory) ----------------------------------
+export async function fetchMemories(): Promise<MemoryItem[] | null> {
+  const data = await getJson<any[]>('/api/memory');
+  if (!Array.isArray(data)) return null;
+  return data
+    .slice(-40)
+    .reverse()
+    .map((m, i): MemoryItem => ({
+      id: m.task_id || `mem-${i}`,
+      title: clip(m.user_input || m.task_type || 'Memory', 80),
+      snippet: clip(m.final_output_summary || '', 240),
+      type: 'Memory',
+      relevance: Math.min(100, Math.round(Number(m.judge_score) || 90)),
+      tier: 'hot',
+      source: Array.isArray(m.agents_used) ? m.agents_used.join(', ') : String(m.agents_used || 'Task Memory'),
+      timestamp: clip(m.created_at, 10) || '—',
+      tags: [m.task_type].filter(Boolean),
+      pinned: false,
+    }));
+}
+
+// ---- Tools / MCP connectors -------------------------------------------------
+export async function fetchConnectors(): Promise<ToolConnector[] | null> {
+  const data = await getJson<{ connectors: any[] }>('/api/mcp/connectors');
+  const list = data?.connectors;
+  if (!Array.isArray(list)) return null;
+  return list.slice(0, 48).map((c): ToolConnector => ({
+    id: c.connector_id,
+    name: c.name || c.slug || 'Connector',
+    category: 'MCP',
+    status: c.last_error ? 'error' : c.enabled ? 'connected' : 'disconnected',
+    riskLevel: riskFromLevel(c.risk_level),
+    description: clip(c.description || '', 160),
+    icon: '🔌',
+    permissions: (c.allowed_actions || []).slice(0, 8),
+    dryCheckPassed: !c.last_error,
+    activeAgentsCount: 0,
+    callsToday: 0,
+    lastUsed: clip(c.last_checked_at, 10) || '—',
+  }));
+}
+
+// ---- Approvals --------------------------------------------------------------
+export async function fetchApprovals(): Promise<ApprovalRequest[] | null> {
+  const data = await getJson<any[]>('/api/approvals');
+  if (!Array.isArray(data)) return null;
+  const mapStatus = (s: string): ApprovalRequest['status'] => {
+    const v = String(s || '').toLowerCase();
+    if (v === 'approved' || v === 'completed' || v === 'allowed') return 'approved';
+    if (v === 'rejected' || v === 'blocked' || v === 'denied') return 'rejected';
+    return 'pending';
+  };
+  // Pending first, then most recent; cap the list.
+  const sorted = [...data].sort((a, b) => {
+    const ap = mapStatus(a.status) === 'pending' ? 0 : 1;
+    const bp = mapStatus(b.status) === 'pending' ? 0 : 1;
+    return ap - bp || String(b.created_at).localeCompare(String(a.created_at));
+  });
+  return sorted.slice(0, 24).map((a, i): ApprovalRequest => ({
+    id: a.approval_id || `apr-${i}`,
+    title: clip(a.summary || a.action_type || 'Approval request', 80),
+    description: clip(a.summary || '', 240),
+    agentId: '',
+    agentName: clip(a.task_type || 'Agent', 40),
+    riskLevel: riskFromLevel(a.risk_level),
+    timestamp: clip(a.created_at, 10) || '—',
+    status: mapStatus(a.status),
+    intent: clip(a.action_type || '', 80),
+    plannedAction: clip(a.action_type || a.summary || '', 120),
+    permissionScopes: [],
+    toolName: clip(a.action_type || 'action', 40),
+    workspaceScope: a.workspace_id || 'default',
+    governanceChecks: [
+      { label: 'Approval-gated', passed: true, detail: 'Held for explicit human approval' },
+      { label: 'Mock-safe', passed: true, detail: 'No real external mutation without approval' },
+    ],
+  }));
+}
+
 export async function fetchLiveData(): Promise<{
   agents: Agent[] | null;
   governanceLogs: GovernanceEvent[] | null;
   systemMetrics: SystemMetric[] | null;
+  memories: MemoryItem[] | null;
+  connectors: ToolConnector[] | null;
+  approvals: ApprovalRequest[] | null;
 } | null> {
-  const [agents, governanceLogs, systemMetrics] = await Promise.all([
+  const [agents, governanceLogs, systemMetrics, memories, connectors, approvals] = await Promise.all([
     fetchAgents(),
     fetchGovernance(),
     fetchSystemMetrics(),
+    fetchMemories(),
+    fetchConnectors(),
+    fetchApprovals(),
   ]);
-  if (!agents && !governanceLogs && !systemMetrics) return null; // backend down
-  return { agents, governanceLogs, systemMetrics };
+  if (!agents && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals) return null;
+  return { agents, governanceLogs, systemMetrics, memories, connectors, approvals };
 }
