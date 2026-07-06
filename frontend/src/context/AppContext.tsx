@@ -25,7 +25,16 @@ import {
   INITIAL_CHAT_MESSAGES,
   SYSTEM_METRICS
 } from '../data/mockData';
-import { fetchLiveData, routeMessage, decideApproval } from '../data/api';
+import { fetchLiveData, routeMessage, decideApproval, setConnectorEnabled } from '../data/api';
+
+const SAFETY_KEY = 'evolveagent-safety';
+const DEFAULT_SAFETY: SafetySettings = {
+  planningFirst: true,
+  mockSafe: true,
+  requireApproval: true,
+  auditLogging: true,
+  blockDestructive: true,
+};
 
 interface SafetySettings {
   planningFirst: boolean;
@@ -87,12 +96,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
   const [liveConnected, setLiveConnected] = useState(false);
 
-  const [safetySettings, setSafetySettings] = useState<SafetySettings>({
-    planningFirst: true,
-    mockSafe: true,
-    requireApproval: true,
-    auditLogging: true,
-    blockDestructive: true
+  const [safetySettings, setSafetySettings] = useState<SafetySettings>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SAFETY_KEY) || 'null');
+      if (saved && typeof saved === 'object') return { ...DEFAULT_SAFETY, ...saved };
+    } catch { /* ignore */ }
+    return DEFAULT_SAFETY;
   });
 
   // Keyboard shortcut for Command K
@@ -136,6 +145,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleSafetySetting = (key: keyof SafetySettings) => {
     setSafetySettings(prev => {
       const updated = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem(SAFETY_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
       showToast(`Safety setting "${key}" updated to ${updated[key] ? 'Enabled' : 'Disabled'}`, 'info');
       return updated;
     });
@@ -316,6 +326,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (c.id === id) {
         const nextStatus = c.status === 'connected' ? 'disconnected' : 'connected';
         showToast(`Tool connector "${c.name}" is now ${nextStatus.toUpperCase()}`, nextStatus === 'connected' ? 'success' : 'warning');
+        // Best-effort real enable/disable on the backend (no-op for sample items).
+        setConnectorEnabled(id, nextStatus === 'connected').then(ok => { if (ok) refreshLive(); });
         return { ...c, status: nextStatus };
       }
       return c;

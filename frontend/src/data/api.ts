@@ -64,6 +64,12 @@ export async function routeMessage(
   };
 }
 
+/** Enable/disable a real MCP connector. Best-effort; false if it 404s (sample item). */
+export async function setConnectorEnabled(connectorId: string, enabled: boolean): Promise<boolean> {
+  const d = await postJson<any>(`/api/mcp/connectors/${connectorId}/${enabled ? 'enable' : 'disable'}`, {});
+  return d !== null;
+}
+
 /** Approve or reject a REAL backend approval. Best-effort; null if it 404s (mock item). */
 export async function decideApproval(
   approvalId: string,
