@@ -83,6 +83,76 @@ export async function planConnectorAction(
   };
 }
 
+// ---- MCP execute → approve → run (approval-gated, mock-safe) ----------------
+export interface McpExecutionRequest {
+  requestId: string;
+  status: string; // pending_approval | approved | executed | blocked | rejected
+  requiresApproval: boolean;
+  riskLevel: string;
+  blockedReason: string | null;
+  actionName: string;
+}
+
+export interface McpExecutionResult {
+  status: string;
+  executionMode: string; // mock | real_read_only
+  success: boolean;
+  realCallMade: boolean;
+  secretsUsed: boolean;
+  output: any;
+  note: string;
+}
+
+/** Request a real execution of a connector action. Returns a request_id.
+ *  Risky/approval-gated actions come back as `pending_approval` and never auto-run.
+ *  Returns null for sample/mock connectors (backend 404s). */
+export async function requestConnectorExecution(
+  connectorId: string,
+  actionName: string,
+): Promise<McpExecutionRequest | null> {
+  const d = await postJson<any>(`/api/mcp/connectors/${connectorId}/execute`, { action_name: actionName, payload: {} });
+  if (!d) return null;
+  return {
+    requestId: d.request_id,
+    status: d.status || 'pending_approval',
+    requiresApproval: Boolean(d.requires_approval),
+    riskLevel: d.risk_level || 'medium',
+    blockedReason: d.blocked_reason || null,
+    actionName,
+  };
+}
+
+/** Approve a pending execution request (explicit human sign-off). */
+export async function approveConnectorExecution(requestId: string): Promise<McpExecutionRequest | null> {
+  const d = await postJson<any>(`/api/mcp/executions/${requestId}/approve`, {});
+  if (!d) return null;
+  return {
+    requestId: d.request_id,
+    status: d.status || 'approved',
+    requiresApproval: Boolean(d.requires_approval),
+    riskLevel: d.risk_level || 'medium',
+    blockedReason: d.blocked_reason || null,
+    actionName: d.action_name || '',
+  };
+}
+
+/** Run an approved execution request. Mock-by-default; a real read-only call
+ *  only happens when the backend adapter's opt-in is set. Surfaces the result. */
+export async function runConnectorExecution(requestId: string): Promise<McpExecutionResult | null> {
+  const d = await postJson<any>(`/api/mcp/executions/${requestId}/run`, {});
+  if (!d) return null;
+  const result = d.result || {};
+  return {
+    status: d.status || 'executed',
+    executionMode: result.execution_mode || 'mock',
+    success: Boolean(result.success),
+    realCallMade: Boolean(result.real_call_made),
+    secretsUsed: Boolean(result.secrets_used),
+    output: result.output ?? {},
+    note: result.note || '',
+  };
+}
+
 /** Enable/disable a real MCP connector. Best-effort; false if it 404s (sample item). */
 export async function setConnectorEnabled(connectorId: string, enabled: boolean): Promise<boolean> {
   const d = await postJson<any>(`/api/mcp/connectors/${connectorId}/${enabled ? 'enable' : 'disable'}`, {});
