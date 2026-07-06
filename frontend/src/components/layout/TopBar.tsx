@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ setMobileOpen }) => {
-  const { activePage, setActivePage, setIsCommandModalOpen, approvals, safetySettings, showToast } = useApp();
+  const { activePage, setActivePage, setIsCommandModalOpen, approvals, safetySettings, showToast, liveConnected, refreshLive } = useApp();
 
   const pendingApprovalsCount = approvals.filter(a => a.status === 'pending').length;
 
@@ -110,8 +110,22 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           </button>
         </div>
 
+        {/* Live/Mock data indicator — reflects real backend connection */}
+        <button
+          onClick={() => { refreshLive(); showToast(liveConnected ? 'Refreshed live data from backend' : 'Backend offline — showing sample data', liveConnected ? 'success' : 'warning'); }}
+          title={liveConnected ? 'Connected to the local backend — click to refresh' : 'Backend offline (showing sample data) — click to retry'}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
+            liveConnected
+              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
+              : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-gray-400'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+          <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Sample Data'}</span>
+        </button>
+
         {/* Mock-Safe status badge */}
-        <div 
+        <div
           onClick={() => { setActivePage('governance'); showToast('Viewing Governance & Safety defaults', 'info'); }}
           className="cursor-pointer flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-300 text-xs font-mono transition-colors shrink-0"
         >

@@ -25,6 +25,7 @@ import {
   INITIAL_CHAT_MESSAGES,
   SYSTEM_METRICS
 } from '../data/mockData';
+import { fetchLiveData } from '../data/api';
 
 interface SafetySettings {
   planningFirst: boolean;
@@ -53,7 +54,9 @@ interface AppContextType {
   toggleSafetySetting: (key: keyof SafetySettings) => void;
   toast: { message: string; type: 'success' | 'info' | 'warning' } | null;
   showToast: (message: string, type?: 'success' | 'info' | 'warning') => void;
-  
+  liveConnected: boolean;
+  refreshLive: () => Promise<void>;
+
   // Actions
   approveRequest: (id: string) => void;
   rejectRequest: (id: string) => void;
@@ -82,6 +85,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>(SYSTEM_METRICS);
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+  const [liveConnected, setLiveConnected] = useState(false);
 
   const [safetySettings, setSafetySettings] = useState<SafetySettings>({
     planningFirst: true,
@@ -101,6 +105,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Load real backend data on mount; keep mock data as a fallback so the UI
+  // works even if the backend is down. Only overrides slices that came back.
+  const refreshLive = async () => {
+    const live = await fetchLiveData();
+    if (!live) { setLiveConnected(false); return; }
+    setLiveConnected(true);
+    if (live.agents && live.agents.length) setAgents(live.agents);
+    if (live.governanceLogs && live.governanceLogs.length) setGovernanceLogs(live.governanceLogs);
+    if (live.systemMetrics && live.systemMetrics.length) setSystemMetrics(live.systemMetrics);
+  };
+
+  useEffect(() => {
+    refreshLive();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
@@ -332,6 +352,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleSafetySetting,
         toast,
         showToast,
+        liveConnected,
+        refreshLive,
         approveRequest,
         rejectRequest,
         approveBatchLowRisk,
