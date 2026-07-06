@@ -29,6 +29,45 @@ async function getJson<T>(path: string): Promise<T | null> {
   }
 }
 
+async function postJson<T>(path: string, body: any): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+// ---- Actions ---------------------------------------------------------------
+/** Route a chat message through the Master Agent. Returns the reply + metadata. */
+export async function routeMessage(text: string): Promise<
+  { answer: string; requiresApproval: boolean; intent: string; suggestedWorkflow: string | null } | null
+> {
+  const d = await postJson<any>('/api/master-agent/route', { text, execute: false });
+  if (!d) return null;
+  return {
+    answer: d.answer || d.route_explanation || 'Routed your request.',
+    requiresApproval: Boolean(d.requires_approval),
+    intent: d.intent || '',
+    suggestedWorkflow: d.suggested_workflow || null,
+  };
+}
+
+/** Approve or reject a REAL backend approval. Best-effort; null if it 404s (mock item). */
+export async function decideApproval(
+  approvalId: string,
+  decision: 'approve' | 'reject',
+  comment?: string,
+): Promise<boolean> {
+  const d = await postJson<any>(`/api/approvals/${approvalId}/decision`, { decision, comment });
+  return d !== null;
+}
+
 function riskFromScore(score: number): RiskLevel {
   if (score >= 7) return 'high';
   if (score >= 4) return 'medium';

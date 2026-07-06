@@ -25,7 +25,7 @@ import {
   INITIAL_CHAT_MESSAGES,
   SYSTEM_METRICS
 } from '../data/mockData';
-import { fetchLiveData } from '../data/api';
+import { fetchLiveData, routeMessage, decideApproval } from '../data/api';
 
 interface SafetySettings {
   planningFirst: boolean;
@@ -146,6 +146,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'approved' } : a));
+    // Best-effort real decision on the backend (no-op for sample items).
+    decideApproval(id, 'approve').then(ok => { if (ok) refreshLive(); });
     
     // Log governance event
     const newLog: GovernanceEvent = {
@@ -180,7 +182,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected' } : a));
-    
+    decideApproval(id, 'reject', 'Rejected by user; no action was applied.').then(ok => { if (ok) refreshLive(); });
+
     const newLog: GovernanceEvent = {
       id: `gov-${Date.now()}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -244,16 +247,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setChatMessages(prev => [...prev, userMsg]);
 
-    // Simulate Agent response after short delay
-    setTimeout(() => {
-      const isQuestion = text.toLowerCase().includes('?');
+    // Route through the real Master Agent; fall back to a local reply if offline.
+    (async () => {
+      const routed = await routeMessage(text);
       const isDeploy = text.toLowerCase().includes('deploy') || text.toLowerCase().includes('run');
-      
-      const replyText = isDeploy
-        ? `I have verified the build artifacts. Under our **Planning-First Mode**, I prepared a dry-run package for Cloud Run container deployment. Would you like me to submit the deployment request to the Approvals Queue?`
-        : isQuestion
-        ? `I checked Project Brain memories and our 7 connected tools. All agent permissions are compliant with Governance Safety rules (Score: 98%). How would you like to proceed with the current mission?`
-        : `Understood! I've routed your request to the **UI Design Agent** and **Memory Agent** for parallel processing. They are currently synthesizing the required updates.`;
+      const replyText = routed
+        ? `${routed.answer}${routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — it has been held for explicit approval (nothing was executed).' : ''}${routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : ''}`
+        : `I couldn't reach the backend just now, so I'm replying in offline mode. Under Planning-First Mode I'd route this to the right agent and prepare a dry-run before any real action.`;
 
       const agentMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -262,11 +262,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         avatar: '🤖',
         text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isWorkingCard: isDeploy
+        isWorkingCard: isDeploy && Boolean(routed?.requiresApproval)
       };
-
       setChatMessages(prev => [...prev, agentMsg]);
-    }, 800);
+    })();
   };
 
   const runMockWorkflowStep = () => {
