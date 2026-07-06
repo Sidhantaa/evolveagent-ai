@@ -226,6 +226,34 @@ export async function fetchApprovals(): Promise<ApprovalRequest[] | null> {
   }));
 }
 
+// ---- Provider / settings status (secret-safe) ------------------------------
+export interface ProviderStatus {
+  totalProviders: number;
+  readyProviders: number;
+  capabilityModes: Record<string, string>;
+  fallbackEnabled: boolean;
+  providers: { provider: string; ready: boolean; keys: { name: string; isSet: boolean }[] }[];
+}
+
+export async function fetchProviderStatus(): Promise<ProviderStatus | null> {
+  const [summary, keyCheck] = await Promise.all([
+    getJson<any>('/api/provider-control/summary'),
+    getJson<any>('/api/provider-control/key-check'),
+  ]);
+  if (!summary && !keyCheck) return null;
+  return {
+    totalProviders: summary?.total_providers ?? 0,
+    readyProviders: summary?.ready_providers ?? 0,
+    capabilityModes: summary?.capability_modes ?? {},
+    fallbackEnabled: Boolean(summary?.fallback_enabled),
+    providers: (keyCheck?.checks || []).map((c: any) => ({
+      provider: c.provider,
+      ready: Boolean(c.ready),
+      keys: (c.keys || []).map((k: any) => ({ name: k.key_name, isSet: Boolean(k.is_set) })),
+    })),
+  };
+}
+
 export async function fetchLiveData(): Promise<{
   agents: Agent[] | null;
   governanceLogs: GovernanceEvent[] | null;

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { fetchProviderStatus, ProviderStatus } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { 
   Settings, 
@@ -32,6 +33,9 @@ export const SettingsPage: React.FC = () => {
   const [qualityJudge, setQualityJudge] = useState(true);
   const [autoSaveDecisions, setAutoSaveDecisions] = useState(true);
   const [selectedTheme, setSelectedTheme] = useState<'dark-graphite' | 'charcoal-blue' | 'cosmic-purple'>('dark-graphite');
+
+  const [providers, setProviders] = useState<ProviderStatus | null>(null);
+  useEffect(() => { fetchProviderStatus().then(setProviders); }, []);
 
   const handleAction = (msg: string) => {
     showToast(msg, 'success');
@@ -67,6 +71,38 @@ export const SettingsPage: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Live Provider Status (real backend, secret-safe booleans only) */}
+        {(activeTab === 'all' || activeTab === 'models') && providers && (
+          <GlassCard>
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${providers.readyProviders > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+                Provider Status (Live)
+              </span>
+              <span className="text-[11px] font-mono text-gray-400">{providers.readyProviders}/{providers.totalProviders} ready</span>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-3">
+              {Object.entries(providers.capabilityModes).map(([cap, mode]) => (
+                <span key={cap} className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${mode === 'real' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-white/[0.04] text-gray-400 border-white/10'}`}>
+                  {cap}: {mode}
+                </span>
+              ))}
+              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">fallback on</span>}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
+              {providers.providers.map(p => (
+                <div key={p.provider} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                  <span className="text-xs font-medium text-gray-200 capitalize">{p.provider}</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${p.ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 text-gray-400'}`}>
+                    {p.ready ? 'key set ✓' : 'no key'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-500 pt-3">Readiness is boolean-only — no secret values are ever shown or stored.</p>
+          </GlassCard>
+        )}
 
         {/* 1. Workspace Profile Card */}
         {(activeTab === 'all') && (
