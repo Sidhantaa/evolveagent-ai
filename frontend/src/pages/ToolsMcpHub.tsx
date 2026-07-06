@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { planConnectorAction } from '../data/api';
+import {
+  planConnectorAction,
+  requestConnectorExecution,
+  approveConnectorExecution,
+  runConnectorExecution,
+  McpExecutionRequest,
+  McpExecutionResult,
+} from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -34,17 +41,87 @@ export const ToolsMcpHub: React.FC = () => {
   const [selectedConnectorId, setSelectedConnectorId] = useState<string>('conn-github');
   const [planResult, setPlanResult] = useState<Awaited<ReturnType<typeof planConnectorAction>>>(null);
   const [planBusy, setPlanBusy] = useState(false);
+  const [execRequest, setExecRequest] = useState<McpExecutionRequest | null>(null);
+  const [execResult, setExecResult] = useState<McpExecutionResult | null>(null);
+  const [execBusy, setExecBusy] = useState(false);
+
+  const resetExecFlow = () => {
+    setExecRequest(null);
+    setExecResult(null);
+  };
 
   const handlePreviewAction = async (connectorId: string, permissions: string[]) => {
     const action = permissions[0] || 'status';
     setPlanBusy(true);
     setPlanResult(null);
+    resetExecFlow();
     try {
       const res = await planConnectorAction(connectorId, action);
       if (res) { setPlanResult(res); showToast(`Dry-run planned for "${action}" — nothing executed`, 'info'); }
       else showToast('This is a sample connector — connect a real one to plan actions', 'warning');
     } finally {
       setPlanBusy(false);
+    }
+  };
+
+  // Step 1: request an execution (approval-gated at the backend; mock-safe).
+  const handleRequestExecution = async (connectorId: string, permissions: string[]) => {
+    const action = permissions[0] || 'status';
+    setExecBusy(true);
+    setExecResult(null);
+    setExecRequest(null);
+    try {
+      const req = await requestConnectorExecution(connectorId, action);
+      if (!req) {
+        showToast('This is a sample connector — connect a real one to execute actions', 'warning');
+        return;
+      }
+      setExecRequest(req);
+      if (req.status === 'blocked') {
+        showToast(`Blocked: ${req.blockedReason || 'action not permitted'}`, 'warning');
+      } else if (req.status === 'pending_approval') {
+        showToast(`Execution held for approval (${req.riskLevel} risk) — nothing ran`, 'info');
+      } else if (req.status === 'approved') {
+        showToast('Low-risk action auto-approved — ready to run', 'info');
+      }
+    } finally {
+      setExecBusy(false);
+    }
+  };
+
+  // Step 2: run an already-approved request (mock-by-default; surface result).
+  const runRequest = async (requestId: string) => {
+    const result = await runConnectorExecution(requestId);
+    if (!result) { showToast('Run failed — request may not be runnable', 'warning'); return; }
+    setExecResult(result);
+    setExecRequest(prev => (prev ? { ...prev, status: result.status } : prev));
+    showToast(
+      result.executionMode === 'real_read_only'
+        ? 'Ran real read-only call (sandboxed, no secrets)'
+        : 'Ran mock execution — no real side effects',
+      result.success ? 'success' : 'warning',
+    );
+  };
+
+  // Step 2a: explicit human sign-off, then run.
+  const handleApproveAndRun = async (requestId: string) => {
+    setExecBusy(true);
+    try {
+      const approved = await approveConnectorExecution(requestId);
+      if (!approved) { showToast('Approval failed', 'warning'); return; }
+      setExecRequest(approved);
+      await runRequest(requestId);
+    } finally {
+      setExecBusy(false);
+    }
+  };
+
+  const handleRunApproved = async (requestId: string) => {
+    setExecBusy(true);
+    try {
+      await runRequest(requestId);
+    } finally {
+      setExecBusy(false);
     }
   };
 
@@ -157,6 +234,14 @@ export const ToolsMcpHub: React.FC = () => {
                 <span>{planBusy ? 'Planning…' : `Preview action: ${featuredTool.permissions[0] || 'status'}`}</span>
               </button>
               <button
+                onClick={() => handleRequestExecution(featuredTool.id, featuredTool.permissions)}
+                disabled={execBusy}
+                className="px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-200 text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5 text-blue-300" />
+                <span>{execBusy ? 'Working…' : `Execute action: ${featuredTool.permissions[0] || 'status'}`}</span>
+              </button>
+              <button
                 onClick={() => showToast(`Opening OAuth scope settings for ${featuredTool.name}...`, 'info')}
                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-medium transition-colors flex items-center justify-center gap-2"
               >
@@ -185,6 +270,86 @@ export const ToolsMcpHub: React.FC = () => {
             </ol>
             {planResult.blockedReason && <p className="text-[11px] text-rose-300 mt-2">Blocked: {planResult.blockedReason}</p>}
             <p className="text-[10px] text-gray-500 mt-2">This is a planned dry-run only — no action was executed. Running it for real would require approval.</p>
+          </div>
+        )}
+
+        {/* Approval-gated execution flow (request → approve → run). Mock-safe. */}
+        {execRequest && (
+          <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-blue-500/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Terminal className="w-3.5 h-3.5 text-blue-300" />
+                Execution · <span className="font-mono text-blue-300">{execRequest.actionName}</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execRequest.riskLevel === 'high' ? 'bg-rose-500/15 text-rose-300' : execRequest.riskLevel === 'medium' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>risk: {execRequest.riskLevel}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">status: {execRequest.status}</span>
+              </div>
+            </div>
+
+            {execRequest.status === 'blocked' && (
+              <p className="text-[11px] text-rose-300">
+                <AlertTriangle className="w-3 h-3 inline mr-1" />
+                Blocked: {execRequest.blockedReason || 'This action is not permitted by policy.'} — nothing ran.
+              </p>
+            )}
+
+            {execRequest.status === 'pending_approval' && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] text-amber-300 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Held for explicit approval. It will not run until you approve it.
+                </p>
+                <button
+                  onClick={() => handleApproveAndRun(execRequest.requestId)}
+                  disabled={execBusy}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-black text-[11px] font-bold flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {execBusy ? 'Running…' : 'Approve & run'}
+                </button>
+              </div>
+            )}
+
+            {execRequest.status === 'approved' && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] text-emerald-300 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Approved — ready to run (mock-safe).
+                </p>
+                <button
+                  onClick={() => handleRunApproved(execRequest.requestId)}
+                  disabled={execBusy}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Play className="w-3.5 h-3.5" /> {execBusy ? 'Running…' : 'Run now'}
+                </button>
+              </div>
+            )}
+
+            {execResult && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.executionMode === 'real_read_only' ? 'bg-blue-500/15 text-blue-300' : 'bg-purple-500/15 text-purple-300'}`}>
+                    mode: {execResult.executionMode}
+                  </span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
+                    {execResult.success ? 'success' : 'failed'}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
+                    real call: {execResult.realCallMade ? 'yes (read-only)' : 'no'}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
+                    secrets: {execResult.secretsUsed ? 'used' : 'none'}
+                  </span>
+                </div>
+                <pre className="text-[11px] text-gray-300 bg-black/40 rounded-xl p-3 overflow-x-auto max-h-56 whitespace-pre-wrap break-words font-mono">
+                  {JSON.stringify(execResult.output, null, 2)}
+                </pre>
+                {execResult.note && <p className="text-[10px] text-gray-500">{execResult.note}</p>}
+              </div>
+            )}
+
+            <p className="text-[10px] text-gray-500 mt-2">
+              Execution is mock-safe by default. A real call only happens for opt-in, sandboxed, read-only actions — never a send, write, deploy, or payment.
+            </p>
           </div>
         )}
       </div>
@@ -222,7 +387,7 @@ export const ToolsMcpHub: React.FC = () => {
             return (
               <div
                 key={tool.id}
-                onClick={() => setSelectedConnectorId(tool.id)}
+                onClick={() => { setSelectedConnectorId(tool.id); setPlanResult(null); resetExecFlow(); }}
                 className={`cursor-pointer rounded-2xl border transition-all p-5 flex flex-col justify-between ${
                   isSel
                     ? 'bg-[#1e1e28]/90 border-purple-500/50 shadow-[0_4px_25px_-5px_rgba(160,120,255,0.2)]'
