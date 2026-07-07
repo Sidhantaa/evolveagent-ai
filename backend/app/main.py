@@ -7,6 +7,18 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
+from app.api.app_builder_routes import router as app_builder_router
+from app.api.digital_twin_routes import router as digital_twin_router
+from app.api.doc_intel_routes import router as doc_intel_router
+from app.api.eval_harness_routes import router as eval_harness_router
+from app.api.integrations_routes import router as integrations_router
+from app.api.operating_layer_2_routes import router as operating_layer_2_router
+from app.api.permissions_routes import router as permissions_router
+from app.api.plugin_marketplace_routes import router as plugin_marketplace_router
+from app.api.portfolio_routes import router as portfolio_router
+from app.api.quality_routes import router as quality_router
+from app.api.scheduled_tasks_routes import router as scheduled_tasks_router
+from app.api.tools_routes import router as tools_router
 from app.api.team_manager_routes import router as team_manager_router
 from app.api.self_healing_routes import router as self_healing_router
 from app.api.research_agent_routes import router as research_agent_router
@@ -68,6 +80,18 @@ def health_check() -> dict[str, str]:
 
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
+app.include_router(app_builder_router, prefix="/api")
+app.include_router(digital_twin_router, prefix="/api")
+app.include_router(doc_intel_router, prefix="/api")
+app.include_router(eval_harness_router, prefix="/api")
+app.include_router(integrations_router, prefix="/api")
+app.include_router(operating_layer_2_router, prefix="/api")
+app.include_router(permissions_router, prefix="/api")
+app.include_router(plugin_marketplace_router, prefix="/api")
+app.include_router(portfolio_router, prefix="/api")
+app.include_router(quality_router, prefix="/api")
+app.include_router(scheduled_tasks_router, prefix="/api")
+app.include_router(tools_router, prefix="/api")
 app.include_router(team_manager_router, prefix="/api")
 app.include_router(self_healing_router, prefix="/api")
 app.include_router(research_agent_router, prefix="/api")

@@ -585,96 +585,7 @@ def push_git_branch(request: GitPushRequest | None = None) -> dict:
     return git_service.push(remote=payload.remote, branch=payload.branch)
 
 
-@router.get("/quality/status")
-def get_quality_status() -> dict:
-    return test_quality_service.summary()
-
-
-@router.post("/quality/suggest-tests")
-def suggest_quality_tests(request: TestSuggestionRequest) -> dict:
-    files = request.changed_files or git_service.list_changed_files()
-    return test_quality_service.suggest_tests(files)
-
-
-@router.post("/quality/run")
-def run_quality_checks(request: QualityRunRequest | None = None) -> dict:
-    payload = request or QualityRunRequest()
-    commands = payload.commands or ["pytest", "npm run build"]
-    if any(not safe_command_runner.is_allowed(command) for command in commands):
-        raise HTTPException(status_code=400, detail="Quality checks can only run allowlisted commands.")
-    return test_quality_service.run_quality_checks(commands=commands, issue_id=payload.issue_id)
-
-
-@router.get("/quality/flaky-tests")
-def get_flaky_tests() -> dict:
-    return {"flaky_tests": test_quality_service.detect_flaky_tests()}
-
-
-@router.get("/quality/gate")
-def get_quality_gate() -> dict:
-    latest = test_quality_service.latest_run()
-    if not latest:
-        return {
-            "passed": False,
-            "blocked": True,
-            "reason": "No quality run has been recorded yet.",
-            "latest_run": None,
-        }
-    return {**latest.get("quality_gate", {}), "latest_run": latest}
-
-
-@router.post("/quality/linear-summary")
-def post_quality_linear_summary(request: QualityLinearSummaryRequest) -> dict:
-    runs = test_quality_service.list_runs(100)
-    run = None
-    if request.quality_run_id:
-        run = next((item for item in runs if item.get("quality_run_id") == request.quality_run_id), None)
-    else:
-        run = test_quality_service.latest_run()
-    if not run:
-        raise HTTPException(status_code=404, detail="Quality run not found")
-    try:
-        comment = linear_service.add_linear_comment(request.issue_id, run.get("regression_summary", "Quality run completed."))
-    except LinearServiceError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    return {"posted": True, "issue_id": request.issue_id, "quality_run_id": run.get("quality_run_id"), "comment": comment}
-
-
-@router.get("/app-builder/templates")
-def list_app_builder_templates() -> list[dict]:
-    return app_builder_service.list_templates()
-
-
-@router.get("/app-builder/plans")
-def list_app_builder_plans(workspace_id: str | None = Query(default=None)) -> list[dict]:
-    return app_builder_service.list_plans(workspace_id)
-
-
-@router.get("/app-builder/plans/{plan_id}")
-def get_app_builder_plan(plan_id: str) -> dict:
-    plan = app_builder_service.get_plan(plan_id)
-    if not plan:
-        raise HTTPException(status_code=404, detail="App builder plan not found")
-    return plan
-
-
-@router.post("/app-builder/plan")
-def create_app_builder_plan(request: AppBuilderPlanRequest) -> dict:
-    return app_builder_service.create_plan(
-        prompt=request.prompt,
-        stack_id=request.stack_id,
-        workspace_id=request.workspace_id,
-    )
-
-
-@router.post("/app-builder/wizard")
-def update_app_builder_wizard(request: AppBuilderWizardRequest) -> dict:
-    return app_builder_service.update_wizard(request.model_dump())
-
-
-@router.post("/app-builder/scaffold")
-def scaffold_app_builder_plan(request: AppBuilderScaffoldRequest) -> dict:
-    return app_builder_service.scaffold(plan_id=request.plan_id, approved=request.approved)
+# NOTE: /app-builder/* routes were extracted into app/api/app_builder_routes.py (services still live here).
 
 
 @router.get("/debate/summary")
@@ -990,47 +901,7 @@ def run_assistant_command(command_name: str, request: AssistantCommandRequest) -
     )
 
 
-@router.get("/tools")
-def list_tools(include_disabled: bool = Query(default=False)) -> list[dict]:
-    plugin_loader.load_plugins()
-    return tool_registry.list_tools(include_disabled=include_disabled)
-
-
-@router.get("/tools/history")
-def list_tool_execution_history(
-    workspace_id: str | None = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
-) -> list[dict]:
-    return tool_execution_service.list_history(workspace_id=workspace_id, limit=limit)
-
-
-@router.get("/tools/summary")
-def get_tool_execution_summary(workspace_id: str | None = Query(default=None)) -> dict:
-    return tool_execution_service.summary(workspace_id=workspace_id)
-
-
-@router.get("/tools/history/{execution_id}")
-def get_tool_execution(execution_id: str) -> dict:
-    execution = tool_execution_service.get(execution_id)
-    if execution is None:
-        raise HTTPException(status_code=404, detail="Tool execution not found")
-    return execution
-
-
-@router.post("/tools/register")
-def register_tool(request: RegisterToolRequest) -> dict:
-    try:
-        return tool_registry.register_tool(request.model_dump())
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@router.get("/tools/{name}")
-def get_tool(name: str) -> dict:
-    tool = tool_registry.get_tool(name)
-    if tool is None:
-        raise HTTPException(status_code=404, detail="Tool not found")
-    return tool
+# NOTE: /tools/* routes were extracted into app/api/tools_routes.py (services still live here).
 
 
 @router.get("/plugins")
@@ -1038,47 +909,7 @@ def list_plugins() -> list[dict]:
     return plugin_loader.load_plugins()
 
 
-@router.get("/integrations/slack/status")
-def get_slack_integration_status() -> dict:
-    return slack_notifications.status()
-
-
-@router.get("/integrations/slack/notifications")
-def list_slack_notifications(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
-    return slack_notifications.list_notifications(limit=limit)
-
-
-@router.post("/integrations/slack/test")
-def send_slack_test_notification(request: SlackTestNotificationRequest) -> dict:
-    resolved_workspace_id = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
-    return slack_notifications.send_test_message(
-        text=request.text,
-        channel=request.channel,
-        workspace_id=resolved_workspace_id,
-    )
-
-
-@router.get("/integrations/notion/status")
-def get_notion_integration_status() -> dict:
-    return notion_exports.status()
-
-
-@router.get("/integrations/notion/exports")
-def list_notion_exports(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
-    return notion_exports.list_exports(limit=limit)
-
-
-@router.post("/integrations/notion/export")
-def export_to_notion(request: NotionExportRequest) -> dict:
-    resolved_workspace_id = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
-    return notion_exports.export_page(
-        title=request.title,
-        content=request.content,
-        workspace_id=resolved_workspace_id,
-    )
-
-
-# NOTE: /autopilot/* routes were extracted into app/api/autopilot_routes.py (services still live here).
+# NOTE: /integrations/* routes were extracted into app/api/integrations_routes.py (services still live here).
 
 
 @router.post("/run", response_model=RunResponse)
@@ -1377,37 +1208,7 @@ def get_learning_report(workspace_id: str | None = Query(default=None)) -> dict:
     return learning_agent.report(workspace_id=resolved)
 
 
-@router.get("/digital-twin/profile")
-def get_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
-    return digital_twin_service.get_profile(workspace_id)
-
-
-@router.post("/digital-twin/profile/refresh")
-def refresh_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
-    return digital_twin_service.refresh_profile(workspace_id)
-
-
-@router.patch("/digital-twin/profile")
-def update_digital_twin_profile(request: DigitalTwinUpdateRequest) -> dict:
-    return digital_twin_service.update_profile(
-        workspace_id=request.workspace_id,
-        updates=request.model_dump(exclude={"workspace_id"}, exclude_none=True),
-    )
-
-
-@router.get("/digital-twin/profile/export")
-def export_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
-    return digital_twin_service.export_profile(workspace_id)
-
-
-@router.post("/digital-twin/profile/reset")
-def reset_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
-    return digital_twin_service.reset_profile(workspace_id)
-
-
-@router.delete("/digital-twin/profile")
-def delete_digital_twin_profile(workspace_id: str | None = Query(default=None)) -> dict:
-    return digital_twin_service.delete_profile(workspace_id)
+# NOTE: /digital-twin/* routes were extracted into app/api/digital_twin_routes.py (services still live here).
 
 
 @router.get("/learning/prompt-versions")
@@ -1567,44 +1368,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
     }
 
 
-# NOTE: /project-manager/* routes were extracted into app/api/project_manager_routes.py (services still live here).
-
-
-@router.get("/portfolio/dashboard")
-def get_portfolio_dashboard() -> dict:
-    return portfolio_service.dashboard()
-
-
-@router.get("/portfolio/analytics")
-def get_portfolio_analytics() -> dict:
-    return portfolio_service.analytics()
-
-
-@router.get("/portfolio/health")
-def get_portfolio_health() -> dict:
-    return portfolio_service.health()
-
-
-@router.post("/portfolio/reports")
-def generate_portfolio_report(request: PortfolioReportRequest | None = None) -> dict:
-    return portfolio_service.generate_executive_summary()
-
-
-@router.get("/portfolio/reports")
-def get_portfolio_reports() -> list[dict]:
-    return portfolio_service.list_reports()
-
-
-@router.get("/portfolio/export")
-def export_portfolio(format: str = Query(default="json", pattern="^(json|markdown)$")) -> PlainTextResponse:
-    content = portfolio_service.export(format=format)
-    media_type = "application/json" if format == "json" else "text/markdown"
-    extension = "json" if format == "json" else "md"
-    return PlainTextResponse(
-        content,
-        media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="evolveagent-portfolio.{extension}"'},
-    )
+# NOTE: /portfolio/* routes were extracted into app/api/portfolio_routes.py (services still live here).
 
 
 @router.get("/os/installer")
@@ -2145,42 +1909,7 @@ def query_retrieval(request: RetrievalQueryRequest) -> dict:
     return local_retrieval_service.query(request.model_dump())
 
 
-# ----------------------------------------------------------------------
-# v52.0 Evaluation Harness 2.0 — repeatable suites + scorecards + regression.
-# ----------------------------------------------------------------------
-@router.get("/eval-harness/summary")
-def get_eval_harness_summary() -> dict:
-    return eval_harness_service.summary()
-
-
-@router.get("/eval-harness/suites")
-def list_eval_suites() -> dict:
-    suites = eval_harness_service.list_suites()
-    return {"suites": suites, "count": len(suites)}
-
-
-@router.post("/eval-harness/suites")
-def create_eval_suite(request: EvalSuiteCreateRequest) -> dict:
-    return eval_harness_service.create_suite(request.model_dump())
-
-
-@router.post("/eval-harness/suites/{suite_id}/run")
-def run_eval_suite(suite_id: str) -> dict:
-    try:
-        return eval_harness_service.run_suite(suite_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail="Suite not found") from error
-
-
-@router.get("/eval-harness/runs")
-def list_eval_runs(suite_id: str | None = Query(default=None)) -> dict:
-    runs = eval_harness_service.list_runs(suite_id)
-    return {"runs": runs, "count": len(runs)}
-
-
-@router.get("/eval-harness/suites/{suite_id}/regression")
-def get_eval_regression(suite_id: str) -> dict:
-    return eval_harness_service.regression(suite_id)
+# NOTE: /eval-harness/* routes were extracted into app/api/eval_harness_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2216,38 +1945,7 @@ def list_playbook_runs(playbook_id: str | None = Query(default=None)) -> dict:
     return {"runs": runs, "count": len(runs)}
 
 
-# ----------------------------------------------------------------------
-# v55.0 EvolveAgent Operating Layer 2.0 — expanded capability map + scorecard.
-# ----------------------------------------------------------------------
-@router.get("/operating-layer-2/dashboard")
-def get_operating_layer_v2_dashboard() -> dict:
-    return operating_layer_v2_service.dashboard()
-
-
-@router.get("/operating-layer-2/capabilities")
-def get_operating_layer_v2_capabilities() -> dict:
-    return operating_layer_v2_service.capabilities()
-
-
-@router.get("/operating-layer-2/scorecard")
-def get_operating_layer_v2_scorecard() -> dict:
-    return operating_layer_v2_service.scorecard()
-
-
-@router.get("/operating-layer-2/snapshots")
-def list_operating_layer_v2_snapshots() -> dict:
-    snapshots = operating_layer_v2_service.list_snapshots()
-    return {"snapshots": snapshots, "count": len(snapshots)}
-
-
-@router.post("/operating-layer-2/snapshots")
-def create_operating_layer_v2_snapshot() -> dict:
-    return operating_layer_v2_service.create_snapshot()
-
-
-@router.post("/operating-layer-2/report")
-def create_operating_layer_v2_report() -> dict:
-    return operating_layer_v2_service.create_report()
+# NOTE: /operating-layer-2/* routes were extracted into app/api/operating_layer_2_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2304,47 +2002,7 @@ def instantiate_workspace_template(template_id: str, request: WorkspaceTemplateI
         raise HTTPException(status_code=404, detail="Template not found") from error
 
 
-# ----------------------------------------------------------------------
-# v58.0 Scheduled Tasks — local registry, planning-first triggers (no daemon).
-# ----------------------------------------------------------------------
-@router.get("/scheduled-tasks/summary")
-def get_scheduled_tasks_summary() -> dict:
-    return scheduled_tasks_service.summary()
-
-
-@router.get("/scheduled-tasks/runs")
-def list_scheduled_task_runs(task_id: str | None = Query(default=None)) -> dict:
-    runs = scheduled_tasks_service.list_runs(task_id)
-    return {"runs": runs, "count": len(runs)}
-
-
-@router.get("/scheduled-tasks")
-def list_scheduled_tasks() -> dict:
-    tasks = scheduled_tasks_service.list_tasks()
-    return {"tasks": tasks, "count": len(tasks)}
-
-
-@router.post("/scheduled-tasks")
-def create_scheduled_task(request: ScheduledTaskCreateRequest) -> dict:
-    return scheduled_tasks_service.create_task(request.model_dump())
-
-
-@router.patch("/scheduled-tasks/{task_id}")
-def toggle_scheduled_task(task_id: str, request: ScheduledTaskToggleRequest) -> dict:
-    try:
-        return scheduled_tasks_service.set_enabled(task_id, request.enabled)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail="Task not found") from error
-
-
-@router.post("/scheduled-tasks/{task_id}/trigger")
-def trigger_scheduled_task(task_id: str) -> dict:
-    try:
-        return scheduled_tasks_service.trigger(task_id)
-    except ValueError as error:
-        detail = str(error)
-        status = 404 if "not found" in detail.lower() else 409
-        raise HTTPException(status_code=status, detail=detail) from error
+# NOTE: /scheduled-tasks/* routes were extracted into app/api/scheduled_tasks_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2683,37 +2341,7 @@ def productivity_summary() -> dict:
     return personal_productivity_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v75.0 Document Intelligence 2.0 — deterministic local document toolkit.
-# ----------------------------------------------------------------------
-@router.post("/doc-intel/compare")
-def doc_intel_compare(request: DocCompareRequest) -> dict:
-    return document_intelligence_service.compare(request.text_a, request.text_b)
-
-
-@router.post("/doc-intel/ats")
-def doc_intel_ats(request: AtsScoreRequest) -> dict:
-    return document_intelligence_service.ats_score(request.resume_text, request.job_keywords)
-
-
-@router.post("/doc-intel/contract-risk")
-def doc_intel_contract_risk(request: DocTextRequest) -> dict:
-    return document_intelligence_service.contract_risk(request.text)
-
-
-@router.post("/doc-intel/csv-insight")
-def doc_intel_csv_insight(request: DocTextRequest) -> dict:
-    return document_intelligence_service.csv_insight(request.text)
-
-
-@router.post("/doc-intel/qa")
-def doc_intel_qa(request: DocQARequest) -> dict:
-    return document_intelligence_service.qa(request.text, request.question)
-
-
-@router.get("/doc-intel/summary")
-def doc_intel_summary() -> dict:
-    return document_intelligence_service.summary()
+# NOTE: /doc-intel/* routes were extracted into app/api/doc_intel_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2796,41 +2424,7 @@ def collaboration_summary() -> dict:
     return agent_collaboration_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v81.0 Permission System 3.0 — profiles + previewable evaluation (advisory layer).
-# ----------------------------------------------------------------------
-@router.get("/permissions/profiles")
-def list_permission_profiles() -> dict:
-    profiles = permission_profiles_service.list_profiles()
-    return {"profiles": profiles, "count": len(profiles)}
-
-
-@router.post("/permissions/profiles")
-def create_permission_profile(request: PermissionProfileRequest) -> dict:
-    return permission_profiles_service.create_profile(request.model_dump())
-
-
-@router.delete("/permissions/profiles/{profile_id}")
-def delete_permission_profile(profile_id: str) -> dict:
-    try:
-        return permission_profiles_service.delete_profile(profile_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.post("/permissions/evaluate")
-def evaluate_permission(request: PermissionEvaluateRequest) -> dict:
-    return permission_profiles_service.evaluate(request.scope_type, request.scope_value, request.action, request.risk_level)
-
-
-@router.post("/permissions/preview")
-def preview_permission(request: PermissionEvaluateRequest) -> dict:
-    return permission_profiles_service.preview(request.scope_type, request.scope_value, request.action, request.risk_level)
-
-
-@router.get("/permissions/summary")
-def permissions_summary() -> dict:
-    return permission_profiles_service.summary()
+# NOTE: /permissions/* routes were extracted into app/api/permissions_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2937,43 +2531,7 @@ def export_center_summary() -> dict:
     return export_center_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v86.0 Plugin Marketplace 3.0 — safer plugin catalog (additive; mock test runner).
-# ----------------------------------------------------------------------
-@router.get("/plugin-marketplace/catalog")
-def plugin_marketplace_catalog() -> dict:
-    return plugin_marketplace_service.catalog()
-
-
-@router.post("/plugin-marketplace/register")
-def plugin_marketplace_register(request: PluginRegisterRequest) -> dict:
-    return plugin_marketplace_service.register(request.name, request.description, request.permissions)
-
-
-@router.post("/plugin-marketplace/{plugin_id}/toggle")
-def plugin_marketplace_toggle(plugin_id: str, request: PluginToggleRequest) -> dict:
-    try:
-        return plugin_marketplace_service.toggle(plugin_id, request.enabled)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.post("/plugin-marketplace/{plugin_id}/test")
-def plugin_marketplace_test(plugin_id: str) -> dict:
-    try:
-        return plugin_marketplace_service.test_run(plugin_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.get("/plugin-marketplace/activity")
-def plugin_marketplace_activity() -> dict:
-    return plugin_marketplace_service.activity_log()
-
-
-@router.get("/plugin-marketplace/summary")
-def plugin_marketplace_summary() -> dict:
-    return plugin_marketplace_service.summary()
+# NOTE: /plugin-marketplace/* routes were extracted into app/api/plugin_marketplace_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
