@@ -341,6 +341,7 @@ from app.services.marketplace_hub_service import MarketplaceHubService
 from app.services.design_agent_service import DesignAgentService
 from app.services.git_reader_service import GitReaderService
 from app.services.github_connector_service import GitHubConnectorService
+from app.services.mcp_github_adapter import MCPGitHubAdapter
 from app.services.repo_finder_service import RepoFinderService
 from app.services.adaptive_learning_service import AdaptiveLearningService
 from app.services.home_dashboard_service import HomeDashboardService
@@ -488,6 +489,9 @@ marketplace_hub_service = MarketplaceHubService(storage, governance_service, age
 design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
 github_connector_service = GitHubConnectorService(storage, governance_service)
+# v100: wire the real (opt-in, read-only) GitHub adapter into MCP execution now
+# that github_connector_service exists (it's constructed after mcp_execution_service).
+mcp_execution_service.github_adapter = MCPGitHubAdapter(github_connector_service)
 repo_finder_service = RepoFinderService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
