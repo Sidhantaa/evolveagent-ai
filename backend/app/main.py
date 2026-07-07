@@ -7,6 +7,14 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
+from app.api.team_manager_routes import router as team_manager_router
+from app.api.self_healing_routes import router as self_healing_router
+from app.api.research_agent_routes import router as research_agent_router
+from app.api.project_manager_routes import router as project_manager_router
+from app.api.operating_layer_routes import router as operating_layer_router
+from app.api.multimodal_routes import router as multimodal_router
+from app.api.industry_modes_routes import router as industry_modes_router
+from app.api.evaluation_routes import router as evaluation_router
 from app.api.device_operator_routes import router as device_operator_router
 from app.api.demo_routes import router as demo_router
 from app.api.company_brain_routes import router as company_brain_router
@@ -60,6 +68,14 @@ def health_check() -> dict[str, str]:
 
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
+app.include_router(team_manager_router, prefix="/api")
+app.include_router(self_healing_router, prefix="/api")
+app.include_router(research_agent_router, prefix="/api")
+app.include_router(project_manager_router, prefix="/api")
+app.include_router(operating_layer_router, prefix="/api")
+app.include_router(multimodal_router, prefix="/api")
+app.include_router(industry_modes_router, prefix="/api")
+app.include_router(evaluation_router, prefix="/api")
 app.include_router(device_operator_router, prefix="/api")
 app.include_router(demo_router, prefix="/api")
 app.include_router(company_brain_router, prefix="/api")
