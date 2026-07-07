@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchSystemHealth, SystemHealth } from '../data/api';
+import { fetchStorageStatus, fetchSystemHealth, StorageStatus, SystemHealth } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -45,7 +45,11 @@ export const DevModeConsole: React.FC = () => {
   };
 
   const [health, setHealth] = useState<SystemHealth | null>(null);
-  useEffect(() => { fetchSystemHealth().then(setHealth); }, []);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
+  useEffect(() => {
+    fetchSystemHealth().then(setHealth);
+    fetchStorageStatus().then(setStorageStatus);
+  }, []);
 
   const filteredLogs = governanceLogs.filter(l =>
     l.agentName.toLowerCase().includes(logFilter.toLowerCase()) || 
@@ -72,6 +76,95 @@ export const DevModeConsole: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* 2. v100 Storage foundation status */}
+      <GlassCard className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/20">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Storage</h3>
+                <StatusBadge status={storageStatus ? 'connected' : 'waiting'} size="sm" showIcon={false} />
+                <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${
+                  (storageStatus?.backend || 'json').toLowerCase() === 'postgres'
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                }`}>
+                  {(storageStatus?.backend || 'json').toUpperCase()}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 font-mono mt-1">
+                v100 storage backend readiness. JSON fallback remains safe when Postgres or Redis are unavailable.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              const latest = await fetchStorageStatus();
+              setStorageStatus(latest);
+              showToast(latest ? 'Storage status refreshed' : 'Storage status endpoint unavailable', latest ? 'success' : 'info');
+            }}
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Refresh Storage</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            {
+              label: 'Collections',
+              value: storageStatus ? storageStatus.collections.toLocaleString() : '—',
+              sub: 'Storage collections',
+              color: 'text-purple-300',
+            },
+            {
+              label: 'Documents',
+              value: storageStatus ? storageStatus.totalDocuments.toLocaleString() : '—',
+              sub: 'Total records',
+              color: 'text-emerald-300',
+            },
+            {
+              label: 'Postgres',
+              value: storageStatus?.postgresReady ? 'Ready' : 'Offline',
+              sub: `Configured: ${storageStatus?.configuredBackend || 'json'}`,
+              color: storageStatus?.postgresReady ? 'text-emerald-300' : 'text-amber-300',
+            },
+            {
+              label: 'Redis',
+              value: storageStatus?.redisReady ? 'Ready' : 'Optional',
+              sub: 'Read-through cache',
+              color: storageStatus?.redisReady ? 'text-emerald-300' : 'text-gray-400',
+            },
+          ].map(item => (
+            <div key={item.label} className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+              <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">{item.label}</div>
+              <div className={`text-xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
+              <div className="text-[10px] text-gray-500 font-mono truncate">{item.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] font-mono text-gray-300">
+          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+            <span className={`w-2 h-2 rounded-full ${storageStatus ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span>{storageStatus ? 'Live backend status loaded' : 'Using safe loading state'}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+            <span className={`w-2 h-2 rounded-full ${storageStatus?.postgresReady ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+            <span>Postgres JSONB backend is {storageStatus?.postgresReady ? 'reachable' : 'not required'}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+            <span className={`w-2 h-2 rounded-full ${storageStatus?.redisReady ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+            <span>Redis cache is {storageStatus?.redisReady ? 'reachable' : 'optional'}</span>
+          </div>
+        </div>
+      </GlassCard>
 
       {/* 2. Header & Control Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#141418] border border-white/10">

@@ -6,6 +6,7 @@ import {
   fetchConnectors,
   fetchApprovals,
   fetchSystemHealth,
+  fetchStorageStatus,
   fetchWorkflowRuns,
   routeMessage,
   startDurableRun,
@@ -112,6 +113,35 @@ describe('fetchSystemHealth', () => {
     });
     const h = await fetchSystemHealth();
     expect(h).toMatchObject({ online: true, totalEvents: 120, blocked: 4, approvals: 30, workflowRuns: 13 });
+  });
+});
+
+describe('fetchStorageStatus', () => {
+  it('maps the v100 storage status endpoint', async () => {
+    stubFetch({
+      '/api/system/storage-status': {
+        backend: 'postgres',
+        configured_backend: 'postgres',
+        collections: 197,
+        total_documents: 105817,
+        postgres_ready: true,
+        redis_ready: true,
+      },
+    });
+    const status = await fetchStorageStatus();
+    expect(status).toMatchObject({
+      backend: 'postgres',
+      configuredBackend: 'postgres',
+      collections: 197,
+      totalDocuments: 105817,
+      postgresReady: true,
+      redisReady: true,
+    });
+  });
+
+  it('returns null when storage status is unavailable', async () => {
+    stubFetch({});
+    expect(await fetchStorageStatus()).toBeNull();
   });
 });
 
