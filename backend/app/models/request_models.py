@@ -1780,3 +1780,27 @@ class AgentPolicyUpdateRequest(BaseModel):
     risk_level: str | None = Field(default=None, pattern="^(\\*|low|medium|high)$")
     name_contains: str | None = Field(default=None, max_length=80)
     enabled: bool | None = None
+
+
+class EventEmitRequest(BaseModel):
+    event_type: str = Field(..., min_length=1, max_length=80)
+    payload: dict = Field(default_factory=dict)
+    source: str = Field(default="manual", max_length=60)
+
+
+class EventSubscriptionCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    event_type: str = Field(default="*", max_length=80)
+    filter: dict = Field(default_factory=dict)
+    action_type: str = Field(..., pattern="^(start_workflow|trigger_task|notify)$")
+    action_params: dict = Field(default_factory=dict)
+    enabled: bool = Field(default=True)
+
+
+class EventSubscriptionUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    event_type: str | None = Field(default=None, max_length=80)
+    filter: dict | None = None
+    action_type: str | None = Field(default=None, pattern="^(start_workflow|trigger_task|notify)$")
+    action_params: dict | None = None
+    enabled: bool | None = None

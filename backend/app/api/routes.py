@@ -488,6 +488,13 @@ durable_workflow_service = DurableWorkflowService(storage, governance_service)
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402
 scheduler_tick_worker = SchedulerTickWorker(scheduled_tasks_service)
+# v120: the event bus dispatches subscription actions through the two engines
+# above; wire it back into them as an optional collaborator (post-init, since
+# they were constructed first) so their own state transitions can emit events.
+from app.services.event_bus_service import EventBusService  # noqa: E402
+event_bus_service = EventBusService(storage, governance_service, workflows=durable_workflow_service, scheduled_tasks=scheduled_tasks_service)
+durable_workflow_service.event_bus = event_bus_service
+scheduled_tasks_service.event_bus = event_bus_service
 marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
 design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
@@ -1236,6 +1243,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **memory_service.analytics_summary(),
         **agent_registry_service.analytics_summary(),
         **agent_governance_service.analytics_summary(),
+        **event_bus_service.analytics_summary(),
         **adaptive_learning_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),

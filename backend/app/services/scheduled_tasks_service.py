@@ -35,11 +35,13 @@ class ScheduledTasksService:
     tasks_file = "scheduled_tasks.json"
     runs_file = "scheduled_task_runs.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, workflows=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, workflows=None, event_bus=None):
         self.storage = storage
         self.governance = governance_service
         # Optional DurableWorkflowService — enables real (still approval-gated) runs.
         self.workflows = workflows
+        # Optional EventBusService — lets a firing schedule chain into another action.
+        self.event_bus = event_bus
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -124,6 +126,14 @@ class ScheduledTasksService:
         task["trigger_count"] = task.get("trigger_count", 0) + 1
         self.storage.write_list(self.tasks_file, tasks)
         self._log("scheduled_task_triggered", f"Triggered scheduled task {task_id} → {run['status']}.")
+        if self.event_bus is not None:
+            try:
+                self.event_bus.emit("scheduled_task.triggered", {
+                    "task_id": task_id, "name": task.get("name"), "status": run.get("status"),
+                    "workflow_run_id": run.get("workflow_run_id"),
+                }, source="scheduled_tasks")
+            except Exception:
+                pass
         return run
 
     def _trigger_mock(self, task_id: str, task: dict) -> dict:

@@ -239,6 +239,8 @@ class StorageService:
             "team_reviews.json",
             "team_manager_reports.json",
             "agent_governance_policies.json",
+            "system_events.json",
+            "event_subscriptions.json",
         ):
             self.backend.ensure(filename)
 
