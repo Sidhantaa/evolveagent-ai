@@ -1754,3 +1754,10 @@ class ScheduledTaskToggleRequest(BaseModel):
 # ----------------------------------------------------------------------
 class DataImportRequest(BaseModel):
     bundle: dict = Field(default_factory=dict)
+
+
+class MemoryAddRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=8000)
+    kind: str = Field(default="note", max_length=40)
+    source: str = Field(default="manual", max_length=80)
+    metadata: dict = Field(default_factory=dict)

@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
 from app.api.system_routes import router as system_router
+from app.api.memory_v2_routes import router as memory_v2_router
 from app.api.agent_quality_routes import router as agent_quality_router
 from app.api.business_intel_routes import router as business_intel_router
 from app.api.data_export_routes import router as data_export_router
@@ -114,6 +115,7 @@ def health_check() -> dict[str, str]:
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
 app.include_router(system_router, prefix="/api")
+app.include_router(memory_v2_router, prefix="/api")
 app.include_router(agent_quality_router, prefix="/api")
 app.include_router(business_intel_router, prefix="/api")
 app.include_router(data_export_router, prefix="/api")
