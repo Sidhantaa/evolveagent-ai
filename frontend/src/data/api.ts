@@ -373,6 +373,12 @@ export interface LiveWorkflowRun {
   total: number;
 }
 
+/** Start a REAL durable-workflow run. Risky/action steps stay approval-gated by the backend. */
+export async function startDurableRun(name: string, steps: any[]): Promise<boolean> {
+  const d = await postJson<any>('/api/durable-workflows/runs', { name, steps });
+  return d !== null;
+}
+
 export async function fetchWorkflowRuns(): Promise<LiveWorkflowRun[] | null> {
   const data = await getJson<{ runs: any[] }>('/api/durable-workflows/runs');
   if (!data?.runs) return null;

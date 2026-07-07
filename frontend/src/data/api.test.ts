@@ -8,6 +8,7 @@ import {
   fetchSystemHealth,
   fetchWorkflowRuns,
   routeMessage,
+  startDurableRun,
 } from './api';
 
 // Helper: stub global fetch to return a given JSON body per-URL.
@@ -123,6 +124,23 @@ describe('fetchWorkflowRuns', () => {
     });
     const r = await fetchWorkflowRuns();
     expect(r![0]).toMatchObject({ id: 'r1', done: 2, total: 3, status: 'waiting_approval' });
+  });
+});
+
+describe('startDurableRun', () => {
+  it('POSTs name + steps and returns true on success', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ run_id: 'r9', status: 'running' }) }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const ok = await startDurableRun('My run', [{ name: 'step 1' }]);
+    expect(ok).toBe(true);
+    const call = fetchMock.mock.calls[0];
+    expect(call[0]).toContain('/api/durable-workflows/runs');
+    expect(JSON.parse((call[1] as any).body)).toMatchObject({ name: 'My run', steps: [{ name: 'step 1' }] });
+  });
+
+  it('returns false when the backend is offline', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }) as any);
+    expect(await startDurableRun('x', [])).toBe(false);
   });
 });
 

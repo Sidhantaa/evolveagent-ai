@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchWorkflowRuns, LiveWorkflowRun } from '../data/api';
+import { fetchWorkflowRuns, startDurableRun, LiveWorkflowRun } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -25,7 +25,24 @@ import { TaskStatus } from '../types';
 export const MissionControl: React.FC = () => {
   const { mission, tasks, agents, approvals, runMockWorkflowStep, showToast } = useApp();
   const [liveRuns, setLiveRuns] = useState<LiveWorkflowRun[] | null>(null);
-  useEffect(() => { fetchWorkflowRuns().then(setLiveRuns); }, []);
+  const [starting, setStarting] = useState(false);
+  const loadRuns = () => fetchWorkflowRuns().then(setLiveRuns);
+  useEffect(() => { loadRuns(); }, []);
+
+  const handleStartRun = async () => {
+    setStarting(true);
+    try {
+      const ok = await startDurableRun('Mission Control run', [
+        { name: 'Collect mission context' },
+        { name: 'Summarize progress' },
+        { name: 'Notify on completion', action_type: 'notify', action_params: { message: 'Mission Control workflow complete' } },
+      ]);
+      showToast(ok ? 'Started a real durable workflow — the notify step is held for approval.' : 'Backend offline — could not start a real run.', ok ? 'success' : 'warning');
+      if (ok) await loadRuns();
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const handleApproveNext = () => {
     runMockWorkflowStep();
@@ -99,7 +116,13 @@ export const MissionControl: React.FC = () => {
             <span className="text-sm font-bold text-white flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live Workflow Runs
             </span>
-            <span className="text-[11px] font-mono text-gray-400">{liveRuns.length} recent</span>
+            <button
+              onClick={handleStartRun}
+              disabled={starting}
+              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 transition-colors disabled:opacity-50"
+            >
+              {starting ? 'Starting…' : '▶ Start real run'}
+            </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
             {liveRuns.map(run => {
