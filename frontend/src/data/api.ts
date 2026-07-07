@@ -365,6 +365,15 @@ export interface SystemHealth {
   learnedItems: number;
 }
 
+export interface StorageStatus {
+  backend: string;
+  configuredBackend: string;
+  collections: number;
+  totalDocuments: number;
+  postgresReady: boolean;
+  redisReady: boolean;
+}
+
 export interface LiveWorkflowRun {
   id: string;
   name: string;
@@ -405,6 +414,19 @@ export async function fetchSystemHealth(): Promise<SystemHealth | null> {
     approvals: gov?.approvals ?? 0,
     workflowRuns: today?.metrics?.workflow_runs ?? 0,
     learnedItems: today?.metrics?.learned_items ?? 0,
+  };
+}
+
+export async function fetchStorageStatus(): Promise<StorageStatus | null> {
+  const data = await getJson<any>('/api/system/storage-status');
+  if (!data) return null;
+  return {
+    backend: data.backend || data.active_backend || 'json',
+    configuredBackend: data.configured_backend || data.configuredBackend || data.backend || 'json',
+    collections: Number(data.collections ?? data.collection_count ?? 0),
+    totalDocuments: Number(data.total_documents ?? data.totalDocuments ?? 0),
+    postgresReady: Boolean(data.postgres_ready ?? data.postgresReady),
+    redisReady: Boolean(data.redis_ready ?? data.redisReady),
   };
 }
 
