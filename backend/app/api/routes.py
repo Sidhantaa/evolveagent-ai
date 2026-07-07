@@ -585,32 +585,7 @@ def push_git_branch(request: GitPushRequest | None = None) -> dict:
     return git_service.push(remote=payload.remote, branch=payload.branch)
 
 
-# NOTE: /debate/* routes were extracted into app/api/debate_routes.py (services still live here).
-
-
-@router.get("/simulations")
-def list_simulation_runs(workspace_id: str | None = Query(default=None)) -> list[dict]:
-    return debate_simulation_service.list_simulations(workspace_id)
-
-
-@router.get("/simulations/{simulation_id}")
-def get_simulation_run(simulation_id: str) -> dict:
-    simulation = debate_simulation_service.get_simulation(simulation_id)
-    if not simulation:
-        raise HTTPException(status_code=404, detail="Simulation run not found")
-    return simulation
-
-
-@router.post("/simulations")
-def create_simulation_run(request: SimulationCreateRequest) -> dict:
-    return debate_simulation_service.create_simulation(
-        prompt=request.prompt,
-        scenario=request.scenario,
-        workspace_id=request.workspace_id,
-    )
-
-
-# NOTE: /research/* routes were extracted into app/api/research_routes.py (services still live here).
+# NOTE: /simulations/* routes were extracted into app/api/simulations_routes.py (services still live here).
 
 
 @router.post("/workspaces")
@@ -885,25 +860,7 @@ def run_workflow(request: RunRequest) -> RunResponse:
     return response
 
 
-# NOTE: /agent-jobs/* routes were extracted into app/api/agent_jobs_routes.py (services still live here).
-
-
-@router.get("/system-prompts")
-def list_system_prompts() -> list[dict]:
-    return system_prompt_registry.list_prompts()
-
-
-@router.get("/system-prompts/{agent_name}")
-def get_system_prompt(agent_name: str) -> dict:
-    prompt = system_prompt_registry.get_prompt(agent_name)
-    if not prompt:
-        raise HTTPException(status_code=404, detail="System prompt not found")
-    return {"agent_name": agent_name, "prompt": prompt}
-
-
-@router.post("/system-prompts")
-def upsert_system_prompt(request: UpdateSystemPromptRequest) -> dict:
-    return system_prompt_registry.upsert_prompt(request.agent_name, request.prompt, request.reason)
+# NOTE: /system-prompts/* routes were extracted into app/api/system_prompts_routes.py (services still live here).
 
 
 @router.post("/files/upload")
@@ -1167,47 +1124,7 @@ def decide_approval(approval_id: str, request: ApprovalDecisionRequest) -> dict:
     return approval
 
 
-@router.get("/learning/report")
-def get_learning_report(workspace_id: str | None = Query(default=None)) -> dict:
-    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
-    return learning_agent.report(workspace_id=resolved)
-
-
-# NOTE: /digital-twin/* routes were extracted into app/api/digital_twin_routes.py (services still live here).
-
-
-@router.get("/learning/prompt-versions")
-def get_prompt_versions() -> list[dict]:
-    return prompt_versions.list_versions()
-
-
-@router.post("/learning/propose-prompt")
-def propose_prompt(request: PromptProposalRequest) -> dict:
-    return prompt_versions.propose(request.agent_name, request.reason, request.proposed_prompt)
-
-
-@router.post("/learning/approve-prompt")
-def approve_prompt(request: PromptDecisionRequest) -> dict:
-    try:
-        return prompt_versions.set_status(request.agent_name, request.version_id, "active")
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.post("/learning/reject-prompt")
-def reject_prompt(request: PromptDecisionRequest) -> dict:
-    try:
-        return prompt_versions.set_status(request.agent_name, request.version_id, "rejected")
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.post("/learning/rollback-prompt")
-def rollback_prompt(request: PromptDecisionRequest) -> dict:
-    try:
-        return prompt_versions.rollback(request.agent_name, request.version_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+# NOTE: /learning/* routes were extracted into app/api/learning_routes.py (services still live here).
 
 
 @router.get("/analytics")
@@ -1333,56 +1250,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
     }
 
 
-# NOTE: /portfolio/* routes were extracted into app/api/portfolio_routes.py (services still live here).
-
-
-@router.get("/os/installer")
-def get_os_installer() -> dict:
-    return platform_installer_service.installer()
-
-
-@router.get("/os/plugin-sdk")
-def get_os_plugin_sdk() -> dict:
-    return plugin_sdk_service.sdk()
-
-
-@router.post("/os/plugin-sdk/validate")
-def validate_os_plugin_manifest(request: PluginManifestValidateRequest) -> dict:
-    return plugin_sdk_service.validate(request.manifest)
-
-
-@router.get("/os/sla")
-def get_os_sla() -> dict:
-    return sla_monitoring_service.sla()
-
-
-@router.get("/os/scheduler")
-def get_os_scheduler() -> dict:
-    return os_scheduler_service.overview()
-
-
-@router.get("/os/summary")
-def get_os_summary() -> dict:
-    installer = platform_installer_service.installer()
-    sla = sla_monitoring_service.sla()
-    scheduler = os_scheduler_service.overview()
-    return {
-        "platform": "EvolveAgent OS",
-        "version": "v15.0",
-        "positioning": (
-            "EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed "
-            "automation, plugins, analytics, evaluation, and portfolio management."
-        ),
-        "installer_readiness": installer["readiness"],
-        "plugin_sdk": plugin_sdk_service.summary(),
-        "sla_rating": sla["sla_rating"],
-        "uptime_proxy_score": sla["uptime_proxy_score"],
-        "scheduler_health": scheduler["scheduler_health"],
-        "safety_notes": installer["safety_notes"],
-    }
-
-
-# NOTE: /team-manager/* routes were extracted into app/api/team_manager_routes.py (services still live here).
+# NOTE: /os/* routes were extracted into app/api/os_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -1766,29 +1634,7 @@ def run_mcp_execution(request_id: str) -> dict:
         raise HTTPException(status_code=status, detail=detail) from error
 
 
-# NOTE: /approvals-center/* routes were extracted into app/api/approvals_center_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v49.0 Health & Readiness Monitor — read-only scored health dashboard.
-# ----------------------------------------------------------------------
-@router.get("/health-monitor/dashboard")
-def get_health_monitor_dashboard() -> dict:
-    return health_monitor_service.dashboard()
-
-
-@router.get("/health-monitor/snapshots")
-def list_health_snapshots() -> dict:
-    snapshots = health_monitor_service.list_snapshots()
-    return {"snapshots": snapshots, "count": len(snapshots)}
-
-
-@router.post("/health-monitor/snapshots")
-def create_health_snapshot() -> dict:
-    return health_monitor_service.create_snapshot()
-
-
-# NOTE: /retrieval/* routes were extracted into app/api/retrieval_routes.py (services still live here).
+# NOTE: /health-monitor/* routes were extracted into app/api/health_monitor_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -1818,31 +1664,7 @@ def acknowledge_notification(notif_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Notification not found") from error
 
 
-# NOTE: /workspace-templates/* routes were extracted into app/api/workspace_templates_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v59.0 Data Export & Backup — local bundle export/import (non-destructive).
-# ----------------------------------------------------------------------
-@router.get("/data-export/summary")
-def get_data_export_summary() -> dict:
-    return data_export_service.summary()
-
-
-@router.post("/data-export/bundle")
-def export_data_bundle() -> dict:
-    return data_export_service.export_bundle()
-
-
-@router.post("/data-export/import")
-def import_data_bundle(request: DataImportRequest) -> dict:
-    try:
-        return data_export_service.import_bundle(request.bundle)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-# NOTE: /master-agent/* routes were extracted into app/api/master_agent_routes.py (services still live here).
+# NOTE: /data-export/* routes were extracted into app/api/data_export_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2001,22 +1823,7 @@ def context_summary() -> dict:
     return smart_context_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v72.0 Agent Quality Optimizer — trends, weak agents, regressions (read-only).
-# ----------------------------------------------------------------------
-@router.get("/agent-quality/dashboard")
-def agent_quality_dashboard() -> dict:
-    return agent_quality_service.dashboard()
-
-
-@router.get("/agent-quality/summary")
-def agent_quality_summary() -> dict:
-    return agent_quality_service.summary()
-
-
-@router.get("/agent-quality/best-by-task")
-def agent_quality_best_by_task() -> dict:
-    return {"best_by_task": agent_quality_service.best_by_task()}
+# NOTE: /agent-quality/* routes were extracted into app/api/agent_quality_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2032,61 +1839,7 @@ def workflow_recommend_summary() -> dict:
     return workflow_recommendation_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v74.0 Personal Productivity Brain — what should I work on now? (read-only).
-# ----------------------------------------------------------------------
-@router.get("/productivity")
-def productivity_brain(workspace_id: str | None = Query(default=None)) -> dict:
-    return personal_productivity_service.brain(workspace_id=workspace_id)
-
-
-@router.get("/productivity/what-now")
-def productivity_what_now(workspace_id: str | None = Query(default=None)) -> dict:
-    return personal_productivity_service.what_now(workspace_id=workspace_id)
-
-
-@router.get("/productivity/summary")
-def productivity_summary() -> dict:
-    return personal_productivity_service.summary()
-
-
-# NOTE: /code-intel/* routes were extracted into app/api/code_intel_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v78.0 Business Intelligence 2.0 — read-only business analytics (mock forecast).
-# ----------------------------------------------------------------------
-@router.get("/business-intel/dashboard")
-def business_intel_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
-    return business_intelligence_service.dashboard(workspace_id=workspace_id)
-
-
-@router.get("/business-intel/report")
-def business_intel_report(workspace_id: str | None = Query(default=None)) -> dict:
-    return business_intelligence_service.report(workspace_id=workspace_id)
-
-
-@router.get("/business-intel/summary")
-def business_intel_summary() -> dict:
-    return business_intelligence_service.summary()
-
-
-# ----------------------------------------------------------------------
-# v79.0 Meeting Intelligence 2.0 — deterministic transcript extraction (read-only).
-# ----------------------------------------------------------------------
-@router.post("/meeting-intel/analyze")
-def meeting_intel_analyze(request: MeetingAnalyzeRequest) -> dict:
-    return meeting_intelligence_service.analyze(request.transcript)
-
-
-@router.post("/meeting-intel/to-goal")
-def meeting_intel_to_goal(request: MeetingToGoalRequest) -> dict:
-    return meeting_intelligence_service.to_goal_plan(request.transcript, request.title)
-
-
-@router.get("/meeting-intel/summary")
-def meeting_intel_summary() -> dict:
-    return meeting_intelligence_service.summary()
+# NOTE: /business-intel/* routes were extracted into app/api/business_intel_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2102,70 +1855,7 @@ def collaboration_summary() -> dict:
     return agent_collaboration_service.summary()
 
 
-# NOTE: /permissions/* routes were extracted into app/api/permissions_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v82.0 Governance Console 3.0 — read-only console over the governance log.
-# ----------------------------------------------------------------------
-@router.get("/governance-console/dashboard")
-def governance_console_dashboard() -> dict:
-    return governance_console_service.dashboard()
-
-
-@router.get("/governance-console/report")
-def governance_console_report(format: str = Query(default="markdown", pattern="^(markdown|json)$")) -> dict:
-    return governance_console_service.report(fmt=format)
-
-
-@router.get("/governance-console/summary")
-def governance_console_summary() -> dict:
-    return governance_console_service.summary()
-
-
-# NOTE: /export-center/* routes were extracted into app/api/export_center_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v87.0 Integration Hub 3.0 — read-only integration cards (no secret display).
-# ----------------------------------------------------------------------
-@router.get("/integration-hub/cards")
-def integration_hub_cards() -> dict:
-    return integration_hub_service.cards()
-
-
-@router.post("/integration-hub/{integration_id}/dry-run")
-def integration_hub_dry_run(integration_id: str) -> dict:
-    try:
-        return integration_hub_service.dry_run(integration_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.get("/integration-hub/summary")
-def integration_hub_summary() -> dict:
-    return integration_hub_service.summary()
-
-
-# NOTE: /qa-center/* routes were extracted into app/api/qa_center_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v90.0 EvolveAgent Product Launch Console (capstone) — launch-readiness overview.
-# ----------------------------------------------------------------------
-@router.get("/launch-console/dashboard")
-def launch_console_dashboard() -> dict:
-    return product_launch_service.dashboard()
-
-
-@router.get("/launch-console/report")
-def launch_console_report() -> dict:
-    return product_launch_service.launch_report()
-
-
-@router.get("/launch-console/summary")
-def launch_console_summary() -> dict:
-    return product_launch_service.summary()
+# NOTE: /governance-console/* routes were extracted into app/api/governance_console_routes.py (services still live here).
 
 
 @router.get("/activity/export")
@@ -2370,19 +2060,7 @@ def transcription_smoke_test(request: TranscriptionSmokeTestRequest) -> dict:
     return recording_service.transcription.smoke_test(live=request.live)
 
 
-@router.get("/real-api/summary")
-def get_real_api_summary() -> dict:
-    return real_api_control_service.summary()
-
-
-@router.get("/real-api/live-warning/{capability}")
-def get_real_api_live_warning(capability: str) -> dict:
-    return real_api_control_service.live_warning(capability)
-
-
-@router.post("/real-api/decode-error")
-def decode_real_api_error(request: RealApiErrorDecodeRequest) -> dict:
-    return real_api_control_service.decode_error(request.error)
+# NOTE: /real-api/* routes were extracted into app/api/real_api_routes.py (services still live here).
 
 
 @router.get("/chats")
