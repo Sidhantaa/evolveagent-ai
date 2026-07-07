@@ -7,6 +7,20 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
+from app.api.agent_quality_routes import router as agent_quality_router
+from app.api.business_intel_routes import router as business_intel_router
+from app.api.data_export_routes import router as data_export_router
+from app.api.governance_console_routes import router as governance_console_router
+from app.api.health_monitor_routes import router as health_monitor_router
+from app.api.integration_hub_routes import router as integration_hub_router
+from app.api.launch_console_routes import router as launch_console_router
+from app.api.meeting_intel_routes import router as meeting_intel_router
+from app.api.productivity_routes import router as productivity_router
+from app.api.real_api_routes import router as real_api_router
+from app.api.simulations_routes import router as simulations_router
+from app.api.system_prompts_routes import router as system_prompts_router
+from app.api.learning_routes import router as learning_router
+from app.api.os_routes import router as os_router
 from app.api.master_agent_routes import router as master_agent_router
 from app.api.notifications_inbox_routes import router as notifications_inbox_router
 from app.api.approvals_center_routes import router as approvals_center_router
@@ -98,6 +112,20 @@ def health_check() -> dict[str, str]:
 
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
+app.include_router(agent_quality_router, prefix="/api")
+app.include_router(business_intel_router, prefix="/api")
+app.include_router(data_export_router, prefix="/api")
+app.include_router(governance_console_router, prefix="/api")
+app.include_router(health_monitor_router, prefix="/api")
+app.include_router(integration_hub_router, prefix="/api")
+app.include_router(launch_console_router, prefix="/api")
+app.include_router(meeting_intel_router, prefix="/api")
+app.include_router(productivity_router, prefix="/api")
+app.include_router(real_api_router, prefix="/api")
+app.include_router(simulations_router, prefix="/api")
+app.include_router(system_prompts_router, prefix="/api")
+app.include_router(learning_router, prefix="/api")
+app.include_router(os_router, prefix="/api")
 app.include_router(master_agent_router, prefix="/api")
 app.include_router(notifications_inbox_router, prefix="/api")
 app.include_router(approvals_center_router, prefix="/api")
