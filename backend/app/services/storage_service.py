@@ -238,6 +238,7 @@ class StorageService:
             "team_sprints.json",
             "team_reviews.json",
             "team_manager_reports.json",
+            "agent_governance_policies.json",
         ):
             self.backend.ensure(filename)
 
