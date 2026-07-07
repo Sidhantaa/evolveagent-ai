@@ -83,13 +83,18 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None):
         self.storage = storage
         self.governance = governance_service
         # v120: optional EventBusService — lets a run's completion/approval-halt/
         # cancellation chain into another action. Emitting is best-effort and must
         # never break the workflow engine itself.
         self.event_bus = event_bus
+        # v120: optional AgentSchedulerService — every run started here becomes a
+        # real, observable job in the (previously driver-less) job queue. This is
+        # the ONLY place runs are created, so wiring it here covers every entry
+        # point (direct API, a firing schedule, or an event-bus dispatch) for free.
+        self.agent_scheduler = agent_scheduler
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -101,6 +106,37 @@ class DurableWorkflowService:
             self.event_bus.emit(f"workflow.{run['status']}", {
                 "run_id": run.get("run_id"), "definition_id": run.get("definition_id"), "name": run.get("name"),
             }, source="durable_workflow")
+        except Exception:
+            pass
+
+    def _create_job_for_run(self, run: dict) -> None:
+        """Best-effort: register this run as an observable job. Never blocks the run."""
+        if self.agent_scheduler is None:
+            return
+        try:
+            job = self.agent_scheduler.create_job({
+                "job_type": "workflow",
+                "title": f"Workflow run: {run['name']}"[:160],
+                "payload": {"run_id": run["run_id"], "definition_id": run.get("definition_id") or ""},
+            })
+            run["job_id"] = job["job_id"]
+            self.agent_scheduler.heartbeat(job["job_id"])  # queued -> running: we're executing it now
+        except Exception:
+            pass
+
+    def _sync_job_status(self, run: dict) -> None:
+        """Best-effort: reflect this run's status onto its linked job, if any."""
+        job_id = run.get("job_id")
+        if self.agent_scheduler is None or not job_id:
+            return
+        try:
+            status = run.get("status")
+            if status == "completed":
+                self.agent_scheduler.complete(job_id, result_summary=f"Workflow '{run['name']}' completed.")
+            elif status == "waiting_approval":
+                self.agent_scheduler.pause(job_id, reason="Waiting for human approval on a risky step.")
+            elif status == "cancelled":
+                self.agent_scheduler.cancel(job_id, reason="Workflow run was cancelled.")
         except Exception:
             pass
 
@@ -241,6 +277,7 @@ class DurableWorkflowService:
             "updated_at": self._now(),
             "checkpoints": [],
         }
+        self._create_job_for_run(run)  # sets run["job_id"] if agent_scheduler is wired
         runs = self.storage.read_list(self.runs_file)
         runs.append(run)
         self.storage.write_list(self.runs_file, runs)
@@ -287,6 +324,7 @@ class DurableWorkflowService:
         elif run["status"] == "waiting_approval":
             self._log("workflow_awaiting_approval", f"Run '{run['name']}' halted for approval", risk=4, approved=False)
         self._emit_status_event(run)
+        self._sync_job_status(run)
         return run
 
     def approve_step(self, run_id: str, approved: bool = True, note: str = "") -> dict:
@@ -317,6 +355,7 @@ class DurableWorkflowService:
             run = self._advance_in_place(run)
         self._save_run(runs, idx, run)
         self._emit_status_event(run)
+        self._sync_job_status(run)
         return run
 
     def pause_run(self, run_id: str) -> dict:
@@ -345,6 +384,7 @@ class DurableWorkflowService:
         self._save_run(runs, idx, run)
         self._log("workflow_cancelled", f"Cancelled run '{run['name']}'")
         self._emit_status_event(run)
+        self._sync_job_status(run)
         return run
 
     def get_run(self, run_id: str) -> dict:
