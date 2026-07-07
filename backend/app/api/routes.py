@@ -493,6 +493,8 @@ from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
 # Memory v2 powers adaptive-learning recall (semantic when on pgvector).
 adaptive_learning_service = AdaptiveLearningService(storage, governance_service, memory=memory_service)
+from app.services.agent_registry_service import AgentRegistryService  # noqa: E402
+agent_registry_service = AgentRegistryService(storage, governance_service)
 home_dashboard_service = HomeDashboardService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
@@ -1223,6 +1225,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **github_connector_service.analytics_summary(),
         **repo_finder_service.analytics_summary(),
         **memory_service.analytics_summary(),
+        **agent_registry_service.analytics_summary(),
         **adaptive_learning_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),
