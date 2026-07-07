@@ -7,6 +7,17 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
+from app.api.device_operator_routes import router as device_operator_router
+from app.api.demo_routes import router as demo_router
+from app.api.company_brain_routes import router as company_brain_router
+from app.api.chief_of_staff_routes import router as chief_of_staff_router
+from app.api.business_simulator_routes import router as business_simulator_router
+from app.api.business_routes import router as business_router
+from app.api.autopilot_routes import router as autopilot_router
+from app.api.agent_studio_routes import router as agent_studio_router
+from app.api.agent_network_routes import router as agent_network_router
+from app.api.agent_marketplace_routes import router as agent_marketplace_router
+from app.api.agent_jobs_routes import router as agent_jobs_router
 from app.api.hardware_companion_routes import router as hardware_companion_router
 from app.api.organization_os_routes import router as organization_os_router
 from app.api.simulation_world_routes import router as simulation_world_router
@@ -49,6 +60,17 @@ def health_check() -> dict[str, str]:
 
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
+app.include_router(device_operator_router, prefix="/api")
+app.include_router(demo_router, prefix="/api")
+app.include_router(company_brain_router, prefix="/api")
+app.include_router(chief_of_staff_router, prefix="/api")
+app.include_router(business_simulator_router, prefix="/api")
+app.include_router(business_router, prefix="/api")
+app.include_router(autopilot_router, prefix="/api")
+app.include_router(agent_studio_router, prefix="/api")
+app.include_router(agent_network_router, prefix="/api")
+app.include_router(agent_marketplace_router, prefix="/api")
+app.include_router(agent_jobs_router, prefix="/api")
 app.include_router(hardware_companion_router, prefix="/api")
 app.include_router(organization_os_router, prefix="/api")
 app.include_router(simulation_world_router, prefix="/api")
