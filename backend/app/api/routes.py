@@ -489,9 +489,10 @@ design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
 github_connector_service = GitHubConnectorService(storage, governance_service)
 repo_finder_service = RepoFinderService(storage, governance_service)
-adaptive_learning_service = AdaptiveLearningService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
+# Memory v2 powers adaptive-learning recall (semantic when on pgvector).
+adaptive_learning_service = AdaptiveLearningService(storage, governance_service, memory=memory_service)
 home_dashboard_service = HomeDashboardService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)

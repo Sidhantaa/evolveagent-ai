@@ -40,9 +40,29 @@ class AdaptiveLearningService:
     _agents = "agent_profiles.json"
     _effects = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, memory=None):
         self.storage = storage
         self.governance = governance_service
+        # Optional MemoryService (Memory v2). When present and in pgvector mode,
+        # recommend() upgrades from keyword overlap to semantic search.
+        self.memory = memory
+
+    def _semantic(self) -> bool:
+        return self.memory is not None and getattr(self.memory, "mode", "keyword") == "pgvector"
+
+    def _mirror(self, kind: str, text: str, source: str, fingerprint: str) -> None:
+        """Best-effort: mirror a NEW learned item into Memory v2 for semantic recall."""
+        if self.memory is None:
+            return
+        try:
+            self.memory.add(
+                text,
+                kind=kind,
+                source="adaptive_learning",
+                metadata={"fingerprint": fingerprint, "origin": source},
+            )
+        except Exception:
+            pass  # mirroring must never break learning
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -67,6 +87,7 @@ class AdaptiveLearningService:
             "available": True,
             "method": "retrieval_memory_and_few_shot",
             "trains_base_model": False,
+            "recall_engine": "semantic" if self._semantic() else "keyword",
             "kinds": list(KINDS),
             "note": (
                 "Self-improving retrieval memory (RAG + few-shot). Learns from your history and "
@@ -99,6 +120,7 @@ class AdaptiveLearningService:
             "source": str(source or "manual")[:60], "weight": 1,
             "created_at": self._now(), "updated_at": self._now(),
         })
+        self._mirror(kind, text, source, fp)
         return True
 
     # -- learning ------------------------------------------------------------
@@ -146,26 +168,55 @@ class AdaptiveLearningService:
         self._log("adaptive_ingested", f"Ingested a {kind} item into learning memory")
         return {"total": len(items), "by_kind": self._by_kind(items)}
 
+    def _recommend_semantic(self, query: str, limit: int) -> list[dict] | None:
+        """Semantic recall via Memory v2 (pgvector). Returns None to signal fallback."""
+        try:
+            hits = self.memory.search(query, limit * 4)  # over-fetch, then filter to our items
+        except Exception:
+            return None
+        by_fp = {it.get("fingerprint"): it for it in self._all()}
+        recs: list[dict] = []
+        for h in hits.get("results", []):
+            meta = h.get("metadata") or {}
+            if h.get("source") != "adaptive_learning":
+                continue
+            it = by_fp.get(meta.get("fingerprint"))
+            if not it:
+                continue
+            recs.append({"kind": it["kind"], "text": it["text"], "source": it["source"],
+                         "weight": it.get("weight", 1), "match": h.get("score", 0)})
+            if len(recs) >= limit:
+                break
+        return recs or None  # empty -> let keyword fallback try
+
     def recommend(self, query: str, limit: int = 5) -> dict:
         q_tokens = _tokens(query)
         if not q_tokens:
-            return {"query": query, "recommendations": [], "count": 0,
+            return {"query": query, "recommendations": [], "count": 0, "engine": "keyword",
                     "note": "Relevant learned context is retrieved and added to answers — not model training."}
         try:
             limit = max(1, min(20, int(limit)))
         except (TypeError, ValueError):
             limit = 5
-        scored = []
-        for it in self._all():
-            overlap = len(q_tokens & _tokens(it["text"]))
-            if overlap:
-                # rank by keyword overlap, tie-broken by reinforcement weight
-                scored.append((overlap, it.get("weight", 1), it))
-        scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
-        recs = [{"kind": it["kind"], "text": it["text"], "source": it["source"],
-                 "weight": it.get("weight", 1), "match": ov} for ov, _, it in scored[:limit]]
-        self._log("adaptive_recommend", f"Retrieved {len(recs)} learned items for a query")
-        return {"query": query, "recommendations": recs, "count": len(recs),
+
+        engine = "keyword"
+        recs: list[dict] | None = None
+        if self._semantic():
+            recs = self._recommend_semantic(query, limit)
+            if recs is not None:
+                engine = "semantic"
+        if recs is None:
+            scored = []
+            for it in self._all():
+                overlap = len(q_tokens & _tokens(it["text"]))
+                if overlap:
+                    # rank by keyword overlap, tie-broken by reinforcement weight
+                    scored.append((overlap, it.get("weight", 1), it))
+            scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
+            recs = [{"kind": it["kind"], "text": it["text"], "source": it["source"],
+                     "weight": it.get("weight", 1), "match": ov} for ov, _, it in scored[:limit]]
+        self._log("adaptive_recommend", f"Retrieved {len(recs)} learned items ({engine})")
+        return {"query": query, "recommendations": recs, "count": len(recs), "engine": engine,
                 "note": "Relevant learned context is retrieved to augment answers — not model training."}
 
     def items(self, kind: str | None = None, limit: int = 50) -> dict:
