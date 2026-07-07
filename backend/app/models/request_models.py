@@ -1761,3 +1761,21 @@ class MemoryAddRequest(BaseModel):
     kind: str = Field(default="note", max_length=40)
     source: str = Field(default="manual", max_length=80)
     metadata: dict = Field(default_factory=dict)
+
+
+class AgentPolicyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=400)
+    source: str = Field(default="*", max_length=40)
+    risk_level: str = Field(default="*", pattern="^(\\*|low|medium|high)$")
+    name_contains: str = Field(default="*", max_length=80)
+    enabled: bool = Field(default=True)
+
+
+class AgentPolicyUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=400)
+    source: str | None = Field(default=None, max_length=40)
+    risk_level: str | None = Field(default=None, pattern="^(\\*|low|medium|high)$")
+    name_contains: str | None = Field(default=None, max_length=80)
+    enabled: bool | None = None
