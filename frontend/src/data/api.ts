@@ -269,6 +269,65 @@ export async function fetchMemories(): Promise<MemoryItem[] | null> {
     }));
 }
 
+export interface MemoryV2SearchResult {
+  id: string;
+  title: string;
+  text: string;
+  kind: string;
+  source: string;
+  similarity: number;
+  mode: string;
+  metadata: Record<string, any>;
+}
+
+export interface MemoryV2SearchResponse {
+  results: MemoryV2SearchResult[];
+  mode: string;
+  count: number;
+}
+
+export async function addMemoryV2(
+  text: string,
+  kind: string,
+  source: string,
+  metadata: Record<string, any> = {},
+): Promise<{ ok: boolean; mode?: string; id?: string } | null> {
+  const data = await postJson<any>('/api/memory-v2/add', { text, kind, source, metadata });
+  if (!data) return null;
+  return {
+    ok: data.ok !== false,
+    mode: data.mode || data.backend || data.search_mode,
+    id: data.id || data.memory_id,
+  };
+}
+
+export async function searchMemoryV2(query: string, limit = 8): Promise<MemoryV2SearchResponse | null> {
+  const q = String(query || '').trim();
+  if (!q) return null;
+  const data = await getJson<any>(`/api/memory-v2/search?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(String(limit))}`);
+  const rawResults = Array.isArray(data?.results) ? data.results : Array.isArray(data?.items) ? data.items : [];
+  if (!data || !Array.isArray(rawResults)) return null;
+  const mode = data.mode || data.backend || data.search_mode || (data.pgvector_ready ? 'pgvector' : 'keyword');
+  return {
+    mode,
+    count: Number(data.count ?? rawResults.length),
+    results: rawResults.map((item: any, index: number): MemoryV2SearchResult => {
+      const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+      const similarity = Number(item.similarity ?? item.score ?? item.relevance ?? metadata.similarity ?? 0);
+      return {
+        id: item.id || item.memory_id || item.item_id || `memory-v2-${index}`,
+        title: clip(item.title || metadata.title || item.kind || 'Semantic memory', 90),
+        text: clip(item.text || item.content || item.snippet || metadata.text || '', 500),
+        kind: item.kind || metadata.kind || 'memory',
+        source: item.source || metadata.source || 'memory-v2',
+        similarity: Number.isFinite(similarity) ? similarity : 0,
+        mode: item.mode || item.backend || mode,
+        metadata,
+      };
+    }),
+  };
+}
+
 // ---- Tools / MCP connectors -------------------------------------------------
 export async function fetchConnectors(): Promise<ToolConnector[] | null> {
   const data = await getJson<{ connectors: any[] }>('/api/mcp/connectors');

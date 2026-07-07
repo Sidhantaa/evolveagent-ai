@@ -8,6 +8,8 @@ import {
   fetchSystemHealth,
   fetchStorageStatus,
   fetchWorkflowRuns,
+  addMemoryV2,
+  searchMemoryV2,
   routeMessage,
   startDurableRun,
 } from './api';
@@ -154,6 +156,58 @@ describe('fetchWorkflowRuns', () => {
     });
     const r = await fetchWorkflowRuns();
     expect(r![0]).toMatchObject({ id: 'r1', done: 2, total: 3, status: 'waiting_approval' });
+  });
+});
+
+describe('Memory v2 helpers', () => {
+  it('POSTs new semantic memory items', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, memory_id: 'm1', mode: 'pgvector' }) }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const result = await addMemoryV2('Remember this', 'Decision', 'test', { title: 'ADR' });
+    expect(result).toMatchObject({ ok: true, id: 'm1', mode: 'pgvector' });
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/memory-v2/add');
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as any).body)).toMatchObject({
+      text: 'Remember this',
+      kind: 'Decision',
+      source: 'test',
+      metadata: { title: 'ADR' },
+    });
+  });
+
+  it('maps semantic search results with pgvector mode and similarity', async () => {
+    stubFetch({
+      '/api/memory-v2/search': {
+        mode: 'pgvector',
+        count: 1,
+        results: [
+          {
+            memory_id: 'm2',
+            title: 'Storage migration decision',
+            text: 'Keep JSON as fallback while Postgres comes online.',
+            kind: 'Decision',
+            source: 'project_brain',
+            similarity: 0.91,
+            metadata: { created_at: '2026-07-07' },
+          },
+        ],
+      },
+    });
+    const response = await searchMemoryV2('storage migration', 5);
+    expect(response).toMatchObject({ mode: 'pgvector', count: 1 });
+    expect(response!.results[0]).toMatchObject({
+      id: 'm2',
+      title: 'Storage migration decision',
+      kind: 'Decision',
+      source: 'project_brain',
+      similarity: 0.91,
+      mode: 'pgvector',
+    });
+  });
+
+  it('returns null for blank or unavailable semantic search', async () => {
+    expect(await searchMemoryV2('   ')).toBeNull();
+    stubFetch({});
+    expect(await searchMemoryV2('missing')).toBeNull();
   });
 });
 
