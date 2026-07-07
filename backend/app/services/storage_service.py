@@ -1,17 +1,32 @@
-import json
-import os
-from threading import Lock
 from typing import Any
-from uuid import uuid4
 
-from app.config import DATA_DIR
+from app.config import DATA_DIR, settings
+from app.storage.backend import StorageBackend
+from app.storage.json_backend import JsonBackend
+
+
+def _select_backend(data_dir: str) -> StorageBackend:
+    """Pick the storage backend from settings. Defaults to JSON (current behavior);
+    uses Postgres only when explicitly requested AND a DATABASE_URL is configured."""
+    from app.storage.cached_backend import maybe_wrap_with_redis
+    if settings.storage_backend.lower() == "postgres" and settings.database_url:
+        from app.storage.postgres_backend import PostgresBackend
+        return maybe_wrap_with_redis(PostgresBackend(settings.database_url), settings.redis_url)
+    return maybe_wrap_with_redis(JsonBackend(data_dir), settings.redis_url)
 
 
 class StorageService:
-    def __init__(self, data_dir: str = DATA_DIR):
+    """Facade over a pluggable :class:`StorageBackend` (JSON today; Postgres later).
+
+    The public interface (``read_list`` / ``append`` / ``write_list``) is
+    unchanged, so the 140+ services built on it are untouched. Swap the backend
+    via the constructor; ``data_dir`` is retained for backward compatibility
+    (some services list files under it directly).
+    """
+
+    def __init__(self, data_dir: str = DATA_DIR, backend: StorageBackend | None = None):
         self.data_dir = data_dir
-        self._lock = Lock()
-        os.makedirs(self.data_dir, exist_ok=True)
+        self.backend: StorageBackend = backend or _select_backend(data_dir)
         for filename in (
             "tasks.json",
             "memory.json",
@@ -223,49 +238,34 @@ class StorageService:
             "team_sprints.json",
             "team_reviews.json",
             "team_manager_reports.json",
+            "agent_governance_policies.json",
         ):
-            self._ensure_file(filename)
-
-    def _path(self, filename: str) -> str:
-        return os.path.join(self.data_dir, filename)
-
-    def _ensure_file(self, filename: str) -> None:
-        path = self._path(filename)
-        if not os.path.exists(path):
-            with open(path, "w", encoding="utf-8") as file:
-                json.dump([], file)
+            self.backend.ensure(filename)
 
     def read_list(self, filename: str) -> list[dict[str, Any]]:
-        self._ensure_file(filename)
-        with self._lock:
-            with open(self._path(filename), "r", encoding="utf-8") as file:
-                try:
-                    data = json.load(file)
-                except json.JSONDecodeError:
-                    data = []
-        return data if isinstance(data, list) else []
+        return self.backend.read_list(filename)
 
     def append(self, filename: str, item: dict[str, Any]) -> None:
-        with self._lock:
-            self._ensure_file(filename)
-            with open(self._path(filename), "r", encoding="utf-8") as file:
-                try:
-                    data = json.load(file)
-                except json.JSONDecodeError:
-                    data = []
-            if not isinstance(data, list):
-                data = []
-            data.append(item)
-            self._atomic_write(filename, data)
+        self.backend.append(filename, item)
 
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
-        with self._lock:
-            self._ensure_file(filename)
-            self._atomic_write(filename, items)
+        self.backend.write_list(filename, items)
 
-    def _atomic_write(self, filename: str, items: list[dict[str, Any]]) -> None:
-        path = self._path(filename)
-        temp_path = f"{path}.{uuid4().hex}.tmp"
-        with open(temp_path, "w", encoding="utf-8") as file:
-            json.dump(items, file, indent=2)
-        os.replace(temp_path, path)
+    def backend_kind(self) -> str:
+        inner = getattr(self.backend, "inner", self.backend)  # unwrap cache decorator
+        return "postgres" if type(inner).__name__ == "PostgresBackend" else "json"
+
+    def status(self) -> dict[str, Any]:
+        """Read-only storage status for the Dev Console / /api/system/storage-status."""
+        try:
+            stats = self.backend.stats()
+        except Exception as exc:  # never fail the status endpoint
+            stats = {"kind": self.backend_kind(), "collections": None, "total_documents": None, "error": type(exc).__name__}
+        return {
+            "backend": stats.get("kind", self.backend_kind()),
+            "collections": stats.get("collections"),
+            "total_documents": stats.get("total_documents"),
+            "postgres_ready": bool(settings.database_url),
+            "redis_ready": bool(settings.redis_url),
+            "cache": stats.get("cache", "none"),
+        }

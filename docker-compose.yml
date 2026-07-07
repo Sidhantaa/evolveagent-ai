@@ -1,0 +1,53 @@
+# EvolveAgent AI — v100 local infrastructure (Postgres + pgvector + Redis).
+#
+# INFRA ONLY. Nothing in the app is wired to these yet — the backend still
+# defaults to STORAGE_BACKEND=json. This just provisions the services so later
+# v100 tasks (Postgres backend, migration, Memory v2, Redis cache) have a target.
+#
+# Usage:
+#   cp backend/.env.example backend/.env      # then edit as needed
+#   docker compose up -d                      # start postgres + redis
+#   docker compose ps                         # check health
+#   docker compose down                       # stop (data persists in volumes)
+#   docker compose down -v                    # stop AND wipe data
+#
+# The Postgres image ships the pgvector extension (enabled by the init script).
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: evolveagent-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-evolveagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-evolveagent}
+      POSTGRES_DB: ${POSTGRES_DB:-evolveagent}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - evolveagent_pgdata:/var/lib/postgresql/data
+      - ./scripts/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-evolveagent} -d ${POSTGRES_DB:-evolveagent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: evolveagent-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - evolveagent_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  evolveagent_pgdata:
+  evolveagent_redisdata:

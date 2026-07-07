@@ -47,8 +47,11 @@ npm run build    # produces EvolveAgent.app + a .dmg in src-tauri/target/release
 
 ## Security posture
 
-- **CSP** restricts the webview to `'self'` plus the local backend
-  (`http://127.0.0.1:8000` and its websocket) — nothing else.
+- **CSP** restricts the webview to `'self'`, the local backend
+  (`http://127.0.0.1:8000` and its websocket), and the local Vite dev server
+  (`localhost:5173` + HMR) — no external hosts. `script-src` includes
+  `'unsafe-inline'` because Vite's dev-mode React-refresh preamble is injected
+  inline; connect-src stays limited to localhost so nothing can be exfiltrated.
 - **Capabilities** grant only `core:default`. No `shell`, `fs`, or `http`
   plugins are enabled, so the native layer cannot run commands, read/write
   arbitrary files, or reach arbitrary hosts.
