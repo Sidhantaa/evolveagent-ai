@@ -7,6 +7,13 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
+from app.api.master_agent_routes import router as master_agent_router
+from app.api.notifications_inbox_routes import router as notifications_inbox_router
+from app.api.approvals_center_routes import router as approvals_center_router
+from app.api.retrieval_routes import router as retrieval_router
+from app.api.os2_routes import router as os2_router
+from app.api.usage_ledger_routes import router as usage_ledger_router
+from app.api.features_routes import router as features_router
 from app.api.export_center_routes import router as export_center_router
 from app.api.import_center_routes import router as import_center_router
 from app.api.provider_control_routes import router as provider_control_router
@@ -91,6 +98,13 @@ def health_check() -> dict[str, str]:
 
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
+app.include_router(master_agent_router, prefix="/api")
+app.include_router(notifications_inbox_router, prefix="/api")
+app.include_router(approvals_center_router, prefix="/api")
+app.include_router(retrieval_router, prefix="/api")
+app.include_router(os2_router, prefix="/api")
+app.include_router(usage_ledger_router, prefix="/api")
+app.include_router(features_router, prefix="/api")
 app.include_router(export_center_router, prefix="/api")
 app.include_router(import_center_router, prefix="/api")
 app.include_router(provider_control_router, prefix="/api")
