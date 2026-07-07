@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     notion_api_key: str | None = Field(default=None, alias="NOTION_API_KEY")
     notion_parent_page_id: str | None = Field(default=None, alias="NOTION_PARENT_PAGE_ID")
     notion_version: str = Field(default="2022-06-28", alias="NOTION_VERSION")
+    # v100 storage/infra (read by later tasks; default keeps current JSON behavior).
+    storage_backend: str = Field(default="json", alias="STORAGE_BACKEND")
+    database_url: str | None = Field(default=None, alias="DATABASE_URL")
+    redis_url: str | None = Field(default=None, alias="REDIS_URL")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
