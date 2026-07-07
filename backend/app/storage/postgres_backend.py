@@ -75,3 +75,9 @@ class PostgresBackend:
             conn.execute(text("DELETE FROM documents WHERE collection = :c"), {"c": filename})
             for item in items:
                 conn.execute(_INSERT, {"c": filename, "d": json.dumps(item)})
+
+    def stats(self) -> dict[str, Any]:
+        with self.engine.connect() as conn:
+            total = conn.execute(text("SELECT count(*) FROM documents")).scalar() or 0
+            colls = conn.execute(text("SELECT count(DISTINCT collection) FROM documents")).scalar() or 0
+        return {"kind": "postgres", "collections": int(colls), "total_documents": int(total)}

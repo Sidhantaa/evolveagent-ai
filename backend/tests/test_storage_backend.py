@@ -55,3 +55,29 @@ def test_storage_service_still_ensures_known_files(tmp_path):
     StorageService(data_dir=str(tmp_path))
     # a well-known collection is created on init (as before)
     assert (tmp_path / "tasks.json").exists()
+
+
+def test_default_backend_is_json_and_status(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    assert s.backend_kind() == "json"
+    s.append("a.json", {"x": 1})
+    st = s.status()
+    assert st["backend"] == "json"
+    assert st["collections"] >= 1 and st["total_documents"] >= 1
+    assert st["postgres_ready"] is False and st["redis_ready"] is False  # secret-safe booleans
+
+
+def test_json_backend_stats(tmp_path):
+    b = JsonBackend(str(tmp_path))
+    b.write_list("c1.json", [{"a": 1}, {"a": 2}])
+    b.write_list("c2.json", [{"b": 1}])
+    stats = b.stats()
+    assert stats == {"kind": "json", "collections": 2, "total_documents": 3}
+
+
+def test_storage_status_endpoint():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    r = TestClient(app).get("/api/system/storage-status").json()
+    assert r["backend"] in ("json", "postgres")
+    assert set(["backend", "collections", "total_documents", "postgres_ready", "redis_ready", "configured_backend"]) <= set(r)

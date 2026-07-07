@@ -30,3 +30,7 @@ class StorageBackend(Protocol):
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
         """Replace the whole collection with ``items``."""
         ...
+
+    def stats(self) -> dict[str, Any]:
+        """Lightweight status: ``{kind, collections, total_documents}``."""
+        ...
