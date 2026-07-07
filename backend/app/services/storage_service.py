@@ -8,10 +8,11 @@ from app.storage.json_backend import JsonBackend
 def _select_backend(data_dir: str) -> StorageBackend:
     """Pick the storage backend from settings. Defaults to JSON (current behavior);
     uses Postgres only when explicitly requested AND a DATABASE_URL is configured."""
+    from app.storage.cached_backend import maybe_wrap_with_redis
     if settings.storage_backend.lower() == "postgres" and settings.database_url:
         from app.storage.postgres_backend import PostgresBackend
-        return PostgresBackend(settings.database_url)
-    return JsonBackend(data_dir)
+        return maybe_wrap_with_redis(PostgresBackend(settings.database_url), settings.redis_url)
+    return maybe_wrap_with_redis(JsonBackend(data_dir), settings.redis_url)
 
 
 class StorageService:
@@ -250,7 +251,8 @@ class StorageService:
         self.backend.write_list(filename, items)
 
     def backend_kind(self) -> str:
-        return "postgres" if type(self.backend).__name__ == "PostgresBackend" else "json"
+        inner = getattr(self.backend, "inner", self.backend)  # unwrap cache decorator
+        return "postgres" if type(inner).__name__ == "PostgresBackend" else "json"
 
     def status(self) -> dict[str, Any]:
         """Read-only storage status for the Dev Console / /api/system/storage-status."""
@@ -264,4 +266,5 @@ class StorageService:
             "total_documents": stats.get("total_documents"),
             "postgres_ready": bool(settings.database_url),
             "redis_ready": bool(settings.redis_url),
+            "cache": stats.get("cache", "none"),
         }
