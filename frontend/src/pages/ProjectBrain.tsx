@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { addMemoryV2, searchMemoryV2, MemoryV2SearchResult } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { 
   Brain, 
@@ -29,6 +30,10 @@ export const ProjectBrain: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChip, setActiveChip] = useState<string>('all');
   const [isAddingModalOpen, setIsAddingModalOpen] = useState(false);
+  const [semanticResults, setSemanticResults] = useState<MemoryV2SearchResult[] | null>(null);
+  const [semanticMode, setSemanticMode] = useState<string>('keyword');
+  const [semanticBusy, setSemanticBusy] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
 
   // New memory form state
   const [newTitle, setNewTitle] = useState('');
@@ -46,15 +51,78 @@ export const ProjectBrain: React.FC = () => {
     return matchesChip && matchesQuery;
   });
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      setSemanticResults(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSemanticBusy(true);
+      const response = await searchMemoryV2(query, 8);
+      if (!cancelled) {
+        setSemanticBusy(false);
+        if (response?.results?.length) {
+          setSemanticResults(response.results);
+          setSemanticMode(response.mode || response.results[0]?.mode || 'keyword');
+        } else {
+          setSemanticResults(null);
+        }
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newSnippet.trim()) return;
     const tagArray = newTags.split(',').map(t => t.trim()).filter(Boolean);
-    addMemoryItem(newTitle, newSnippet, newType, tagArray);
+    setAddBusy(true);
+    const saved = await addMemoryV2(
+      `${newTitle.trim()}\n\n${newSnippet.trim()}`,
+      newType,
+      'project_brain_ui',
+      { title: newTitle.trim(), tags: tagArray },
+    );
+    setAddBusy(false);
+    if (saved?.ok) {
+      showToast(`Saved "${newTitle}" to Memory v2 (${saved.mode || 'live'}).`, 'success');
+      if (searchQuery.trim()) {
+        const response = await searchMemoryV2(searchQuery, 8);
+        if (response?.results?.length) {
+          setSemanticResults(response.results);
+          setSemanticMode(response.mode || response.results[0]?.mode || 'keyword');
+        }
+      }
+    } else {
+      addMemoryItem(newTitle, newSnippet, newType, tagArray);
+      showToast(`Backend offline. Saved "${newTitle}" to local Project Brain mock state.`, 'warning');
+    }
     setNewTitle('');
     setNewSnippet('');
     setIsAddingModalOpen(false);
   };
+
+  const semanticMemories: MemoryItem[] = (semanticResults || []).map(result => {
+    const normalizedSimilarity = result.similarity <= 1 ? Math.round(result.similarity * 100) : Math.round(result.similarity);
+    return {
+      id: result.id,
+      title: result.title || result.kind,
+      snippet: result.text,
+      type: 'Memory',
+      relevance: Math.max(0, Math.min(100, normalizedSimilarity || 80)),
+      tier: result.mode === 'pgvector' ? 'hot' : 'warm',
+      source: result.source,
+      timestamp: result.metadata?.created_at || 'Memory v2',
+      tags: [result.kind, result.mode].filter(Boolean),
+      pinned: false,
+    };
+  });
+  const displayMemories = semanticResults?.length ? semanticMemories : filteredMemories;
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -92,6 +160,16 @@ export const ProjectBrain: React.FC = () => {
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Add Memory</span>
             </button>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-mono text-gray-400">
+            <span className={`px-2 py-0.5 rounded-full border ${
+              semanticResults?.length
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                : 'bg-white/[0.04] text-gray-400 border-white/10'
+            }`}>
+              {semanticResults?.length ? `Memory v2: ${semanticMode}` : 'Mock fallback ready'}
+            </span>
+            {semanticBusy && <span className="text-purple-300">Searching semantic memory…</span>}
           </div>
 
           {/* Filter Chips */}
@@ -139,13 +217,15 @@ export const ProjectBrain: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-purple-400" />
-              <span>Relevant Findings ({filteredMemories.length})</span>
+              <span>Relevant Findings ({displayMemories.length})</span>
             </h3>
-            <span className="text-xs text-gray-400 font-mono">Sorted by Relevance Match</span>
+            <span className="text-xs text-gray-400 font-mono">
+              {semanticResults?.length ? `Live Memory v2 · ${semanticMode}` : 'Sorted by Relevance Match'}
+            </span>
           </div>
 
           <div className="space-y-3">
-            {filteredMemories.map((mem) => (
+            {displayMemories.map((mem) => (
               <GlassCard key={mem.id} hover className="space-y-3 relative overflow-hidden">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
@@ -170,6 +250,15 @@ export const ProjectBrain: React.FC = () => {
                         }`}>
                           {mem.tier} Tier
                         </span>
+                        {semanticResults?.length && (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full uppercase border ${
+                            semanticMode === 'pgvector'
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                          }`}>
+                            {semanticMode}
+                          </span>
+                        )}
                       </div>
                       <h4 className="text-base font-bold text-white mt-1">{mem.title}</h4>
                     </div>
@@ -214,6 +303,12 @@ export const ProjectBrain: React.FC = () => {
                 </div>
               </GlassCard>
             ))}
+            {!displayMemories.length && (
+              <GlassCard className="text-center py-10">
+                <p className="text-sm text-gray-300 font-semibold">No matching memories found.</p>
+                <p className="text-xs text-gray-500 font-mono mt-1">Try a broader query or add a new Memory v2 item.</p>
+              </GlassCard>
+            )}
           </div>
         </div>
 
@@ -384,9 +479,10 @@ export const ProjectBrain: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={addBusy}
                   className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors shadow-lg"
                 >
-                  Save & Index
+                  {addBusy ? 'Saving…' : 'Save & Index'}
                 </button>
               </div>
             </form>
