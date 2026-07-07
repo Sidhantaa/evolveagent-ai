@@ -63,3 +63,8 @@ class JsonBackend:
         with open(temp_path, "w", encoding="utf-8") as file:
             json.dump(items, file, indent=2)
         os.replace(temp_path, path)
+
+    def stats(self) -> dict[str, Any]:
+        files = [f for f in os.listdir(self.data_dir) if f.endswith(".json")] if os.path.isdir(self.data_dir) else []
+        total = sum(len(self.read_list(f)) for f in files)
+        return {"kind": "json", "collections": len(files), "total_documents": total}

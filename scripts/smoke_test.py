@@ -71,6 +71,8 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("adaptive-learning", "POST", "/api/adaptive-learning/learn", {}, 200),
     # Home / Today
     ("today", "GET", "/api/today/summary", None, 200),
+    # System / storage
+    ("system", "GET", "/api/system/storage-status", None, 200),
     # Master Agent
     ("master-agent", "GET", "/api/master-agent/summary", None, 200),
     ("master-agent", "GET", "/api/master-agent/capabilities", None, 200),

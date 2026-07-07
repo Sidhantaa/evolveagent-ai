@@ -1,8 +1,17 @@
 from typing import Any
 
-from app.config import DATA_DIR
+from app.config import DATA_DIR, settings
 from app.storage.backend import StorageBackend
 from app.storage.json_backend import JsonBackend
+
+
+def _select_backend(data_dir: str) -> StorageBackend:
+    """Pick the storage backend from settings. Defaults to JSON (current behavior);
+    uses Postgres only when explicitly requested AND a DATABASE_URL is configured."""
+    if settings.storage_backend.lower() == "postgres" and settings.database_url:
+        from app.storage.postgres_backend import PostgresBackend
+        return PostgresBackend(settings.database_url)
+    return JsonBackend(data_dir)
 
 
 class StorageService:
@@ -16,7 +25,7 @@ class StorageService:
 
     def __init__(self, data_dir: str = DATA_DIR, backend: StorageBackend | None = None):
         self.data_dir = data_dir
-        self.backend: StorageBackend = backend or JsonBackend(data_dir)
+        self.backend: StorageBackend = backend or _select_backend(data_dir)
         for filename in (
             "tasks.json",
             "memory.json",
@@ -239,3 +248,20 @@ class StorageService:
 
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
         self.backend.write_list(filename, items)
+
+    def backend_kind(self) -> str:
+        return "postgres" if type(self.backend).__name__ == "PostgresBackend" else "json"
+
+    def status(self) -> dict[str, Any]:
+        """Read-only storage status for the Dev Console / /api/system/storage-status."""
+        try:
+            stats = self.backend.stats()
+        except Exception as exc:  # never fail the status endpoint
+            stats = {"kind": self.backend_kind(), "collections": None, "total_documents": None, "error": type(exc).__name__}
+        return {
+            "backend": stats.get("kind", self.backend_kind()),
+            "collections": stats.get("collections"),
+            "total_documents": stats.get("total_documents"),
+            "postgres_ready": bool(settings.database_url),
+            "redis_ready": bool(settings.redis_url),
+        }
