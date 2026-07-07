@@ -1,17 +1,22 @@
-import json
-import os
-from threading import Lock
 from typing import Any
-from uuid import uuid4
 
 from app.config import DATA_DIR
+from app.storage.backend import StorageBackend
+from app.storage.json_backend import JsonBackend
 
 
 class StorageService:
-    def __init__(self, data_dir: str = DATA_DIR):
+    """Facade over a pluggable :class:`StorageBackend` (JSON today; Postgres later).
+
+    The public interface (``read_list`` / ``append`` / ``write_list``) is
+    unchanged, so the 140+ services built on it are untouched. Swap the backend
+    via the constructor; ``data_dir`` is retained for backward compatibility
+    (some services list files under it directly).
+    """
+
+    def __init__(self, data_dir: str = DATA_DIR, backend: StorageBackend | None = None):
         self.data_dir = data_dir
-        self._lock = Lock()
-        os.makedirs(self.data_dir, exist_ok=True)
+        self.backend: StorageBackend = backend or JsonBackend(data_dir)
         for filename in (
             "tasks.json",
             "memory.json",
@@ -224,48 +229,13 @@ class StorageService:
             "team_reviews.json",
             "team_manager_reports.json",
         ):
-            self._ensure_file(filename)
-
-    def _path(self, filename: str) -> str:
-        return os.path.join(self.data_dir, filename)
-
-    def _ensure_file(self, filename: str) -> None:
-        path = self._path(filename)
-        if not os.path.exists(path):
-            with open(path, "w", encoding="utf-8") as file:
-                json.dump([], file)
+            self.backend.ensure(filename)
 
     def read_list(self, filename: str) -> list[dict[str, Any]]:
-        self._ensure_file(filename)
-        with self._lock:
-            with open(self._path(filename), "r", encoding="utf-8") as file:
-                try:
-                    data = json.load(file)
-                except json.JSONDecodeError:
-                    data = []
-        return data if isinstance(data, list) else []
+        return self.backend.read_list(filename)
 
     def append(self, filename: str, item: dict[str, Any]) -> None:
-        with self._lock:
-            self._ensure_file(filename)
-            with open(self._path(filename), "r", encoding="utf-8") as file:
-                try:
-                    data = json.load(file)
-                except json.JSONDecodeError:
-                    data = []
-            if not isinstance(data, list):
-                data = []
-            data.append(item)
-            self._atomic_write(filename, data)
+        self.backend.append(filename, item)
 
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
-        with self._lock:
-            self._ensure_file(filename)
-            self._atomic_write(filename, items)
-
-    def _atomic_write(self, filename: str, items: list[dict[str, Any]]) -> None:
-        path = self._path(filename)
-        temp_path = f"{path}.{uuid4().hex}.tmp"
-        with open(temp_path, "w", encoding="utf-8") as file:
-            json.dump(items, file, indent=2)
-        os.replace(temp_path, path)
+        self.backend.write_list(filename, items)
