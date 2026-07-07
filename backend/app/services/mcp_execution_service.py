@@ -44,12 +44,16 @@ class MCPExecutionService:
         governance_service: GovernanceService,
         connector_service: MCPConnectorService,
         readonly_adapter: MCPReadOnlyAdapter | None = None,
+        github_adapter=None,
     ):
         self.storage = storage
         self.governance = governance_service
         self.connectors = connector_service
         # v43: opt-in, sandboxed, read-only real adapter (mock fallback by default).
         self.readonly_adapter = readonly_adapter or MCPReadOnlyAdapter()
+        # v100: opt-in real adapter for the GitHub connector's read-only actions.
+        # None until routes.py wires it (after github_connector_service exists).
+        self.github_adapter = github_adapter
 
     # ------------------------------------------------------------------
     # Helpers
@@ -205,9 +209,13 @@ class MCPExecutionService:
             self._log("mcp_execution_blocked", f"Blocked run of {request_id}: connector disabled/not enabled.", request.get("risk_level", "high"), blocked=True, approved=False)
             return self.get_request(request_id)
 
-        # v43: try the opt-in, sandboxed, read-only real adapter first; if it
-        # declines (opt-in off or action not allow-listed), fall back to mock.
+        # v43/v100: try real adapters first (readonly, then github); if every
+        # adapter declines (opt-in off, action not allow-listed, or wrong
+        # connector), fall back to mock. Adapters never raise — a decline is a
+        # plain None return, and an internal failure degrades to a safe result.
         adapter_result = self.readonly_adapter.try_execute(connector, request["action_name"], {})
+        if adapter_result is None and self.github_adapter is not None:
+            adapter_result = self.github_adapter.try_execute(connector, request["action_name"], {})
         if adapter_result is not None:
             result = {
                 "result_id": str(uuid4()),
@@ -258,8 +266,13 @@ class MCPExecutionService:
         return list(reversed(self.storage.read_list(self.results_file)[-limit:]))
 
     def adapter_status(self) -> dict:
-        """v43: expose the read-only adapter's opt-in state, allow-list, and sandbox."""
-        return self.readonly_adapter.status()
+        """v43: expose the read-only adapter's opt-in state, allow-list, and sandbox.
+        v100: adds a nested 'github' section for the GitHub adapter, if wired —
+        the top-level (readonly) shape is unchanged for backward compatibility."""
+        status = self.readonly_adapter.status()
+        if self.github_adapter is not None:
+            status["github"] = self.github_adapter.status()
+        return status
 
     # ------------------------------------------------------------------
     # Summary + analytics
