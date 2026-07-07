@@ -1742,6 +1742,7 @@ class ScheduledTaskCreateRequest(BaseModel):
     schedule: str = Field(default="manual", pattern="^(manual|hourly|daily|weekly)$")
     action_type: str = Field(default="plan", pattern="^(plan|note|approval_required)$")
     detail: str = Field(default="", max_length=2000)
+    workflow_definition_id: str | None = Field(default=None, max_length=80, description="Optional durable-workflow definition to run for real when this task fires.")
     enabled: bool = Field(default=True)
 
 

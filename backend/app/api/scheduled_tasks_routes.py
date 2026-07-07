@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, status
 from app.api.routes import (
     scheduled_tasks_service,
+    scheduler_tick_worker,
 )
 from app.models.request_models import (
     ScheduledTaskCreateRequest,
@@ -16,10 +17,26 @@ router = APIRouter()
 
 # ----------------------------------------------------------------------
 # v58.0 Scheduled Tasks — local registry, planning-first triggers (no daemon).
+# v120: an optional workflow_definition_id makes trigger() start a real
+# (still approval-gated) durable workflow run; the tick worker below is the
+# first real background scheduler in the app, opt-in and off by default.
 # ----------------------------------------------------------------------
 @router.get("/scheduled-tasks/summary")
 def get_scheduled_tasks_summary() -> dict:
     return scheduled_tasks_service.summary()
+
+
+@router.get("/scheduled-tasks/tick-status")
+def get_scheduler_tick_status() -> dict:
+    return scheduler_tick_worker.status()
+
+
+@router.post("/scheduled-tasks/tick-now")
+def run_scheduler_tick_now() -> dict:
+    """Manually run one tick (fires currently-due tasks) without waiting for the
+    background loop — useful for testing/demoing even when the loop is off."""
+    fired = scheduler_tick_worker.tick_once()
+    return {"fired": fired, "count": len(fired)}
 
 
 @router.get("/scheduled-tasks/runs")
