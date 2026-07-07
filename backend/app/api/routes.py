@@ -585,42 +585,7 @@ def push_git_branch(request: GitPushRequest | None = None) -> dict:
     return git_service.push(remote=payload.remote, branch=payload.branch)
 
 
-# NOTE: /app-builder/* routes were extracted into app/api/app_builder_routes.py (services still live here).
-
-
-@router.get("/debate/summary")
-def get_debate_simulation_summary(workspace_id: str | None = Query(default=None)) -> dict:
-    return debate_simulation_service.summary(workspace_id)
-
-
-@router.get("/debate/sessions")
-def list_debate_sessions(workspace_id: str | None = Query(default=None)) -> list[dict]:
-    return debate_simulation_service.list_debates(workspace_id)
-
-
-@router.get("/debate/sessions/{debate_id}")
-def get_debate_session(debate_id: str) -> dict:
-    debate = debate_simulation_service.get_debate(debate_id)
-    if not debate:
-        raise HTTPException(status_code=404, detail="Debate session not found")
-    return debate
-
-
-@router.post("/debate/sessions")
-def create_debate_session(request: DebateCreateRequest) -> dict:
-    return debate_simulation_service.create_debate(
-        prompt=request.prompt,
-        workspace_id=request.workspace_id,
-        agents=request.agents,
-    )
-
-
-@router.post("/debate/consensus")
-def select_debate_consensus(request: DebateConsensusRequest) -> dict:
-    result = debate_simulation_service.consensus_for(request.debate_id)
-    if not result.get("success"):
-        raise HTTPException(status_code=404, detail=result.get("error", "Debate session not found"))
-    return result
+# NOTE: /debate/* routes were extracted into app/api/debate_routes.py (services still live here).
 
 
 @router.get("/simulations")
@@ -1909,43 +1874,7 @@ def query_retrieval(request: RetrievalQueryRequest) -> dict:
     return local_retrieval_service.query(request.model_dump())
 
 
-# NOTE: /eval-harness/* routes were extracted into app/api/eval_harness_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v53.0 Playbook Library — reusable multi-step playbooks (planning-first).
-# ----------------------------------------------------------------------
-@router.get("/playbooks/summary")
-def get_playbooks_summary() -> dict:
-    return playbook_library_service.summary()
-
-
-@router.get("/playbooks")
-def list_playbooks() -> dict:
-    playbooks = playbook_library_service.list_playbooks()
-    return {"playbooks": playbooks, "count": len(playbooks)}
-
-
-@router.post("/playbooks")
-def create_playbook(request: PlaybookCreateRequest) -> dict:
-    return playbook_library_service.create_playbook(request.model_dump())
-
-
-@router.post("/playbooks/{playbook_id}/run")
-def run_playbook(playbook_id: str) -> dict:
-    try:
-        return playbook_library_service.run_playbook(playbook_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail="Playbook not found") from error
-
-
-@router.get("/playbooks/runs")
-def list_playbook_runs(playbook_id: str | None = Query(default=None)) -> dict:
-    runs = playbook_library_service.list_runs(playbook_id)
-    return {"runs": runs, "count": len(runs)}
-
-
-# NOTE: /operating-layer-2/* routes were extracted into app/api/operating_layer_2_routes.py (services still live here).
+# NOTE: /playbooks/* routes were extracted into app/api/playbooks_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -1975,34 +1904,7 @@ def acknowledge_notification(notif_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Notification not found") from error
 
 
-# ----------------------------------------------------------------------
-# v57.0 Workspace Templates & Cloning — local templates + instantiate.
-# ----------------------------------------------------------------------
-@router.get("/workspace-templates/summary")
-def get_workspace_templates_summary() -> dict:
-    return workspace_templates_service.summary()
-
-
-@router.get("/workspace-templates")
-def list_workspace_templates() -> dict:
-    templates = workspace_templates_service.list_templates()
-    return {"templates": templates, "count": len(templates)}
-
-
-@router.post("/workspace-templates")
-def create_workspace_template(request: WorkspaceTemplateCreateRequest) -> dict:
-    return workspace_templates_service.create_template(request.model_dump())
-
-
-@router.post("/workspace-templates/{template_id}/instantiate")
-def instantiate_workspace_template(template_id: str, request: WorkspaceTemplateInstantiateRequest | None = None) -> dict:
-    try:
-        return workspace_templates_service.instantiate(template_id, request.model_dump() if request else {})
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail="Template not found") from error
-
-
-# NOTE: /scheduled-tasks/* routes were extracted into app/api/scheduled_tasks_routes.py (services still live here).
+# NOTE: /workspace-templates/* routes were extracted into app/api/workspace_templates_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2214,27 +2116,7 @@ def import_settings(request: SettingsImportRequest) -> dict:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
-# ----------------------------------------------------------------------
-# v68.0 Real Provider Control Center 2.0 — readiness, model/mode prefs, cost/latency.
-# ----------------------------------------------------------------------
-@router.get("/provider-control/dashboard")
-def provider_control_dashboard() -> dict:
-    return provider_control_service.dashboard()
-
-
-@router.get("/provider-control/summary")
-def provider_control_summary() -> dict:
-    return provider_control_service.summary()
-
-
-@router.get("/provider-control/key-check")
-def provider_control_key_check() -> dict:
-    return provider_control_service.key_check()
-
-
-@router.patch("/provider-control")
-def provider_control_update(request: ProviderControlUpdateRequest) -> dict:
-    return provider_control_service.update(request.model_by_task, request.capability_modes, request.fallback_enabled)
+# NOTE: /provider-control/* routes were extracted into app/api/provider_control_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2341,38 +2223,7 @@ def productivity_summary() -> dict:
     return personal_productivity_service.summary()
 
 
-# NOTE: /doc-intel/* routes were extracted into app/api/doc_intel_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v76.0 Code Intelligence 2.0 — static analysis of submitted code (read-only).
-# ----------------------------------------------------------------------
-@router.post("/code-intel/analyze")
-def code_intel_analyze(request: CodeAnalyzeRequest) -> dict:
-    return code_intelligence_service.analyze(request.code, request.language)
-
-
-@router.post("/code-intel/routes")
-def code_intel_routes(request: CodeTextRequest) -> dict:
-    return code_intelligence_service.route_map(request.code)
-
-
-@router.post("/code-intel/dependencies")
-def code_intel_dependencies(request: CodeTextRequest) -> dict:
-    return code_intelligence_service.dependencies(request.code)
-
-
-@router.post("/code-intel/test-coverage")
-def code_intel_test_coverage(request: CodeTextRequest) -> dict:
-    return code_intelligence_service.test_coverage(request.code)
-
-
-@router.get("/code-intel/summary")
-def code_intel_summary() -> dict:
-    return code_intelligence_service.summary()
-
-
-# NOTE: /research-agent/* routes were extracted into app/api/research_agent_routes.py (services still live here).
+# NOTE: /code-intel/* routes were extracted into app/api/code_intel_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2445,93 +2296,7 @@ def governance_console_summary() -> dict:
     return governance_console_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v83.0 Local Data Manager — read-only/planning-first storage management.
-# ----------------------------------------------------------------------
-@router.get("/data-manager/browse")
-def data_manager_browse() -> dict:
-    return data_manager_service.browse()
-
-
-@router.get("/data-manager/usage")
-def data_manager_usage() -> dict:
-    return data_manager_service.usage()
-
-
-@router.get("/data-manager/cleanup-suggestions")
-def data_manager_cleanup() -> dict:
-    return data_manager_service.cleanup_suggestions()
-
-
-@router.post("/data-manager/redaction-preview")
-def data_manager_redaction_preview(request: RedactionPreviewRequest) -> dict:
-    try:
-        return data_manager_service.redaction_preview(request.collection)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.get("/data-manager/summary")
-def data_manager_summary() -> dict:
-    return data_manager_service.summary()
-
-
-# ----------------------------------------------------------------------
-# v84.0 Import Center — validate + sanitize + preview before saving.
-# ----------------------------------------------------------------------
-@router.post("/import-center/preview")
-def import_center_preview(request: ImportPreviewRequest) -> dict:
-    try:
-        return import_center_service.preview(request.kind, request.content)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@router.post("/import-center/commit")
-def import_center_commit(request: ImportCommitRequest) -> dict:
-    try:
-        return import_center_service.commit(request.kind, request.content, request.workspace_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@router.get("/import-center/records")
-def import_center_records(kind: str | None = Query(default=None)) -> dict:
-    return import_center_service.list_records(kind=kind)
-
-
-@router.get("/import-center/summary")
-def import_center_summary() -> dict:
-    return import_center_service.summary()
-
-
-# ----------------------------------------------------------------------
-# v85.0 Export Center — read-only portable exports (markdown/JSON).
-# ----------------------------------------------------------------------
-@router.post("/export-center/export")
-def export_center_export(request: ExportRequest) -> dict:
-    try:
-        return export_center_service.export(request.kind, request.format, request.workspace_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@router.post("/export-center/package")
-def export_center_package(request: ExportPackageRequest) -> dict:
-    return export_center_service.package(request.kinds, request.format, request.workspace_id)
-
-
-@router.get("/export-center/case-study")
-def export_center_case_study() -> dict:
-    return export_center_service.case_study()
-
-
-@router.get("/export-center/summary")
-def export_center_summary() -> dict:
-    return export_center_service.summary()
-
-
-# NOTE: /plugin-marketplace/* routes were extracted into app/api/plugin_marketplace_routes.py (services still live here).
+# NOTE: /export-center/* routes were extracted into app/api/export_center_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2555,55 +2320,7 @@ def integration_hub_summary() -> dict:
     return integration_hub_service.summary()
 
 
-# ----------------------------------------------------------------------
-# v88.0 Quality Assurance Center — verification matrix + release readiness.
-# ----------------------------------------------------------------------
-@router.get("/qa-center/dashboard")
-def qa_center_dashboard() -> dict:
-    return qa_center_service.dashboard()
-
-
-@router.get("/qa-center/matrix")
-def qa_center_matrix() -> dict:
-    return qa_center_service.verification_matrix()
-
-
-@router.post("/qa-center/record")
-def qa_center_record(request: QARecordRequest) -> dict:
-    return qa_center_service.record(request.feature_key, request.status, request.note)
-
-
-@router.get("/qa-center/summary")
-def qa_center_summary() -> dict:
-    return qa_center_service.summary()
-
-
-# ----------------------------------------------------------------------
-# v89.0 Release Manager — read-only release-prep generators (text only).
-# ----------------------------------------------------------------------
-@router.get("/release-manager/dashboard")
-def release_manager_dashboard() -> dict:
-    return release_manager_service.dashboard()
-
-
-@router.get("/release-manager/changelog")
-def release_manager_changelog() -> dict:
-    return release_manager_service.changelog()
-
-
-@router.post("/release-manager/pr-summary")
-def release_manager_pr_summary(request: PRSummaryRequest) -> dict:
-    return release_manager_service.pr_summary(request.title, request.changes)
-
-
-@router.post("/release-manager/release-notes")
-def release_manager_release_notes(request: ReleaseNotesRequest) -> dict:
-    return release_manager_service.release_notes(request.version, request.highlights)
-
-
-@router.get("/release-manager/summary")
-def release_manager_summary() -> dict:
-    return release_manager_service.summary()
+# NOTE: /qa-center/* routes were extracted into app/api/qa_center_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2749,159 +2466,7 @@ def scan_pii(request: PiiScanRequest) -> dict:
     return result
 
 
-@router.post("/goals")
-def create_goal(request: CreateGoalRequest) -> dict:
-    workspace_id = workspace_service.resolve_workspace_id(request.workspace_id)
-    if request.prompt:
-        _, planner_result = master_agent.goal_planner.run(request.prompt)
-        if request.title:
-            planner_result["goal_title"] = request.title
-        if request.description:
-            planner_result["goal_summary"] = request.description
-        goal, task_graph = goal_service.create_from_plan(
-            planner_result,
-            source_session_id=request.source_session_id,
-            source_message_id=request.source_message_id,
-            tags=request.tags,
-            workspace_id=workspace_id,
-        )
-    elif request.title:
-        goal, task_graph = goal_service.create_manual(
-            request.title,
-            request.description or "",
-            tags=request.tags,
-            workspace_id=workspace_id,
-        )
-    else:
-        raise HTTPException(status_code=422, detail="Provide either prompt or title.")
-    governance_service.log_event(
-        GovernanceEvent(
-            run_id=None,
-            session_id=request.source_session_id,
-            workspace_id=workspace_id,
-            task_type="goal_planning",
-            agent_name="Mission Control",
-            action_type="goal_created",
-            tool_used="GoalService",
-            permission_level="plan_only",
-            approved=False,
-            blocked=False,
-            risk_score=0,
-            reason=f"Goal {goal.goal_id} was created.",
-        )
-    )
-    return {"goal": goal.model_dump(), "task_graph": task_graph.model_dump()}
-
-
-@router.get("/goals")
-def list_goals(workspace_id: str | None = Query(default=None)) -> list[dict]:
-    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
-    return goal_service.list_goals(workspace_id=resolved)
-
-
-@router.get("/goals/{goal_id}")
-def get_goal(goal_id: str) -> dict:
-    result = goal_service.get_goal(goal_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Goal not found")
-    goal, task_graph = result
-    return {"goal": goal, "task_graph": task_graph}
-
-
-@router.patch("/goals/{goal_id}")
-def update_goal(goal_id: str, request: UpdateGoalRequest) -> dict:
-    goal = goal_service.update_goal(goal_id, request.model_dump(exclude_unset=True))
-    if goal is None:
-        raise HTTPException(status_code=404, detail="Goal not found")
-    return goal
-
-
-@router.delete("/goals/{goal_id}")
-def delete_goal(goal_id: str) -> dict:
-    goal = goal_service.archive_goal(goal_id)
-    if goal is None:
-        raise HTTPException(status_code=404, detail="Goal not found")
-    return {"archived": True, "goal": goal}
-
-
-@router.post("/goals/{goal_id}/tasks")
-def add_goal_task(goal_id: str, request: CreateGoalTaskRequest) -> dict:
-    task = goal_service.add_task(goal_id, request.model_dump())
-    if task is None:
-        raise HTTPException(status_code=404, detail="Goal not found")
-    return task.model_dump()
-
-
-@router.patch("/goals/{goal_id}/tasks/{task_id}")
-def update_goal_task(goal_id: str, task_id: str, request: UpdateGoalTaskRequest) -> dict:
-    updates = request.model_dump(exclude_unset=True)
-    task = goal_service.update_task(goal_id, task_id, updates)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Goal task not found")
-    linear_sync = None
-    if updates.get("status") in {"done", "completed"}:
-        try:
-            linear_sync = linear_orchestration.on_goal_task_updated(
-                goal_id,
-                task_id,
-                updates,
-                completion_note=updates.get("completion_note"),
-            )
-        except LinearServiceError as error:
-            linear_sync = {"completed": False, "error": str(error)}
-    payload = task.model_dump()
-    if linear_sync is not None:
-        payload["linear_sync"] = linear_sync
-    return payload
-
-
-@router.post("/goals/{goal_id}/tasks/{task_id}/run", response_model=RunResponse)
-def run_goal_task(goal_id: str, task_id: str) -> RunResponse:
-    task = goal_service.get_task(goal_id, task_id)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Goal task not found")
-    goal_service.update_task(goal_id, task_id, {"status": "running"})
-    goal_record, _ = goal_service.get_goal(goal_id) or ({}, {})
-    request = RunRequest(
-        user_input=f"{task.get('title')}\n\n{task.get('description', '')}".strip(),
-        task_type="auto",
-        workspace_id=goal_record.get("workspace_id"),
-        goal_id=goal_id,
-        task_id=task_id,
-    )
-    response = master_agent.run(request)
-    final_status = "needs_approval" if response.requires_approval else "done"
-    goal_service.update_task(
-        goal_id,
-        task_id,
-        {
-            "status": final_status,
-            "last_run_id": response.run_id,
-            "last_result_summary": response.final_output[:240],
-        },
-    )
-    if final_status == "done":
-        try:
-            linear_orchestration.on_goal_task_updated(goal_id, task_id, {"status": "done"})
-        except LinearServiceError:
-            pass
-    governance_service.log_event(
-        GovernanceEvent(
-            run_id=response.run_id,
-            session_id=response.session_id,
-            workspace_id=response.workspace_id,
-            task_type=response.task_type,
-            agent_name="Mission Control",
-            action_type="goal_task_run",
-            tool_used="GoalService",
-            permission_level="plan_only",
-            approved=False,
-            blocked=False,
-            risk_score=response.security_report.risk_score,
-            reason=f"Ran goal task {task_id} through the existing agent workflow.",
-        )
-    )
-    return response
+# NOTE: /goals/* routes were extracted into app/api/goals_routes.py (services still live here).
 
 
 @router.get("/agents/templates")

@@ -7,6 +7,17 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router, linear_poll_worker
 from app.api.discovery_routes import router as discovery_router
+from app.api.export_center_routes import router as export_center_router
+from app.api.import_center_routes import router as import_center_router
+from app.api.provider_control_routes import router as provider_control_router
+from app.api.qa_center_routes import router as qa_center_router
+from app.api.workspace_templates_routes import router as workspace_templates_router
+from app.api.release_manager_routes import router as release_manager_router
+from app.api.playbooks_routes import router as playbooks_router
+from app.api.debate_routes import router as debate_router
+from app.api.data_manager_routes import router as data_manager_router
+from app.api.code_intel_routes import router as code_intel_router
+from app.api.goals_routes import router as goals_router
 from app.api.app_builder_routes import router as app_builder_router
 from app.api.digital_twin_routes import router as digital_twin_router
 from app.api.doc_intel_routes import router as doc_intel_router
@@ -80,6 +91,17 @@ def health_check() -> dict[str, str]:
 
 app.include_router(router, prefix="/api")
 app.include_router(discovery_router, prefix="/api")
+app.include_router(export_center_router, prefix="/api")
+app.include_router(import_center_router, prefix="/api")
+app.include_router(provider_control_router, prefix="/api")
+app.include_router(qa_center_router, prefix="/api")
+app.include_router(workspace_templates_router, prefix="/api")
+app.include_router(release_manager_router, prefix="/api")
+app.include_router(playbooks_router, prefix="/api")
+app.include_router(debate_router, prefix="/api")
+app.include_router(data_manager_router, prefix="/api")
+app.include_router(code_intel_router, prefix="/api")
+app.include_router(goals_router, prefix="/api")
 app.include_router(app_builder_router, prefix="/api")
 app.include_router(digital_twin_router, prefix="/api")
 app.include_router(doc_intel_router, prefix="/api")
