@@ -65,6 +65,9 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     # Repo Finder
     ("repo-finder", "GET", "/api/repo-finder/status", None, 200),
     ("repo-finder", "GET", "/api/repo-finder/summary", None, 200),
+    # GitHub Connector (read-only, token-safe)
+    ("github-connector", "GET", "/api/github/status", None, 200),
+    ("github-connector", "GET", "/api/github/summary", None, 200),
     # Adaptive Learning
     ("adaptive-learning", "GET", "/api/adaptive-learning/status", None, 200),
     ("adaptive-learning", "GET", "/api/adaptive-learning/summary", None, 200),

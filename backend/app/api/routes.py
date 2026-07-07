@@ -340,6 +340,7 @@ from app.services.durable_workflow_service import DurableWorkflowService
 from app.services.marketplace_hub_service import MarketplaceHubService
 from app.services.design_agent_service import DesignAgentService
 from app.services.git_reader_service import GitReaderService
+from app.services.github_connector_service import GitHubConnectorService
 from app.services.repo_finder_service import RepoFinderService
 from app.services.adaptive_learning_service import AdaptiveLearningService
 from app.services.home_dashboard_service import HomeDashboardService
@@ -486,6 +487,7 @@ durable_workflow_service = DurableWorkflowService(storage, governance_service)
 marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
 design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
+github_connector_service = GitHubConnectorService(storage, governance_service)
 repo_finder_service = RepoFinderService(storage, governance_service)
 adaptive_learning_service = AdaptiveLearningService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
@@ -1217,6 +1219,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **marketplace_hub_service.analytics_summary(),
         **design_agent_service.analytics_summary(),
         **git_reader_service.analytics_summary(),
+        **github_connector_service.analytics_summary(),
         **repo_finder_service.analytics_summary(),
         **memory_service.analytics_summary(),
         **adaptive_learning_service.analytics_summary(),
