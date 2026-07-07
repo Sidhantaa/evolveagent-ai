@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     storage_backend: str = Field(default="json", alias="STORAGE_BACKEND")
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
     redis_url: str | None = Field(default=None, alias="REDIS_URL")
+    # v120 Workflow Automation: real (opt-in) scheduler tick. Off by default —
+    # scheduled tasks stay purely on-demand unless explicitly enabled.
+    scheduler_tick_enabled: bool = Field(default=False, alias="SCHEDULER_TICK_ENABLED")
+    scheduler_tick_interval_seconds: int = Field(default=60, alias="SCHEDULER_TICK_INTERVAL_SECONDS")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

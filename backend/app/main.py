@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import router, linear_poll_worker
+from app.api.routes import router, linear_poll_worker, scheduler_tick_worker
 from app.api.discovery_routes import router as discovery_router
 from app.api.system_routes import router as system_router
 from app.api.memory_v2_routes import router as memory_v2_router
@@ -95,7 +95,9 @@ from app.config import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await linear_poll_worker.start()
+    await scheduler_tick_worker.start()  # no-op unless SCHEDULER_TICK_ENABLED=true
     yield
+    await scheduler_tick_worker.stop()
     await linear_poll_worker.stop()
 
 

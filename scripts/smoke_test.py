@@ -74,6 +74,8 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("adaptive-learning", "POST", "/api/adaptive-learning/learn", {}, 200),
     # Home / Today
     ("today", "GET", "/api/today/summary", None, 200),
+    # v120 Scheduler tick (opt-in, off by default)
+    ("scheduler", "GET", "/api/scheduled-tasks/tick-status", None, 200),
     # Agent Governance (risk + policies)
     ("governance", "GET", "/api/governance/risk/agents", None, 200),
     ("governance", "GET", "/api/governance/agent-policies/summary", None, 200),
