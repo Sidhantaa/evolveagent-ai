@@ -1,12 +1,15 @@
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
-// Standalone Vitest config (does NOT load the Tailwind/React vite plugins, which
-// are ESM-only and can't be required by Vitest's esbuild loader). Tests exercise
-// the data-layer mappers, so no CSS/JSX transform is needed here.
+// Standalone Vitest config. Includes the React plugin (for JSX/TSX transform in
+// component tests) but NOT the Tailwind plugin, which is ESM-only and can't be
+// loaded by Vitest's config loader.
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: 'jsdom',
     globals: true,
     include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: ['./src/test-setup.ts'],
   },
 })
