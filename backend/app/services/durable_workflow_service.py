@@ -17,6 +17,11 @@ WHITELISTED_ACTIONS = {"create_task", "create_note", "notify"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
+# v120: which run statuses are interesting enough to emit as system events
+# (chaining points for the event bus). Transitional states ("running", "paused")
+# are not emitted -- they're reversible/in-progress, not occurrences.
+_EMITTABLE_STATUSES = {"completed", "waiting_approval", "cancelled"}
+
 # Starter durable workflows. Each step: name + optional action verb; risk is derived.
 STARTER_TEMPLATES = [
     {"key": "weekly_report", "name": "Weekly Status Report",
@@ -78,12 +83,26 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None):
         self.storage = storage
         self.governance = governance_service
+        # v120: optional EventBusService — lets a run's completion/approval-halt/
+        # cancellation chain into another action. Emitting is best-effort and must
+        # never break the workflow engine itself.
+        self.event_bus = event_bus
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
+
+    def _emit_status_event(self, run: dict) -> None:
+        if self.event_bus is None or run.get("status") not in _EMITTABLE_STATUSES:
+            return
+        try:
+            self.event_bus.emit(f"workflow.{run['status']}", {
+                "run_id": run.get("run_id"), "definition_id": run.get("definition_id"), "name": run.get("name"),
+            }, source="durable_workflow")
+        except Exception:
+            pass
 
     def _log(self, action_type: str, reason: str, risk: int = 1, approved: bool = True) -> None:
         self.governance.log_event(
@@ -267,6 +286,7 @@ class DurableWorkflowService:
             self._log("workflow_completed", f"Run '{run['name']}' completed")
         elif run["status"] == "waiting_approval":
             self._log("workflow_awaiting_approval", f"Run '{run['name']}' halted for approval", risk=4, approved=False)
+        self._emit_status_event(run)
         return run
 
     def approve_step(self, run_id: str, approved: bool = True, note: str = "") -> dict:
@@ -296,6 +316,7 @@ class DurableWorkflowService:
             self._log("workflow_step_rejected", f"Rejected '{step['name']}' in run '{run['name']}'")
             run = self._advance_in_place(run)
         self._save_run(runs, idx, run)
+        self._emit_status_event(run)
         return run
 
     def pause_run(self, run_id: str) -> dict:
@@ -323,6 +344,7 @@ class DurableWorkflowService:
         run["status"] = "cancelled"
         self._save_run(runs, idx, run)
         self._log("workflow_cancelled", f"Cancelled run '{run['name']}'")
+        self._emit_status_event(run)
         return run
 
     def get_run(self, run_id: str) -> dict:
