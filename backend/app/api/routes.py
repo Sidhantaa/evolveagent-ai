@@ -1766,39 +1766,7 @@ def run_mcp_execution(request_id: str) -> dict:
         raise HTTPException(status_code=status, detail=detail) from error
 
 
-# ----------------------------------------------------------------------
-# v48.0 Unified Approvals Center — one queue across all approval sources.
-# (Distinct /approvals-center prefix to avoid the pre-existing /approvals workflow.)
-# ----------------------------------------------------------------------
-@router.get("/approvals-center/summary")
-def get_approvals_center_summary() -> dict:
-    return unified_approvals_service.summary()
-
-
-@router.get("/approvals-center")
-def list_approvals_center(source: str | None = Query(default=None)) -> dict:
-    items = unified_approvals_service.list_pending(source)
-    return {"items": items, "count": len(items)}
-
-
-@router.post("/approvals-center/approve")
-def approve_approvals_center(request: ApprovalDecisionRequest) -> dict:
-    try:
-        return unified_approvals_service.approve(request.source, request.item_id)
-    except ValueError as error:
-        detail = str(error)
-        status = 404 if "not found" in detail.lower() else 409
-        raise HTTPException(status_code=status, detail=detail) from error
-
-
-@router.post("/approvals-center/reject")
-def reject_approvals_center(request: ApprovalDecisionRequest) -> dict:
-    try:
-        return unified_approvals_service.reject(request.source, request.item_id)
-    except ValueError as error:
-        detail = str(error)
-        status = 404 if "not found" in detail.lower() else 409
-        raise HTTPException(status_code=status, detail=detail) from error
+# NOTE: /approvals-center/* routes were extracted into app/api/approvals_center_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -1820,61 +1788,7 @@ def create_health_snapshot() -> dict:
     return health_monitor_service.create_snapshot()
 
 
-# ----------------------------------------------------------------------
-# v50.0 Cost & Usage Ledger — usage estimates + budgets (no billing).
-# ----------------------------------------------------------------------
-@router.get("/usage-ledger/summary")
-def get_usage_ledger_summary(workspace_id: str | None = Query(default=None)) -> dict:
-    return usage_ledger_service.summary(workspace_id)
-
-
-@router.get("/usage-ledger/entries")
-def list_usage_entries(workspace_id: str | None = Query(default=None)) -> dict:
-    entries = usage_ledger_service.list_entries(workspace_id)
-    return {"entries": entries, "count": len(entries)}
-
-
-@router.post("/usage-ledger/entries")
-def record_usage_entry(request: UsageRecordRequest) -> dict:
-    return usage_ledger_service.record_usage(request.model_dump())
-
-
-@router.get("/usage-ledger/budgets")
-def list_usage_budgets() -> dict:
-    budgets = usage_ledger_service.list_budgets()
-    return {"budgets": budgets, "count": len(budgets)}
-
-
-@router.post("/usage-ledger/budgets")
-def set_usage_budget(request: UsageBudgetRequest) -> dict:
-    return usage_ledger_service.set_budget(request.model_dump())
-
-
-# ----------------------------------------------------------------------
-# v51.0 Local Retrieval Layer — local chunking + keyword retrieval.
-# ----------------------------------------------------------------------
-@router.get("/retrieval/summary")
-def get_retrieval_summary(workspace_id: str | None = Query(default=None)) -> dict:
-    return local_retrieval_service.summary(workspace_id)
-
-
-@router.get("/retrieval/documents")
-def list_retrieval_documents(workspace_id: str | None = Query(default=None)) -> dict:
-    docs = local_retrieval_service.list_documents(workspace_id)
-    return {"documents": docs, "count": len(docs)}
-
-
-@router.post("/retrieval/documents")
-def index_retrieval_document(request: RetrievalIndexRequest) -> dict:
-    return local_retrieval_service.index_document(request.model_dump())
-
-
-@router.post("/retrieval/query")
-def query_retrieval(request: RetrievalQueryRequest) -> dict:
-    return local_retrieval_service.query(request.model_dump())
-
-
-# NOTE: /playbooks/* routes were extracted into app/api/playbooks_routes.py (services still live here).
+# NOTE: /retrieval/* routes were extracted into app/api/retrieval_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -1928,35 +1842,7 @@ def import_data_bundle(request: DataImportRequest) -> dict:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
-# ----------------------------------------------------------------------
-# Master Agent — one top-level AI surface routing across all of v1–v60.
-# ----------------------------------------------------------------------
-@router.post("/master-agent/route")
-def master_agent_route(request: MasterAgentRouteRequest) -> dict:
-    return master_agent_service.route(
-        request.text,
-        workspace_id=request.workspace_id,
-        voice_used=request.voice_used,
-        execute=request.execute,
-    )
-
-
-@router.get("/master-agent/capabilities")
-def master_agent_capabilities() -> dict:
-    return master_agent_service.capabilities()
-
-
-@router.post("/master-agent/route/{run_id}/feedback")
-def master_agent_route_feedback(run_id: str, request: MasterRouteFeedbackRequest) -> dict:
-    try:
-        return master_agent_service.record_feedback(run_id, request.correct, request.note, request.correct_domain)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-@router.get("/master-agent/summary")
-def master_agent_summary() -> dict:
-    return master_agent_service.summary()
+# NOTE: /master-agent/* routes were extracted into app/api/master_agent_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2052,37 +1938,7 @@ def dashboard_home(workspace_id: str | None = Query(default=None)) -> dict:
     return dashboard_home_service.home(workspace_id=workspace_id)
 
 
-# ----------------------------------------------------------------------
-# v65.0 Feature Registry + Capability Map 3.0 — make all 60+ versions discoverable.
-# ----------------------------------------------------------------------
-@router.get("/features")
-def list_features(
-    q: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-) -> dict:
-    return feature_registry_service.list_features(query=q, status=status, category=category)
-
-
-@router.get("/features/route-map")
-def features_route_map() -> dict:
-    return feature_registry_service.route_map()
-
-
-@router.get("/features/summary")
-def features_summary() -> dict:
-    return feature_registry_service.summary()
-
-
-@router.post("/features/{key}/try")
-def try_feature(key: str) -> dict:
-    try:
-        return feature_registry_service.try_feature(key)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-
-
-# NOTE: /demo/* routes were extracted into app/api/demo_routes.py (services still live here).
+# NOTE: /features/* routes were extracted into app/api/features_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2116,36 +1972,7 @@ def import_settings(request: SettingsImportRequest) -> dict:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
-# NOTE: /provider-control/* routes were extracted into app/api/provider_control_routes.py (services still live here).
-
-
-# ----------------------------------------------------------------------
-# v69.0 Unified Notifications Inbox 2.0 — actionable alerts (additive to v56).
-# ----------------------------------------------------------------------
-@router.post("/notifications-inbox/generate")
-def notifications_inbox_generate() -> dict:
-    return notifications_inbox_service.generate()
-
-
-@router.get("/notifications-inbox")
-def notifications_inbox_list(
-    severity: str | None = Query(default=None),
-    include_resolved: bool = Query(default=False),
-) -> dict:
-    return notifications_inbox_service.list_items(severity=severity, include_resolved=include_resolved)
-
-
-@router.get("/notifications-inbox/summary")
-def notifications_inbox_summary() -> dict:
-    return notifications_inbox_service.summary()
-
-
-@router.post("/notifications-inbox/{item_id}/resolve")
-def notifications_inbox_resolve(item_id: str) -> dict:
-    try:
-        return notifications_inbox_service.resolve(item_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+# NOTE: /notifications-inbox/* routes were extracted into app/api/notifications_inbox_routes.py (services still live here).
 
 
 # ----------------------------------------------------------------------
@@ -2352,33 +2179,7 @@ def activity_timeline_export(
     return activity_timeline_service.export(fmt=format, workspace_id=workspace_id, types=type_list, since=since)
 
 
-# ----------------------------------------------------------------------
-# v60.0 EvolveAgent OS 2.0 — unified command center + final report (capstone).
-# ----------------------------------------------------------------------
-@router.get("/os2/dashboard")
-def get_os2_dashboard() -> dict:
-    return evolveagent_os2_service.dashboard()
-
-
-@router.get("/os2/command-center")
-def get_os2_command_center() -> dict:
-    return evolveagent_os2_service.command_center()
-
-
-@router.get("/os2/snapshots")
-def list_os2_snapshots() -> dict:
-    snapshots = evolveagent_os2_service.list_snapshots()
-    return {"snapshots": snapshots, "count": len(snapshots)}
-
-
-@router.post("/os2/snapshots")
-def create_os2_snapshot() -> dict:
-    return evolveagent_os2_service.create_snapshot()
-
-
-@router.post("/os2/report")
-def create_os2_report() -> dict:
-    return evolveagent_os2_service.create_report()
+# NOTE: /os2/* routes were extracted into app/api/os2_routes.py (services still live here).
 
 
 @router.get("/governance")
