@@ -511,6 +511,12 @@ from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
 # Memory v2 powers adaptive-learning recall (semantic when on pgvector).
 adaptive_learning_service = AdaptiveLearningService(storage, governance_service, memory=memory_service)
+# v140 Workspace Brain: wire Memory v2 into BOTH WorkspaceService instances now
+# that it exists — the routes.py singleton (used by /api/workspaces/*) and the
+# one MasterOrchestratorAgent built internally (used by the live /api/run
+# pipeline, the one that actually matters for real agent memory recall).
+workspace_service.memory_v2 = memory_service
+master_agent.workspace.memory_v2 = memory_service
 from app.services.agent_registry_service import AgentRegistryService  # noqa: E402
 agent_registry_service = AgentRegistryService(storage, governance_service)
 from app.services.agent_governance_service import AgentGovernanceService  # noqa: E402

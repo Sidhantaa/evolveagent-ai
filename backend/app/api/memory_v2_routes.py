@@ -28,8 +28,8 @@ def memory_v2_add(request: MemoryAddRequest) -> dict:
 
 
 @router.get("/memory-v2/search")
-def memory_v2_search(q: str, limit: int = 5) -> dict:
-    return memory_service.search(q, limit)
+def memory_v2_search(q: str, limit: int = 5, workspace_id: str | None = None) -> dict:
+    return memory_service.search(q, limit, workspace_id)
 
 
 @router.get("/memory-v2/summary")
