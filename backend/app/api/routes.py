@@ -477,14 +477,24 @@ playbook_library_service = PlaybookLibraryService(storage, governance_service)
 operating_layer_v2_service = OperatingLayerV2Service(storage, governance_service, health_monitor_service)
 notifications_center_service = NotificationsCenterService(storage, governance_service, health_monitor_service)
 workspace_templates_service = WorkspaceTemplatesService(storage, governance_service, workspace_service)
-scheduled_tasks_service = ScheduledTasksService(storage, governance_service)
 data_export_service = DataExportService(storage, governance_service)
 evolveagent_os2_service = EvolveAgentOS2Service(storage, governance_service, operating_layer_v2_service, health_monitor_service)
 master_agent_service = MasterAgentService(storage, governance_service, mcp_suggestion_service, kernel_service.run_workflow)
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
-durable_workflow_service = DurableWorkflowService(storage, governance_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service)
+# v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
+scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
+from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402
+scheduler_tick_worker = SchedulerTickWorker(scheduled_tasks_service)
+# v120: the event bus dispatches subscription actions through the two engines
+# above; wire it back into them as an optional collaborator (post-init, since
+# they were constructed first) so their own state transitions can emit events.
+from app.services.event_bus_service import EventBusService  # noqa: E402
+event_bus_service = EventBusService(storage, governance_service, workflows=durable_workflow_service, scheduled_tasks=scheduled_tasks_service)
+durable_workflow_service.event_bus = event_bus_service
+scheduled_tasks_service.event_bus = event_bus_service
 marketplace_hub_service = MarketplaceHubService(storage, governance_service, agent_profile_service, durable_workflow_service)
 design_agent_service = DesignAgentService(storage, governance_service)
 git_reader_service = GitReaderService(governance_service)
@@ -492,6 +502,10 @@ github_connector_service = GitHubConnectorService(storage, governance_service)
 # v100: wire the real (opt-in, read-only) GitHub adapter into MCP execution now
 # that github_connector_service exists (it's constructed after mcp_execution_service).
 mcp_execution_service.github_adapter = MCPGitHubAdapter(github_connector_service)
+# v120: wire the real (opt-in, approval-gated) GitHub connector into durable
+# workflows now that it exists (it's constructed after durable_workflow_service),
+# backing the create_github_issue whitelisted effect with a real write.
+durable_workflow_service.github = github_connector_service
 repo_finder_service = RepoFinderService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
@@ -1233,6 +1247,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **memory_service.analytics_summary(),
         **agent_registry_service.analytics_summary(),
         **agent_governance_service.analytics_summary(),
+        **event_bus_service.analytics_summary(),
         **adaptive_learning_service.analytics_summary(),
         **global_search_service.analytics_summary(),
         **activity_timeline_service.analytics_summary(),

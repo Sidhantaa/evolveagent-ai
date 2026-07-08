@@ -1487,6 +1487,7 @@ class DurableWorkflowStartRequest(BaseModel):
 class WorkflowApprovalRequest(BaseModel):
     approved: bool = Field(default=True)
     note: str = Field(default="", max_length=500)
+    approver: str | None = Field(default=None, max_length=60)
 
 
 class MarketplacePublishRequest(BaseModel):
@@ -1742,6 +1743,7 @@ class ScheduledTaskCreateRequest(BaseModel):
     schedule: str = Field(default="manual", pattern="^(manual|hourly|daily|weekly)$")
     action_type: str = Field(default="plan", pattern="^(plan|note|approval_required)$")
     detail: str = Field(default="", max_length=2000)
+    workflow_definition_id: str | None = Field(default=None, max_length=80, description="Optional durable-workflow definition to run for real when this task fires.")
     enabled: bool = Field(default=True)
 
 
@@ -1778,4 +1780,28 @@ class AgentPolicyUpdateRequest(BaseModel):
     source: str | None = Field(default=None, max_length=40)
     risk_level: str | None = Field(default=None, pattern="^(\\*|low|medium|high)$")
     name_contains: str | None = Field(default=None, max_length=80)
+    enabled: bool | None = None
+
+
+class EventEmitRequest(BaseModel):
+    event_type: str = Field(..., min_length=1, max_length=80)
+    payload: dict = Field(default_factory=dict)
+    source: str = Field(default="manual", max_length=60)
+
+
+class EventSubscriptionCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    event_type: str = Field(default="*", max_length=80)
+    filter: dict = Field(default_factory=dict)
+    action_type: str = Field(..., pattern="^(start_workflow|trigger_task|notify)$")
+    action_params: dict = Field(default_factory=dict)
+    enabled: bool = Field(default=True)
+
+
+class EventSubscriptionUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    event_type: str | None = Field(default=None, max_length=80)
+    filter: dict | None = None
+    action_type: str | None = Field(default=None, pattern="^(start_workflow|trigger_task|notify)$")
+    action_params: dict | None = None
     enabled: bool | None = None

@@ -54,6 +54,13 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("durable-workflows", "GET", "/api/durable-workflows/summary", None, 200),
     ("durable-workflows", "GET", "/api/durable-workflows/effects", None, 200),
     ("durable-workflows", "POST", "/api/durable-workflows/runs", {"steps": [{"name": "smoke step"}]}, 200),
+    # v120 Multi-approver approval pipelines
+    ("durable-workflows", "POST", "/api/durable-workflows/runs",
+     {"steps": [{"name": "pay vendor", "action": "pay", "approvers": ["finance", "security"]}]}, 200),
+    # v120 Write-capable GitHub connector (opt-in, approval-gated create_issue)
+    ("durable-workflows", "POST", "/api/durable-workflows/runs",
+     {"steps": [{"name": "file bug", "action_type": "create_github_issue",
+                 "action_params": {"repo": "owner/repo", "title": "smoke issue"}}]}, 200),
     # Phase 7 — Marketplace Hub
     ("marketplace-hub", "GET", "/api/marketplace-hub/listings", None, 200),
     ("marketplace-hub", "GET", "/api/marketplace-hub/summary", None, 200),
@@ -74,6 +81,14 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("adaptive-learning", "POST", "/api/adaptive-learning/learn", {}, 200),
     # Home / Today
     ("today", "GET", "/api/today/summary", None, 200),
+    # v120 Job queue observability (agent-jobs)
+    ("agent-jobs", "GET", "/api/agent-jobs", None, 200),
+    ("agent-jobs", "GET", "/api/agent-jobs/health", None, 200),
+    # v120 Event system
+    ("events", "GET", "/api/events", None, 200),
+    ("events", "GET", "/api/event-subscriptions/summary", None, 200),
+    # v120 Scheduler tick (opt-in, off by default)
+    ("scheduler", "GET", "/api/scheduled-tasks/tick-status", None, 200),
     # Agent Governance (risk + policies)
     ("governance", "GET", "/api/governance/risk/agents", None, 200),
     ("governance", "GET", "/api/governance/agent-policies/summary", None, 200),
@@ -126,6 +141,79 @@ def flow_marketplace_install(base: str) -> tuple[bool, str]:
     return status == 200, f"install {lid[:8]} -> {status}"
 
 
+def flow_multi_approver_gate(base: str) -> tuple[bool, str]:
+    """Start a run gated by 2 named approvers, decide both via the workflow's own
+    approve endpoint, and confirm the chain is visible on the shared /api/approvals
+    endpoint throughout — exercises the v120 multi-step approval pipeline wiring."""
+    req = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs",
+        data=json.dumps({"steps": [{"name": "wire payment", "action": "pay", "approvers": ["finance", "security"]}]}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"start run -> {r.status}"
+            run = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"start run failed: {exc}"
+    run_id = run["run_id"]
+    chain_id = run["steps"][0].get("approval_chain_id")
+    if not chain_id:
+        return False, "no approval_chain_id created for a 2-approver step"
+    status, _ = request(base, "GET", f"/api/approvals/{chain_id}", None)
+    if status != 200:
+        return False, f"fetch chain -> {status}"
+    status, _ = request(base, "POST", f"/api/durable-workflows/runs/{run_id}/approve",
+                         {"approved": True, "approver": "finance"})
+    if status != 200:
+        return False, f"first sign-off -> {status}"
+    req2 = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs/{run_id}/approve",
+        data=json.dumps({"approved": True, "approver": "security"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            final = json.loads(r.read().decode()) if r.status == 200 else {}
+    except Exception as exc:  # noqa: BLE001
+        return False, f"second sign-off failed: {exc}"
+    return final.get("status") == "completed", f"final status={final.get('status')}"
+
+
+def flow_github_write_effect_declines_safely(base: str) -> tuple[bool, str]:
+    """create_github_issue is always approval-gated; with writes disabled (the
+    smoke suite's default env) approving it must decline safely and still
+    complete the run — never crash, never silently pretend to have written."""
+    req = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs",
+        data=json.dumps({"steps": [{"name": "file bug", "action_type": "create_github_issue",
+                                     "action_params": {"repo": "owner/repo", "title": "smoke issue"}}]}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"start run -> {r.status}"
+            run = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"start run failed: {exc}"
+    if run["status"] != "waiting_approval":
+        return False, f"expected waiting_approval, got {run['status']}"
+    req2 = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs/{run['run_id']}/approve",
+        data=json.dumps({"approved": True}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            final = json.loads(r.read().decode()) if r.status == 200 else {}
+    except Exception as exc:  # noqa: BLE001
+        return False, f"approve failed: {exc}"
+    ok = final.get("status") == "completed" and "declined" in final.get("steps", [{}])[0].get("output", "")
+    return ok, f"final status={final.get('status')}, output={final.get('steps', [{}])[0].get('output', '')[:60]}"
+
+
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     print(f"\n  EvolveAgent smoke test → {base}\n" + "  " + "-" * 58)
@@ -149,6 +237,16 @@ def main() -> int:
     print("\n  [flows]")
     ok, detail = flow_marketplace_install(base)
     print(f"    {'✓' if ok else '✗'} marketplace publish→install   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_multi_approver_gate(base)
+    print(f"    {'✓' if ok else '✗'} multi-approver gate (2 sign-offs)   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_github_write_effect_declines_safely(base)
+    print(f"    {'✓' if ok else '✗'} github write effect (declines safely)   {detail}")
     passed += ok
     failed += not ok
 

@@ -5,12 +5,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import router, linear_poll_worker
+from app.api.routes import router, linear_poll_worker, scheduler_tick_worker
 from app.api.discovery_routes import router as discovery_router
 from app.api.system_routes import router as system_router
 from app.api.memory_v2_routes import router as memory_v2_router
 from app.api.agent_registry_routes import router as agent_registry_router
 from app.api.agent_governance_routes import router as agent_governance_router
+from app.api.event_bus_routes import router as event_bus_router
 from app.api.agent_quality_routes import router as agent_quality_router
 from app.api.business_intel_routes import router as business_intel_router
 from app.api.data_export_routes import router as data_export_router
@@ -95,7 +96,9 @@ from app.config import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await linear_poll_worker.start()
+    await scheduler_tick_worker.start()  # no-op unless SCHEDULER_TICK_ENABLED=true
     yield
+    await scheduler_tick_worker.stop()
     await linear_poll_worker.stop()
 
 
@@ -121,6 +124,7 @@ app.include_router(system_router, prefix="/api")
 app.include_router(memory_v2_router, prefix="/api")
 app.include_router(agent_registry_router, prefix="/api")
 app.include_router(agent_governance_router, prefix="/api")
+app.include_router(event_bus_router, prefix="/api")
 app.include_router(agent_quality_router, prefix="/api")
 app.include_router(business_intel_router, prefix="/api")
 app.include_router(data_export_router, prefix="/api")

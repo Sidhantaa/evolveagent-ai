@@ -14,23 +14,34 @@ _SCHEDULE_SECONDS = {"hourly": 3600, "daily": 86400, "weekly": 604800}
 
 
 class ScheduledTasksService:
-    """v58.0 Scheduled Tasks (local, planning-first).
+    """v58.0 Scheduled Tasks (local, planning-first) — v120: real triggers.
 
-    A local registry of scheduled tasks. It does **not** run a real background
-    scheduler and never executes anything on a timer — there is no daemon, no
-    real background execution. A task records a schedule (manual/hourly/daily/
-    weekly) and an action; ``trigger`` performs a **planning-first mock run**
-    (plan / note / hold-for-approval) and records the outcome. ``due_tasks`` is
-    informational only (which tasks *would* be due), never an auto-runner.
-    Stateful actions are governance-logged.
+    A local registry of scheduled tasks. A task records a schedule (manual/
+    hourly/daily/weekly) and an action. There is still **no daemon by default**:
+    ``due_tasks`` is informational only, and firing a task only ever happens via
+    an explicit ``trigger()`` call — either a user/API call, or (v120, opt-in)
+    ``SchedulerTickWorker`` periodically calling ``trigger()`` for due tasks.
+
+    v120: a task may declare a ``workflow_definition_id`` (from
+    ``DurableWorkflowService``). When set, ``trigger`` starts a **real** durable
+    workflow run instead of the original planning-first mock note — but that run
+    is still governed entirely by the workflow engine's own rules: risky/action
+    steps still halt at ``waiting_approval`` and are never auto-approved just
+    because a schedule fired them. Tasks without a linked workflow behave exactly
+    as before (unchanged, backward-compatible mock run). Stateful actions are
+    governance-logged.
     """
 
     tasks_file = "scheduled_tasks.json"
     runs_file = "scheduled_task_runs.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, workflows=None, event_bus=None):
         self.storage = storage
         self.governance = governance_service
+        # Optional DurableWorkflowService — enables real (still approval-gated) runs.
+        self.workflows = workflows
+        # Optional EventBusService — lets a firing schedule chain into another action.
+        self.event_bus = event_bus
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -68,6 +79,7 @@ class ScheduledTasksService:
             "schedule": self._enum(data.get("schedule"), SCHEDULES, "manual"),
             "action_type": self._enum(data.get("action_type"), ACTION_TYPES, "plan"),
             "detail": self._clean(data.get("detail"), 2000),
+            "workflow_definition_id": self._clean(data.get("workflow_definition_id"), 80) or None,
             "enabled": bool(data.get("enabled", True)),
             "last_triggered_at": None,
             "trigger_count": 0,
@@ -103,6 +115,29 @@ class ScheduledTasksService:
             raise ValueError("Task not found")
         if not task.get("enabled", True):
             raise ValueError("Task is disabled")
+
+        workflow_definition_id = task.get("workflow_definition_id")
+        if workflow_definition_id and self.workflows is not None:
+            run = self._trigger_real_workflow(task_id, task, workflow_definition_id)
+        else:
+            run = self._trigger_mock(task_id, task)
+
+        task["last_triggered_at"] = self._now()
+        task["trigger_count"] = task.get("trigger_count", 0) + 1
+        self.storage.write_list(self.tasks_file, tasks)
+        self._log("scheduled_task_triggered", f"Triggered scheduled task {task_id} → {run['status']}.")
+        if self.event_bus is not None:
+            try:
+                self.event_bus.emit("scheduled_task.triggered", {
+                    "task_id": task_id, "name": task.get("name"), "status": run.get("status"),
+                    "workflow_run_id": run.get("workflow_run_id"),
+                }, source="scheduled_tasks")
+            except Exception:
+                pass
+        return run
+
+    def _trigger_mock(self, task_id: str, task: dict) -> dict:
+        """Original planning-first mock run — unchanged for tasks with no linked workflow."""
         action_type = task.get("action_type")
         if action_type == "approval_required":
             status, note = "approval_required", "Risky action — held for explicit human approval; not executed."
@@ -116,14 +151,36 @@ class ScheduledTasksService:
             "task_name": task.get("name"),
             "status": status,
             "executed": False,
+            "workflow_run_id": None,
             "note": note,
             "created_at": self._now(),
         }
         self.storage.append(self.runs_file, run)
-        task["last_triggered_at"] = self._now()
-        task["trigger_count"] = task.get("trigger_count", 0) + 1
-        self.storage.write_list(self.tasks_file, tasks)
-        self._log("scheduled_task_triggered", f"Triggered (planning-first) scheduled task {task_id} → {status}.")
+        return run
+
+    def _trigger_real_workflow(self, task_id: str, task: dict, workflow_definition_id: str) -> dict:
+        """v120: start a REAL durable workflow run. Still fully governed by that
+        engine's own approval gates — firing a schedule is not an approval."""
+        try:
+            workflow_run = self.workflows.start_run({"definition_id": workflow_definition_id})
+            status = workflow_run.get("status", "running")
+            note = (f"Started durable workflow run (status={status}). "
+                    "Any risky/action step still halts for explicit approval.")
+            executed = status == "completed"
+        except ValueError as exc:
+            status, note, executed = "failed", f"Could not start linked workflow: {exc}", False
+            workflow_run = None
+        run = {
+            "run_id": str(uuid4()),
+            "task_id": task_id,
+            "task_name": task.get("name"),
+            "status": status,
+            "executed": executed,
+            "workflow_run_id": (workflow_run or {}).get("run_id"),
+            "note": note,
+            "created_at": self._now(),
+        }
+        self.storage.append(self.runs_file, run)
         return run
 
     def list_runs(self, task_id: str | None = None, limit: int = 50) -> list[dict]:

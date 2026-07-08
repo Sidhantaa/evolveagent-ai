@@ -10,12 +10,22 @@ from app.services.storage_service import StorageService
 # Words that mark a step as risky — it can never auto-run; the workflow halts for approval.
 RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post", "publish", "transfer", "charge", "refund"]
 
-# Whitelisted INTERNAL, LOCAL, reversible effects a step may actually perform
-# (once approved). These write only to the app's own effect store — never any
-# external service. Anything not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify"}
+# Whitelisted effects a step may actually perform (once approved). These are
+# either internal/local/reversible (create_task, create_note, notify — write only
+# to the app's own effect store, never any external service) or, for
+# create_github_issue, a single real external write — but ONLY reachable through
+# this approval-gated path (never called directly by an agent) and only when the
+# GitHub connector's own writes_enabled() opt-in flag is on; otherwise it degrades
+# to a safe refusal recorded as the step's output, never a silent no-op. Anything
+# not in this set is simulated, not executed.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
+
+# v120: which run statuses are interesting enough to emit as system events
+# (chaining points for the event bus). Transitional states ("running", "paused")
+# are not emitted -- they're reversible/in-progress, not occurrences.
+_EMITTABLE_STATUSES = {"completed", "waiting_approval", "cancelled"}
 
 # Starter durable workflows. Each step: name + optional action verb; risk is derived.
 STARTER_TEMPLATES = [
@@ -78,12 +88,92 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None):
         self.storage = storage
         self.governance = governance_service
+        # v120: optional EventBusService — lets a run's completion/approval-halt/
+        # cancellation chain into another action. Emitting is best-effort and must
+        # never break the workflow engine itself.
+        self.event_bus = event_bus
+        # v120: optional AgentSchedulerService — every run started here becomes a
+        # real, observable job in the (previously driver-less) job queue. This is
+        # the ONLY place runs are created, so wiring it here covers every entry
+        # point (direct API, a firing schedule, or an event-bus dispatch) for free.
+        self.agent_scheduler = agent_scheduler
+        # v120: optional ApprovalService — a step declaring 2+ named approvers is
+        # backed by a REAL multi-party sequential sign-off chain (the same
+        # governed, audited engine used elsewhere in the app) instead of a single
+        # boolean gate. Steps with 0-1 approvers are unaffected (existing behavior).
+        self.approvals = approvals
+        # v120: optional GitHubConnectorService — backs the create_github_issue
+        # whitelisted action with a real (opt-in, approval-gated) GitHub write.
+        # Without it, that action type degrades to a safe simulated note, same as
+        # any other collaborator-less path in this service.
+        self.github = github
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
+
+    def _emit_status_event(self, run: dict) -> None:
+        if self.event_bus is None or run.get("status") not in _EMITTABLE_STATUSES:
+            return
+        try:
+            self.event_bus.emit(f"workflow.{run['status']}", {
+                "run_id": run.get("run_id"), "definition_id": run.get("definition_id"), "name": run.get("name"),
+            }, source="durable_workflow")
+        except Exception:
+            pass
+
+    def _create_job_for_run(self, run: dict) -> None:
+        """Best-effort: register this run as an observable job. Never blocks the run."""
+        if self.agent_scheduler is None:
+            return
+        try:
+            job = self.agent_scheduler.create_job({
+                "job_type": "workflow",
+                "title": f"Workflow run: {run['name']}"[:160],
+                "payload": {"run_id": run["run_id"], "definition_id": run.get("definition_id") or ""},
+            })
+            run["job_id"] = job["job_id"]
+            self.agent_scheduler.heartbeat(job["job_id"])  # queued -> running: we're executing it now
+        except Exception:
+            pass
+
+    def _sync_job_status(self, run: dict) -> None:
+        """Best-effort: reflect this run's status onto its linked job, if any."""
+        job_id = run.get("job_id")
+        if self.agent_scheduler is None or not job_id:
+            return
+        try:
+            status = run.get("status")
+            if status == "completed":
+                self.agent_scheduler.complete(job_id, result_summary=f"Workflow '{run['name']}' completed.")
+            elif status == "waiting_approval":
+                self.agent_scheduler.pause(job_id, reason="Waiting for human approval on a risky step.")
+            elif status == "cancelled":
+                self.agent_scheduler.cancel(job_id, reason="Workflow run was cancelled.")
+        except Exception:
+            pass
+
+    def _create_approval_chain_for_step(self, run: dict, step: dict) -> None:
+        """Best-effort: for a step naming 2+ approvers, back the gate with a real
+        ApprovalService chain (sequential sign-off, all must approve). Idempotent —
+        does nothing if a chain already exists or fewer than 2 approvers are named."""
+        approvers = step.get("approvers") or []
+        if self.approvals is None or len(approvers) < 2 or step.get("approval_chain_id"):
+            return
+        try:
+            chain = self.approvals.create_chain(
+                run_id=run["run_id"], session_id=None, workspace_id=None,
+                task_type="durable_workflow", action_type=step.get("action_type") or step.get("action") or "workflow_step",
+                summary=f"Multi-party approval for '{step['name']}' in run '{run['name']}'",
+                risk_level="high" if _is_risky(step) else "medium",
+                steps=[{"title": f"Approval from {name}"} for name in approvers],
+                metadata={"run_id": run["run_id"], "step_id": step["id"]},
+            )
+            step["approval_chain_id"] = chain["approval_id"]
+        except Exception:
+            pass
 
     def _log(self, action_type: str, reason: str, risk: int = 1, approved: bool = True) -> None:
         self.governance.log_event(
@@ -116,13 +206,21 @@ class DurableWorkflowService:
             action_type = str(s.get("action_type") or "")[:40]
             real = action_type in WHITELISTED_ACTIONS
             params = s.get("action_params") if isinstance(s.get("action_params"), dict) else {}
+            # A step may name multiple required approvers (e.g. ["finance", "security"]).
+            # 2+ approvers => a real multi-party sign-off chain; 0-1 => the original
+            # single boolean gate, unchanged.
+            raw_approvers = s.get("approvers") if isinstance(s.get("approvers"), list) else []
+            approvers = list(dict.fromkeys(str(a)[:40] for a in raw_approvers if str(a).strip()))[:10]
             steps.append({
                 "id": str(uuid4()),
                 "name": name,
                 "action": action,
                 "action_type": action_type if real else "",
-                "action_params": {str(k)[:40]: str(v)[:200] for k, v in list(params.items())[:10]} if real else {},
-                "requires_approval": _is_risky(step) or real,
+                "action_params": {str(k)[:40]: str(v)[:2000] for k, v in list(params.items())[:10]} if real else {},
+                "requires_approval": _is_risky(step) or real or bool(approvers),
+                "approvers": approvers,
+                "approval_chain_id": None,
+                "approval_progress": None,
                 "status": "pending",
                 "output": "",
                 "started_at": None,
@@ -131,19 +229,40 @@ class DurableWorkflowService:
         return steps
 
     def _execute_action(self, run: dict, step: dict) -> str:
-        """Perform a whitelisted internal effect and record it. Local + reversible."""
+        """Perform a whitelisted effect and record it. create_task/create_note/
+        notify are local + reversible. create_github_issue is a real external
+        write when a GitHubConnectorService is wired and opted in — otherwise it
+        degrades to a safe simulated note (mock-safe by default)."""
         action_type = step.get("action_type") or ""
         params = step.get("action_params") or {}
+        result: dict | None = None
+        if action_type == "create_github_issue":
+            if self.github is not None:
+                try:
+                    result = self.github.create_issue(
+                        repo=params.get("repo", ""), title=params.get("title", ""), body=params.get("body", ""),
+                    )
+                except ValueError as exc:
+                    result = {"issue": None, "degraded": True, "wrote": False, "note": str(exc)}
+            else:
+                result = {"issue": None, "degraded": True, "wrote": False, "note": "No GitHub connector wired; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
             "step_id": step["id"],
             "action_type": action_type,
             "params": params,
+            "result": result,
             "created_at": self._now(),
         }
         self.storage.append(self.effects_file, effect)
-        self._log("workflow_effect_executed", f"Executed internal action '{action_type}' in run '{run['name']}'", risk=3)
+        self._log("workflow_effect_executed", f"Executed action '{action_type}' in run '{run['name']}'", risk=3)
+        if action_type == "create_github_issue":
+            if result and result.get("wrote"):
+                issue = result.get("issue") or {}
+                label = issue.get("url") or f"#{issue.get('number')}"
+                return f"[executed] create_github_issue: {label}"
+            return f"[declined] create_github_issue: {(result or {}).get('note', 'unavailable')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 
@@ -201,7 +320,8 @@ class DurableWorkflowService:
                 raise ValueError(f"Definition not found: {definition_id}")
             steps = self._build_steps([
                 {"name": s["name"], "action": s.get("action", ""),
-                 "action_type": s.get("action_type", ""), "action_params": s.get("action_params", {})}
+                 "action_type": s.get("action_type", ""), "action_params": s.get("action_params", {}),
+                 "approvers": s.get("approvers", [])}
                 for s in definition["steps"]
             ])
             name = definition["name"]
@@ -222,6 +342,7 @@ class DurableWorkflowService:
             "updated_at": self._now(),
             "checkpoints": [],
         }
+        self._create_job_for_run(run)  # sets run["job_id"] if agent_scheduler is wired
         runs = self.storage.read_list(self.runs_file)
         runs.append(run)
         self.storage.write_list(self.runs_file, runs)
@@ -243,6 +364,7 @@ class DurableWorkflowService:
                 step["status"] = "waiting_approval"
                 step["started_at"] = step["started_at"] or self._now()
                 run["status"] = "waiting_approval"
+                self._create_approval_chain_for_step(run, step)
                 return run
             # Safe step (or already-approved step): simulate execution.
             step["started_at"] = step["started_at"] or self._now()
@@ -267,13 +389,34 @@ class DurableWorkflowService:
             self._log("workflow_completed", f"Run '{run['name']}' completed")
         elif run["status"] == "waiting_approval":
             self._log("workflow_awaiting_approval", f"Run '{run['name']}' halted for approval", risk=4, approved=False)
+        self._emit_status_event(run)
+        self._sync_job_status(run)
         return run
 
-    def approve_step(self, run_id: str, approved: bool = True, note: str = "") -> dict:
+    def approve_step(self, run_id: str, approved: bool = True, note: str = "", approver: str | None = None) -> dict:
         runs, idx, run = self._get_run(run_id)
         if run["status"] != "waiting_approval":
             raise ValueError("Run is not waiting for approval")
         step = run["steps"][run["cursor"]]
+        chain_id = step.get("approval_chain_id")
+        if chain_id and self.approvals is not None:
+            if approver and note:
+                comment = f"{approver}: {note}"
+            elif approver:
+                comment = f"Decided by {approver}"
+            else:
+                comment = note or None
+            chain = self.approvals.decide(chain_id, "approve" if approved else "reject", comment)
+            step["approval_progress"] = {
+                "approval_id": chain["approval_id"],
+                "status": chain["status"],
+                "steps": [{"title": s["title"], "status": s["status"]} for s in chain["steps"]],
+            }
+            if chain["status"] == "pending":
+                # More sign-offs still required — the gate stays open, run unchanged.
+                self._save_run(runs, idx, run)
+                return run
+            approved = chain["status"] == "approved"  # multi-party outcome collapses into the single-gate path below
         if approved:
             # Whitelisted internal action => perform the REAL local effect.
             # Anything else stays simulated (as before).
@@ -296,6 +439,8 @@ class DurableWorkflowService:
             self._log("workflow_step_rejected", f"Rejected '{step['name']}' in run '{run['name']}'")
             run = self._advance_in_place(run)
         self._save_run(runs, idx, run)
+        self._emit_status_event(run)
+        self._sync_job_status(run)
         return run
 
     def pause_run(self, run_id: str) -> dict:
@@ -323,6 +468,8 @@ class DurableWorkflowService:
         run["status"] = "cancelled"
         self._save_run(runs, idx, run)
         self._log("workflow_cancelled", f"Cancelled run '{run['name']}'")
+        self._emit_status_event(run)
+        self._sync_job_status(run)
         return run
 
     def get_run(self, run_id: str) -> dict:
