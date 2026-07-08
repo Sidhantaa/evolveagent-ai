@@ -1487,6 +1487,7 @@ class DurableWorkflowStartRequest(BaseModel):
 class WorkflowApprovalRequest(BaseModel):
     approved: bool = Field(default=True)
     note: str = Field(default="", max_length=500)
+    approver: str | None = Field(default=None, max_length=60)
 
 
 class MarketplacePublishRequest(BaseModel):

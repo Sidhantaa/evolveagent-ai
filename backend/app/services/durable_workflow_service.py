@@ -83,7 +83,7 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None):
         self.storage = storage
         self.governance = governance_service
         # v120: optional EventBusService — lets a run's completion/approval-halt/
@@ -95,6 +95,11 @@ class DurableWorkflowService:
         # the ONLY place runs are created, so wiring it here covers every entry
         # point (direct API, a firing schedule, or an event-bus dispatch) for free.
         self.agent_scheduler = agent_scheduler
+        # v120: optional ApprovalService — a step declaring 2+ named approvers is
+        # backed by a REAL multi-party sequential sign-off chain (the same
+        # governed, audited engine used elsewhere in the app) instead of a single
+        # boolean gate. Steps with 0-1 approvers are unaffected (existing behavior).
+        self.approvals = approvals
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -140,6 +145,26 @@ class DurableWorkflowService:
         except Exception:
             pass
 
+    def _create_approval_chain_for_step(self, run: dict, step: dict) -> None:
+        """Best-effort: for a step naming 2+ approvers, back the gate with a real
+        ApprovalService chain (sequential sign-off, all must approve). Idempotent —
+        does nothing if a chain already exists or fewer than 2 approvers are named."""
+        approvers = step.get("approvers") or []
+        if self.approvals is None or len(approvers) < 2 or step.get("approval_chain_id"):
+            return
+        try:
+            chain = self.approvals.create_chain(
+                run_id=run["run_id"], session_id=None, workspace_id=None,
+                task_type="durable_workflow", action_type=step.get("action_type") or step.get("action") or "workflow_step",
+                summary=f"Multi-party approval for '{step['name']}' in run '{run['name']}'",
+                risk_level="high" if _is_risky(step) else "medium",
+                steps=[{"title": f"Approval from {name}"} for name in approvers],
+                metadata={"run_id": run["run_id"], "step_id": step["id"]},
+            )
+            step["approval_chain_id"] = chain["approval_id"]
+        except Exception:
+            pass
+
     def _log(self, action_type: str, reason: str, risk: int = 1, approved: bool = True) -> None:
         self.governance.log_event(
             GovernanceEvent(
@@ -171,13 +196,21 @@ class DurableWorkflowService:
             action_type = str(s.get("action_type") or "")[:40]
             real = action_type in WHITELISTED_ACTIONS
             params = s.get("action_params") if isinstance(s.get("action_params"), dict) else {}
+            # A step may name multiple required approvers (e.g. ["finance", "security"]).
+            # 2+ approvers => a real multi-party sign-off chain; 0-1 => the original
+            # single boolean gate, unchanged.
+            raw_approvers = s.get("approvers") if isinstance(s.get("approvers"), list) else []
+            approvers = list(dict.fromkeys(str(a)[:40] for a in raw_approvers if str(a).strip()))[:10]
             steps.append({
                 "id": str(uuid4()),
                 "name": name,
                 "action": action,
                 "action_type": action_type if real else "",
                 "action_params": {str(k)[:40]: str(v)[:200] for k, v in list(params.items())[:10]} if real else {},
-                "requires_approval": _is_risky(step) or real,
+                "requires_approval": _is_risky(step) or real or bool(approvers),
+                "approvers": approvers,
+                "approval_chain_id": None,
+                "approval_progress": None,
                 "status": "pending",
                 "output": "",
                 "started_at": None,
@@ -256,7 +289,8 @@ class DurableWorkflowService:
                 raise ValueError(f"Definition not found: {definition_id}")
             steps = self._build_steps([
                 {"name": s["name"], "action": s.get("action", ""),
-                 "action_type": s.get("action_type", ""), "action_params": s.get("action_params", {})}
+                 "action_type": s.get("action_type", ""), "action_params": s.get("action_params", {}),
+                 "approvers": s.get("approvers", [])}
                 for s in definition["steps"]
             ])
             name = definition["name"]
@@ -299,6 +333,7 @@ class DurableWorkflowService:
                 step["status"] = "waiting_approval"
                 step["started_at"] = step["started_at"] or self._now()
                 run["status"] = "waiting_approval"
+                self._create_approval_chain_for_step(run, step)
                 return run
             # Safe step (or already-approved step): simulate execution.
             step["started_at"] = step["started_at"] or self._now()
@@ -327,11 +362,30 @@ class DurableWorkflowService:
         self._sync_job_status(run)
         return run
 
-    def approve_step(self, run_id: str, approved: bool = True, note: str = "") -> dict:
+    def approve_step(self, run_id: str, approved: bool = True, note: str = "", approver: str | None = None) -> dict:
         runs, idx, run = self._get_run(run_id)
         if run["status"] != "waiting_approval":
             raise ValueError("Run is not waiting for approval")
         step = run["steps"][run["cursor"]]
+        chain_id = step.get("approval_chain_id")
+        if chain_id and self.approvals is not None:
+            if approver and note:
+                comment = f"{approver}: {note}"
+            elif approver:
+                comment = f"Decided by {approver}"
+            else:
+                comment = note or None
+            chain = self.approvals.decide(chain_id, "approve" if approved else "reject", comment)
+            step["approval_progress"] = {
+                "approval_id": chain["approval_id"],
+                "status": chain["status"],
+                "steps": [{"title": s["title"], "status": s["status"]} for s in chain["steps"]],
+            }
+            if chain["status"] == "pending":
+                # More sign-offs still required — the gate stays open, run unchanged.
+                self._save_run(runs, idx, run)
+                return run
+            approved = chain["status"] == "approved"  # multi-party outcome collapses into the single-gate path below
         if approved:
             # Whitelisted internal action => perform the REAL local effect.
             # Anything else stays simulated (as before).

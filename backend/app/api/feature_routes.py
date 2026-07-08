@@ -125,7 +125,7 @@ def durable_workflow_advance(run_id: str) -> dict:
 @router.post("/durable-workflows/runs/{run_id}/approve")
 def durable_workflow_approve(run_id: str, request: WorkflowApprovalRequest) -> dict:
     try:
-        return durable_workflow_service.approve_step(run_id, request.approved, request.note)
+        return durable_workflow_service.approve_step(run_id, request.approved, request.note, request.approver)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
