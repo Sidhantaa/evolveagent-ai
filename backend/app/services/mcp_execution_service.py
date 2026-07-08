@@ -64,6 +64,13 @@ class MCPExecutionService:
     def _clean(self, value, max_length: int, default: str = "") -> str:
         return str(value if value is not None else default).strip()[:max_length]
 
+    def _clean_payload(self, payload: dict | None) -> dict:
+        """Bound and stringify a request payload for safe storage. Adapters that
+        read params (e.g. int(payload.get('limit', 20))) work fine on strings."""
+        if not isinstance(payload, dict):
+            return {}
+        return {str(k)[:40]: str(v)[:200] for k, v in list(payload.items())[:10]}
+
     def _risk_score(self, risk_level: str) -> int:
         return {"low": 3, "medium": 6, "high": 9}.get(risk_level, 5)
 
@@ -106,6 +113,7 @@ class MCPExecutionService:
                 "risk_level": plan.get("risk_level", "medium"),
                 "blocked_reason": plan.get("blocked_reason"),
                 "plan": [],
+                "payload": self._clean_payload(payload),
                 "workspace_id": self._clean(workspace_id, 120) or None,
                 "created_at": self._now(),
                 "updated_at": self._now(),
@@ -125,6 +133,7 @@ class MCPExecutionService:
             "risk_level": plan.get("risk_level", "medium"),
             "blocked_reason": None,
             "plan": plan.get("plan", []),
+            "payload": self._clean_payload(payload),
             "workspace_id": self._clean(workspace_id, 120) or None,
             "result_id": None,
             "created_at": self._now(),
@@ -213,9 +222,14 @@ class MCPExecutionService:
         # adapter declines (opt-in off, action not allow-listed, or wrong
         # connector), fall back to mock. Adapters never raise — a decline is a
         # plain None return, and an internal failure degrades to a safe result.
-        adapter_result = self.readonly_adapter.try_execute(connector, request["action_name"], {})
+        # The requester's own payload (e.g. {"repo": "...", "path": "..."}) is
+        # threaded through here — it used to be silently discarded, which meant a
+        # parameterized real action could never actually target anything but the
+        # adapter's hardcoded default even when fully opted-in and approved.
+        request_payload = request.get("payload") or {}
+        adapter_result = self.readonly_adapter.try_execute(connector, request["action_name"], request_payload)
         if adapter_result is None and self.github_adapter is not None:
-            adapter_result = self.github_adapter.try_execute(connector, request["action_name"], {})
+            adapter_result = self.github_adapter.try_execute(connector, request["action_name"], request_payload)
         if adapter_result is not None:
             result = {
                 "result_id": str(uuid4()),

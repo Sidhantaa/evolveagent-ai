@@ -214,6 +214,36 @@ def flow_github_write_effect_declines_safely(base: str) -> tuple[bool, str]:
     return ok, f"final status={final.get('status')}, output={final.get('steps', [{}])[0].get('output', '')[:60]}"
 
 
+def flow_mcp_execution_payload_roundtrip(base: str) -> tuple[bool, str]:
+    """Regression: request_execution used to validate a caller's payload and then
+    silently discard it before storage/execution. It must now round-trip onto
+    the persisted request record."""
+    req = urllib.request.Request(
+        f"{base}/api/mcp/connectors", data=json.dumps({"slug": "context7"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            connector = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"create connector failed: {exc}"
+    status, _ = request(base, "POST", f"/api/mcp/connectors/{connector['connector_id']}/enable", {})
+    if status != 200:
+        return False, f"enable connector -> {status}"
+    req2 = urllib.request.Request(
+        f"{base}/api/mcp/connectors/{connector['connector_id']}/execute",
+        data=json.dumps({"action_name": "fetch_library_docs", "payload": {"library": "fastapi"}}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            record = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"request execution failed: {exc}"
+    ok = record.get("payload", {}).get("library") == "fastapi"
+    return ok, f"stored payload={record.get('payload')}"
+
+
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     print(f"\n  EvolveAgent smoke test → {base}\n" + "  " + "-" * 58)
@@ -247,6 +277,11 @@ def main() -> int:
 
     ok, detail = flow_github_write_effect_declines_safely(base)
     print(f"    {'✓' if ok else '✗'} github write effect (declines safely)   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_mcp_execution_payload_roundtrip(base)
+    print(f"    {'✓' if ok else '✗'} mcp execution payload roundtrip   {detail}")
     passed += ok
     failed += not ok
 
