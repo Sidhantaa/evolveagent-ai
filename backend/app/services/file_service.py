@@ -34,10 +34,31 @@ CODE_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css"}
 
 
 class FileService:
-    def __init__(self, storage: StorageService):
+    def __init__(self, storage: StorageService, memory_v2=None):
         self.storage = storage
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         EXTRACTED_DIR.mkdir(parents=True, exist_ok=True)
+        # v140 Workspace Brain: optional MemoryService (v2) collaborator. Files
+        # are the last of the workspace's own "chats, files, goals, agents, and
+        # memory" context pillars to reach real semantic recall (memory and
+        # goals already do; chats already flow through create_memory() via
+        # persist_workspace_memory, so they get it for free). Best-effort,
+        # never blocks an upload.
+        self.memory_v2 = memory_v2
+
+    def _mirror_to_memory_v2(self, metadata: dict, extracted_text: str) -> None:
+        if self.memory_v2 is None or not metadata.get("workspace_id"):
+            return
+        try:
+            text = f"{metadata['filename']}\n{extracted_text}".strip()
+            if not text:
+                return
+            self.memory_v2.add(
+                text, kind="file", source="file_service",
+                metadata={"workspace_id": metadata["workspace_id"], "file_id": metadata["file_id"]},
+            )
+        except Exception:
+            pass
 
     async def process_uploads(
         self,
@@ -110,6 +131,7 @@ class FileService:
             self.storage.append("files.json", metadata)
             return self.response_metadata(metadata)
 
+        extracted_text = ""
         try:
             stored_path.write_bytes(content)
             extracted_text = self.extract_text(stored_path, extension)
@@ -120,6 +142,8 @@ class FileService:
         except Exception as exc:
             metadata["error"] = f"Could not process file: {exc}"
 
+        if metadata["status"] == "processed":
+            self._mirror_to_memory_v2(metadata, extracted_text)
         self.storage.append("files.json", metadata)
         return self.response_metadata(metadata)
 

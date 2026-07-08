@@ -6,8 +6,25 @@ from app.services.storage_service import StorageService
 
 
 class GoalService:
-    def __init__(self, storage: StorageService):
+    def __init__(self, storage: StorageService, memory_v2=None):
         self.storage = storage
+        # v140 Workspace Brain: optional MemoryService (v2) collaborator. A
+        # workspace's own docstring defines it as project context over "chats,
+        # files, goals, agents, and memory" — goals were the one pillar the real
+        # semantic recall layer (task 1) didn't reach yet. Best-effort, never
+        # blocks goal creation.
+        self.memory_v2 = memory_v2
+
+    def _mirror_to_memory_v2(self, goal: GoalResult, goal_id: str, workspace_id: str | None) -> None:
+        if self.memory_v2 is None or not workspace_id:
+            return
+        try:
+            text = f"Goal: {goal.title}\n{goal.description}".strip()
+            if not text:
+                return
+            self.memory_v2.add(text, kind="goal", source="goal_service", metadata={"workspace_id": workspace_id, "goal_id": goal_id})
+        except Exception:
+            pass
 
     def create_from_plan(
         self,
@@ -53,6 +70,7 @@ class GoalService:
         graphs = self.storage.read_list("task_graphs.json")
         graphs.append(task_graph.model_dump())
         self.storage.write_list("task_graphs.json", graphs)
+        self._mirror_to_memory_v2(goal, goal_id, workspace_id)
         return goal, task_graph
 
     def create_manual(

@@ -244,6 +244,114 @@ def flow_mcp_execution_payload_roundtrip(base: str) -> tuple[bool, str]:
     return ok, f"stored payload={record.get('payload')}"
 
 
+def flow_workspace_brain_recall(base: str) -> tuple[bool, str]:
+    """v140 Workspace Brain: a memory created in a workspace must be retrievable
+    both through the workspace itself and through Memory v2 scoped to that
+    workspace (the mirror wiring that lets relevant_memory() use real semantic
+    recall when the app is on Postgres)."""
+    try:
+        with urllib.request.urlopen(f"{base}/api/workspaces", timeout=15) as r:
+            workspaces = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"list workspaces failed: {exc}"
+    if not workspaces:
+        return False, "no default workspace found"
+    wid = workspaces[0]["workspace_id"]
+    req = urllib.request.Request(
+        f"{base}/api/workspaces/{wid}/memory",
+        data=json.dumps({"title": "Smoke brain note", "content": "workspace-brain-smoke-marker content"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"create memory -> {r.status}"
+    except Exception as exc:  # noqa: BLE001
+        return False, f"create memory failed: {exc}"
+    try:
+        with urllib.request.urlopen(f"{base}/api/workspaces/{wid}", timeout=15) as r:
+            workspace = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"fetch workspace failed: {exc}"
+    engine = workspace.get("summary", {}).get("semantic_recall_engine")
+    if engine not in ("heuristic", "keyword", "pgvector"):
+        return False, f"unexpected semantic_recall_engine={engine}"
+    status, body = request(base, "GET", f"/api/memory-v2/search?q=workspace-brain-smoke-marker&workspace_id={wid}", None)
+    ok = status == 200 and "results" in body
+    return ok, f"semantic_recall_engine={engine}, memory-v2 search status={status}"
+
+
+def flow_goal_mirrors_into_memory_v2(base: str) -> tuple[bool, str]:
+    """v140 task 2: a created goal must be mirrored into Memory v2, findable by
+    a workspace-scoped search — goals are the other context pillar besides
+    workspace_memory that real semantic recall should reach."""
+    req = urllib.request.Request(
+        f"{base}/api/goals",
+        data=json.dumps({"title": "Smoke goal brain check", "description": "goal-brain-smoke-marker content"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"create goal -> {r.status}"
+            created = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"create goal failed: {exc}"
+    workspace_id = created.get("goal", {}).get("workspace_id")
+    status, body = request(base, "GET", f"/api/memory-v2/search?q=goal-brain-smoke-marker&workspace_id={workspace_id}", None)
+    ok = status == 200 and "results" in body
+    return ok, f"goal created, memory-v2 search status={status}"
+
+
+def _multipart_upload(base: str, path: str, filename: str, content: bytes, fields: dict) -> tuple[int, str]:
+    """Hand-rolled multipart/form-data POST — stays stdlib-only (no `requests`)."""
+    boundary = "----smoke-test-boundary"
+    parts = []
+    for key, value in fields.items():
+        parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{key}\"\r\n\r\n{value}\r\n")
+    parts.append(
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"files\"; filename=\"{filename}\"\r\n"
+        f"Content-Type: text/plain\r\n\r\n"
+    )
+    body = "".join(parts).encode() + content + f"\r\n--{boundary}--\r\n".encode()
+    req = urllib.request.Request(
+        f"{base}{path}", data=body, method="POST",
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8", "replace")
+
+
+def flow_file_mirrors_into_memory_v2(base: str) -> tuple[bool, str]:
+    """v140 task 3: an uploaded, successfully-processed file's extracted text
+    must be mirrored into Memory v2, scoped to its workspace — the last of the
+    workspace's context pillars (chats/files/goals/agents/memory) to reach real
+    semantic recall."""
+    try:
+        with urllib.request.urlopen(f"{base}/api/workspaces", timeout=15) as r:
+            workspaces = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"list workspaces failed: {exc}"
+    if not workspaces:
+        return False, "no default workspace found"
+    wid = workspaces[0]["workspace_id"]
+    status, body = _multipart_upload(
+        base, "/api/files/upload", "smoke-brain-file.txt", b"file-brain-smoke-marker unique content",
+        {"workspace_id": wid},
+    )
+    if status != 200:
+        return False, f"upload -> {status}"
+    uploaded = json.loads(body)
+    if uploaded.get("files", [{}])[0].get("status") != "processed":
+        return False, f"file not processed: {uploaded}"
+    status, search_body = request(base, "GET", f"/api/memory-v2/search?q=file-brain-smoke-marker&workspace_id={wid}", None)
+    ok = status == 200 and "results" in search_body
+    return ok, f"file processed, memory-v2 search status={status}"
+
+
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     print(f"\n  EvolveAgent smoke test → {base}\n" + "  " + "-" * 58)
@@ -282,6 +390,21 @@ def main() -> int:
 
     ok, detail = flow_mcp_execution_payload_roundtrip(base)
     print(f"    {'✓' if ok else '✗'} mcp execution payload roundtrip   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_workspace_brain_recall(base)
+    print(f"    {'✓' if ok else '✗'} workspace brain recall   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_goal_mirrors_into_memory_v2(base)
+    print(f"    {'✓' if ok else '✗'} goal mirrors into memory v2   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_file_mirrors_into_memory_v2(base)
+    print(f"    {'✓' if ok else '✗'} file mirrors into memory v2   {detail}")
     passed += ok
     failed += not ok
 
