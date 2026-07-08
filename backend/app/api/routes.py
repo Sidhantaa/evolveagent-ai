@@ -521,10 +521,14 @@ master_agent.workspace.memory_v2 = memory_service
 # memory) that real semantic recall hadn't reached yet — mirror them in too.
 goal_service.memory_v2 = memory_service
 master_agent.goal_service.memory_v2 = memory_service
-# v140 task 3: uploaded files are the last pillar (chats already flow through
+# v140 task 3: uploaded files are another pillar (chats already flow through
 # create_memory via persist_workspace_memory, so they get real recall for free).
 file_service.memory_v2 = memory_service
 master_agent.file_service.memory_v2 = memory_service
+# v140 task 4: custom agents are the last of the 5 pillars (chats/files/goals/
+# agents/memory) to reach real semantic recall.
+custom_agent_service.memory_v2 = memory_service
+master_agent.custom_agents.memory_v2 = memory_service
 from app.services.agent_registry_service import AgentRegistryService  # noqa: E402
 agent_registry_service = AgentRegistryService(storage, governance_service)
 from app.services.agent_governance_service import AgentGovernanceService  # noqa: E402

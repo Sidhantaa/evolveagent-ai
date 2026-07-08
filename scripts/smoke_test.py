@@ -22,6 +22,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+import uuid
 
 DEFAULT_BASE = os.environ.get("SMOKE_BASE", "http://127.0.0.1:8000")
 
@@ -338,8 +339,9 @@ def flow_file_mirrors_into_memory_v2(base: str) -> tuple[bool, str]:
     if not workspaces:
         return False, "no default workspace found"
     wid = workspaces[0]["workspace_id"]
+    tag = uuid.uuid4().hex[:12]
     status, body = _multipart_upload(
-        base, "/api/files/upload", "smoke-brain-file.txt", b"file-brain-smoke-marker unique content",
+        base, "/api/files/upload", "smoke-brain-file.txt", f"file-{tag}-marker unique content".encode(),
         {"workspace_id": wid},
     )
     if status != 200:
@@ -347,9 +349,32 @@ def flow_file_mirrors_into_memory_v2(base: str) -> tuple[bool, str]:
     uploaded = json.loads(body)
     if uploaded.get("files", [{}])[0].get("status") != "processed":
         return False, f"file not processed: {uploaded}"
-    status, search_body = request(base, "GET", f"/api/memory-v2/search?q=file-brain-smoke-marker&workspace_id={wid}", None)
+    status, search_body = request(base, "GET", f"/api/memory-v2/search?q=file-{tag}-marker&workspace_id={wid}", None)
     ok = status == 200 and "results" in search_body
     return ok, f"file processed, memory-v2 search status={status}"
+
+
+def flow_custom_agent_mirrors_into_memory_v2(base: str) -> tuple[bool, str]:
+    """v140 task 4: a created custom agent must be mirrored into Memory v2 —
+    the last of the workspace's 5 context pillars (chats/files/goals/agents/
+    memory) to reach real semantic recall."""
+    tag = uuid.uuid4().hex[:12]
+    req = urllib.request.Request(
+        f"{base}/api/agents/custom",
+        data=json.dumps({"name": "Smoke Brain Agent", "role": f"agent-{tag}-marker responsibilities"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"create agent -> {r.status}"
+            created = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"create agent failed: {exc}"
+    workspace_id = created.get("workspace_id")
+    status, body = request(base, "GET", f"/api/memory-v2/search?q=agent-{tag}-marker&workspace_id={workspace_id}", None)
+    ok = status == 200 and "results" in body
+    return ok, f"agent created, memory-v2 search status={status}"
 
 
 def main() -> int:
@@ -405,6 +430,11 @@ def main() -> int:
 
     ok, detail = flow_file_mirrors_into_memory_v2(base)
     print(f"    {'✓' if ok else '✗'} file mirrors into memory v2   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_custom_agent_mirrors_into_memory_v2(base)
+    print(f"    {'✓' if ok else '✗'} custom agent mirrors into memory v2   {detail}")
     passed += ok
     failed += not ok
 

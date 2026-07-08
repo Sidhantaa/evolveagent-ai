@@ -13,8 +13,27 @@ class RuntimeCustomAgent(BaseAgent):
 
 
 class CustomAgentService:
-    def __init__(self, storage: StorageService):
+    def __init__(self, storage: StorageService, memory_v2=None):
         self.storage = storage
+        # v140 Workspace Brain: optional MemoryService (v2) collaborator. Agents
+        # are the last of the workspace's own "chats, files, goals, agents, and
+        # memory" context pillars to reach real semantic recall. Best-effort,
+        # never blocks agent creation.
+        self.memory_v2 = memory_v2
+
+    def _mirror_to_memory_v2(self, agent: CustomAgentResult) -> None:
+        if self.memory_v2 is None or not agent.workspace_id:
+            return
+        try:
+            text = f"Agent: {agent.name}\n{agent.role}\n{agent.description}".strip()
+            if not text:
+                return
+            self.memory_v2.add(
+                text, kind="agent", source="custom_agent_service",
+                metadata={"workspace_id": agent.workspace_id, "agent_id": agent.agent_id},
+            )
+        except Exception:
+            pass
 
     @staticmethod
     def templates() -> list[dict]:
@@ -145,6 +164,7 @@ class CustomAgentService:
         items = self.storage.read_list("custom_agents.json")
         items.append(agent.model_dump())
         self.storage.write_list("custom_agents.json", items)
+        self._mirror_to_memory_v2(agent)
         return agent
 
     def list(self, workspace_id: str | None = None) -> list[dict]:
