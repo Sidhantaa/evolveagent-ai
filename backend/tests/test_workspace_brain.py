@@ -10,6 +10,7 @@ import uuid
 
 import pytest
 
+from app.services.goal_service import GoalService
 from app.services.governance_service import GovernanceService
 from app.services.memory_service import MemoryService
 from app.services.storage_service import StorageService
@@ -112,3 +113,77 @@ def test_endpoints_still_work_and_search_accepts_workspace_id():
     resp = client.get("/api/memory-v2/search", params={"q": "workspace brain smoke", "workspace_id": "does-not-exist"}).json()
     assert "results" in resp
     assert client.get("/api/workspaces").status_code == 200
+
+
+# ------------------------------------------------------------------
+# v140 task 2 — goals are the other context pillar (a workspace is defined as
+# "chats, files, goals, agents, and memory") that real semantic recall hadn't
+# reached yet: GoalService now mirrors created goals into Memory v2 too.
+# ------------------------------------------------------------------
+def test_goal_creation_mirrors_into_memory_v2(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    memory_v2 = MemoryService(s, GovernanceService(s), database_url=None)
+    ws = WorkspaceService(s, memory_v2=memory_v2)
+    goals = GoalService(s, memory_v2=memory_v2)
+    wid = ws.default_workspace_id()
+    goals.create_manual("Launch the beta", description="Ship the closed beta to design partners.", workspace_id=wid)
+    hits = memory_v2.search("closed beta design partners", workspace_id=wid)
+    assert hits["count"] >= 1
+    assert "beta" in hits["results"][0]["text"].lower()
+
+
+def test_goal_without_workspace_id_does_not_mirror(tmp_path):
+    """Ad-hoc goals with no workspace can't be scoped for recall — must not
+    crash, and must not silently land in the wrong workspace's search results."""
+    s = StorageService(data_dir=str(tmp_path))
+    memory_v2 = MemoryService(s, GovernanceService(s), database_url=None)
+    goals = GoalService(s, memory_v2=memory_v2)
+    goal, _ = goals.create_manual("Untracked goal", description="No workspace attached.")
+    assert goal.goal_id
+    assert memory_v2.count() == 0
+
+
+def test_goal_mirror_failure_never_blocks_goal_creation(tmp_path):
+    class BrokenMemoryV2:
+        mode = "keyword"
+
+        def add(self, *args, **kwargs):
+            raise RuntimeError("boom")
+
+    s = StorageService(data_dir=str(tmp_path))
+    goals = GoalService(s, memory_v2=BrokenMemoryV2())
+    goal, _ = goals.create_manual("Still creates", description="Mirroring failure must not block this.", workspace_id="ws-1")
+    assert goal.title == "Still creates"
+
+
+def test_relevant_memory_can_surface_a_goal_alongside_notes():
+    """The workspace's own docstring defines it as project context over chats,
+    files, goals, agents, and memory — relevant_memory() should be able to draw
+    on a goal, not just workspace_memory notes, when v2 pgvector recall is live."""
+    from unittest.mock import MagicMock
+
+    from app.services.storage_service import StorageService as SS
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        s = SS(data_dir=tmp)
+        fake_v2 = MagicMock()
+        fake_v2.mode = "pgvector"
+        ws = WorkspaceService(s, memory_v2=fake_v2)
+        goals = GoalService(s, memory_v2=fake_v2)
+        wid = ws.default_workspace_id()
+        goal, _ = goals.create_manual("Cut the release", description="Coordinate the v2 release cut.", workspace_id=wid)
+        fake_v2.search.return_value = {
+            "results": [{"metadata": {"workspace_id": wid, "goal_id": goal.goal_id}}],
+        }
+        candidates = ws._semantic_candidates(wid, "release plan", limit=5)
+        assert candidates and candidates[0]["type"] == "goal"
+        assert "release cut" in candidates[0]["content"].lower()
+
+
+def test_goal_endpoints_still_work():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    created = client.post("/api/goals", json={"title": "Smoke goal", "description": "test"}).json()
+    assert created["goal"]["title"] == "Smoke goal"
+    assert client.get("/api/goals").status_code == 200

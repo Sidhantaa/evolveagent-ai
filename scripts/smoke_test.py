@@ -281,6 +281,28 @@ def flow_workspace_brain_recall(base: str) -> tuple[bool, str]:
     return ok, f"semantic_recall_engine={engine}, memory-v2 search status={status}"
 
 
+def flow_goal_mirrors_into_memory_v2(base: str) -> tuple[bool, str]:
+    """v140 task 2: a created goal must be mirrored into Memory v2, findable by
+    a workspace-scoped search — goals are the other context pillar besides
+    workspace_memory that real semantic recall should reach."""
+    req = urllib.request.Request(
+        f"{base}/api/goals",
+        data=json.dumps({"title": "Smoke goal brain check", "description": "goal-brain-smoke-marker content"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"create goal -> {r.status}"
+            created = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"create goal failed: {exc}"
+    workspace_id = created.get("goal", {}).get("workspace_id")
+    status, body = request(base, "GET", f"/api/memory-v2/search?q=goal-brain-smoke-marker&workspace_id={workspace_id}", None)
+    ok = status == 200 and "results" in body
+    return ok, f"goal created, memory-v2 search status={status}"
+
+
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     print(f"\n  EvolveAgent smoke test → {base}\n" + "  " + "-" * 58)
@@ -324,6 +346,11 @@ def main() -> int:
 
     ok, detail = flow_workspace_brain_recall(base)
     print(f"    {'✓' if ok else '✗'} workspace brain recall   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_goal_mirrors_into_memory_v2(base)
+    print(f"    {'✓' if ok else '✗'} goal mirrors into memory v2   {detail}")
     passed += ok
     failed += not ok
 
