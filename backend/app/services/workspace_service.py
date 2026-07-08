@@ -12,10 +12,34 @@ from app.services.storage_service import StorageService
 class WorkspaceService:
     default_name = "Default Workspace"
 
-    def __init__(self, storage: StorageService):
+    def __init__(self, storage: StorageService, memory_v2=None):
         self.storage = storage
         self.memory_intelligence = MemoryIntelligenceService(storage)
+        # v140 Workspace Brain: optional MemoryService (v2) collaborator. When it's
+        # wired AND running in real pgvector mode, relevant_memory() retrieves by
+        # genuine cosine similarity over real embeddings instead of the local
+        # sparse/heuristic scoring below — the actual payoff of the v100 Memory v2
+        # infrastructure, which until now had no caller in the live agent pipeline.
+        # Without it (or in keyword-fallback mode, e.g. plain JSON storage), every
+        # method here behaves exactly as before — zero regression.
+        self.memory_v2 = memory_v2
         self.ensure_default_workspace()
+
+    def _mirror_to_memory_v2(self, memory: dict) -> None:
+        """Best-effort: keep Memory v2 populated as workspace memory grows, so
+        real semantic search has something to search. Never blocks a write."""
+        if self.memory_v2 is None:
+            return
+        try:
+            text = f"{memory.get('title', '')}\n{memory.get('content', '')}".strip()
+            if not text:
+                return
+            self.memory_v2.add(
+                text, kind=memory.get("type") or "note", source="workspace_memory",
+                metadata={"workspace_id": memory["workspace_id"], "memory_id": memory["memory_id"]},
+            )
+        except Exception:
+            pass
 
     def ensure_default_workspace(self) -> dict:
         workspaces = self.storage.read_list("workspaces.json")
@@ -109,6 +133,7 @@ class WorkspaceService:
         }
         memory.update(self.memory_intelligence.score_memory(memory))
         self.storage.append("workspace_memory.json", memory)
+        self._mirror_to_memory_v2(memory)
         return memory
 
     def list_memory(
@@ -184,10 +209,32 @@ class WorkspaceService:
         self.storage.write_list("workspace_memory.json", next_memories)
         return True
 
+    def _semantic_candidates(self, workspace_id: str, user_input: str, limit: int) -> list[dict]:
+        """Prefer Memory v2's real cosine-similarity search when it's wired and
+        running on real embeddings (pgvector mode). Resolve each hit back to its
+        full workspace_memory record (by the memory_id stashed in v2's metadata)
+        so downstream usage-tracking and formatting are unaffected either way.
+        Any miss — v2 unwired, keyword-fallback mode, or a lookup failure —
+        degrades to the original local heuristic search, unchanged."""
+        if self.memory_v2 is not None and self.memory_v2.mode == "pgvector":
+            try:
+                hits = self.memory_v2.search(user_input, limit=limit, workspace_id=workspace_id).get("results", [])
+                by_id = {
+                    item.get("memory_id"): item
+                    for item in self.storage.read_list("workspace_memory.json")
+                    if item.get("workspace_id") == workspace_id
+                }
+                resolved = [by_id[mid] for h in hits if (mid := (h.get("metadata") or {}).get("memory_id")) in by_id]
+                if resolved:
+                    return resolved
+            except Exception:
+                pass  # fall through to the heuristic path below
+        semantic = self.memory_intelligence.semantic_search(workspace_id, user_input, limit=limit, include_archived=False)
+        return [row["memory"] for row in semantic.get("results", [])]
+
     def relevant_memory(self, workspace_id: str, user_input: str, limit: int = 6, char_limit: int = 4000) -> tuple[str, list[dict]]:
         resolved = self.resolve_workspace_id(workspace_id)
-        semantic = self.memory_intelligence.semantic_search(resolved, user_input, limit=limit, include_archived=False)
-        selected = [row["memory"] for row in semantic.get("results", [])]
+        selected = self._semantic_candidates(resolved, user_input, limit)
         if len(selected) < limit:
             selected_ids = {item.get("memory_id") for item in selected}
             fallback = [
@@ -257,4 +304,5 @@ class WorkspaceService:
             "workspace_id": resolved,
             "memory_count": len(memories),
             "memory_types": [{"type": name, "count": count} for name, count in types.most_common()],
+            "semantic_recall_engine": self.memory_v2.mode if self.memory_v2 is not None else "heuristic",
         }

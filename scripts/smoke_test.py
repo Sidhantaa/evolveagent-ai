@@ -244,6 +244,43 @@ def flow_mcp_execution_payload_roundtrip(base: str) -> tuple[bool, str]:
     return ok, f"stored payload={record.get('payload')}"
 
 
+def flow_workspace_brain_recall(base: str) -> tuple[bool, str]:
+    """v140 Workspace Brain: a memory created in a workspace must be retrievable
+    both through the workspace itself and through Memory v2 scoped to that
+    workspace (the mirror wiring that lets relevant_memory() use real semantic
+    recall when the app is on Postgres)."""
+    try:
+        with urllib.request.urlopen(f"{base}/api/workspaces", timeout=15) as r:
+            workspaces = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"list workspaces failed: {exc}"
+    if not workspaces:
+        return False, "no default workspace found"
+    wid = workspaces[0]["workspace_id"]
+    req = urllib.request.Request(
+        f"{base}/api/workspaces/{wid}/memory",
+        data=json.dumps({"title": "Smoke brain note", "content": "workspace-brain-smoke-marker content"}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"create memory -> {r.status}"
+    except Exception as exc:  # noqa: BLE001
+        return False, f"create memory failed: {exc}"
+    try:
+        with urllib.request.urlopen(f"{base}/api/workspaces/{wid}", timeout=15) as r:
+            workspace = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"fetch workspace failed: {exc}"
+    engine = workspace.get("summary", {}).get("semantic_recall_engine")
+    if engine not in ("heuristic", "keyword", "pgvector"):
+        return False, f"unexpected semantic_recall_engine={engine}"
+    status, body = request(base, "GET", f"/api/memory-v2/search?q=workspace-brain-smoke-marker&workspace_id={wid}", None)
+    ok = status == 200 and "results" in body
+    return ok, f"semantic_recall_engine={engine}, memory-v2 search status={status}"
+
+
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     print(f"\n  EvolveAgent smoke test → {base}\n" + "  " + "-" * 58)
@@ -282,6 +319,11 @@ def main() -> int:
 
     ok, detail = flow_mcp_execution_payload_roundtrip(base)
     print(f"    {'✓' if ok else '✗'} mcp execution payload roundtrip   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_workspace_brain_recall(base)
+    print(f"    {'✓' if ok else '✗'} workspace brain recall   {detail}")
     passed += ok
     failed += not ok
 

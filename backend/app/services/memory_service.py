@@ -139,7 +139,7 @@ class MemoryService:
         return {"id": item_id, "kind": kind, "mode": self.mode}
 
     # -- search --------------------------------------------------------------
-    def search(self, query: str, limit: int = 5) -> dict:
+    def search(self, query: str, limit: int = 5, workspace_id: str | None = None) -> dict:
         query = str(query or "").strip()
         try:
             limit = max(1, min(50, int(limit)))
@@ -152,12 +152,17 @@ class MemoryService:
         if self.mode == "pgvector":
             from sqlalchemy import text as sql
             qv = self._vec_literal(self.embed(query))
+            where = " AND metadata->>'workspace_id' = :wsid" if workspace_id else ""
+            params = {"q": qv, "n": limit}
+            if workspace_id:
+                params["wsid"] = workspace_id
             with self._engine.connect() as conn:  # type: ignore[union-attr]
                 rows = conn.execute(
                     sql("SELECT id, kind, text, source, metadata, "
                         "1 - (embedding <=> CAST(:q AS vector)) AS score "
-                        "FROM memory_embeddings ORDER BY embedding <=> CAST(:q AS vector) LIMIT :n"),
-                    {"q": qv, "n": limit},
+                        f"FROM memory_embeddings WHERE true{where} "
+                        "ORDER BY embedding <=> CAST(:q AS vector) LIMIT :n"),
+                    params,
                 ).fetchall()
             results = [{"id": r[0], "kind": r[1], "text": r[2], "source": r[3],
                         "metadata": r[4], "score": round(float(r[5]), 4)} for r in rows]
@@ -165,6 +170,8 @@ class MemoryService:
             qtokens = set(_tokens(query))
             scored = []
             for it in self.storage.read_list(_ITEMS_FILE):
+                if workspace_id and it.get("metadata", {}).get("workspace_id") != workspace_id:
+                    continue
                 overlap = len(qtokens & set(it.get("tokens", [])))
                 if overlap:
                     denom = len(qtokens) or 1
