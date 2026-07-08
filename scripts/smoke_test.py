@@ -57,6 +57,10 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     # v120 Multi-approver approval pipelines
     ("durable-workflows", "POST", "/api/durable-workflows/runs",
      {"steps": [{"name": "pay vendor", "action": "pay", "approvers": ["finance", "security"]}]}, 200),
+    # v120 Write-capable GitHub connector (opt-in, approval-gated create_issue)
+    ("durable-workflows", "POST", "/api/durable-workflows/runs",
+     {"steps": [{"name": "file bug", "action_type": "create_github_issue",
+                 "action_params": {"repo": "owner/repo", "title": "smoke issue"}}]}, 200),
     # Phase 7 — Marketplace Hub
     ("marketplace-hub", "GET", "/api/marketplace-hub/listings", None, 200),
     ("marketplace-hub", "GET", "/api/marketplace-hub/summary", None, 200),
@@ -177,6 +181,39 @@ def flow_multi_approver_gate(base: str) -> tuple[bool, str]:
     return final.get("status") == "completed", f"final status={final.get('status')}"
 
 
+def flow_github_write_effect_declines_safely(base: str) -> tuple[bool, str]:
+    """create_github_issue is always approval-gated; with writes disabled (the
+    smoke suite's default env) approving it must decline safely and still
+    complete the run — never crash, never silently pretend to have written."""
+    req = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs",
+        data=json.dumps({"steps": [{"name": "file bug", "action_type": "create_github_issue",
+                                     "action_params": {"repo": "owner/repo", "title": "smoke issue"}}]}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"start run -> {r.status}"
+            run = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"start run failed: {exc}"
+    if run["status"] != "waiting_approval":
+        return False, f"expected waiting_approval, got {run['status']}"
+    req2 = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs/{run['run_id']}/approve",
+        data=json.dumps({"approved": True}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            final = json.loads(r.read().decode()) if r.status == 200 else {}
+    except Exception as exc:  # noqa: BLE001
+        return False, f"approve failed: {exc}"
+    ok = final.get("status") == "completed" and "declined" in final.get("steps", [{}])[0].get("output", "")
+    return ok, f"final status={final.get('status')}, output={final.get('steps', [{}])[0].get('output', '')[:60]}"
+
+
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     print(f"\n  EvolveAgent smoke test → {base}\n" + "  " + "-" * 58)
@@ -205,6 +242,11 @@ def main() -> int:
 
     ok, detail = flow_multi_approver_gate(base)
     print(f"    {'✓' if ok else '✗'} multi-approver gate (2 sign-offs)   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_github_write_effect_declines_safely(base)
+    print(f"    {'✓' if ok else '✗'} github write effect (declines safely)   {detail}")
     passed += ok
     failed += not ok
 

@@ -157,3 +157,88 @@ def test_summary_analytics_and_governance(monkeypatch):
 def test_existing_endpoints_still_work():
     assert client.get("/api/repo-finder/status").status_code == 200
     assert client.get("/api/master-agent/summary").status_code == 200
+
+
+# ------------------------------------------------------------------
+# v120 — the one real write: create_issue (opt-in, never called directly by an
+# agent; only reachable via an approved DurableWorkflowService step).
+# ------------------------------------------------------------------
+def test_writes_disabled_by_default_in_status(monkeypatch):
+    monkeypatch.delenv("GITHUB_WRITES_ENABLED", raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    result = client.get("/api/github/status").json()
+    assert result["writes_enabled"] is False
+    assert result["supported_writes"] == []
+
+
+def test_create_issue_declines_without_token(monkeypatch, tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.delenv("GH_TOKEN", raising=False)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    result = svc.create_issue("manit0700/evolveagent-ai", "Bug report")
+    assert result["wrote"] is False
+    assert result["degraded"] is True
+    assert "GITHUB_TOKEN" in result["note"]
+
+
+def test_create_issue_requires_a_title(tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    try:
+        svc.create_issue("manit0700/evolveagent-ai", "   ")
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
+def test_create_issue_performs_a_real_write_when_opted_in(monkeypatch, tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    created_payload = {}
+
+    def fake_post(self, path, body):
+        created_payload["path"] = path
+        created_payload["body"] = body
+        return {"id": 99, "number": 42, "title": body["title"], "state": "open",
+                "user": {"login": "eva-bot"}, "labels": [], "html_url": "https://github.com/o/r/issues/42",
+                "created_at": "2026-07-08T00:00:00Z", "updated_at": "2026-07-08T00:00:00Z"}
+
+    monkeypatch.setattr(GitHubConnectorService, "_http_post", fake_post)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    result = svc.create_issue("owner/repo", "Ship the feature", body="details here", labels=["bug"])
+    assert result["wrote"] is True
+    assert result["issue"]["number"] == 42
+    assert created_payload["path"] == "/repos/owner/repo/issues"
+    assert created_payload["body"]["labels"] == ["bug"]
+
+
+def test_create_issue_network_failure_degrades(monkeypatch, tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    def boom(self, path, body):
+        raise TimeoutError("network unavailable")
+
+    monkeypatch.setattr(GitHubConnectorService, "_http_post", boom)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    result = svc.create_issue("owner/repo", "Ship the feature")
+    assert result["wrote"] is False
+    assert result["degraded"] is True
+    assert "TimeoutError" in result["note"]
