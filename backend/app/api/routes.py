@@ -517,6 +517,10 @@ adaptive_learning_service = AdaptiveLearningService(storage, governance_service,
 # pipeline, the one that actually matters for real agent memory recall).
 workspace_service.memory_v2 = memory_service
 master_agent.workspace.memory_v2 = memory_service
+# v140 task 2: goals are the other context pillar (chats/files/goals/agents/
+# memory) that real semantic recall hadn't reached yet — mirror them in too.
+goal_service.memory_v2 = memory_service
+master_agent.goal_service.memory_v2 = memory_service
 from app.services.agent_registry_service import AgentRegistryService  # noqa: E402
 agent_registry_service = AgentRegistryService(storage, governance_service)
 from app.services.agent_governance_service import AgentGovernanceService  # noqa: E402

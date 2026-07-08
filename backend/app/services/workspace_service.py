@@ -211,20 +211,33 @@ class WorkspaceService:
 
     def _semantic_candidates(self, workspace_id: str, user_input: str, limit: int) -> list[dict]:
         """Prefer Memory v2's real cosine-similarity search when it's wired and
-        running on real embeddings (pgvector mode). Resolve each hit back to its
-        full workspace_memory record (by the memory_id stashed in v2's metadata)
-        so downstream usage-tracking and formatting are unaffected either way.
-        Any miss — v2 unwired, keyword-fallback mode, or a lookup failure —
-        degrades to the original local heuristic search, unchanged."""
+        running on real embeddings (pgvector mode). Resolves each hit back to its
+        source record — a workspace_memory item, or (v140 task 2) a goal mirrored
+        by GoalService — so downstream usage-tracking and formatting are
+        unaffected either way. Any miss — v2 unwired, keyword-fallback mode, or a
+        lookup failure — degrades to the original local heuristic search over
+        workspace memory, unchanged."""
         if self.memory_v2 is not None and self.memory_v2.mode == "pgvector":
             try:
                 hits = self.memory_v2.search(user_input, limit=limit, workspace_id=workspace_id).get("results", [])
-                by_id = {
+                memories_by_id = {
                     item.get("memory_id"): item
                     for item in self.storage.read_list("workspace_memory.json")
                     if item.get("workspace_id") == workspace_id
                 }
-                resolved = [by_id[mid] for h in hits if (mid := (h.get("metadata") or {}).get("memory_id")) in by_id]
+                goals_by_id = {
+                    item.get("goal_id"): item
+                    for item in self.storage.read_list("goals.json")
+                    if item.get("workspace_id") == workspace_id
+                }
+                resolved = []
+                for hit in hits:
+                    metadata = hit.get("metadata") or {}
+                    if (mid := metadata.get("memory_id")) in memories_by_id:
+                        resolved.append(memories_by_id[mid])
+                    elif (gid := metadata.get("goal_id")) in goals_by_id:
+                        goal = goals_by_id[gid]
+                        resolved.append({"type": "goal", "title": goal.get("title", "Goal"), "content": goal.get("description", "")})
                 if resolved:
                     return resolved
             except Exception:
