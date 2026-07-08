@@ -502,6 +502,10 @@ github_connector_service = GitHubConnectorService(storage, governance_service)
 # v100: wire the real (opt-in, read-only) GitHub adapter into MCP execution now
 # that github_connector_service exists (it's constructed after mcp_execution_service).
 mcp_execution_service.github_adapter = MCPGitHubAdapter(github_connector_service)
+# v120: wire the real (opt-in, approval-gated) GitHub connector into durable
+# workflows now that it exists (it's constructed after durable_workflow_service),
+# backing the create_github_issue whitelisted effect with a real write.
+durable_workflow_service.github = github_connector_service
 repo_finder_service = RepoFinderService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)

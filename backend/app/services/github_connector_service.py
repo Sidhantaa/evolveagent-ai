@@ -17,14 +17,26 @@ _TIMEOUT = 12
 _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 
+WRITES_OPT_IN_ENV = "GITHUB_WRITES_ENABLED"
+
+
 class GitHubConnectorService:
-    """Read-only, governed GitHub connector for repos, issues, and pull requests.
+    """Governed GitHub connector for repos, issues, and pull requests.
 
     Safety model:
-    * Uses GET requests only against GitHub REST API.
+    * Reads use GET requests only against the GitHub REST API and are always on
+      (governed, never write anything).
+    * The ONE write capability (create_issue) is opt-in via GITHUB_WRITES_ENABLED
+      (default OFF) — mirrors every other real-capability flag in this app
+      (MCP_REAL_READONLY, MCP_REAL_GITHUB, SCHEDULER_TICK_ENABLED, ...). It is never
+      called directly by an agent — the only caller is DurableWorkflowService's
+      whitelisted-effect path, which means it only ever runs after a human has
+      approved the specific workflow step that requested it.
     * Token is read from GITHUB_TOKEN/GH_TOKEN and is never stored, logged, or returned.
-    * Missing token, network failure, and GitHub errors degrade to empty results + a note.
-    * All read attempts are governance-logged as low-risk read_only activity.
+    * Missing token/opt-in, network failure, and GitHub errors degrade to a safe
+      refusal + a note — this method never raises and never silently no-ops as if
+      it succeeded.
+    * All read and write attempts are governance-logged.
     """
 
     def __init__(self, storage: StorageService, governance_service: GovernanceService):
@@ -36,35 +48,44 @@ class GitHubConnectorService:
         return os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or None
 
     @staticmethod
+    def writes_enabled() -> bool:
+        return str(os.environ.get(WRITES_OPT_IN_ENV, "")).strip().lower() in ("1", "true", "yes", "on")
+
+    @staticmethod
     def _now() -> str:
         return datetime.now(UTC).isoformat()
 
-    def _log(self, action_type: str, reason: str, blocked: bool = False) -> None:
+    def _log(self, action_type: str, reason: str, blocked: bool = False, write: bool = False) -> None:
         self.governance.log_event(
             GovernanceEvent(
                 task_type="github_connector",
                 agent_name="GitHub Connector",
                 action_type=action_type,
                 tool_used="GitHubConnectorService",
-                permission_level="read_only",
+                permission_level="approve_to_run" if write else "read_only",
                 approved=not blocked,
                 blocked=blocked,
-                risk_score=1 if not blocked else 20,
+                risk_score=(30 if write else 1) if not blocked else 20,
                 reason=reason,
             )
         )
 
     def status(self) -> dict:
         token_configured = bool(self._token())
+        writes_enabled = self.writes_enabled()
         return {
             "available": True,
             "source": "github_rest_api",
-            "mode": "read_only",
+            "mode": "read_only" if not writes_enabled else "read_write",
             "token_configured": token_configured,
             "authenticated": token_configured,
-            "writes_enabled": False,
+            "writes_enabled": writes_enabled,
+            "writes_opt_in_env": WRITES_OPT_IN_ENV,
             "supported_reads": ["repos", "issues", "pull_requests"],
-            "note": "Uses GITHUB_TOKEN only for read-only GitHub API calls. Token value is never returned.",
+            "supported_writes": ["create_issue"] if writes_enabled else [],
+            "note": "Uses GITHUB_TOKEN for GitHub API calls. Token value is never returned. "
+                    "Writes (create_issue) are opt-in and only ever reachable through an "
+                    "approved durable-workflow step.",
         }
 
     def _headers(self) -> dict[str, str]:
@@ -82,6 +103,13 @@ class GitHubConnectorService:
         query = urllib.parse.urlencode(params or {})
         url = f"{_API}{path}" + (f"?{query}" if query else "")
         req = urllib.request.Request(url, headers=self._headers(), method="GET")
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8", "replace"))
+
+    def _http_post(self, path: str, body: dict[str, Any]) -> Any:
+        url = f"{_API}{path}"
+        headers = {**self._headers(), "Content-Type": "application/json"}
+        req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
             return json.loads(resp.read().decode("utf-8", "replace"))
 
@@ -197,6 +225,39 @@ class GitHubConnectorService:
         except Exception as exc:  # noqa: BLE001
             self._log("github_pulls_read_degraded", f"GitHub pull request read unavailable for {repo} ({type(exc).__name__})")
             return self._degraded("pull_requests", f"GitHub pull requests unavailable ({type(exc).__name__}).", {"repo": repo, "state": state})
+
+    def create_issue(self, repo: str, title: str, body: str = "", labels: list[str] | None = None) -> dict:
+        """The one real write this connector performs. Never called directly by an
+        agent — only reachable via an approved DurableWorkflowService step, so a
+        real issue is only ever created after explicit human sign-off."""
+        repo = self._validate_repo(repo)
+        title = str(title or "").strip()[:250]
+        if not title:
+            raise ValueError("title is required to create a GitHub issue")
+        body = str(body or "")[:5000]
+        labels = [str(label)[:40] for label in (labels or []) if str(label).strip()][:10]
+
+        if not self.writes_enabled():
+            self._log("github_write_declined", f"create_issue for {repo} declined: {WRITES_OPT_IN_ENV} is not enabled", blocked=True, write=True)
+            return {"issue": None, "degraded": True, "wrote": False, "repo": repo,
+                    "note": f"GitHub writes are disabled. Set {WRITES_OPT_IN_ENV}=true to enable."}
+        if not self._token():
+            self._log("github_write_declined", f"create_issue for {repo} declined: no token configured", blocked=True, write=True)
+            return {"issue": None, "degraded": True, "wrote": False, "repo": repo,
+                    "note": "GITHUB_TOKEN is not configured. Add a token to enable issue creation."}
+
+        try:
+            payload: dict[str, Any] = {"title": title, "body": body}
+            if labels:
+                payload["labels"] = labels
+            item = self._http_post(f"/repos/{repo}/issues", payload)
+            issue = self._map_issue(item)
+            self._log("github_issue_created", f"Created GitHub issue #{issue.get('number')} in {repo}: {title}", write=True)
+            return {"issue": issue, "degraded": False, "wrote": True, "repo": repo, "note": ""}
+        except Exception as exc:  # noqa: BLE001 - degrade, never crash
+            self._log("github_write_failed", f"GitHub issue creation failed for {repo} ({type(exc).__name__})", blocked=True, write=True)
+            return {"issue": None, "degraded": True, "wrote": False, "repo": repo,
+                    "note": f"GitHub issue creation failed ({type(exc).__name__})."}
 
     def analytics_summary(self) -> dict:
         events = self.storage.read_list("governance_log.json")

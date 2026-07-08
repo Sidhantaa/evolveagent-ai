@@ -10,10 +10,15 @@ from app.services.storage_service import StorageService
 # Words that mark a step as risky — it can never auto-run; the workflow halts for approval.
 RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post", "publish", "transfer", "charge", "refund"]
 
-# Whitelisted INTERNAL, LOCAL, reversible effects a step may actually perform
-# (once approved). These write only to the app's own effect store — never any
-# external service. Anything not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify"}
+# Whitelisted effects a step may actually perform (once approved). These are
+# either internal/local/reversible (create_task, create_note, notify — write only
+# to the app's own effect store, never any external service) or, for
+# create_github_issue, a single real external write — but ONLY reachable through
+# this approval-gated path (never called directly by an agent) and only when the
+# GitHub connector's own writes_enabled() opt-in flag is on; otherwise it degrades
+# to a safe refusal recorded as the step's output, never a silent no-op. Anything
+# not in this set is simulated, not executed.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
@@ -83,7 +88,7 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None):
         self.storage = storage
         self.governance = governance_service
         # v120: optional EventBusService — lets a run's completion/approval-halt/
@@ -100,6 +105,11 @@ class DurableWorkflowService:
         # governed, audited engine used elsewhere in the app) instead of a single
         # boolean gate. Steps with 0-1 approvers are unaffected (existing behavior).
         self.approvals = approvals
+        # v120: optional GitHubConnectorService — backs the create_github_issue
+        # whitelisted action with a real (opt-in, approval-gated) GitHub write.
+        # Without it, that action type degrades to a safe simulated note, same as
+        # any other collaborator-less path in this service.
+        self.github = github
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -206,7 +216,7 @@ class DurableWorkflowService:
                 "name": name,
                 "action": action,
                 "action_type": action_type if real else "",
-                "action_params": {str(k)[:40]: str(v)[:200] for k, v in list(params.items())[:10]} if real else {},
+                "action_params": {str(k)[:40]: str(v)[:2000] for k, v in list(params.items())[:10]} if real else {},
                 "requires_approval": _is_risky(step) or real or bool(approvers),
                 "approvers": approvers,
                 "approval_chain_id": None,
@@ -219,19 +229,40 @@ class DurableWorkflowService:
         return steps
 
     def _execute_action(self, run: dict, step: dict) -> str:
-        """Perform a whitelisted internal effect and record it. Local + reversible."""
+        """Perform a whitelisted effect and record it. create_task/create_note/
+        notify are local + reversible. create_github_issue is a real external
+        write when a GitHubConnectorService is wired and opted in — otherwise it
+        degrades to a safe simulated note (mock-safe by default)."""
         action_type = step.get("action_type") or ""
         params = step.get("action_params") or {}
+        result: dict | None = None
+        if action_type == "create_github_issue":
+            if self.github is not None:
+                try:
+                    result = self.github.create_issue(
+                        repo=params.get("repo", ""), title=params.get("title", ""), body=params.get("body", ""),
+                    )
+                except ValueError as exc:
+                    result = {"issue": None, "degraded": True, "wrote": False, "note": str(exc)}
+            else:
+                result = {"issue": None, "degraded": True, "wrote": False, "note": "No GitHub connector wired; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
             "step_id": step["id"],
             "action_type": action_type,
             "params": params,
+            "result": result,
             "created_at": self._now(),
         }
         self.storage.append(self.effects_file, effect)
-        self._log("workflow_effect_executed", f"Executed internal action '{action_type}' in run '{run['name']}'", risk=3)
+        self._log("workflow_effect_executed", f"Executed action '{action_type}' in run '{run['name']}'", risk=3)
+        if action_type == "create_github_issue":
+            if result and result.get("wrote"):
+                issue = result.get("issue") or {}
+                label = issue.get("url") or f"#{issue.get('number')}"
+                return f"[executed] create_github_issue: {label}"
+            return f"[declined] create_github_issue: {(result or {}).get('note', 'unavailable')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 
