@@ -187,3 +187,80 @@ def test_goal_endpoints_still_work():
     created = client.post("/api/goals", json={"title": "Smoke goal", "description": "test"}).json()
     assert created["goal"]["title"] == "Smoke goal"
     assert client.get("/api/goals").status_code == 200
+
+
+# ------------------------------------------------------------------
+# v140 task 3 — uploaded files are the last context pillar (chats already flow
+# through create_memory via persist_workspace_memory, so they got real recall
+# for free once task 1 landed): FileService now mirrors extracted text too.
+# ------------------------------------------------------------------
+def test_processed_file_mirrors_into_memory_v2():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    workspaces = client.get("/api/workspaces").json()
+    wid = workspaces[0]["workspace_id"]
+    resp = client.post(
+        "/api/files/upload",
+        files={"files": ("brain-note.txt", b"file-brain-smoke-marker unique content", "text/plain")},
+        data={"workspace_id": wid},
+    ).json()
+    assert resp["files"][0]["status"] == "processed"
+    hits = client.get("/api/memory-v2/search", params={"q": "file-brain-smoke-marker", "workspace_id": wid}).json()
+    assert hits["count"] >= 1
+    assert "brain-note.txt" in hits["results"][0]["text"]
+
+
+def test_unsupported_file_type_does_not_mirror():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    workspaces = client.get("/api/workspaces").json()
+    wid = workspaces[0]["workspace_id"]
+    resp = client.post(
+        "/api/files/upload",
+        files={"files": ("unsupported.exe", b"zqxjklmnopq", "application/octet-stream")},
+        data={"workspace_id": wid},
+    ).json()
+    assert resp["files"][0]["status"] == "failed"
+    hits = client.get("/api/memory-v2/search", params={"q": "zqxjklmnopq", "workspace_id": wid}).json()
+    assert hits["count"] == 0
+
+
+def test_file_mirror_failure_never_blocks_upload(tmp_path):
+    import asyncio
+    import io
+    from fastapi import UploadFile
+
+    from app.services.file_service import FileService
+    from app.services.storage_service import StorageService
+
+    class BrokenMemoryV2:
+        mode = "keyword"
+
+        def add(self, *args, **kwargs):
+            raise RuntimeError("boom")
+
+    s = StorageService(data_dir=str(tmp_path))
+    fs = FileService(s, memory_v2=BrokenMemoryV2())
+    upload = UploadFile(filename="note.txt", file=io.BytesIO(b"still processes fine"))
+    result = asyncio.run(fs.process_file(upload, workspace_id="ws-1"))
+    assert result["status"] == "processed"
+
+
+def test_file_resolves_to_a_file_type_candidate_via_semantic_candidates(tmp_path):
+    from unittest.mock import MagicMock
+
+    from app.services.storage_service import StorageService
+    from app.services.workspace_service import WorkspaceService
+
+    s = StorageService(data_dir=str(tmp_path))
+    fake_v2 = MagicMock()
+    fake_v2.mode = "pgvector"
+    ws = WorkspaceService(s, memory_v2=fake_v2)
+    wid = ws.default_workspace_id()
+    s.append("files.json", {"file_id": "f1", "workspace_id": wid, "filename": "notes.txt", "text_preview": "roadmap details here"})
+    fake_v2.search.return_value = {"results": [{"metadata": {"workspace_id": wid, "file_id": "f1"}}]}
+    candidates = ws._semantic_candidates(wid, "roadmap", limit=5)
+    assert candidates and candidates[0]["type"] == "file"
+    assert candidates[0]["title"] == "notes.txt"
