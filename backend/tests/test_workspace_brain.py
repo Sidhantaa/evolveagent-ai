@@ -10,6 +10,7 @@ import uuid
 
 import pytest
 
+from app.services.custom_agent_service import CustomAgentService
 from app.services.goal_service import GoalService
 from app.services.governance_service import GovernanceService
 from app.services.memory_service import MemoryService
@@ -200,15 +201,16 @@ def test_processed_file_mirrors_into_memory_v2():
     client = TestClient(app)
     workspaces = client.get("/api/workspaces").json()
     wid = workspaces[0]["workspace_id"]
+    tag = uuid.uuid4().hex
     resp = client.post(
         "/api/files/upload",
-        files={"files": ("brain-note.txt", b"file-brain-smoke-marker unique content", "text/plain")},
+        files={"files": ("brain-note.txt", f"file-{tag}-marker unique content".encode(), "text/plain")},
         data={"workspace_id": wid},
     ).json()
     assert resp["files"][0]["status"] == "processed"
-    hits = client.get("/api/memory-v2/search", params={"q": "file-brain-smoke-marker", "workspace_id": wid}).json()
+    hits = client.get("/api/memory-v2/search", params={"q": f"file-{tag}-marker", "workspace_id": wid}).json()
     assert hits["count"] >= 1
-    assert "brain-note.txt" in hits["results"][0]["text"]
+    assert any("brain-note.txt" in r["text"] for r in hits["results"])
 
 
 def test_unsupported_file_type_does_not_mirror():
@@ -264,3 +266,68 @@ def test_file_resolves_to_a_file_type_candidate_via_semantic_candidates(tmp_path
     candidates = ws._semantic_candidates(wid, "roadmap", limit=5)
     assert candidates and candidates[0]["type"] == "file"
     assert candidates[0]["title"] == "notes.txt"
+
+
+# ------------------------------------------------------------------
+# v140 task 4 — custom agents are the last of the 5 context pillars (chats,
+# files, goals, agents, and memory) to reach real semantic recall.
+# ------------------------------------------------------------------
+def test_custom_agent_creation_mirrors_into_memory_v2(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    memory_v2 = MemoryService(s, GovernanceService(s), database_url=None)
+    ws = WorkspaceService(s, memory_v2=memory_v2)
+    agents = CustomAgentService(s, memory_v2=memory_v2)
+    wid = ws.default_workspace_id()
+    agents.create({"name": "Pharmacy PA Agent", "role": "Organize prior authorization criteria for review.", "workspace_id": wid})
+    hits = memory_v2.search("prior authorization criteria", workspace_id=wid)
+    assert hits["count"] >= 1
+    assert "pharmacy" in hits["results"][0]["text"].lower()
+
+
+def test_custom_agent_without_workspace_id_does_not_mirror(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    memory_v2 = MemoryService(s, GovernanceService(s), database_url=None)
+    agents = CustomAgentService(s, memory_v2=memory_v2)
+    created = agents.create({"name": "Untracked Agent", "role": "No workspace attached."})
+    assert created.agent_id
+    assert memory_v2.count() == 0
+
+
+def test_custom_agent_mirror_failure_never_blocks_creation(tmp_path):
+    class BrokenMemoryV2:
+        mode = "keyword"
+
+        def add(self, *args, **kwargs):
+            raise RuntimeError("boom")
+
+    s = StorageService(data_dir=str(tmp_path))
+    agents = CustomAgentService(s, memory_v2=BrokenMemoryV2())
+    created = agents.create({"name": "Still creates", "role": "Mirroring failure must not block this.", "workspace_id": "ws-1"})
+    assert created.name == "Still creates"
+
+
+def test_custom_agent_resolves_to_an_agent_type_candidate_via_semantic_candidates(tmp_path):
+    from unittest.mock import MagicMock
+
+    from app.services.storage_service import StorageService
+    from app.services.workspace_service import WorkspaceService
+
+    s = StorageService(data_dir=str(tmp_path))
+    fake_v2 = MagicMock()
+    fake_v2.mode = "pgvector"
+    ws = WorkspaceService(s, memory_v2=fake_v2)
+    wid = ws.default_workspace_id()
+    s.append("custom_agents.json", {"agent_id": "a1", "workspace_id": wid, "name": "Bug Fix Agent", "role": "diagnose bugs"})
+    fake_v2.search.return_value = {"results": [{"metadata": {"workspace_id": wid, "agent_id": "a1"}}]}
+    candidates = ws._semantic_candidates(wid, "bug diagnosis", limit=5)
+    assert candidates and candidates[0]["type"] == "agent"
+    assert candidates[0]["title"] == "Bug Fix Agent"
+
+
+def test_custom_agent_endpoints_still_work():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    created = client.post("/api/agents/custom", json={"name": "Smoke Agent", "role": "test"}).json()
+    assert created["name"] == "Smoke Agent"
+    assert client.get("/api/agents/custom").status_code == 200

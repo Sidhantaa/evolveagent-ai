@@ -212,11 +212,11 @@ class WorkspaceService:
     def _semantic_candidates(self, workspace_id: str, user_input: str, limit: int) -> list[dict]:
         """Prefer Memory v2's real cosine-similarity search when it's wired and
         running on real embeddings (pgvector mode). Resolves each hit back to its
-        source record — a workspace_memory item, a goal (v140 task 2), or an
-        uploaded file (v140 task 3) — so downstream usage-tracking and formatting
-        are unaffected either way. Any miss — v2 unwired, keyword-fallback mode,
-        or a lookup failure — degrades to the original local heuristic search
-        over workspace memory, unchanged."""
+        source record — a workspace_memory item, a goal (v140 task 2), an
+        uploaded file (v140 task 3), or a custom agent (v140 task 4) — so
+        downstream usage-tracking and formatting are unaffected either way. Any
+        miss — v2 unwired, keyword-fallback mode, or a lookup failure — degrades
+        to the original local heuristic search over workspace memory, unchanged."""
         if self.memory_v2 is not None and self.memory_v2.mode == "pgvector":
             try:
                 hits = self.memory_v2.search(user_input, limit=limit, workspace_id=workspace_id).get("results", [])
@@ -235,6 +235,11 @@ class WorkspaceService:
                     for item in self.storage.read_list("files.json")
                     if item.get("workspace_id") == workspace_id
                 }
+                agents_by_id = {
+                    item.get("agent_id"): item
+                    for item in self.storage.read_list("custom_agents.json")
+                    if item.get("workspace_id") == workspace_id
+                }
                 resolved = []
                 for hit in hits:
                     metadata = hit.get("metadata") or {}
@@ -246,6 +251,9 @@ class WorkspaceService:
                     elif (fid := metadata.get("file_id")) in files_by_id:
                         file_item = files_by_id[fid]
                         resolved.append({"type": "file", "title": file_item.get("filename", "File"), "content": file_item.get("text_preview", "")})
+                    elif (aid := metadata.get("agent_id")) in agents_by_id:
+                        agent_item = agents_by_id[aid]
+                        resolved.append({"type": "agent", "title": agent_item.get("name", "Agent"), "content": agent_item.get("role", "")})
                 if resolved:
                     return resolved
             except Exception:
