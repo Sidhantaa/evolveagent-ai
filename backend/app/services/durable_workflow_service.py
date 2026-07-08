@@ -12,13 +12,13 @@ RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post",
 
 # Whitelisted effects a step may actually perform (once approved). These are
 # either internal/local/reversible (create_task, create_note, notify — write only
-# to the app's own effect store, never any external service) or, for
-# create_github_issue, a single real external write — but ONLY reachable through
-# this approval-gated path (never called directly by an agent) and only when the
-# GitHub connector's own writes_enabled() opt-in flag is on; otherwise it degrades
-# to a safe refusal recorded as the step's output, never a silent no-op. Anything
-# not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue"}
+# to the app's own effect store, never any external service) or a single real
+# external write (create_github_issue, write_code_change) — but ONLY reachable
+# through this approval-gated path (never called directly by an agent) and only
+# when the backing service's own writes_enabled() opt-in flag is on; otherwise
+# it degrades to a safe refusal recorded as the step's output, never a silent
+# no-op. Anything not in this set is simulated, not executed.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
@@ -88,7 +88,7 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None):
         self.storage = storage
         self.governance = governance_service
         # v120: optional EventBusService — lets a run's completion/approval-halt/
@@ -110,6 +110,10 @@ class DurableWorkflowService:
         # Without it, that action type degrades to a safe simulated note, same as
         # any other collaborator-less path in this service.
         self.github = github
+        # v150 Autonomous Software Team: optional CodeWriterService — backs the
+        # write_code_change whitelisted action with a real (opt-in, allow-listed-
+        # repo, approval-gated) local git commit. Without it, degrades the same way.
+        self.code_writer = code_writer
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -230,9 +234,10 @@ class DurableWorkflowService:
 
     def _execute_action(self, run: dict, step: dict) -> str:
         """Perform a whitelisted effect and record it. create_task/create_note/
-        notify are local + reversible. create_github_issue is a real external
-        write when a GitHubConnectorService is wired and opted in — otherwise it
-        degrades to a safe simulated note (mock-safe by default)."""
+        notify are local + reversible. create_github_issue and write_code_change
+        are real external writes when their backing service is wired and opted
+        in — otherwise they degrade to a safe simulated note (mock-safe by
+        default)."""
         action_type = step.get("action_type") or ""
         params = step.get("action_params") or {}
         result: dict | None = None
@@ -246,6 +251,15 @@ class DurableWorkflowService:
                     result = {"issue": None, "degraded": True, "wrote": False, "note": str(exc)}
             else:
                 result = {"issue": None, "degraded": True, "wrote": False, "note": "No GitHub connector wired; simulated only."}
+        elif action_type == "write_code_change":
+            if self.code_writer is not None:
+                result = self.code_writer.write_and_commit(
+                    repo_path=params.get("repo_path", ""), file_path=params.get("file_path", ""),
+                    content=params.get("content", ""), commit_message=params.get("commit_message", ""),
+                    branch_name=params.get("branch_name") or None,
+                )
+            else:
+                result = {"wrote": False, "note": "No code writer wired; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
@@ -263,6 +277,10 @@ class DurableWorkflowService:
                 label = issue.get("url") or f"#{issue.get('number')}"
                 return f"[executed] create_github_issue: {label}"
             return f"[declined] create_github_issue: {(result or {}).get('note', 'unavailable')}"
+        if action_type == "write_code_change":
+            if result and result.get("wrote"):
+                return f"[executed] write_code_change: branch={result.get('branch')} sha={result.get('commit_sha', '')[:8]}"
+            return f"[declined] write_code_change: {(result or {}).get('note', 'unavailable')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 

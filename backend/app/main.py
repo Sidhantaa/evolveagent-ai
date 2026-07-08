@@ -45,6 +45,7 @@ from app.api.data_manager_routes import router as data_manager_router
 from app.api.code_intel_routes import router as code_intel_router
 from app.api.goals_routes import router as goals_router
 from app.api.github_connector_routes import router as github_connector_router
+from app.api.code_writer_routes import router as code_writer_router
 from app.api.app_builder_routes import router as app_builder_router
 from app.api.digital_twin_routes import router as digital_twin_router
 from app.api.doc_intel_routes import router as doc_intel_router
@@ -158,6 +159,7 @@ app.include_router(data_manager_router, prefix="/api")
 app.include_router(code_intel_router, prefix="/api")
 app.include_router(goals_router, prefix="/api")
 app.include_router(github_connector_router, prefix="/api")
+app.include_router(code_writer_router, prefix="/api")
 app.include_router(app_builder_router, prefix="/api")
 app.include_router(digital_twin_router, prefix="/api")
 app.include_router(doc_intel_router, prefix="/api")
