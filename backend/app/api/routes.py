@@ -343,6 +343,7 @@ from app.services.git_reader_service import GitReaderService
 from app.services.github_connector_service import GitHubConnectorService
 from app.services.mcp_github_adapter import MCPGitHubAdapter
 from app.services.repo_finder_service import RepoFinderService
+from app.services.code_writer_service import CodeWriterService
 from app.services.adaptive_learning_service import AdaptiveLearningService
 from app.services.home_dashboard_service import HomeDashboardService
 from app.services.global_search_service import GlobalSearchService
@@ -506,6 +507,11 @@ mcp_execution_service.github_adapter = MCPGitHubAdapter(github_connector_service
 # workflows now that it exists (it's constructed after durable_workflow_service),
 # backing the create_github_issue whitelisted effect with a real write.
 durable_workflow_service.github = github_connector_service
+# v150 Autonomous Software Team: wire the real (opt-in, allow-listed-repo,
+# approval-gated) code writer into durable workflows, backing the
+# write_code_change whitelisted effect with a real local git commit.
+code_writer_service = CodeWriterService(governance_service)
+durable_workflow_service.code_writer = code_writer_service
 repo_finder_service = RepoFinderService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
@@ -1261,6 +1267,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **design_agent_service.analytics_summary(),
         **git_reader_service.analytics_summary(),
         **github_connector_service.analytics_summary(),
+        **code_writer_service.analytics_summary(),
         **repo_finder_service.analytics_summary(),
         **memory_service.analytics_summary(),
         **agent_registry_service.analytics_summary(),

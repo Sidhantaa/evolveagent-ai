@@ -76,6 +76,9 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     # GitHub Connector (read-only, token-safe)
     ("github-connector", "GET", "/api/github/status", None, 200),
     ("github-connector", "GET", "/api/github/summary", None, 200),
+    # v150 Code Writer (Autonomous Software Team, opt-in, allow-list-gated)
+    ("code-writer", "GET", "/api/code-writer/status", None, 200),
+    ("code-writer", "GET", "/api/code-writer/summary", None, 200),
     # Adaptive Learning
     ("adaptive-learning", "GET", "/api/adaptive-learning/status", None, 200),
     ("adaptive-learning", "GET", "/api/adaptive-learning/summary", None, 200),
@@ -190,6 +193,41 @@ def flow_github_write_effect_declines_safely(base: str) -> tuple[bool, str]:
         f"{base}/api/durable-workflows/runs",
         data=json.dumps({"steps": [{"name": "file bug", "action_type": "create_github_issue",
                                      "action_params": {"repo": "owner/repo", "title": "smoke issue"}}]}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            if r.status != 200:
+                return False, f"start run -> {r.status}"
+            run = json.loads(r.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return False, f"start run failed: {exc}"
+    if run["status"] != "waiting_approval":
+        return False, f"expected waiting_approval, got {run['status']}"
+    req2 = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs/{run['run_id']}/approve",
+        data=json.dumps({"approved": True}).encode(),
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            final = json.loads(r.read().decode()) if r.status == 200 else {}
+    except Exception as exc:  # noqa: BLE001
+        return False, f"approve failed: {exc}"
+    ok = final.get("status") == "completed" and "declined" in final.get("steps", [{}])[0].get("output", "")
+    return ok, f"final status={final.get('status')}, output={final.get('steps', [{}])[0].get('output', '')[:60]}"
+
+
+def flow_code_write_effect_declines_safely(base: str) -> tuple[bool, str]:
+    """v150 write_code_change is always approval-gated; with writes disabled
+    (the smoke suite's default env) approving it must decline safely and still
+    complete the run — never crash, never silently pretend to have committed."""
+    req = urllib.request.Request(
+        f"{base}/api/durable-workflows/runs",
+        data=json.dumps({"steps": [{"name": "add helper", "action_type": "write_code_change",
+                                     "action_params": {"repo_path": "/tmp/smoke-nonexistent-repo",
+                                                        "file_path": "x.py", "content": "x = 1",
+                                                        "commit_message": "smoke"}}]}).encode(),
         headers={"Content-Type": "application/json"}, method="POST",
     )
     try:
@@ -435,6 +473,11 @@ def main() -> int:
 
     ok, detail = flow_custom_agent_mirrors_into_memory_v2(base)
     print(f"    {'✓' if ok else '✗'} custom agent mirrors into memory v2   {detail}")
+    passed += ok
+    failed += not ok
+
+    ok, detail = flow_code_write_effect_declines_safely(base)
+    print(f"    {'✓' if ok else '✗'} code write effect (declines safely)   {detail}")
     passed += ok
     failed += not ok
 
