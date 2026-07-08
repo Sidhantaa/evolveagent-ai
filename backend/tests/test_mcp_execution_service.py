@@ -160,3 +160,18 @@ def test_existing_endpoints_still_work():
     assert client.get("/api/mcp/summary").status_code == 200
     assert client.get("/api/operating-layer/dashboard").status_code == 200
     assert client.get("/api/governance").status_code == 200
+
+
+def test_request_payload_is_persisted_on_the_record():
+    """Regression: the payload a caller submits used to be validated at planning
+    time and then silently discarded — never stored, never passed to run_execution.
+    It must now round-trip onto the request record."""
+    connector = _connector("context7")
+    _enable(connector["connector_id"])
+    request = client.post(
+        f"/api/mcp/connectors/{connector['connector_id']}/execute",
+        json={"action_name": "fetch_library_docs", "payload": {"library": "fastapi", "limit": 5}},
+    ).json()
+    assert request["payload"] == {"library": "fastapi", "limit": "5"}
+    fetched = client.get(f"/api/mcp/executions/{request['request_id']}").json()
+    assert fetched["payload"]["library"] == "fastapi"
