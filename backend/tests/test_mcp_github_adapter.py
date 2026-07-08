@@ -118,11 +118,38 @@ def _github_connector_id() -> str:
     return connector["connector_id"]
 
 
-def _approved_request(connector_id: str, action_name: str) -> str:
-    request = client.post(f"/api/mcp/connectors/{connector_id}/execute", json={"action_name": action_name}).json()
+def _approved_request(connector_id: str, action_name: str, payload: dict | None = None) -> str:
+    body = {"action_name": action_name}
+    if payload is not None:
+        body["payload"] = payload
+    request = client.post(f"/api/mcp/connectors/{connector_id}/execute", json=body).json()
     if request["status"] == "pending_approval":
         client.post(f"/api/mcp/executions/{request['request_id']}/approve")
     return request["request_id"]
+
+
+def test_execution_flow_threads_the_payload_repo_to_the_real_adapter(monkeypatch):
+    """Regression: request_execution used to discard the caller's payload entirely,
+    so a parameterized real action (list_issues needs a repo) could never target
+    anything but the adapter's hardcoded default ("") even when fully opted-in
+    and approved — it would always degrade. The payload must now survive the
+    request -> approve -> run round trip."""
+    monkeypatch.setenv(OPT_IN_ENV, "1")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    from app.services.github_connector_service import GitHubConnectorService
+
+    def fake_get(self, path, params=None):
+        assert path == "/repos/acme/widgets/issues"
+        return [{"id": 1, "number": 9, "title": "real issue", "state": "open", "user": {"login": "octocat"}, "labels": []}]
+
+    monkeypatch.setattr(GitHubConnectorService, "_http_get", fake_get)
+    connector_id = _github_connector_id()
+    request_id = _approved_request(connector_id, "list_issues", {"repo": "acme/widgets"})
+    ran = client.post(f"/api/mcp/executions/{request_id}/run").json()
+    result = ran["result"]
+    assert result["success"] is True
+    assert result["output"]["issues"][0]["number"] == 9
 
 
 def test_execution_flow_uses_mock_when_github_adapter_disabled(monkeypatch):
