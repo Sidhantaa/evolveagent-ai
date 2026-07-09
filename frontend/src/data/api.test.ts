@@ -8,6 +8,12 @@ import {
   fetchSystemHealth,
   fetchStorageStatus,
   fetchWorkflowRuns,
+  fetchCodeChangeRuns,
+  fetchWorkflowRunDetail,
+  approveDurableWorkflowStep,
+  fetchWorkflowEffects,
+  fetchCodeWriterStatus,
+  fetchGitHubWriteStatus,
   addMemoryV2,
   searchMemoryV2,
   routeMessage,
@@ -156,6 +162,101 @@ describe('fetchWorkflowRuns', () => {
     });
     const r = await fetchWorkflowRuns();
     expect(r![0]).toMatchObject({ id: 'r1', done: 2, total: 3, status: 'waiting_approval' });
+  });
+});
+
+describe('v150 code-change workflow helpers', () => {
+  it('filters durable workflow runs to code-write and pull-request runs', async () => {
+    stubFetch({
+      '/api/durable-workflows/runs': {
+        runs: [
+          { run_id: 'r1', name: 'Code write', status: 'waiting_approval', cursor: 0, steps: [{ id: 's1', action_type: 'write_code_change', status: 'waiting_approval', action_params: { file_path: 'x.ts', content: 'ok' } }] },
+          { run_id: 'r2', name: 'Notify', status: 'completed', steps: [{ id: 's2', action_type: 'notify', status: 'done' }] },
+          { run_id: 'r3', name: 'Open PR', status: 'waiting_approval', steps: [{ id: 's3', action_type: 'open_pull_request', status: 'waiting_approval', action_params: { github_repo: 'manit/repo' } }] },
+        ],
+      },
+    });
+    const runs = await fetchCodeChangeRuns();
+    expect(runs!.map((run) => run.id)).toEqual(['r1', 'r3']);
+    expect(runs![0].steps[0]).toMatchObject({ id: 's1', actionType: 'write_code_change', status: 'waiting_approval' });
+  });
+
+  it('fetches one durable workflow run detail', async () => {
+    stubFetch({
+      '/api/durable-workflows/runs/r1': {
+        run_id: 'r1',
+        name: 'Code write',
+        status: 'waiting_approval',
+        steps: [{ id: 's1', action_type: 'write_code_change', status: 'waiting_approval', output: '' }],
+      },
+    });
+    const run = await fetchWorkflowRunDetail('r1');
+    expect(run).toMatchObject({ id: 'r1', name: 'Code write', status: 'waiting_approval' });
+    expect(run!.steps[0].actionType).toBe('write_code_change');
+  });
+
+  it('approves or rejects the current gated durable workflow step', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ run_id: 'r1', name: 'Code write', status: 'completed', steps: [{ id: 's1', status: 'done', action_type: 'write_code_change' }] }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const run = await approveDurableWorkflowStep('r1', true, 'looks good', 'tester');
+    expect(run).toMatchObject({ id: 'r1', status: 'completed' });
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/durable-workflows/runs/r1/approve');
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as any).body)).toMatchObject({
+      approved: true,
+      note: 'looks good',
+      approver: 'tester',
+    });
+  });
+
+  it('maps durable workflow effects for declined-safe output and PR links', async () => {
+    stubFetch({
+      '/api/durable-workflows/effects': {
+        effects: [
+          {
+            effect_id: 'e1',
+            run_id: 'r1',
+            step_id: 's1',
+            action_type: 'open_pull_request',
+            result: { pushed: true, wrote: true, pull_request: { url: 'https://github.com/x/y/pull/1', number: 1 } },
+            created_at: '2026-07-09T01:00:00Z',
+          },
+        ],
+      },
+    });
+    const effects = await fetchWorkflowEffects('r1');
+    expect(effects![0]).toMatchObject({ id: 'e1', actionType: 'open_pull_request' });
+    expect(effects![0].result.pull_request.url).toContain('/pull/1');
+  });
+
+  it('maps code-writer and GitHub write status without secret values', async () => {
+    stubFetch({
+      '/api/code-writer/status': {
+        available: true,
+        writes_enabled: false,
+        writes_opt_in_env: 'CODE_WRITES_ENABLED',
+        push_enabled: false,
+        push_opt_in_env: 'CODE_WRITER_PUSH_ENABLED',
+        allowed_repos_env: 'CODE_WRITER_ALLOWED_REPOS',
+        allowed_repos: [],
+        allowed_git_subcommands: ['add', 'commit'],
+        note: 'off by default',
+      },
+      '/api/github/status': {
+        available: true,
+        configured: true,
+        writes_enabled: false,
+        supported_writes: [],
+        note: 'safe',
+      },
+    });
+    const code = await fetchCodeWriterStatus();
+    const github = await fetchGitHubWriteStatus();
+    expect(code).toMatchObject({ writesEnabled: false, writesOptInEnv: 'CODE_WRITES_ENABLED' });
+    expect(github).toMatchObject({ configured: true, writesEnabled: false });
   });
 });
 
