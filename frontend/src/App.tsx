@@ -14,6 +14,7 @@ import { CommandModal } from './components/shared/CommandModal';
 import { HomeDashboard } from './pages/HomeDashboard';
 import { SimpleModeChat } from './pages/SimpleModeChat';
 import { DevModeConsole } from './pages/DevModeConsole';
+import { CodeChangesPage } from './pages/CodeChangesPage';
 import { MissionControl } from './pages/MissionControl';
 import { AgentsPage } from './pages/AgentsPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
@@ -40,6 +41,7 @@ const MainContent: React.FC = () => {
           {activePage === 'home' && <HomeDashboard />}
           {activePage === 'chat' && <SimpleModeChat />}
           {activePage === 'dev-console' && <DevModeConsole />}
+          {activePage === 'code-changes' && <CodeChangesPage />}
           {activePage === 'mission-control' && <MissionControl />}
           {activePage === 'agents' && <AgentsPage />}
           {activePage === 'approvals' && <ApprovalsPage />}
@@ -65,4 +67,3 @@ export default function App() {
     </AppProvider>
   );
 }
-

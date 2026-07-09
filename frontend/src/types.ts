@@ -2,6 +2,7 @@ export type PageId =
   | 'home'
   | 'chat'
   | 'dev-console'
+  | 'code-changes'
   | 'mission-control'
   | 'agents'
   | 'approvals'
