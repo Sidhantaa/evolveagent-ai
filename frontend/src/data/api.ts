@@ -441,6 +441,57 @@ export interface LiveWorkflowRun {
   total: number;
 }
 
+export interface DurableWorkflowStep {
+  id: string;
+  name: string;
+  actionType: string;
+  actionParams: Record<string, any>;
+  status: string;
+  output: string;
+  requiresApproval: boolean;
+  approvers: string[];
+  approvalProgress: any | null;
+}
+
+export interface DurableWorkflowRunDetail {
+  id: string;
+  name: string;
+  status: string;
+  cursor: number;
+  updatedAt: string;
+  steps: DurableWorkflowStep[];
+}
+
+export interface DurableWorkflowEffect {
+  id: string;
+  runId: string;
+  stepId: string;
+  actionType: string;
+  params: Record<string, any>;
+  result: Record<string, any>;
+  createdAt: string;
+}
+
+export interface CodeWriterStatus {
+  available: boolean;
+  writesEnabled: boolean;
+  writesOptInEnv: string;
+  pushEnabled: boolean;
+  pushOptInEnv: string;
+  allowedReposEnv: string;
+  allowedRepos: string[];
+  allowedGitSubcommands: string[];
+  note: string;
+}
+
+export interface GitHubWriteStatus {
+  available: boolean;
+  configured: boolean;
+  writesEnabled: boolean;
+  supportedWrites: string[];
+  note: string;
+}
+
 /** Start a REAL durable-workflow run. Risky/action steps stay approval-gated by the backend. */
 export async function startDurableRun(name: string, steps: any[]): Promise<boolean> {
   const d = await postJson<any>('/api/durable-workflows/runs', { name, steps });
@@ -457,6 +508,103 @@ export async function fetchWorkflowRuns(): Promise<LiveWorkflowRun[] | null> {
     done: (r.steps || []).filter((s: any) => s.status === 'done' || s.status === 'skipped').length,
     total: (r.steps || []).length,
   }));
+}
+
+function mapDurableStep(s: any): DurableWorkflowStep {
+  return {
+    id: s.id || '',
+    name: s.name || s.action_type || 'Step',
+    actionType: s.action_type || '',
+    actionParams: s.action_params && typeof s.action_params === 'object' ? s.action_params : {},
+    status: s.status || 'pending',
+    output: s.output || '',
+    requiresApproval: Boolean(s.requires_approval),
+    approvers: Array.isArray(s.approvers) ? s.approvers : [],
+    approvalProgress: s.approval_progress || null,
+  };
+}
+
+function mapDurableRun(r: any): DurableWorkflowRunDetail {
+  return {
+    id: r.run_id || r.id || '',
+    name: r.name || 'Workflow',
+    status: r.status || 'unknown',
+    cursor: Number(r.cursor ?? 0),
+    updatedAt: r.updated_at || r.created_at || '',
+    steps: Array.isArray(r.steps) ? r.steps.map(mapDurableStep) : [],
+  };
+}
+
+export async function fetchCodeChangeRuns(): Promise<DurableWorkflowRunDetail[] | null> {
+  const data = await getJson<{ runs: any[] }>('/api/durable-workflows/runs');
+  if (!data?.runs) return null;
+  return data.runs
+    .map(mapDurableRun)
+    .filter((run) => run.steps.some((step) => step.actionType === 'write_code_change' || step.actionType === 'open_pull_request'));
+}
+
+export async function fetchWorkflowRunDetail(runId: string): Promise<DurableWorkflowRunDetail | null> {
+  const data = await getJson<any>(`/api/durable-workflows/runs/${encodeURIComponent(runId)}`);
+  if (!data) return null;
+  return mapDurableRun(data);
+}
+
+export async function approveDurableWorkflowStep(
+  runId: string,
+  approved: boolean,
+  note = '',
+  approver = 'EvolveAgent UI',
+): Promise<DurableWorkflowRunDetail | null> {
+  const data = await postJson<any>(`/api/durable-workflows/runs/${encodeURIComponent(runId)}/approve`, {
+    approved,
+    note,
+    approver,
+  });
+  if (!data) return null;
+  return mapDurableRun(data);
+}
+
+export async function fetchWorkflowEffects(runId: string): Promise<DurableWorkflowEffect[] | null> {
+  const data = await getJson<any>(`/api/durable-workflows/effects?run_id=${encodeURIComponent(runId)}&limit=50`);
+  const raw = Array.isArray(data?.effects) ? data.effects : [];
+  if (!data || !Array.isArray(raw)) return null;
+  return raw.map((e: any): DurableWorkflowEffect => ({
+    id: e.effect_id || e.id || '',
+    runId: e.run_id || '',
+    stepId: e.step_id || '',
+    actionType: e.action_type || '',
+    params: e.params && typeof e.params === 'object' ? e.params : {},
+    result: e.result && typeof e.result === 'object' ? e.result : {},
+    createdAt: e.created_at || '',
+  }));
+}
+
+export async function fetchCodeWriterStatus(): Promise<CodeWriterStatus | null> {
+  const data = await getJson<any>('/api/code-writer/status');
+  if (!data) return null;
+  return {
+    available: Boolean(data.available),
+    writesEnabled: Boolean(data.writes_enabled),
+    writesOptInEnv: data.writes_opt_in_env || 'CODE_WRITES_ENABLED',
+    pushEnabled: Boolean(data.push_enabled),
+    pushOptInEnv: data.push_opt_in_env || 'CODE_WRITER_PUSH_ENABLED',
+    allowedReposEnv: data.allowed_repos_env || 'CODE_WRITER_ALLOWED_REPOS',
+    allowedRepos: Array.isArray(data.allowed_repos) ? data.allowed_repos.map(String) : [],
+    allowedGitSubcommands: Array.isArray(data.allowed_git_subcommands) ? data.allowed_git_subcommands.map(String) : [],
+    note: data.note || '',
+  };
+}
+
+export async function fetchGitHubWriteStatus(): Promise<GitHubWriteStatus | null> {
+  const data = await getJson<any>('/api/github/status');
+  if (!data) return null;
+  return {
+    available: Boolean(data.available ?? true),
+    configured: Boolean(data.configured ?? data.token_configured ?? data.key_configured),
+    writesEnabled: Boolean(data.writes_enabled),
+    supportedWrites: Array.isArray(data.supported_writes) ? data.supported_writes.map(String) : [],
+    note: data.note || '',
+  };
 }
 
 export async function fetchSystemHealth(): Promise<SystemHealth | null> {
