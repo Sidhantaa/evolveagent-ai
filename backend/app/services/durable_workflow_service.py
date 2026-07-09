@@ -13,12 +13,12 @@ RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post",
 # Whitelisted effects a step may actually perform (once approved). These are
 # either internal/local/reversible (create_task, create_note, notify — write only
 # to the app's own effect store, never any external service) or a single real
-# external write (create_github_issue, write_code_change) — but ONLY reachable
-# through this approval-gated path (never called directly by an agent) and only
-# when the backing service's own writes_enabled() opt-in flag is on; otherwise
-# it degrades to a safe refusal recorded as the step's output, never a silent
-# no-op. Anything not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change"}
+# external write (create_github_issue, write_code_change, open_pull_request) —
+# but ONLY reachable through this approval-gated path (never called directly by
+# an agent) and only when the backing service's own opt-in flag(s) are on;
+# otherwise it degrades to a safe refusal recorded as the step's output, never
+# a silent no-op. Anything not in this set is simulated, not executed.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
@@ -260,6 +260,31 @@ class DurableWorkflowService:
                 )
             else:
                 result = {"wrote": False, "note": "No code writer wired; simulated only."}
+        elif action_type == "open_pull_request":
+            # v150 task 2: a SEPARATE approved step from write_code_change — this
+            # is the escalation from "local commit" to "visible to others", so it
+            # gets its own gate. Pushes the branch first (its own opt-in on top of
+            # code writes), and only opens a real PR if the push actually succeeded.
+            if self.code_writer is not None and self.github is not None:
+                push_result = self.code_writer.push_branch(
+                    repo_path=params.get("repo_path", ""), branch_name=params.get("branch_name", ""),
+                )
+                if push_result.get("pushed"):
+                    try:
+                        pr_result = self.github.create_pull_request(
+                            repo=params.get("github_repo", ""), title=params.get("title", ""),
+                            head=params.get("branch_name", ""), base=params.get("base", "main"),
+                            body=params.get("body", ""),
+                        )
+                    except ValueError as exc:
+                        pr_result = {"pull_request": None, "degraded": True, "wrote": False, "note": str(exc)}
+                    result = {"pushed": True, **pr_result}
+                else:
+                    result = {"pushed": False, "pull_request": None, "wrote": False,
+                               "note": push_result.get("note", "push declined")}
+            else:
+                result = {"pushed": False, "pull_request": None, "wrote": False,
+                           "note": "No code writer or GitHub connector wired; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
@@ -281,6 +306,12 @@ class DurableWorkflowService:
             if result and result.get("wrote"):
                 return f"[executed] write_code_change: branch={result.get('branch')} sha={result.get('commit_sha', '')[:8]}"
             return f"[declined] write_code_change: {(result or {}).get('note', 'unavailable')}"
+        if action_type == "open_pull_request":
+            if result and result.get("wrote"):
+                pr = result.get("pull_request") or {}
+                label = pr.get("url") or f"#{pr.get('number')}"
+                return f"[executed] open_pull_request: {label}"
+            return f"[declined] open_pull_request: {(result or {}).get('note', 'unavailable')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 

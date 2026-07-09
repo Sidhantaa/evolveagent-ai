@@ -82,9 +82,9 @@ class GitHubConnectorService:
             "writes_enabled": writes_enabled,
             "writes_opt_in_env": WRITES_OPT_IN_ENV,
             "supported_reads": ["repos", "issues", "pull_requests"],
-            "supported_writes": ["create_issue"] if writes_enabled else [],
+            "supported_writes": ["create_issue", "create_pull_request"] if writes_enabled else [],
             "note": "Uses GITHUB_TOKEN for GitHub API calls. Token value is never returned. "
-                    "Writes (create_issue) are opt-in and only ever reachable through an "
+                    "Writes (create_issue, create_pull_request) are opt-in and only ever reachable through an "
                     "approved durable-workflow step.",
         }
 
@@ -258,6 +258,41 @@ class GitHubConnectorService:
             self._log("github_write_failed", f"GitHub issue creation failed for {repo} ({type(exc).__name__})", blocked=True, write=True)
             return {"issue": None, "degraded": True, "wrote": False, "repo": repo,
                     "note": f"GitHub issue creation failed ({type(exc).__name__})."}
+
+    def create_pull_request(self, repo: str, title: str, head: str, base: str = "main", body: str = "") -> dict:
+        """The connector's second real write — same opt-in/token gating and
+        degrade-safe contract as create_issue. Never called directly by an
+        agent — only reachable via an approved DurableWorkflowService step, and
+        only after that step has already pushed `head` for real (v150 task 2)."""
+        repo = self._validate_repo(repo)
+        title = str(title or "").strip()[:250]
+        if not title:
+            raise ValueError("title is required to open a pull request")
+        head = str(head or "").strip()[:250]
+        if not head:
+            raise ValueError("head branch is required to open a pull request")
+        base = str(base or "main").strip()[:250]
+        body = str(body or "")[:5000]
+
+        if not self.writes_enabled():
+            self._log("github_write_declined", f"create_pull_request for {repo} declined: {WRITES_OPT_IN_ENV} is not enabled", blocked=True, write=True)
+            return {"pull_request": None, "degraded": True, "wrote": False, "repo": repo,
+                    "note": f"GitHub writes are disabled. Set {WRITES_OPT_IN_ENV}=true to enable."}
+        if not self._token():
+            self._log("github_write_declined", f"create_pull_request for {repo} declined: no token configured", blocked=True, write=True)
+            return {"pull_request": None, "degraded": True, "wrote": False, "repo": repo,
+                    "note": "GITHUB_TOKEN is not configured. Add a token to enable pull request creation."}
+
+        try:
+            payload = {"title": title, "head": head, "base": base, "body": body}
+            item = self._http_post(f"/repos/{repo}/pulls", payload)
+            pull = self._map_pull(item)
+            self._log("github_pull_request_created", f"Opened GitHub PR #{pull.get('number')} in {repo}: {title}", write=True)
+            return {"pull_request": pull, "degraded": False, "wrote": True, "repo": repo, "note": ""}
+        except Exception as exc:  # noqa: BLE001 - degrade, never crash
+            self._log("github_write_failed", f"GitHub PR creation failed for {repo} ({type(exc).__name__})", blocked=True, write=True)
+            return {"pull_request": None, "degraded": True, "wrote": False, "repo": repo,
+                    "note": f"GitHub PR creation failed ({type(exc).__name__})."}
 
     def analytics_summary(self) -> dict:
         events = self.storage.read_list("governance_log.json")
