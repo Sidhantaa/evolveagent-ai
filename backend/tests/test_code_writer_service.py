@@ -234,3 +234,88 @@ def test_branch_name_sanitization_strips_leading_dashes():
     assert CodeWriterService._safe_branch_name("feature/normal") == "feature/normal"
     assert CodeWriterService._safe_branch_name("").startswith("eva/auto-")
     assert CodeWriterService._safe_branch_name("---").startswith("eva/auto-")
+
+
+# ------------------------------------------------------------------
+# v150 task 3 — write_files_and_commit: the same write_and_commit contract for
+# a change spanning several related files in ONE commit.
+# ------------------------------------------------------------------
+def test_multi_file_declines_by_default_when_writes_disabled(tmp_path, monkeypatch):
+    monkeypatch.delenv("CODE_WRITES_ENABLED", raising=False)
+    repo = _init_repo(tmp_path / "repo")
+    svc = _service(tmp_path)
+    result = svc.write_files_and_commit(repo, [{"file_path": "a.py", "content": "a"}], "msg")
+    assert result["wrote"] is False
+    assert "CODE_WRITES_ENABLED" in result["note"]
+
+
+def test_multi_file_real_commit_writes_every_file(tmp_path, monkeypatch):
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+
+    files = [
+        {"file_path": "src/a.py", "content": "a = 1\n"},
+        {"file_path": "src/b.py", "content": "b = 2\n"},
+        {"file_path": "docs/notes.md", "content": "# notes\n"},
+    ]
+    result = svc.write_files_and_commit(repo, files, "add a/b/notes", branch_name="feature/multi")
+    assert result["wrote"] is True
+    assert result["branch"] == "feature/multi"
+    assert set(result["file_paths"]) == {"src/a.py", "src/b.py", "docs/notes.md"}
+
+    assert (tmp_path / "repo" / "src" / "a.py").read_text() == "a = 1\n"
+    assert (tmp_path / "repo" / "src" / "b.py").read_text() == "b = 2\n"
+    assert (tmp_path / "repo" / "docs" / "notes.md").read_text() == "# notes\n"
+
+    # All three files landed in the SAME single commit.
+    log = subprocess.run(["git", "-C", repo, "show", "--stat", "--oneline", "-1"], capture_output=True, text=True, check=True).stdout
+    assert "3 files changed" in log
+
+
+def test_multi_file_requires_at_least_one_file(tmp_path, monkeypatch):
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    result = svc.write_files_and_commit(repo, [], "msg")
+    assert result["wrote"] is False
+    assert "At least one file" in result["note"]
+
+
+def test_multi_file_rejects_too_many_files(tmp_path, monkeypatch):
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    files = [{"file_path": f"f{i}.txt", "content": "x"} for i in range(11)]
+    result = svc.write_files_and_commit(repo, files, "msg")
+    assert result["wrote"] is False
+    assert "Too many files" in result["note"]
+
+
+def test_multi_file_rejects_path_traversal_in_any_file(tmp_path, monkeypatch):
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    files = [{"file_path": "safe.txt", "content": "ok"}, {"file_path": "../../etc/passwd", "content": "evil"}]
+    result = svc.write_files_and_commit(repo, files, "msg")
+    assert result["wrote"] is False
+    assert "inside the repo" in result["note"]
+    # Nothing was written — not even the safe file from before the bad one.
+    assert not (tmp_path / "repo" / "safe.txt").exists()
+    branches = subprocess.run(["git", "-C", repo, "branch"], capture_output=True, text=True, check=True).stdout
+    assert len(branches.strip().splitlines()) == 1
+
+
+def test_multi_file_rejects_combined_content_over_the_limit(tmp_path, monkeypatch):
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    files = [{"file_path": "big1.txt", "content": "x" * 150_000}, {"file_path": "big2.txt", "content": "y" * 150_000}]
+    result = svc.write_files_and_commit(repo, files, "msg")
+    assert result["wrote"] is False
+    assert "limit" in result["note"]

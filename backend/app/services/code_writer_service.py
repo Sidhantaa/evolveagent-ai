@@ -26,6 +26,7 @@ _ALLOWED = {"checkout", "add", "commit", "rev-parse", "push"}
 _TIMEOUT = 10
 _PUSH_TIMEOUT = 30
 _MAX_CONTENT_BYTES = 200_000
+_MAX_FILES = 10
 
 
 class CodeWriterService:
@@ -44,6 +45,8 @@ class CodeWriterService:
       agent can never unsupervisedly modify the app that is running it.
     * write_and_commit writes exactly ONE file, always on a brand-new branch
       (never touches an existing branch), then makes exactly ONE commit.
+      write_files_and_commit (v150 task 3) is the same contract for a change
+      spanning several related files (capped at _MAX_FILES) in ONE commit.
     * push_branch (v150 task 2) is a bigger escalation — a human-approved local
       commit becoming visible to others — so it is gated by its OWN opt-in flag
       (CODE_WRITER_PUSH_ENABLED) on top of writes_enabled(). It only ever pushes
@@ -179,6 +182,85 @@ class CodeWriterService:
         return {
             "wrote": True, "repo": repo, "branch": branch_name, "commit_sha": sha,
             "file_path": os.path.relpath(target, repo), "commit_message": commit_message,
+            "note": "Committed locally on a new branch. Not pushed — a human decides whether to push it.",
+        }
+
+    def write_files_and_commit(
+        self, repo_path: str, files: list[dict], commit_message: str, branch_name: str | None = None,
+    ) -> dict:
+        """v150 task 3 — like write_and_commit, but for a change that spans
+        several related files in ONE commit. `files` is a list of
+        {"file_path": ..., "content": ...} dicts (up to _MAX_FILES). Same
+        safety rules as write_and_commit (allow-listed repo, every path must
+        resolve inside the repo, combined content is size-capped), plus a cap
+        on file count. Never called directly by an agent — only reachable via
+        an approved DurableWorkflowService step."""
+        if not self.writes_enabled():
+            self._log("code_write_declined", f"write_files_and_commit declined: {WRITES_OPT_IN_ENV} is not enabled", blocked=True)
+            return {"wrote": False, "note": f"Code writes are disabled. Set {WRITES_OPT_IN_ENV}=true to enable."}
+
+        repo = os.path.realpath(os.path.expanduser(str(repo_path or "")))
+        if repo not in self._allowed_repos():
+            self._log("code_write_declined", f"write_files_and_commit declined: {repo} is not on the allow-list", blocked=True)
+            return {"wrote": False, "note": f"Repo is not on the allow-list. Add it to {ALLOWED_REPOS_ENV}."}
+        if not os.path.isdir(repo):
+            return {"wrote": False, "note": "Repo path is not a directory."}
+
+        if not files:
+            return {"wrote": False, "note": "At least one file is required."}
+        if len(files) > _MAX_FILES:
+            return {"wrote": False, "note": f"Too many files (max {_MAX_FILES} per commit)."}
+
+        resolved: list[tuple[str, str]] = []
+        total_bytes = 0
+        for item in files:
+            file_path = str((item or {}).get("file_path") or "")
+            content = str((item or {}).get("content") or "")
+            target = os.path.realpath(os.path.join(repo, file_path.lstrip("/")))
+            if not target.startswith(repo + os.sep):
+                self._log("code_write_declined", f"write_files_and_commit declined: path traversal attempt ({file_path})", blocked=True)
+                return {"wrote": False, "note": "Every file_path must resolve inside the repo."}
+            total_bytes += len(content.encode("utf-8"))
+            resolved.append((target, content))
+        if total_bytes > _MAX_CONTENT_BYTES:
+            return {"wrote": False, "note": f"combined content exceeds the {_MAX_CONTENT_BYTES}-byte limit."}
+
+        commit_message = str(commit_message or "").strip()[:300] or "EvolveAgent: automated code change"
+        branch_name = self._safe_branch_name(branch_name)
+
+        try:
+            original_branch = self._run(repo, ["rev-parse", "--abbrev-ref", "HEAD"]).strip()
+        except ValueError as exc:
+            self._log("code_write_failed", f"write_files_and_commit could not read current branch in {repo}: {exc}", blocked=True)
+            return {"wrote": False, "note": str(exc)}
+
+        try:
+            self._run(repo, ["checkout", "-b", branch_name])
+            written_paths = []
+            for target, content in resolved:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "w", encoding="utf-8") as f:
+                    f.write(content)
+                rel = os.path.relpath(target, repo)
+                self._run(repo, ["add", rel])
+                written_paths.append(rel)
+            self._run(repo, ["commit", "-m", commit_message])
+            sha = self._run(repo, ["rev-parse", "HEAD"]).strip()
+        except (ValueError, OSError) as exc:
+            try:
+                self._run(repo, ["checkout", original_branch])
+            except ValueError:
+                pass  # best-effort — the failure note below is what matters
+            self._log("code_write_failed", f"write_files_and_commit failed for {repo}: {exc}", blocked=True)
+            return {"wrote": False, "note": str(exc)}
+
+        self._log(
+            "code_write_committed",
+            f"Committed a {len(written_paths)}-file code change to {branch_name} in {os.path.basename(repo)}: {commit_message}",
+        )
+        return {
+            "wrote": True, "repo": repo, "branch": branch_name, "commit_sha": sha,
+            "file_paths": written_paths, "commit_message": commit_message,
             "note": "Committed locally on a new branch. Not pushed — a human decides whether to push it.",
         }
 

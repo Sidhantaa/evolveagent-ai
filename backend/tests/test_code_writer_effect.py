@@ -131,3 +131,58 @@ def test_end_to_end_via_api(tmp_path, monkeypatch):
     finished = client.post(f"/api/durable-workflows/runs/{run['run_id']}/approve", json={"approved": True}).json()
     assert finished["status"] == "completed"
     assert "declined" in finished["steps"][0]["output"]  # writes disabled by default in the live app
+
+
+# ------------------------------------------------------------------
+# v150 task 3 — a write_code_change step can propose a change spanning several
+# files by passing a JSON-encoded "files" array in action_params (required,
+# since action_params values are always plain strings by the time a step
+# definition reaches this service).
+# ------------------------------------------------------------------
+def _multi_file_step(repo: str):
+    import json
+    files = [
+        {"file_path": "src/a.py", "content": "a = 1\n"},
+        {"file_path": "src/b.py", "content": "b = 2\n"},
+    ]
+    return {"name": "add a/b", "action_type": "write_code_change",
+            "action_params": {"repo_path": repo, "files": json.dumps(files), "commit_message": "add a and b"}}
+
+
+def test_multi_file_step_dispatches_to_write_files_and_commit(tmp_path, monkeypatch):
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    s = StorageService(data_dir=str(tmp_path / "data"))
+    g = GovernanceService(s)
+    code_writer = CodeWriterService(g)
+    workflows = DurableWorkflowService(s, g, code_writer=code_writer)
+    definition = workflows.create_definition({"name": "MultiFile", "steps": [_multi_file_step(repo)]})
+    run = workflows.start_run({"definition_id": definition["definition_id"]})
+    finished = workflows.approve_step(run["run_id"], approved=True)
+    assert finished["status"] == "completed"
+    assert "files=2" in finished["steps"][0]["output"]
+    effects = workflows.effects(run["run_id"])["effects"]
+    assert set(effects[0]["result"]["file_paths"]) == {"src/a.py", "src/b.py"}
+    assert (tmp_path / "repo" / "src" / "a.py").read_text() == "a = 1\n"
+    assert (tmp_path / "repo" / "src" / "b.py").read_text() == "b = 2\n"
+
+
+def test_malformed_files_json_falls_back_to_single_file_path_gracefully(tmp_path, monkeypatch):
+    """A malformed "files" value must never crash the workflow engine — it
+    falls back to the single-file path, which then declines cleanly since
+    file_path/content are absent."""
+    repo = _init_repo(tmp_path / "repo")
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    s = StorageService(data_dir=str(tmp_path / "data"))
+    g = GovernanceService(s)
+    code_writer = CodeWriterService(g)
+    workflows = DurableWorkflowService(s, g, code_writer=code_writer)
+    step = {"name": "bad json", "action_type": "write_code_change",
+            "action_params": {"repo_path": repo, "files": "not valid json", "commit_message": "x"}}
+    definition = workflows.create_definition({"name": "BadJson", "steps": [step]})
+    run = workflows.start_run({"definition_id": definition["definition_id"]})
+    finished = workflows.approve_step(run["run_id"], approved=True)
+    assert finished["status"] == "completed"  # never crashes
+    assert "declined" in finished["steps"][0]["output"]
