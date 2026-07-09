@@ -9,16 +9,22 @@ from app.models.response_models import GovernanceEvent
 from app.services.governance_service import GovernanceService
 
 WRITES_OPT_IN_ENV = "CODE_WRITES_ENABLED"
+PUSH_OPT_IN_ENV = "CODE_WRITER_PUSH_ENABLED"
 ALLOWED_REPOS_ENV = "CODE_WRITER_ALLOWED_REPOS"  # comma-separated absolute repo paths
 
-# Only these git subcommands may ever run, and only in this narrow sequence
-# (read the current branch, create ONE new branch, stage ONE file, commit —
-# with a best-effort checkout back to the original branch on any failure). No
-# push, no reset, no rm, no clean, no force anything. Always an argv list,
-# never a shell string — mirrors GitReaderService's safety architecture,
-# applied to a deliberately narrow set of writes instead of reads.
-_ALLOWED = {"checkout", "add", "commit", "rev-parse"}
+# Only these git subcommands may ever run. checkout/add/commit/rev-parse back
+# write_and_commit's narrow local-only sequence (read the current branch,
+# create ONE new branch, stage ONE file, commit — with a best-effort checkout
+# back to the original branch on any failure). push (v150 task 2) backs
+# push_branch's own, separately-gated escalation: `git push origin <branch>`
+# only, always to the "origin" remote the repo already has configured — never
+# a remote URL supplied by a caller. No reset, no rm, no clean, no force
+# anything, no arbitrary remote. Always an argv list, never a shell string —
+# mirrors GitReaderService's safety architecture, applied to a deliberately
+# narrow set of writes instead of reads.
+_ALLOWED = {"checkout", "add", "commit", "rev-parse", "push"}
 _TIMEOUT = 10
+_PUSH_TIMEOUT = 30
 _MAX_CONTENT_BYTES = 200_000
 
 
@@ -36,9 +42,17 @@ class CodeWriterService:
       directory, and critically the app's own live source tree is never
       included unless an operator explicitly opts it in, so a code-writing
       agent can never unsupervisedly modify the app that is running it.
-    * Writes exactly ONE file, always on a brand-new branch (never touches an
-      existing branch), then makes exactly ONE commit. No push, no PR, no
-      merge — a human decides whether to push the resulting local branch.
+    * write_and_commit writes exactly ONE file, always on a brand-new branch
+      (never touches an existing branch), then makes exactly ONE commit.
+    * push_branch (v150 task 2) is a bigger escalation — a human-approved local
+      commit becoming visible to others — so it is gated by its OWN opt-in flag
+      (CODE_WRITER_PUSH_ENABLED) on top of writes_enabled(). It only ever pushes
+      to the repo's existing "origin" remote (never a caller-supplied URL), and
+      never handles or stores push credentials — whatever the repo's own git
+      config already uses (SSH key, credential helper) is what applies. Even
+      with push enabled, this service never opens a PR itself; that's
+      GitHubConnectorService.create_pull_request's job, orchestrated by a
+      separate, separately-approved workflow step (open_pull_request).
     * Any failure mid-sequence best-effort checks the repo back out onto its
       original branch, so a partial failure never leaves the repo stranded on
       a half-finished branch.
@@ -50,6 +64,10 @@ class CodeWriterService:
     @staticmethod
     def writes_enabled() -> bool:
         return str(os.environ.get(WRITES_OPT_IN_ENV, "")).strip().lower() in ("1", "true", "yes", "on")
+
+    @staticmethod
+    def push_enabled() -> bool:
+        return str(os.environ.get(PUSH_OPT_IN_ENV, "")).strip().lower() in ("1", "true", "yes", "on")
 
     @staticmethod
     def _allowed_repos() -> list[str]:
@@ -66,13 +84,22 @@ class CodeWriterService:
             )
         )
 
-    def _run(self, repo: str, args: list[str]) -> str:
+    @staticmethod
+    def _safe_branch_name(branch_name: str | None) -> str:
+        """Sanitize a caller-supplied branch name for argv use. Beyond the
+        character allow-list, a name starting with "-" could otherwise be
+        misread as a git flag (e.g. "--force") rather than a ref — strip any
+        leading dashes/dots so it can never be mistaken for one."""
+        cleaned = re.sub(r"[^a-zA-Z0-9/_.-]", "-", str(branch_name or "")).lstrip("-.")[:120]
+        return cleaned or f"eva/auto-{uuid4().hex[:10]}"
+
+    def _run(self, repo: str, args: list[str], timeout: int = _TIMEOUT) -> str:
         if not args or args[0] not in _ALLOWED:
             raise ValueError("git subcommand not allowed")
         try:
             result = subprocess.run(
                 ["git", "-C", repo, *args],
-                capture_output=True, text=True, timeout=_TIMEOUT, check=False, shell=False,
+                capture_output=True, text=True, timeout=timeout, check=False, shell=False,
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
             raise ValueError(f"git write failed: {type(exc).__name__}")
@@ -82,16 +109,21 @@ class CodeWriterService:
 
     def status(self) -> dict:
         writes_enabled = self.writes_enabled()
+        push_enabled = self.push_enabled()
         return {
             "available": True,
             "writes_enabled": writes_enabled,
             "writes_opt_in_env": WRITES_OPT_IN_ENV,
+            "push_enabled": push_enabled,
+            "push_opt_in_env": PUSH_OPT_IN_ENV,
             "allowed_repos_env": ALLOWED_REPOS_ENV,
             "allowed_repos": self._allowed_repos() if writes_enabled else [],
             "allowed_git_subcommands": sorted(_ALLOWED),
-            "note": "Writes exactly one file per call, always on a brand-new branch, then makes one local "
-                    "commit. Never pushes, never opens a PR — a human decides whether to push it. Off by "
-                    "default; the target repo must be explicitly allow-listed.",
+            "note": "write_and_commit writes exactly one file per call, always on a brand-new branch, then "
+                    "makes one local commit. push_branch (a separate opt-in on top of writes_enabled) pushes "
+                    "that branch to the repo's existing origin remote only. This service never opens a PR "
+                    "itself — that's a separate, separately-approved step. Off by default; the target repo "
+                    "must be explicitly allow-listed.",
         }
 
     def write_and_commit(
@@ -119,7 +151,7 @@ class CodeWriterService:
         if len(content.encode("utf-8")) > _MAX_CONTENT_BYTES:
             return {"wrote": False, "note": f"content exceeds the {_MAX_CONTENT_BYTES}-byte limit."}
         commit_message = str(commit_message or "").strip()[:300] or "EvolveAgent: automated code change"
-        branch_name = re.sub(r"[^a-zA-Z0-9/_.-]", "-", str(branch_name or f"eva/auto-{uuid4().hex[:10]}"))[:120]
+        branch_name = self._safe_branch_name(branch_name)
 
         try:
             original_branch = self._run(repo, ["rev-parse", "--abbrev-ref", "HEAD"]).strip()
@@ -150,5 +182,39 @@ class CodeWriterService:
             "note": "Committed locally on a new branch. Not pushed — a human decides whether to push it.",
         }
 
+    def push_branch(self, repo_path: str, branch_name: str) -> dict:
+        """v150 task 2 — push a branch that write_and_commit already created
+        locally, to the repo's existing "origin" remote only (never a caller-
+        supplied URL). A bigger escalation than a local commit, so it is gated
+        by its OWN opt-in flag (CODE_WRITER_PUSH_ENABLED) on top of
+        writes_enabled() and the same repo allow-list. Never called directly by
+        an agent — only reachable via an approved DurableWorkflowService step.
+        Whatever push credentials are configured for the repo's own git remote
+        (SSH key, credential helper, ...) are what's used — this service never
+        handles or stores push credentials itself."""
+        if not self.writes_enabled():
+            self._log("code_push_declined", f"push_branch declined: {WRITES_OPT_IN_ENV} is not enabled", blocked=True)
+            return {"pushed": False, "note": f"Code writes are disabled. Set {WRITES_OPT_IN_ENV}=true to enable."}
+        if not self.push_enabled():
+            self._log("code_push_declined", f"push_branch declined: {PUSH_OPT_IN_ENV} is not enabled", blocked=True)
+            return {"pushed": False, "note": f"Pushing is disabled. Set {PUSH_OPT_IN_ENV}=true to enable."}
+
+        repo = os.path.realpath(os.path.expanduser(str(repo_path or "")))
+        if repo not in self._allowed_repos():
+            self._log("code_push_declined", f"push_branch declined: {repo} is not on the allow-list", blocked=True)
+            return {"pushed": False, "note": f"Repo is not on the allow-list. Add it to {ALLOWED_REPOS_ENV}."}
+        if not os.path.isdir(repo):
+            return {"pushed": False, "note": "Repo path is not a directory."}
+
+        branch_name = self._safe_branch_name(branch_name)
+        try:
+            self._run(repo, ["push", "origin", branch_name], timeout=_PUSH_TIMEOUT)
+        except ValueError as exc:
+            self._log("code_push_failed", f"push_branch failed for {branch_name} in {repo}: {exc}", blocked=True)
+            return {"pushed": False, "note": str(exc)}
+
+        self._log("code_push_succeeded", f"Pushed {branch_name} to origin in {os.path.basename(repo)}")
+        return {"pushed": True, "repo": repo, "branch": branch_name, "note": "Pushed to origin."}
+
     def analytics_summary(self) -> dict:
-        return {"code_writer_writes_enabled": self.writes_enabled()}
+        return {"code_writer_writes_enabled": self.writes_enabled(), "code_writer_push_enabled": self.push_enabled()}

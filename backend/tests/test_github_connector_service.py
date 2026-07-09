@@ -242,3 +242,94 @@ def test_create_issue_network_failure_degrades(monkeypatch, tmp_path):
     assert result["wrote"] is False
     assert result["degraded"] is True
     assert "TimeoutError" in result["note"]
+
+
+# ------------------------------------------------------------------
+# v150 task 2 — the connector's second real write: create_pull_request (same
+# opt-in/token gating as create_issue; never called directly by an agent).
+# ------------------------------------------------------------------
+def test_create_pull_request_declines_without_token(monkeypatch, tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.delenv("GH_TOKEN", raising=False)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    result = svc.create_pull_request("owner/repo", "Add helper", head="feature/helper")
+    assert result["wrote"] is False
+    assert result["degraded"] is True
+    assert "GITHUB_TOKEN" in result["note"]
+
+
+def test_create_pull_request_requires_a_title_and_head(tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    try:
+        svc.create_pull_request("owner/repo", "   ", head="feature/x")
+        assert False, "expected ValueError for missing title"
+    except ValueError:
+        pass
+    try:
+        svc.create_pull_request("owner/repo", "Add helper", head="   ")
+        assert False, "expected ValueError for missing head"
+    except ValueError:
+        pass
+
+
+def test_create_pull_request_performs_a_real_write_when_opted_in(monkeypatch, tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    created_payload = {}
+
+    def fake_post(self, path, body):
+        created_payload["path"] = path
+        created_payload["body"] = body
+        return {"id": 7, "number": 12, "title": body["title"], "state": "open", "draft": False,
+                "user": {"login": "eva-bot"}, "head": {"ref": body["head"]}, "base": {"ref": body["base"]},
+                "html_url": "https://github.com/owner/repo/pull/12",
+                "created_at": "2026-07-08T00:00:00Z", "updated_at": "2026-07-08T00:00:00Z"}
+
+    monkeypatch.setattr(GitHubConnectorService, "_http_post", fake_post)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    result = svc.create_pull_request("owner/repo", "Add helper", head="feature/helper", base="main", body="details")
+    assert result["wrote"] is True
+    assert result["pull_request"]["number"] == 12
+    assert created_payload["path"] == "/repos/owner/repo/pulls"
+    assert created_payload["body"]["head"] == "feature/helper"
+    assert created_payload["body"]["base"] == "main"
+
+
+def test_create_pull_request_network_failure_degrades(monkeypatch, tmp_path):
+    from app.services.governance_service import GovernanceService
+    from app.services.storage_service import StorageService
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    def boom(self, path, body):
+        raise TimeoutError("network unavailable")
+
+    monkeypatch.setattr(GitHubConnectorService, "_http_post", boom)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    svc = GitHubConnectorService(s, g)
+    result = svc.create_pull_request("owner/repo", "Add helper", head="feature/helper")
+    assert result["wrote"] is False
+    assert result["degraded"] is True
+    assert "TimeoutError" in result["note"]
+
+
+def test_status_reports_create_pull_request_when_writes_enabled(monkeypatch):
+    monkeypatch.setenv("GITHUB_WRITES_ENABLED", "true")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    result = client.get("/api/github/status").json()
+    assert "create_pull_request" in result["supported_writes"]

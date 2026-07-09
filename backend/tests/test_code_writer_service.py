@@ -128,8 +128,12 @@ def test_status_reports_secret_safe_configuration(tmp_path, monkeypatch):
     status = svc.status()
     assert status["writes_enabled"] is True
     assert repo in status["allowed_repos"]
-    assert "push" not in status["allowed_git_subcommands"]
+    assert status["push_enabled"] is False  # separate opt-in, off here
+    # push is narrowly allowed (git push origin <branch> only); nothing
+    # destructive or remote-arbitrary is ever on the allow-list.
+    assert "push" in status["allowed_git_subcommands"]
     assert "reset" not in status["allowed_git_subcommands"]
+    assert "clean" not in status["allowed_git_subcommands"]
 
 
 def test_endpoints_still_work():
@@ -140,3 +144,93 @@ def test_endpoints_still_work():
     assert status["available"] is True
     assert client.get("/api/code-writer/summary").status_code == 200
     assert "code_writer_writes_enabled" in client.get("/api/analytics").json()
+    assert "code_writer_push_enabled" in client.get("/api/analytics").json()
+
+
+# ------------------------------------------------------------------
+# v150 task 2 — push_branch: a bigger escalation than a local commit, gated by
+# its OWN opt-in flag (CODE_WRITER_PUSH_ENABLED) on top of writes_enabled().
+# Pushes to a genuine local bare repo standing in for "origin" — real git
+# network protocol, zero actual network access.
+# ------------------------------------------------------------------
+def _init_repo_with_bare_origin(tmp_path):
+    bare = str(tmp_path / "origin.git")
+    subprocess.run(["git", "init", "-q", "--bare", bare], check=True)
+    repo = _init_repo(tmp_path / "repo")
+    subprocess.run(["git", "-C", repo, "remote", "add", "origin", bare], check=True)
+    return repo, bare
+
+
+def test_push_declines_when_writes_disabled(tmp_path, monkeypatch):
+    repo, _ = _init_repo_with_bare_origin(tmp_path)
+    monkeypatch.delenv("CODE_WRITES_ENABLED", raising=False)
+    monkeypatch.setenv("CODE_WRITER_PUSH_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    result = svc.push_branch(repo, "feature/x")
+    assert result["pushed"] is False
+    assert "CODE_WRITES_ENABLED" in result["note"]
+
+
+def test_push_declines_when_push_not_separately_enabled(tmp_path, monkeypatch):
+    repo, _ = _init_repo_with_bare_origin(tmp_path)
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.delenv("CODE_WRITER_PUSH_ENABLED", raising=False)
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    result = svc.push_branch(repo, "feature/x")
+    assert result["pushed"] is False
+    assert "CODE_WRITER_PUSH_ENABLED" in result["note"]
+
+
+def test_push_declines_when_repo_not_allow_listed(tmp_path, monkeypatch):
+    repo, _ = _init_repo_with_bare_origin(tmp_path)
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_PUSH_ENABLED", "true")
+    monkeypatch.delenv("CODE_WRITER_ALLOWED_REPOS", raising=False)
+    svc = _service(tmp_path)
+    result = svc.push_branch(repo, "feature/x")
+    assert result["pushed"] is False
+    assert "allow-list" in result["note"]
+
+
+def test_real_push_to_origin_when_both_opted_in(tmp_path, monkeypatch):
+    repo, bare = _init_repo_with_bare_origin(tmp_path)
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_PUSH_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+
+    write_result = svc.write_and_commit(repo, "src/x.py", "x = 1\n", "add x", branch_name="feature/x")
+    assert write_result["wrote"] is True
+
+    push_result = svc.push_branch(repo, "feature/x")
+    assert push_result["pushed"] is True
+    assert push_result["branch"] == "feature/x"
+
+    # The bare "origin" really has the branch now.
+    branches = subprocess.run(["git", "-C", bare, "branch"], capture_output=True, text=True, check=True).stdout
+    assert "feature/x" in branches
+
+
+def test_push_of_nonexistent_branch_fails_safely(tmp_path, monkeypatch):
+    repo, _ = _init_repo_with_bare_origin(tmp_path)
+    monkeypatch.setenv("CODE_WRITES_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_PUSH_ENABLED", "true")
+    monkeypatch.setenv("CODE_WRITER_ALLOWED_REPOS", repo)
+    svc = _service(tmp_path)
+    result = svc.push_branch(repo, "branch/does-not-exist")
+    assert result["pushed"] is False
+    assert result["note"]
+
+
+def test_branch_name_sanitization_strips_leading_dashes():
+    # A caller-supplied name that looks like a git flag (e.g. "--force") must
+    # never be passed to git as-is — leading dashes/dots are stripped so it can
+    # only ever be interpreted as a literal ref, never a flag.
+    assert CodeWriterService._safe_branch_name("--force") == "force"
+    assert CodeWriterService._safe_branch_name("-x") == "x"
+    assert CodeWriterService._safe_branch_name("...weird") == "weird"
+    assert CodeWriterService._safe_branch_name("feature/normal") == "feature/normal"
+    assert CodeWriterService._safe_branch_name("").startswith("eva/auto-")
+    assert CodeWriterService._safe_branch_name("---").startswith("eva/auto-")
