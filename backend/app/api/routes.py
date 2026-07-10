@@ -1388,6 +1388,14 @@ def list_compliance_audit_packages() -> dict:
     return {"audit_packages": packages, "count": len(packages)}
 
 
+@router.get("/compliance/audit-packages/{package_id}")
+def get_compliance_audit_package(package_id: str) -> dict:
+    try:
+        return compliance_intelligence_service.get_audit_package(package_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
 # NOTE: /operating-layer/* routes were extracted into app/api/operating_layer_routes.py (services still live here).
 
 

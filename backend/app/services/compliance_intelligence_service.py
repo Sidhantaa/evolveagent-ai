@@ -10,6 +10,11 @@ from app.services.secret_scanner import SecretScanner
 from app.services.storage_service import StorageService
 
 DISCLAIMER = "This is not legal advice. It produces checklists, warnings, and audit material for human review."
+# v190 — a genuine audit package embeds a real, immutable point-in-time
+# snapshot (a real auditor needs "what it looked like on the audit date", not
+# a view that silently changes afterward) — capped so one export can't balloon
+# storage unbounded.
+_MAX_AUDIT_EVENTS = 1000
 POLICY_STATUSES = ["draft", "active", "archived"]
 
 # Local PII / PHI classifiers (heuristic). Secrets use the existing SecretScanner.
@@ -43,6 +48,13 @@ class ComplianceIntelligenceService:
     generates audit packages from governance + findings. It is NOT legal advice;
     it produces checklists, warnings, and audit material for human review. Every
     stateful action is governance-logged.
+
+    v190: an audit package used to be only a summary of counts — real numbers,
+    but nothing a compliance officer could actually hand to an auditor. Every
+    package now embeds a real, capped, point-in-time snapshot of the
+    governance log, sensitive-data findings, policies, checklists, and
+    contract reviews at the moment it was generated (immutable by design — a
+    real audit record shouldn't silently change after the fact).
     """
 
     policies_file = "compliance_intel_policies.json"
@@ -251,6 +263,9 @@ class ComplianceIntelligenceService:
     def create_audit_package(self, data: dict) -> dict:
         governance = self.storage.read_list("governance_log.json")
         findings = self.storage.read_list(self.findings_file)
+        policies = self.list_policies()
+        checklists = self.storage.read_list(self.checklists_file)
+        contracts = self.storage.read_list(self.contracts_file)
         package = {
             "package_id": str(uuid4()),
             "title": self._clean(data.get("title"), 200) or "Audit package",
@@ -259,7 +274,7 @@ class ComplianceIntelligenceService:
             "blocked_action_count": sum(1 for e in governance if e.get("blocked")),
             "sensitive_findings_count": len(findings),
             "high_risk_findings": sum(1 for f in findings if f.get("risk_level") == "high"),
-            "policy_count": len(self.list_policies()),
+            "policy_count": len(policies),
             "contents": [
                 "Governance event summary",
                 "Sensitive-data findings summary",
@@ -267,13 +282,33 @@ class ComplianceIntelligenceService:
                 "Recent contract reviews",
             ],
             "disclaimer": DISCLAIMER,
+            # Real, embedded, point-in-time snapshot — not just the counts
+            # above. governance_events is capped; every other collection here
+            # is already naturally small (policies/checklists/contract
+            # reviews a compliance team manages directly).
+            "bundle": {
+                "governance_events": governance[-_MAX_AUDIT_EVENTS:],
+                "sensitive_findings": findings,
+                "policies": policies,
+                "checklists": checklists,
+                "contract_reviews": contracts,
+            },
         }
         self.storage.append(self.audit_packages_file, package)
-        self._log("compliance_audit_package_created", f"Generated audit package {package['package_id']}.")
+        self._log("compliance_audit_package_created", f"Generated audit package {package['package_id']} ({len(governance)} governance events).")
         return package
 
     def list_audit_packages(self, limit: int = 25) -> list[dict]:
-        return list(reversed(self.storage.read_list(self.audit_packages_file)[-limit:]))
+        """Lightweight — omits each package's embedded bundle so the list view
+        stays small; fetch get_audit_package(id) for the full export."""
+        rows = list(reversed(self.storage.read_list(self.audit_packages_file)[-limit:]))
+        return [{k: v for k, v in row.items() if k != "bundle"} for row in rows]
+
+    def get_audit_package(self, package_id: str) -> dict:
+        for row in self.storage.read_list(self.audit_packages_file):
+            if row.get("package_id") == package_id:
+                return row
+        raise ValueError(f"Audit package not found: {package_id}")
 
     # ------------------------------------------------------------------
     # Dashboard
