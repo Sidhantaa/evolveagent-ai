@@ -512,6 +512,11 @@ durable_workflow_service.github = github_connector_service
 # write_code_change whitelisted effect with a real local git commit.
 code_writer_service = CodeWriterService(governance_service)
 durable_workflow_service.code_writer = code_writer_service
+# v180 Personal Chief of Staff: wire the real (read-only) GitHub connector in
+# now that it exists (it's constructed after chief_of_staff_service), folding
+# real open PRs/issues from CHIEF_OF_STAFF_GITHUB_REPOS-configured repos into
+# priority ranking and daily/weekly plans alongside internal signals.
+chief_of_staff_service.github = github_connector_service
 repo_finder_service = RepoFinderService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
@@ -1269,6 +1274,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **git_reader_service.analytics_summary(),
         **github_connector_service.analytics_summary(),
         **code_writer_service.analytics_summary(),
+        **chief_of_staff_service.analytics_summary(),
         **repo_finder_service.analytics_summary(),
         **memory_service.analytics_summary(),
         **agent_registry_service.analytics_summary(),

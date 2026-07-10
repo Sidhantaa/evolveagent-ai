@@ -21,6 +21,11 @@ router = APIRouter()
 # ----------------------------------------------------------------------
 # v19.0 AI Chief of Staff
 # ----------------------------------------------------------------------
+@router.get("/chief-of-staff/status")
+def get_chief_status() -> dict:
+    return chief_of_staff_service.status()
+
+
 @router.get("/chief-of-staff/dashboard")
 def get_chief_dashboard(workspace_id: str | None = Query(default=None)) -> dict:
     return chief_of_staff_service.dashboard(workspace_id)
