@@ -97,3 +97,48 @@ def test_regression_existing_endpoints():
     assert isinstance(response.json().get("final_output"), str)
     assert client.get("/api/business-operator/dashboard").status_code == 200
     assert client.get("/api/saas-builder/dashboard").status_code == 200
+
+
+# ------------------------------------------------------------------
+# v190 — audit packages embed a real, immutable point-in-time snapshot (not
+# just summary counts), so a compliance officer has something real to hand an
+# auditor. The list view stays lightweight (bundle omitted); the full bundle
+# is fetched per-package.
+# ------------------------------------------------------------------
+def test_audit_package_embeds_a_real_bundle():
+    client.post("/api/compliance/policies", json={"name": "Snapshot policy"})
+    package = client.post("/api/compliance/audit-packages", json={"title": "Bundle test"}).json()
+    bundle = package["bundle"]
+    for key in ("governance_events", "sensitive_findings", "policies", "checklists", "contract_reviews"):
+        assert key in bundle
+    assert any(p.get("name") == "Snapshot policy" for p in bundle["policies"])
+    assert len(bundle["governance_events"]) <= 1000
+    assert len(bundle["governance_events"]) <= package["governance_event_count"]
+
+
+def test_list_view_omits_the_bundle_but_get_by_id_includes_it():
+    created = client.post("/api/compliance/audit-packages", json={"title": "List vs detail"}).json()
+    listed = client.get("/api/compliance/audit-packages").json()["audit_packages"]
+    found = next(p for p in listed if p["package_id"] == created["package_id"])
+    assert "bundle" not in found
+    fetched = client.get(f"/api/compliance/audit-packages/{created['package_id']}").json()
+    assert "bundle" in fetched
+    assert fetched["package_id"] == created["package_id"]
+
+
+def test_get_missing_audit_package_404s():
+    assert client.get("/api/compliance/audit-packages/does-not-exist").status_code == 404
+
+
+def test_bundle_is_a_snapshot_not_a_live_view():
+    """Creating a new policy AFTER a package was generated must not retroactively
+    appear in that package's already-embedded bundle — it's a point-in-time
+    snapshot, not a live query. Uses a per-run unique marker since this test
+    hits the shared, non-isolated dev-data store (a static name would collide
+    with itself across repeated test-suite runs)."""
+    import uuid
+    marker = f"Created after snapshot {uuid.uuid4().hex}"
+    package = client.post("/api/compliance/audit-packages", json={"title": "Snapshot integrity"}).json()
+    client.post("/api/compliance/policies", json={"name": marker})
+    refetched = client.get(f"/api/compliance/audit-packages/{package['package_id']}").json()
+    assert not any(p.get("name") == marker for p in refetched["bundle"]["policies"])
