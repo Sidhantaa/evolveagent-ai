@@ -91,3 +91,100 @@ def test_summary_analytics_governance():
 def test_existing_endpoints_still_work():
     assert client.get("/api/durable-workflows/templates").status_code == 200
     assert client.get("/api/voice-console/status").status_code == 200
+
+
+# ------------------------------------------------------------------
+# v160 — real ratings + popularity-driven discovery (real signal, not a mock
+# counter): install counts already existed but were unused for ranking; a
+# genuine 1-5 star rating system now exists too.
+# ------------------------------------------------------------------
+def test_listings_default_to_zero_rating_when_unrated():
+    listing = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Unrated Flow", "steps": [{"name": "x"}]},
+    }).json()
+    fetched = client.get(f"/api/marketplace-hub/listings/{listing['listing_id']}").json()
+    assert fetched["rating_count"] == 0
+    assert fetched["average_rating"] == 0
+
+
+def test_rate_listing_and_read_back_average():
+    listing = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Rateable Flow", "steps": [{"name": "x"}]},
+    }).json()
+    client.post(f"/api/marketplace-hub/listings/{listing['listing_id']}/rate", json={"rating": 5, "review": "great"})
+    client.post(f"/api/marketplace-hub/listings/{listing['listing_id']}/rate", json={"rating": 3})
+    fetched = client.get(f"/api/marketplace-hub/listings/{listing['listing_id']}").json()
+    assert fetched["rating_count"] == 2
+    assert fetched["average_rating"] == 4.0
+    ratings = client.get(f"/api/marketplace-hub/listings/{listing['listing_id']}/ratings").json()
+    assert ratings["count"] == 2
+    assert any(r["review"] == "great" for r in ratings["ratings"])
+
+
+def test_rating_out_of_range_is_clamped():
+    listing = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Clamp Flow", "steps": [{"name": "x"}]},
+    }).json()
+    resp = client.post(f"/api/marketplace-hub/listings/{listing['listing_id']}/rate", json={"rating": 5}).json()
+    assert resp["rating"] == 5
+    assert 1 <= resp["rating"] <= 5
+
+
+def test_rate_missing_listing_404():
+    assert client.post("/api/marketplace-hub/listings/does-not-exist/rate", json={"rating": 5}).status_code == 404
+
+
+def test_rating_request_validation_rejects_out_of_bounds():
+    listing = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Validation Flow", "steps": [{"name": "x"}]},
+    }).json()
+    assert client.post(f"/api/marketplace-hub/listings/{listing['listing_id']}/rate", json={"rating": 6}).status_code == 422
+    assert client.post(f"/api/marketplace-hub/listings/{listing['listing_id']}/rate", json={"rating": 0}).status_code == 422
+
+
+def test_sort_popular_ranks_by_real_install_count():
+    low = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Rarely Installed", "steps": [{"name": "x"}]},
+    }).json()
+    high = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Popular Flow", "steps": [{"name": "x"}]},
+    }).json()
+    client.post(f"/api/marketplace-hub/listings/{low['listing_id']}/install")
+    for _ in range(3):
+        client.post(f"/api/marketplace-hub/listings/{high['listing_id']}/install")
+    ranked = client.get("/api/marketplace-hub/listings", params={"sort": "popular"}).json()
+    assert ranked["sort"] == "popular"
+    ids_in_order = [r["listing_id"] for r in ranked["listings"]]
+    assert ids_in_order.index(high["listing_id"]) < ids_in_order.index(low["listing_id"])
+
+
+def test_sort_top_rated_ranks_by_real_average_rating():
+    mediocre = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Mediocre Flow", "steps": [{"name": "x"}]},
+    }).json()
+    great = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Great Flow", "steps": [{"name": "x"}]},
+    }).json()
+    client.post(f"/api/marketplace-hub/listings/{mediocre['listing_id']}/rate", json={"rating": 2})
+    client.post(f"/api/marketplace-hub/listings/{great['listing_id']}/rate", json={"rating": 5})
+    ranked = client.get("/api/marketplace-hub/listings", params={"sort": "top_rated"}).json()
+    assert ranked["sort"] == "top_rated"
+    ids_in_order = [r["listing_id"] for r in ranked["listings"]]
+    assert ids_in_order.index(great["listing_id"]) < ids_in_order.index(mediocre["listing_id"])
+
+
+def test_default_sort_is_unchanged_featured_then_chronological():
+    data = client.get("/api/marketplace-hub/listings").json()
+    assert data["sort"] == "featured"
+    assert any(x["is_featured"] for x in data["listings"])
+
+
+def test_ratings_counted_in_analytics():
+    listing = client.post("/api/marketplace-hub/listings", json={
+        "kind": "workflow", "manifest": {"name": "Analytics Flow", "steps": [{"name": "x"}]},
+    }).json()
+    before = client.get("/api/marketplace-hub/summary").json()["marketplace_hub_ratings"]
+    client.post(f"/api/marketplace-hub/listings/{listing['listing_id']}/rate", json={"rating": 4})
+    after = client.get("/api/marketplace-hub/summary").json()
+    assert after["marketplace_hub_ratings"] == before + 1
+    assert "marketplace_hub_ratings" in client.get("/api/analytics").json()

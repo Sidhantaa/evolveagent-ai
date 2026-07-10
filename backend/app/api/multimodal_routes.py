@@ -45,10 +45,24 @@ def list_multimodal_analyses(workspace_id: str | None = Query(default=None)) -> 
 @router.post("/multimodal/items/{item_id}/analyze")
 def analyze_multimodal_item(item_id: str, request: MultimodalAnalyzeRequest | None = None) -> dict:
     analysis_type = request.analysis_type if request else None
+    image = request.image if request else None
+    allow_live = request.allow_live if request else False
     try:
-        return multimodal_agent_service.analyze_item(item_id, analysis_type)
+        return multimodal_agent_service.analyze_item(item_id, analysis_type, image, allow_live)
     except ValueError as error:
-        raise HTTPException(status_code=404, detail="Item not found") from error
+        if str(error) == "Item not found":
+            raise HTTPException(status_code=404, detail="Item not found") from error
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/multimodal/status")
+def get_multimodal_status() -> dict:
+    return multimodal_agent_service.status()
+
+
+@router.get("/multimodal/summary")
+def get_multimodal_summary() -> dict:
+    return multimodal_agent_service.summary()
 
 
 # NOTE: /industry-modes/* routes were extracted into app/api/industry_modes_routes.py (services still live here).

@@ -10,7 +10,9 @@ export type PageId =
   | 'tools'
   | 'governance'
   | 'settings'
-  | 'design-system';
+  | 'design-system'
+  | 'command-center'
+  | 'chief-of-staff';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 

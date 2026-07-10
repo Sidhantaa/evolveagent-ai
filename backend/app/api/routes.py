@@ -512,6 +512,11 @@ durable_workflow_service.github = github_connector_service
 # write_code_change whitelisted effect with a real local git commit.
 code_writer_service = CodeWriterService(governance_service)
 durable_workflow_service.code_writer = code_writer_service
+# v180 Personal Chief of Staff: wire the real (read-only) GitHub connector in
+# now that it exists (it's constructed after chief_of_staff_service), folding
+# real open PRs/issues from CHIEF_OF_STAFF_GITHUB_REPOS-configured repos into
+# priority ranking and daily/weekly plans alongside internal signals.
+chief_of_staff_service.github = github_connector_service
 repo_finder_service = RepoFinderService(storage, governance_service)
 from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
@@ -1265,9 +1270,11 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **durable_workflow_service.analytics_summary(),
         **marketplace_hub_service.analytics_summary(),
         **design_agent_service.analytics_summary(),
+        **multimodal_agent_service.analytics_summary(),
         **git_reader_service.analytics_summary(),
         **github_connector_service.analytics_summary(),
         **code_writer_service.analytics_summary(),
+        **chief_of_staff_service.analytics_summary(),
         **repo_finder_service.analytics_summary(),
         **memory_service.analytics_summary(),
         **agent_registry_service.analytics_summary(),
@@ -1379,6 +1386,14 @@ def create_compliance_audit_package(request: ComplianceAuditPackageRequest | Non
 def list_compliance_audit_packages() -> dict:
     packages = compliance_intelligence_service.list_audit_packages()
     return {"audit_packages": packages, "count": len(packages)}
+
+
+@router.get("/compliance/audit-packages/{package_id}")
+def get_compliance_audit_package(package_id: str) -> dict:
+    try:
+        return compliance_intelligence_service.get_audit_package(package_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 # NOTE: /operating-layer/* routes were extracted into app/api/operating_layer_routes.py (services still live here).
