@@ -17,7 +17,9 @@ import {
   Sparkles,
   ChevronRight,
   ShieldAlert,
-  Activity
+  Activity,
+  Gauge,
+  Target
 } from 'lucide-react';
 
 interface NavItem {
@@ -48,6 +50,8 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
     { id: 'project-brain', label: 'Project Brain', icon: Brain, badge: memories.length, badgeColor: 'purple' },
     { id: 'tools', label: 'Tools / MCP Hub', icon: Wrench, badge: '07', badgeColor: 'emerald' },
     { id: 'governance', label: 'Governance', icon: Shield, badge: '98%', badgeColor: 'emerald' },
+    { id: 'command-center', label: 'Command Center', icon: Gauge, badge: 'v200', badgeColor: 'purple' },
+    { id: 'chief-of-staff', label: 'Chief of Staff', icon: Target, badge: 'v180', badgeColor: 'amber' },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'design-system', label: 'Design System', icon: Palette }
   ];
