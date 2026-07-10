@@ -26,6 +26,7 @@ Goal -> Plan -> Agents -> Tools -> Approval -> Execution -> Verification -> Memo
 - [[../CODEX_ASSIGNMENT_v100]]
 - [[../CODEX_ASSIGNMENT_v150_frontend]]
 - [[../ARCHITECTURE]]
+- [[../architecture/Project-Architecture]]
 - [[../PORTFOLIO_PACK]]
 - [[../RESUME_BULLETS]]
 - [[../CASE_STUDY]]
