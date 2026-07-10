@@ -35,6 +35,7 @@ Goal -> Plan -> Agents -> Tools -> Approval -> Execution -> Verification -> Memo
 
 ## Roadmap Notes
 - [[../roadmap/README]]
+- [[../roadmap/EvolveAgent-v200-Strategy]]
 - [[../architecture/README]]
 - [[../handoffs/README]]
 - [[../decisions/README]]
