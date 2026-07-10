@@ -256,6 +256,7 @@ class TestSuggestionRequest(BaseModel):
 class ProviderSmokeTestRequest(BaseModel):
     provider: str | None = Field(default=None, pattern="^(openai|anthropic|gemini|mistral|mock)$")
     live: bool = Field(default=False, description="When false, only checks configuration/readiness without calling a paid API.")
+    task_type: str | None = Field(default=None, max_length=40, description="When set, resolves provider/model via task-based routing instead of the explicit provider field.")
 
 
 class ImageSmokeTestRequest(BaseModel):
