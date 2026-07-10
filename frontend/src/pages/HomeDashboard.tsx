@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { PageId } from '../types';
 import { GlassCard } from '../components/shared/GlassCard';
 import { MetricCard } from '../components/shared/MetricCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
@@ -129,33 +130,52 @@ export const HomeDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. System Metrics Cards (5 cards) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {systemMetrics.map((m, idx) => (
-          <MetricCard
-            key={idx}
-            label={m.label}
-            value={m.value}
-            trend={m.trend}
-            isPositive={m.isPositive}
-            subtitle={m.subtitle}
-            icon={
-              idx === 0 ? <Users className="w-4 h-4" /> :
-              idx === 1 ? <Activity className="w-4 h-4" /> :
-              idx === 2 ? <ShieldAlert className="w-4 h-4" /> :
-              idx === 3 ? <Wrench className="w-4 h-4" /> :
-              <ShieldCheck className="w-4 h-4" />
-            }
-            onClick={() => {
-              if (idx === 0) setActivePage('agents');
-              if (idx === 1) setActivePage('mission-control');
-              if (idx === 2) setActivePage('approvals');
-              if (idx === 3) setActivePage('tools');
-              if (idx === 4) setActivePage('governance');
-            }}
-          />
-        ))}
-      </div>
+      {/* 2. System Metrics — active ones get full cards, idle/zero ones collapse into one quiet line */}
+      {(() => {
+        const parseMetricValue = (val: string | number) => {
+          const num = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
+          return Number.isNaN(num) ? 0 : num;
+        };
+        const activeMetrics = systemMetrics.filter(m => parseMetricValue(m.value) > 0);
+        const idleMetrics = systemMetrics.filter(m => parseMetricValue(m.value) === 0);
+        const metricIcons = [
+          <Users className="w-4 h-4" />,
+          <Activity className="w-4 h-4" />,
+          <ShieldAlert className="w-4 h-4" />,
+          <Wrench className="w-4 h-4" />,
+          <ShieldCheck className="w-4 h-4" />,
+        ];
+        const metricPages: PageId[] = ['agents', 'mission-control', 'approvals', 'tools', 'governance'];
+
+        return (
+          <>
+            {activeMetrics.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                {activeMetrics.map((m) => {
+                  const originalIdx = systemMetrics.indexOf(m);
+                  return (
+                    <MetricCard
+                      key={originalIdx}
+                      label={m.label}
+                      value={m.value}
+                      trend={m.trend}
+                      isPositive={m.isPositive}
+                      subtitle={m.subtitle}
+                      icon={metricIcons[originalIdx] ?? <Activity className="w-4 h-4" />}
+                      onClick={() => setActivePage(metricPages[originalIdx] ?? 'home')}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            {idleMetrics.length > 0 && (
+              <div className="text-[11px] text-gray-500 leading-relaxed">
+                {idleMetrics.map(m => m.label).join(' · ')} — idle, nothing active
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* 3. Main Split Section: Live Activity Log (Left) & Approval Queue (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
