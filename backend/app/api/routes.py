@@ -551,7 +551,12 @@ dashboard_home_service = DashboardHomeService(storage, governance_service, healt
 feature_registry_service = FeatureRegistryService(storage, governance_service)
 demo_service = DemoService(storage, governance_service)
 settings_service = SettingsService(storage, governance_service)
-provider_control_service = ProviderControlService(storage, governance_service)
+provider_control_service = ProviderControlService(storage, governance_service, llm_router=llm_router)
+# Real task-based routing + real provider health (previously the model_by_task
+# preference above had zero effect on llm_router, and llm_router had no
+# observability into real call success/latency).
+llm_router.provider_control = provider_control_service
+llm_router.storage = storage
 notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
 workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
 smart_context_service = SmartContextService(storage, governance_service)
@@ -2109,7 +2114,7 @@ def get_provider_status() -> ProviderStatus:
 
 @router.post("/providers/smoke-test")
 def provider_smoke_test(request: ProviderSmokeTestRequest) -> dict:
-    return llm_router.smoke_test(provider=request.provider, live=request.live)
+    return llm_router.smoke_test(provider=request.provider, live=request.live, task_type=request.task_type)
 
 
 @router.get("/images/status")

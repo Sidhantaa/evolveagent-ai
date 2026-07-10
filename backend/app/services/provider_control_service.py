@@ -38,9 +38,14 @@ class ProviderControlService:
 
     config_file = "provider_control.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, llm_router=None):
         self.storage = storage
         self.governance = governance_service
+        # Optional collaborator (wired post-init in routes.py once llm_router
+        # exists). Closes the loop the other way: LLMRouter reads this service's
+        # model_by_task preference to actually route by task; this service reads
+        # LLMRouter's real per-provider call outcomes to show real health here.
+        self.llm_router = llm_router
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -73,6 +78,17 @@ class ProviderControlService:
                 reason=reason,
             )
         )
+
+    def preferred_model_for_task(self, task_type: str) -> str | None:
+        """The stored free-text model preference for a task, or None. Read by
+        LLMRouter.route_for_agent to give this preference real routing effect —
+        previously it was display-only."""
+        return self._config()["model_by_task"].get(task_type) or None
+
+    def provider_health(self) -> dict:
+        if self.llm_router is None:
+            return {"available": False, "providers": [], "note": "Router not wired."}
+        return self.llm_router.provider_health()
 
     def key_check(self) -> dict:
         # Booleans only — never a value.
@@ -112,6 +128,7 @@ class ProviderControlService:
             "cost_estimate_usd": est_cost,
             "task_types": TASK_TYPES,
             "capabilities": CAPABILITIES,
+            "provider_health": self.provider_health(),
             "note": "Read-only readiness + estimates. Real calls still require the provider key and app env mode; no secrets are exposed.",
         }
 

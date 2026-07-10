@@ -31,6 +31,11 @@ def provider_control_key_check() -> dict:
     return provider_control_service.key_check()
 
 
+@router.get("/provider-control/health")
+def provider_control_health() -> dict:
+    return provider_control_service.provider_health()
+
+
 @router.patch("/provider-control")
 def provider_control_update(request: ProviderControlUpdateRequest) -> dict:
     return provider_control_service.update(request.model_by_task, request.capability_modes, request.fallback_enabled)

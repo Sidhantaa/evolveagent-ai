@@ -64,3 +64,33 @@ def test_governance_logged():
 def test_existing_endpoints_still_work():
     assert client.get("/api/settings").status_code == 200
     assert client.get("/api/demo/summary").status_code == 200
+
+
+def test_preferred_model_for_task_reads_stored_preference():
+    client.patch("/api/provider-control", json={"model_by_task": {"research": "gemini-1.5-pro"}})
+    from app.api.routes import provider_control_service
+    assert provider_control_service.preferred_model_for_task("research") == "gemini-1.5-pro"
+
+
+def test_preferred_model_for_task_none_when_unset():
+    from app.api.routes import provider_control_service
+    assert provider_control_service.preferred_model_for_task("nonexistent-task-xyz") is None
+
+
+def test_health_endpoint_available_when_wired_to_router():
+    data = client.get("/api/provider-control/health").json()
+    assert data["available"] is True
+    assert "providers" in data
+
+
+def test_dashboard_includes_provider_health():
+    data = client.get("/api/provider-control/dashboard").json()
+    assert "provider_health" in data
+    assert "available" in data["provider_health"]
+
+
+def test_smoke_test_task_type_resolves_via_real_task_routing():
+    client.patch("/api/provider-control", json={"model_by_task": {"business": "gpt-5.5"}})
+    resp = client.post("/api/providers/smoke-test", json={"task_type": "business", "live": False}).json()
+    assert resp["task_type"] == "business"
+    assert resp["provider"] in {"openai", "anthropic", "gemini", "mistral", "mock"}
