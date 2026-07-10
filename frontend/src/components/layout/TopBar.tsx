@@ -21,6 +21,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
 
   const pageTitles: Record<PageId, { title: string; subtitle: string }> = {
     'home': { title: 'Home Dashboard', subtitle: 'AI command center & multi-agent system overview' },
+    'instructions': { title: 'Instructions & Getting Started', subtitle: 'How EvolveAgent AI works, and how to use it safely' },
     'chat': { title: 'Simple Mode Chat', subtitle: 'ChatGPT-style agent interface with live orchestration' },
     'dev-console': { title: 'Developer Mode Console', subtitle: 'System health, workflow trace inspector & tool call logs' },
     'mission-control': { title: 'Mission Control', subtitle: 'Active mission tracker, phase graph & next best action recommendations' },

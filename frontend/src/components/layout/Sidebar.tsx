@@ -19,7 +19,8 @@ import {
   ShieldAlert,
   Activity,
   Gauge,
-  Target
+  Target,
+  BookOpen
 } from 'lucide-react';
 
 interface NavItem {
@@ -41,6 +42,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
 
   const navItems: NavItem[] = [
     { id: 'home', label: 'Home Dashboard', icon: LayoutDashboard },
+    { id: 'instructions', label: 'Instructions', icon: BookOpen, badge: 'Start Here', badgeColor: 'purple' },
     { id: 'chat', label: 'Simple Mode Chat', icon: MessageSquare, badge: 'Live', badgeColor: 'purple' },
     { id: 'dev-console', label: 'Dev Mode Console', icon: Terminal, badge: 'Trace', badgeColor: 'emerald' },
     { id: 'code-changes', label: 'Code Changes', icon: GitPullRequestArrow, badge: 'v150', badgeColor: 'amber' },

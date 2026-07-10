@@ -12,7 +12,8 @@ export type PageId =
   | 'settings'
   | 'design-system'
   | 'command-center'
-  | 'chief-of-staff';
+  | 'chief-of-staff'
+  | 'instructions';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 

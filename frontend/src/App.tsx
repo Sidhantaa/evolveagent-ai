@@ -25,6 +25,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { CommandCenterPage } from './pages/CommandCenterPage';
 import { ChiefOfStaffPage } from './pages/ChiefOfStaffPage';
+import { InstructionsPage } from './pages/InstructionsPage';
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -41,6 +42,7 @@ const MainContent: React.FC = () => {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {activePage === 'home' && <HomeDashboard />}
+          {activePage === 'instructions' && <InstructionsPage />}
           {activePage === 'chat' && <SimpleModeChat />}
           {activePage === 'dev-console' && <DevModeConsole />}
           {activePage === 'code-changes' && <CodeChangesPage />}
