@@ -217,3 +217,12 @@ evolveagent-ai/
 backend/.claude-flow/
 backend/app/data/chief_of_staff_items.json
 backend/app/data/tool_executions.json
+# Added by code-review-graph
+.code-review-graph/
+
+# Obsidian local workspace
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins
+.obsidian/themes
