@@ -656,3 +656,341 @@ export async function fetchLiveData(): Promise<{
   if (!agents && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals) return null;
   return { agents, governanceLogs, systemMetrics, memories, connectors, approvals };
 }
+
+// ---- v200 Command Center (unified capability directory) -------------------
+export interface CommandCenterSystem {
+  label: string;
+  route: string;
+  active: boolean;
+  recordCount: number;
+}
+
+export interface CommandCenterDomain {
+  domain: string;
+  systems: CommandCenterSystem[];
+  activeCount: number;
+  systemCount: number;
+}
+
+export interface CommandCenterSnapshot {
+  snapshotId: string;
+  activeSystems: number;
+  totalSystems: number;
+  coveragePct: number;
+  overallScore: number;
+  overallGrade: string;
+  createdAt: string;
+}
+
+export interface CommandCenterDashboard {
+  version: string;
+  title: string;
+  domains: CommandCenterDomain[];
+  activeSystems: number;
+  totalSystems: number;
+  coveragePct: number;
+  overallScore: number;
+  overallGrade: string;
+  scoreDimensions: { name: string; score: number; grade: string }[];
+  healthStatus: string;
+  healthScore: number;
+  implementationVersions: number;
+  governanceEvents: number;
+  workspaces: number;
+  safetyBoundaries: string[];
+  latestSnapshot: CommandCenterSnapshot | null;
+  disclaimer: string;
+}
+
+export interface CommandCenterReport {
+  reportId: string;
+  headline: string;
+  overallGrade: string;
+  overallScore: number;
+  activeSystems: number;
+  totalSystems: number;
+  coveragePct: number;
+  safetyBoundaries: string[];
+  disclaimer: string;
+  createdAt: string;
+}
+
+function mapSnapshot(s: any): CommandCenterSnapshot {
+  return {
+    snapshotId: s.snapshot_id || '',
+    activeSystems: Number(s.active_systems ?? 0),
+    totalSystems: Number(s.total_systems ?? 0),
+    coveragePct: Number(s.coverage_pct ?? 0),
+    overallScore: Number(s.overall_score ?? 0),
+    overallGrade: s.overall_grade || '',
+    createdAt: s.created_at || '',
+  };
+}
+
+export async function fetchCommandCenterDashboard(): Promise<CommandCenterDashboard | null> {
+  const data = await getJson<any>('/api/os2/dashboard');
+  if (!data) return null;
+  const cc = data.command_center || {};
+  return {
+    version: data.version || '',
+    title: data.title || '',
+    domains: Array.isArray(cc.domains) ? cc.domains.map((d: any): CommandCenterDomain => ({
+      domain: d.domain || '',
+      systems: Array.isArray(d.systems) ? d.systems.map((s: any): CommandCenterSystem => ({
+        label: s.label || '',
+        route: s.route || '',
+        active: Boolean(s.active),
+        recordCount: Number(s.record_count ?? 0),
+      })) : [],
+      activeCount: Number(d.active_count ?? 0),
+      systemCount: Number(d.system_count ?? 0),
+    })) : [],
+    activeSystems: Number(cc.active_systems ?? 0),
+    totalSystems: Number(cc.total_systems ?? 0),
+    coveragePct: Number(cc.coverage_pct ?? 0),
+    overallScore: Number(data.scorecard?.overall_score ?? 0),
+    overallGrade: data.scorecard?.overall_grade || '',
+    scoreDimensions: Array.isArray(data.scorecard?.dimensions)
+      ? data.scorecard.dimensions.map((d: any) => ({ name: d.name || '', score: Number(d.score ?? 0), grade: d.grade || '' }))
+      : [],
+    healthStatus: data.health?.status || 'unknown',
+    healthScore: Number(data.health?.score ?? 0),
+    implementationVersions: Number(data.stats?.implementation_versions ?? 0),
+    governanceEvents: Number(data.stats?.governance_events ?? 0),
+    workspaces: Number(data.stats?.workspaces ?? 0),
+    safetyBoundaries: Array.isArray(data.safety_boundaries) ? data.safety_boundaries.map(String) : [],
+    latestSnapshot: data.latest_snapshot ? mapSnapshot(data.latest_snapshot) : null,
+    disclaimer: data.disclaimer || '',
+  };
+}
+
+export async function fetchCommandCenterSnapshots(): Promise<CommandCenterSnapshot[] | null> {
+  const data = await getJson<any>('/api/os2/snapshots');
+  if (!data?.snapshots) return null;
+  return data.snapshots.map(mapSnapshot);
+}
+
+export async function createCommandCenterSnapshot(): Promise<CommandCenterSnapshot | null> {
+  const data = await postJson<any>('/api/os2/snapshots', {});
+  if (!data) return null;
+  return mapSnapshot(data);
+}
+
+export async function generateCommandCenterReport(): Promise<CommandCenterReport | null> {
+  const data = await postJson<any>('/api/os2/report', {});
+  if (!data) return null;
+  return {
+    reportId: data.report_id || '',
+    headline: data.headline || '',
+    overallGrade: data.overall_grade || '',
+    overallScore: Number(data.overall_score ?? 0),
+    activeSystems: Number(data.active_systems ?? 0),
+    totalSystems: Number(data.total_systems ?? 0),
+    coveragePct: Number(data.coverage_pct ?? 0),
+    safetyBoundaries: Array.isArray(data.safety_boundaries) ? data.safety_boundaries.map(String) : [],
+    disclaimer: data.disclaimer || '',
+    createdAt: data.created_at || '',
+  };
+}
+
+// ---- v180 Personal Chief of Staff -------------------------------------------
+export interface ChiefOfStaffStatus {
+  available: boolean;
+  githubWired: boolean;
+  githubReposEnv: string;
+  githubReposConfigured: string[];
+  note: string;
+}
+
+export interface ChiefPriorityItem {
+  itemId: string;
+  itemType: string;
+  title: string;
+  priorityScore: number;
+  reason: string;
+  recommendedAction: string;
+  sourceId: string;
+}
+
+export interface ChiefFollowup {
+  followupId: string;
+  workspaceId: string | null;
+  title: string;
+  description: string;
+  sourceType: string;
+  dueDate: string;
+  priority: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface ChiefDailyPlan {
+  planId: string;
+  date: string;
+  summary: string;
+  topPriorities: ChiefPriorityItem[];
+  scheduleBlocks: { block: string; itemType: string; title: string; recommendedAction: string }[];
+  recommendedNextActions: string[];
+  createdAt: string;
+}
+
+export interface ChiefWeeklyPlan {
+  planId: string;
+  weekStart: string;
+  summary: string;
+  milestones: { title: string; progressPercent: number; riskLevel: string }[];
+  priorityThemes: { theme: string; count: number }[];
+  blockedItemsCount: number;
+  recommendedFocus: string[];
+  createdAt: string;
+}
+
+export interface ChiefOfStaffDashboard {
+  today: string;
+  dailyPlan: ChiefDailyPlan | null;
+  weeklyPlan: ChiefWeeklyPlan | null;
+  priorityItems: ChiefPriorityItem[];
+  githubItemsCount: number;
+  openFollowups: number;
+  overdueFollowups: number;
+  blockedItems: number;
+  riskSummary: { openRiskCount: number; severityCounts: Record<string, number> };
+  recommendedNextAction: string;
+}
+
+function mapPriorityItem(item: any): ChiefPriorityItem {
+  return {
+    itemId: item.item_id || '',
+    itemType: item.item_type || '',
+    title: item.title || '',
+    priorityScore: Number(item.priority_score ?? 0),
+    reason: item.reason || '',
+    recommendedAction: item.recommended_action || '',
+    sourceId: item.source_id || '',
+  };
+}
+
+function mapDailyPlan(p: any): ChiefDailyPlan {
+  return {
+    planId: p.plan_id || '',
+    date: p.date || '',
+    summary: p.summary || '',
+    topPriorities: Array.isArray(p.top_priorities) ? p.top_priorities.map(mapPriorityItem) : [],
+    scheduleBlocks: Array.isArray(p.schedule_blocks) ? p.schedule_blocks.map((b: any) => ({
+      block: b.block || '',
+      itemType: b.item_type || '',
+      title: b.title || '',
+      recommendedAction: b.recommended_action || '',
+    })) : [],
+    recommendedNextActions: Array.isArray(p.recommended_next_actions) ? p.recommended_next_actions.map(String) : [],
+    createdAt: p.created_at || '',
+  };
+}
+
+function mapWeeklyPlan(p: any): ChiefWeeklyPlan {
+  return {
+    planId: p.plan_id || '',
+    weekStart: p.week_start || '',
+    summary: p.summary || '',
+    milestones: Array.isArray(p.milestones) ? p.milestones.map((m: any) => ({
+      title: m.title || '',
+      progressPercent: Number(m.progress_percent ?? 0),
+      riskLevel: m.risk_level || 'low',
+    })) : [],
+    priorityThemes: Array.isArray(p.priority_themes) ? p.priority_themes.map((t: any) => ({
+      theme: t.theme || '',
+      count: Number(t.count ?? 0),
+    })) : [],
+    blockedItemsCount: Array.isArray(p.blocked_items) ? p.blocked_items.length : 0,
+    recommendedFocus: Array.isArray(p.recommended_focus) ? p.recommended_focus.map(String) : [],
+    createdAt: p.created_at || '',
+  };
+}
+
+export async function fetchChiefOfStaffStatus(): Promise<ChiefOfStaffStatus | null> {
+  const data = await getJson<any>('/api/chief-of-staff/status');
+  if (!data) return null;
+  return {
+    available: Boolean(data.available),
+    githubWired: Boolean(data.github_wired),
+    githubReposEnv: data.github_repos_env || 'CHIEF_OF_STAFF_GITHUB_REPOS',
+    githubReposConfigured: Array.isArray(data.github_repos_configured) ? data.github_repos_configured.map(String) : [],
+    note: data.note || '',
+  };
+}
+
+export async function fetchChiefOfStaffDashboard(): Promise<ChiefOfStaffDashboard | null> {
+  const data = await getJson<any>('/api/chief-of-staff/dashboard');
+  if (!data) return null;
+  return {
+    today: data.today || '',
+    dailyPlan: data.daily_plan ? mapDailyPlan(data.daily_plan) : null,
+    weeklyPlan: data.weekly_plan ? mapWeeklyPlan(data.weekly_plan) : null,
+    priorityItems: Array.isArray(data.priority_items) ? data.priority_items.map(mapPriorityItem) : [],
+    githubItemsCount: Number(data.github_items_count ?? 0),
+    openFollowups: Number(data.open_followups ?? 0),
+    overdueFollowups: Number(data.overdue_followups ?? 0),
+    blockedItems: Number(data.blocked_items ?? 0),
+    riskSummary: {
+      openRiskCount: Number(data.risk_summary?.open_risk_count ?? 0),
+      severityCounts: data.risk_summary?.severity_counts || {},
+    },
+    recommendedNextAction: data.recommended_next_action || '',
+  };
+}
+
+export async function generateChiefDailyPlan(): Promise<ChiefDailyPlan | null> {
+  const data = await postJson<any>('/api/chief-of-staff/daily-plan', {});
+  if (!data) return null;
+  return mapDailyPlan(data);
+}
+
+export async function generateChiefWeeklyPlan(): Promise<ChiefWeeklyPlan | null> {
+  const data = await postJson<any>('/api/chief-of-staff/weekly-plan', {});
+  if (!data) return null;
+  return mapWeeklyPlan(data);
+}
+
+export async function fetchChiefFollowups(): Promise<{ followups: ChiefFollowup[]; overdueCount: number } | null> {
+  const data = await getJson<any>('/api/chief-of-staff/followups');
+  if (!data?.followups) return null;
+  return {
+    followups: data.followups.map((f: any): ChiefFollowup => ({
+      followupId: f.followup_id || '',
+      workspaceId: f.workspace_id ?? null,
+      title: f.title || '',
+      description: f.description || '',
+      sourceType: f.source_type || 'manual',
+      dueDate: f.due_date || '',
+      priority: f.priority || 'medium',
+      status: f.status || 'open',
+      createdAt: f.created_at || '',
+    })),
+    overdueCount: Number(data.overdue_count ?? 0),
+  };
+}
+
+export async function createChiefFollowup(title: string, dueDate: string, priority: string): Promise<ChiefFollowup | null> {
+  const data = await postJson<any>('/api/chief-of-staff/followups', { title, due_date: dueDate, priority });
+  if (!data) return null;
+  return {
+    followupId: data.followup_id || '',
+    workspaceId: data.workspace_id ?? null,
+    title: data.title || '',
+    description: data.description || '',
+    sourceType: data.source_type || 'manual',
+    dueDate: data.due_date || '',
+    priority: data.priority || 'medium',
+    status: data.status || 'open',
+    createdAt: data.created_at || '',
+  };
+}
+
+export async function updateChiefFollowupStatus(followupId: string, status: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/api/chief-of-staff/followups/${encodeURIComponent(followupId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  }).catch(() => null);
+  return Boolean(res && res.ok);
+}

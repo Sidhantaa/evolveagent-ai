@@ -23,6 +23,8 @@ import { ToolsMcpHub } from './pages/ToolsMcpHub';
 import { GovernancePage } from './pages/GovernancePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
+import { CommandCenterPage } from './pages/CommandCenterPage';
+import { ChiefOfStaffPage } from './pages/ChiefOfStaffPage';
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -50,6 +52,8 @@ const MainContent: React.FC = () => {
           {activePage === 'governance' && <GovernancePage />}
           {activePage === 'settings' && <SettingsPage />}
           {activePage === 'design-system' && <DesignSystemPage />}
+          {activePage === 'command-center' && <CommandCenterPage />}
+          {activePage === 'chief-of-staff' && <ChiefOfStaffPage />}
         </main>
       </div>
 
