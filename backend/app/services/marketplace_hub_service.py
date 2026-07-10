@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from statistics import mean
 from uuid import uuid4
 
 from app.models.response_models import GovernanceEvent
@@ -10,6 +11,7 @@ from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
 
 KINDS = ("agent", "workflow")
+SORT_MODES = ("featured", "popular", "top_rated")
 
 # Featured starter bundles, seeded once so the marketplace isn't empty. Each is a
 # fully sanitized manifest that installs into a fresh local copy.
@@ -85,11 +87,17 @@ class MarketplaceHubService:
     * Installing a workflow creates a durable-workflow definition, so risky steps
       still halt for approval at run time.
 
+    v160: real, workspace-agnostic 1-5 star ratings (genuine user signal, not
+    a mock counter) feed discovery — list_listings() can sort by "popular"
+    (real install counts) or "top_rated" (real average rating) instead of
+    only the default featured-then-chronological order.
+
     Governance-logged. No secrets are ever stored in a listing.
     """
 
     listings_file = "marketplace_hub_listings.json"
     installs_file = "marketplace_hub_installs.json"
+    ratings_file = "marketplace_hub_ratings.json"
 
     def __init__(
         self,
@@ -160,20 +168,63 @@ class MarketplaceHubService:
             })
         self.storage.write_list(self.listings_file, seeded)
 
-    def list_listings(self, kind: str | None = None) -> dict:
+    def _ratings_by_listing(self) -> dict[str, list[int]]:
+        rows: dict[str, list[int]] = {}
+        for item in self.storage.read_list(self.ratings_file):
+            if item.get("listing_id"):
+                rows.setdefault(item["listing_id"], []).append(item.get("rating", 0))
+        return rows
+
+    def _enrich(self, row: dict, ratings_by_listing: dict[str, list[int]]) -> dict:
+        scores = ratings_by_listing.get(row.get("listing_id"), [])
+        enriched = dict(row)
+        enriched["rating_count"] = len(scores)
+        enriched["average_rating"] = round(mean(scores), 2) if scores else 0
+        return enriched
+
+    def list_listings(self, kind: str | None = None, sort: str | None = None) -> dict:
         self._ensure_seed()
         rows = self.storage.read_list(self.listings_file)
         if kind in KINDS:
             rows = [r for r in rows if r.get("kind") == kind]
-        rows = sorted(rows, key=lambda r: (not r.get("is_featured"), r.get("created_at", "")))
-        return {"listings": rows, "count": len(rows)}
+        ratings_by_listing = self._ratings_by_listing()
+        rows = [self._enrich(r, ratings_by_listing) for r in rows]
+        sort = sort if sort in SORT_MODES else "featured"
+        if sort == "popular":
+            rows.sort(key=lambda r: r.get("installs", 0), reverse=True)
+        elif sort == "top_rated":
+            # Real signal, not a mock counter — but a single 5-star rating
+            # shouldn't outrank a listing with dozens of solid reviews, so tie
+            # rating_count second within the same average_rating.
+            rows.sort(key=lambda r: (r.get("average_rating", 0), r.get("rating_count", 0)), reverse=True)
+        else:
+            rows.sort(key=lambda r: (not r.get("is_featured"), r.get("created_at", "")))
+        return {"listings": rows, "count": len(rows), "sort": sort}
 
     def get_listing(self, listing_id: str) -> dict:
         self._ensure_seed()
         for r in self.storage.read_list(self.listings_file):
             if r.get("listing_id") == listing_id:
-                return r
+                return self._enrich(r, self._ratings_by_listing())
         raise ValueError(f"Listing not found: {listing_id}")
+
+    def rate_listing(self, listing_id: str, rating: int, review: str = "") -> dict:
+        self.get_listing(listing_id)  # raises ValueError if missing
+        record = {
+            "rating_id": str(uuid4()),
+            "listing_id": listing_id,
+            "rating": max(1, min(5, int(rating))),
+            "review": str(review or "")[:1000],
+            "created_at": self._now(),
+        }
+        self.storage.append(self.ratings_file, record)
+        self._log("listing_rated", f"Listing {listing_id} received a rating.")
+        return {**record, "listing": self.get_listing(listing_id)}
+
+    def list_ratings(self, listing_id: str) -> dict:
+        rows = [r for r in self.storage.read_list(self.ratings_file) if r.get("listing_id") == listing_id]
+        rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return {"ratings": rows, "count": len(rows)}
 
     # -- publish -------------------------------------------------------------
     def publish(self, data: dict) -> dict:
@@ -286,6 +337,7 @@ class MarketplaceHubService:
             "marketplace_hub_listings": len(listings),
             "marketplace_hub_installs": len(self.storage.read_list(self.installs_file)),
             "marketplace_hub_listings_by_kind": by_kind,
+            "marketplace_hub_ratings": len(self.storage.read_list(self.ratings_file)),
         }
 
     def summary(self) -> dict:

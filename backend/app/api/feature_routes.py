@@ -19,6 +19,7 @@ from app.models.request_models import (
     DurableWorkflowDefRequest,
     DurableWorkflowStartRequest,
     MarketplacePublishRequest,
+    MarketplaceRatingRequest,
     VoiceActivityRequest,
     VoiceSettingsRequest,
     WorkflowApprovalRequest,
@@ -168,8 +169,8 @@ def durable_workflow_summary() -> dict:
 # Phase 7 Marketplace Hub — local, sanitized agent + workflow bundles.
 # ----------------------------------------------------------------------
 @router.get("/marketplace-hub/listings")
-def marketplace_hub_listings(kind: str | None = None) -> dict:
-    return marketplace_hub_service.list_listings(kind)
+def marketplace_hub_listings(kind: str | None = None, sort: str | None = None) -> dict:
+    return marketplace_hub_service.list_listings(kind, sort)
 
 
 @router.get("/marketplace-hub/listings/{listing_id}")
@@ -202,6 +203,19 @@ def marketplace_hub_unpublish(listing_id: str) -> dict:
         return marketplace_hub_service.unpublish(listing_id)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/marketplace-hub/listings/{listing_id}/rate")
+def marketplace_hub_rate(listing_id: str, request: MarketplaceRatingRequest) -> dict:
+    try:
+        return marketplace_hub_service.rate_listing(listing_id, request.rating, request.review)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/marketplace-hub/listings/{listing_id}/ratings")
+def marketplace_hub_list_ratings(listing_id: str) -> dict:
+    return marketplace_hub_service.list_ratings(listing_id)
 
 
 @router.get("/marketplace-hub/installs")
