@@ -674,6 +674,8 @@ class MultimodalItemCreateRequest(BaseModel):
 
 class MultimodalAnalyzeRequest(BaseModel):
     analysis_type: str | None = Field(default=None, pattern="^(screenshot|ui_bug|diagram|whiteboard|document_image|custom)$")
+    image: str | None = Field(default=None, max_length=15_000_000)
+    allow_live: bool = Field(default=False)
 
 
 # ----------------------------------------------------------------------
@@ -1497,6 +1499,11 @@ class MarketplacePublishRequest(BaseModel):
     summary: str = Field(default="", max_length=280)
     publisher: str = Field(default="local", max_length=80)
     manifest: dict = Field(default_factory=dict)
+
+
+class MarketplaceRatingRequest(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    review: str = Field(default="", max_length=1000)
 
 
 class DesignAnalyzeRequest(BaseModel):

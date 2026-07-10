@@ -1265,6 +1265,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **durable_workflow_service.analytics_summary(),
         **marketplace_hub_service.analytics_summary(),
         **design_agent_service.analytics_summary(),
+        **multimodal_agent_service.analytics_summary(),
         **git_reader_service.analytics_summary(),
         **github_connector_service.analytics_summary(),
         **code_writer_service.analytics_summary(),
