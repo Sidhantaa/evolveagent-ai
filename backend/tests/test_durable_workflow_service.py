@@ -1,8 +1,32 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.durable_workflow_service import DurableWorkflowService
+from app.services.governance_service import GovernanceService
+from app.services.storage_service import StorageService
 
 client = TestClient(app)
+
+
+class _StubTestQuality:
+    """A controlled stand-in for TestQualityService -- real pytest/npm-build runs
+    take up to 60s+ each and would recursively invoke this very test suite, so
+    engine-level wiring tests use a fast, deterministic stub instead."""
+
+    def __init__(self, blocked: bool):
+        self.blocked = blocked
+        self.calls: list[dict] = []
+
+    def run_quality_checks(self, commands=None, issue_id=None):
+        self.calls.append({"commands": commands, "issue_id": issue_id})
+        if self.blocked:
+            return {"quality_gate": {"passed": False, "blocked": True, "reason": "1 command(s) failed."}}
+        return {"quality_gate": {"passed": True, "blocked": False, "reason": "All commands passed."}}
+
+
+def _isolated_workflow_service(tmp_path, test_quality=None) -> DurableWorkflowService:
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    return DurableWorkflowService(storage, GovernanceService(storage), test_quality=test_quality)
 
 
 def test_templates():
@@ -142,3 +166,59 @@ def test_summary_analytics_governance():
 def test_existing_endpoints_still_work():
     assert client.get("/api/voice-console/status").status_code == 200
     assert client.get("/api/agent-studio/summary").status_code == 200
+
+
+# ------------------------------------------------------------------
+# Verification layer: run_quality_checks wires TestQualityService (real pytest/
+# npm-build execution, previously an orphaned service with no caller) into the
+# workflow engine as a genuine pre-approval gate. A real block now fails the
+# run for the first time this engine's dead "failed" terminal status is reached.
+# ------------------------------------------------------------------
+def test_run_quality_checks_gated_and_passes(tmp_path):
+    stub = _StubTestQuality(blocked=False)
+    service = _isolated_workflow_service(tmp_path, test_quality=stub)
+    run = service.start_run({"steps": [{"name": "verify", "action_type": "run_quality_checks"}]})
+    assert run["status"] == "waiting_approval"
+    assert run["steps"][0]["requires_approval"] is True
+    done = service.approve_step(run["run_id"], approved=True)
+    assert done["status"] == "completed"
+    assert "[executed] run_quality_checks" in done["steps"][0]["output"]
+    assert stub.calls  # the real (stubbed) check was actually invoked
+
+
+def test_run_quality_checks_blocked_fails_the_run(tmp_path):
+    stub = _StubTestQuality(blocked=True)
+    service = _isolated_workflow_service(tmp_path, test_quality=stub)
+    run = service.start_run({"steps": [{"name": "verify", "action_type": "run_quality_checks"}]})
+    done = service.approve_step(run["run_id"], approved=True)
+    assert done["status"] == "failed"
+    assert done["steps"][0]["status"] == "blocked"
+    assert "[blocked] run_quality_checks" in done["steps"][0]["output"]
+
+
+def test_run_quality_checks_without_collaborator_declines_safely(tmp_path):
+    service = _isolated_workflow_service(tmp_path, test_quality=None)
+    run = service.start_run({"steps": [{"name": "verify", "action_type": "run_quality_checks"}]})
+    done = service.approve_step(run["run_id"], approved=True)
+    assert done["status"] == "completed"  # missing collaborator declines, never fails the run
+    assert "[declined] run_quality_checks" in done["steps"][0]["output"]
+
+
+def test_failed_run_is_terminal(tmp_path):
+    stub = _StubTestQuality(blocked=True)
+    service = _isolated_workflow_service(tmp_path, test_quality=stub)
+    run = service.start_run({"steps": [{"name": "verify", "action_type": "run_quality_checks"}]})
+    done = service.approve_step(run["run_id"], approved=True)
+    again = service.advance_run(done["run_id"])
+    assert again["status"] == "failed"
+
+
+def test_quality_check_commands_can_be_overridden_via_action_params(tmp_path):
+    stub = _StubTestQuality(blocked=False)
+    service = _isolated_workflow_service(tmp_path, test_quality=stub)
+    run = service.start_run({"steps": [{
+        "name": "verify", "action_type": "run_quality_checks",
+        "action_params": {"commands": '["pytest"]'},
+    }]})
+    service.approve_step(run["run_id"], approved=True)
+    assert stub.calls[0]["commands"] == ["pytest"]
