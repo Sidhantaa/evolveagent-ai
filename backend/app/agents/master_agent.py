@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -1835,18 +1836,56 @@ class MasterOrchestratorAgent:
         return outputs
 
     @staticmethod
-    def summarize_consensus(candidates: list[AgentOutput]) -> tuple[str | None, str | None, list[str]]:
+    def _content_agreement(a: str, b: str) -> float:
+        """Real Jaccard token-overlap similarity between two candidate outputs
+        (0.0-1.0). Same heuristic-but-real bar already used elsewhere in this app
+        for cross-text comparison (EvalHarnessService's regression scoring,
+        ResearchAgentService's contradiction detection) -- no external model call,
+        just genuine content comparison instead of ignoring the text entirely."""
+        tokens_a = {w for w in re.findall(r"[a-z0-9]+", a.lower()) if len(w) > 3}
+        tokens_b = {w for w in re.findall(r"[a-z0-9]+", b.lower()) if len(w) > 3}
+        if not tokens_a or not tokens_b:
+            return 0.0
+        return len(tokens_a & tokens_b) / len(tokens_a | tokens_b)
+
+    @classmethod
+    def summarize_consensus(cls, candidates: list[AgentOutput]) -> tuple[str | None, str | None, list[str]]:
         if not candidates:
             return None, None, []
-        winner = next((candidate for candidate in candidates if candidate.success and not candidate.fallback_used), candidates[0])
         fallback_count = sum(1 for candidate in candidates if candidate.fallback_used)
         providers = ", ".join(dict.fromkeys(candidate.provider for candidate in candidates))
+        successful = [c for c in candidates if c.success and not c.fallback_used]
+        pool = successful or candidates
+
+        if len(pool) < 2:
+            winner = pool[0]
+            agreement_note = "Only one real candidate was available for content comparison."
+        else:
+            # Real pairwise agreement: each candidate's average token-overlap
+            # similarity to every other candidate. The winner is the most
+            # representative of the group -- not just "first successful", which
+            # ignored the actual text of every candidate.
+            scored = []
+            for i, candidate in enumerate(pool):
+                others = [pool[j] for j in range(len(pool)) if j != i]
+                agreement = sum(cls._content_agreement(candidate.output, other.output) for other in others) / len(others)
+                scored.append((agreement, candidate))
+            scored.sort(key=lambda item: item[0], reverse=True)
+            avg_agreement = round(sum(score for score, _ in scored) / len(scored), 2)
+            winner = scored[0][1]
+            agreement_note = (
+                f"Low agreement across candidates (avg similarity {avg_agreement}) -- review before trusting the final answer."
+                if avg_agreement < 0.15
+                else f"Candidates showed reasonable content agreement (avg similarity {avg_agreement})."
+            )
+
         reason = (
-            f"Selected {winner.agent_name} because it completed successfully through {winner.provider}/{winner.model}. "
-            f"The Judge Agent used the candidates as comparison material during final synthesis."
+            f"Selected {winner.agent_name} as most representative of the candidate pool "
+            f"(completed via {winner.provider}/{winner.model})."
         )
         notes = [
             f"Consensus compared {len(candidates)} candidate outputs across: {providers}.",
+            agreement_note,
             f"{fallback_count} candidate route(s) used fallback." if fallback_count else "No consensus candidate used fallback.",
         ]
         return winner.agent_name, reason, notes

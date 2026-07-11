@@ -247,7 +247,8 @@ class AgentNetworkService:
         if handoff is None:
             raise ValueError("Handoff not found")
         contract = self.get_contract(handoff.get("contract_id"))
-        output = (handoff.get("result") or {}).get("output", "")
+        result = handoff.get("result") or {}
+        output = result.get("output", "")
         expected = (contract or {}).get("expected_output", "")
         constraints = (contract or {}).get("constraints", [])
         checks = []
@@ -256,7 +257,14 @@ class AgentNetworkService:
         has_output = bool(output)
         checks.append({"check": "output_present", "passed": has_output})
         passed = passed and has_output
-        # Expected-output keyword overlap (lightweight, local).
+        # Real execution outcome (v214+): when this handoff actually dispatched to
+        # CustomAgentService.run(), `result["success"]` is a genuine AgentOutput
+        # signal, not a heuristic -- a real pass/fail the mock path never had.
+        if handoff.get("executed"):
+            execution_ok = bool(result.get("success", True))
+            checks.append({"check": "real_execution_succeeded", "passed": execution_ok})
+            passed = passed and execution_ok
+        # Expected-output keyword overlap (lightweight, local, advisory).
         if expected:
             overlap = any(word.lower() in output.lower() for word in expected.split()[:8] if len(word) > 3)
             checks.append({"check": "matches_expected", "passed": overlap})
@@ -268,7 +276,11 @@ class AgentNetworkService:
             "verified": passed,
             "checks": checks,
             "verified_at": self._now(),
-            "note": "Local mock verification — heuristic only.",
+            "note": (
+                "Includes a real execution-outcome check (not heuristic)."
+                if handoff.get("executed")
+                else "Local mock verification — heuristic only (no real execution occurred for this handoff)."
+            ),
         }
         handoff["verification"] = verification
         handoff["status"] = "completed" if passed else "failed"

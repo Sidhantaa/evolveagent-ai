@@ -484,7 +484,7 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
-durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service)
 # v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402

@@ -215,3 +215,35 @@ def test_existing_endpoints_still_pass():
     assert client.get("/api/industry-modes/dashboard").status_code == 200
     assert client.get("/api/multimodal/dashboard").status_code == 200
     assert client.get("/api/business/dashboard").status_code == 200
+
+
+# ------------------------------------------------------------------
+# Verification layer: verify_handoff now includes a real execution-outcome
+# check (AgentOutput.success, not a heuristic) whenever the handoff actually
+# dispatched to CustomAgentService.run() -- previously it always used only the
+# keyword-overlap heuristic, even for handoffs that had a real success signal.
+# ------------------------------------------------------------------
+def test_verify_handoff_includes_real_execution_check_when_executed():
+    agent = _create_custom_agent()
+    registry_id = f"custom:{agent['agent_id']}"
+    contract = _create_contract(task="Do the verified test task")
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "target_registry_id": registry_id, "approved": True},
+    ).json()
+    assert handoff["executed"] is True
+    verified = client.post(f"/api/agent-network/handoffs/{handoff['handoff_id']}/verify").json()
+    checks = {c["check"]: c["passed"] for c in verified["verification"]["checks"]}
+    assert "real_execution_succeeded" in checks
+    assert checks["real_execution_succeeded"] is True
+    assert "not heuristic" in verified["verification"]["note"].lower()
+
+
+def test_verify_handoff_mock_path_has_no_real_execution_check():
+    contract = _create_contract(task="Summarize findings", expected_output="findings summary")
+    handoff = client.post(f"/api/agent-network/contracts/{contract['contract_id']}/handoff", json={}).json()
+    assert handoff["executed"] is False
+    verified = client.post(f"/api/agent-network/handoffs/{handoff['handoff_id']}/verify").json()
+    checks = {c["check"] for c in verified["verification"]["checks"]}
+    assert "real_execution_succeeded" not in checks
+    assert "heuristic only" in verified["verification"]["note"].lower()

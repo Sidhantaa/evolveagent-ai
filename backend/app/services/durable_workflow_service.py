@@ -13,20 +13,22 @@ RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post",
 
 # Whitelisted effects a step may actually perform (once approved). These are
 # either internal/local/reversible (create_task, create_note, notify — write only
-# to the app's own effect store, never any external service) or a single real
-# external write (create_github_issue, write_code_change, open_pull_request) —
-# but ONLY reachable through this approval-gated path (never called directly by
-# an agent) and only when the backing service's own opt-in flag(s) are on;
-# otherwise it degrades to a safe refusal recorded as the step's output, never
-# a silent no-op. Anything not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request"}
+# to the app's own effect store, never any external service), a single real
+# external write (create_github_issue, write_code_change, open_pull_request), or
+# a real local verification check (run_quality_checks) — but ONLY reachable
+# through this approval-gated path (never called directly by an agent) and only
+# when the backing service's own opt-in flag(s) are on; otherwise it degrades to
+# a safe refusal recorded as the step's output, never a silent no-op. Anything
+# not in this set is simulated, not executed.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request", "run_quality_checks"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
 # v120: which run statuses are interesting enough to emit as system events
 # (chaining points for the event bus). Transitional states ("running", "paused")
 # are not emitted -- they're reversible/in-progress, not occurrences.
-_EMITTABLE_STATUSES = {"completed", "waiting_approval", "cancelled"}
+# "failed" (a real quality-gate block) is an occurrence too, same as completed.
+_EMITTABLE_STATUSES = {"completed", "waiting_approval", "cancelled", "failed"}
 
 # Starter durable workflows. Each step: name + optional action verb; risk is derived.
 STARTER_TEMPLATES = [
@@ -89,9 +91,15 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None, test_quality=None):
         self.storage = storage
         self.governance = governance_service
+        # Verification layer: optional TestQualityService collaborator backing the
+        # run_quality_checks whitelisted effect with a real pytest/npm-build run
+        # (previously an orphaned service with no caller). A blocked quality gate
+        # fails the run for real -- the first time this engine's dead "failed"
+        # terminal status is ever actually reached.
+        self.test_quality = test_quality
         # v120: optional EventBusService — lets a run's completion/approval-halt/
         # cancellation chain into another action. Emitting is best-effort and must
         # never break the workflow engine itself.
@@ -157,6 +165,8 @@ class DurableWorkflowService:
                 self.agent_scheduler.pause(job_id, reason="Waiting for human approval on a risky step.")
             elif status == "cancelled":
                 self.agent_scheduler.cancel(job_id, reason="Workflow run was cancelled.")
+            elif status == "failed":
+                self.agent_scheduler.fail(job_id, error=f"Workflow '{run['name']}' failed a verification gate.")
         except Exception:
             pass
 
@@ -308,6 +318,31 @@ class DurableWorkflowService:
             else:
                 result = {"pushed": False, "pull_request": None, "wrote": False,
                            "note": "No code writer or GitHub connector wired; simulated only."}
+        elif action_type == "run_quality_checks":
+            if self.test_quality is not None:
+                commands = None
+                commands_raw = params.get("commands")
+                if commands_raw:
+                    try:
+                        parsed_commands = json.loads(commands_raw)
+                        if isinstance(parsed_commands, list) and parsed_commands:
+                            commands = [str(c) for c in parsed_commands][:5]
+                    except (TypeError, ValueError):
+                        commands = None
+                try:
+                    result = self.test_quality.run_quality_checks(commands=commands, issue_id=run["run_id"])
+                    result["executed"] = True
+                except Exception as exc:
+                    result = {"executed": True, "quality_gate": {
+                        "passed": False, "blocked": True,
+                        "reason": f"Quality check execution failed: {type(exc).__name__}: {exc}",
+                    }}
+            else:
+                # Missing collaborator degrades to a safe decline (run proceeds
+                # normally), same as every other whitelisted action without its
+                # backing service -- only a REAL gate failure below fails the run.
+                result = {"executed": False, "quality_gate": None,
+                           "note": "No test quality service wired; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
@@ -336,6 +371,13 @@ class DurableWorkflowService:
                 label = pr.get("url") or f"#{pr.get('number')}"
                 return f"[executed] open_pull_request: {label}"
             return f"[declined] open_pull_request: {(result or {}).get('note', 'unavailable')}"
+        if action_type == "run_quality_checks":
+            if not result or not result.get("executed"):
+                return f"[declined] run_quality_checks: {(result or {}).get('note', 'unavailable')}"
+            gate = result.get("quality_gate") or {}
+            if gate.get("blocked"):
+                return f"[blocked] run_quality_checks: {gate.get('reason', 'Quality gate blocked.')}"
+            return f"[executed] run_quality_checks: {gate.get('reason', 'Quality gate passed.')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 
@@ -498,11 +540,19 @@ class DurableWorkflowService:
             else:
                 step["output"] = f"[approved] {step['name']} executed" + (f" — {note}" if note else "")
             step["finished_at"] = self._now()
-            step["status"] = "done"
-            run["cursor"] += 1
-            run["status"] = "running"
-            self._log("workflow_step_approved", f"Approved '{step['name']}' in run '{run['name']}'", risk=4)
-            run = self._advance_in_place(run)
+            if step["output"].startswith("[blocked]"):
+                # A real verification gate failed (run_quality_checks) -- the run
+                # itself fails. The first genuine use of this engine's "failed"
+                # terminal status, which was declared but never reachable before.
+                step["status"] = "blocked"
+                run["status"] = "failed"
+                self._log("workflow_step_blocked", f"Step '{step['name']}' blocked run '{run['name']}' (verification gate failed)", risk=6, approved=False)
+            else:
+                step["status"] = "done"
+                run["cursor"] += 1
+                run["status"] = "running"
+                self._log("workflow_step_approved", f"Approved '{step['name']}' in run '{run['name']}'", risk=4)
+                run = self._advance_in_place(run)
         else:
             step["status"] = "skipped"
             step["output"] = f"[rejected] {step['name']} skipped" + (f" — {note}" if note else "")
