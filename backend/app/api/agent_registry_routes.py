@@ -19,6 +19,17 @@ def agent_registry_summary() -> dict:
     return agent_registry_service.summary()
 
 
+@router.get("/agent-registry/find-capable")
+def agent_registry_find_capable(
+    capability: str | None = None, source: str | None = None,
+    exclude_approval_gated: bool = False, limit: int = 20,
+) -> dict:
+    # Registered before the {registry_id:path} catch-all below so "find-capable"
+    # is never swallowed as a registry_id.
+    candidates = agent_registry_service.find_capable(capability, source, exclude_approval_gated, limit)
+    return {"candidates": candidates, "count": len(candidates)}
+
+
 @router.get("/agent-registry/{registry_id:path}")
 def agent_registry_get(registry_id: str) -> dict:
     try:

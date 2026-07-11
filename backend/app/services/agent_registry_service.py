@@ -122,6 +122,36 @@ class AgentRegistryService:
         self._log("registry_listed", f"Listed {min(len(entries), limit)} agents (source={source or 'all'})")
         return {"agents": entries[:limit], "count": len(entries), "sources": list(SOURCES)}
 
+    def find_capable(
+        self, capability: str | None = None, source: str | None = None,
+        exclude_approval_gated: bool = False, limit: int = 20,
+    ) -> list[dict]:
+        """Real capability-based candidate search, built on the ``tools``/``role``/
+        ``description`` fields every registry entry already carries (declared by
+        Agent Studio, Custom Agents, or Departments) -- no separate skill-contract
+        schema. Used by AgentNetworkService to resolve a handoff target by
+        capability instead of requiring a caller to already know an exact id."""
+        entries = self._collect()
+        if source in SOURCES:
+            entries = [e for e in entries if e["source"] == source]
+        if exclude_approval_gated:
+            entries = [e for e in entries if not e["approval_gated"]]
+        if capability:
+            needle = capability.lower()
+            entries = [
+                e for e in entries
+                if any(needle in str(tool).lower() for tool in e["tools"])
+                or needle in e["role"].lower() or needle in e["description"].lower()
+            ]
+        try:
+            limit = max(1, min(100, int(limit)))
+        except (TypeError, ValueError):
+            limit = 20
+        active_statuses = ("published", "enabled", "active")
+        entries.sort(key=lambda e: (e["status"] not in active_statuses, e["approval_gated"], e["name"]))
+        self._log("registry_capability_search", f"Searched capability='{capability}' source={source or 'all'} -> {len(entries)} candidate(s)")
+        return entries[:limit]
+
     def get(self, registry_id: str) -> dict:
         for e in self._collect():
             if e["id"] == registry_id:

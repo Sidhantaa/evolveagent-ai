@@ -722,6 +722,10 @@ class AgentContractUpdateRequest(BaseModel):
 class AgentHandoffCreateRequest(BaseModel):
     handoff_type: str = Field(default="local", pattern="^(local|external_mock)$")
     payload: dict = Field(default_factory=dict)
+    target_registry_id: str | None = Field(default=None, max_length=200, description="Explicit Agent Registry id to execute against, e.g. 'custom:<agent_id>'.")
+    capability: str | None = Field(default=None, max_length=120, description="Resolve a real execution target by declared capability instead of an explicit id.")
+    execute: bool = Field(default=False, description="Opt in to real execution via CustomAgentService; default stays mock.")
+    approved: bool = Field(default=False, description="Explicit human approval for a target that requires it.")
 
 
 # ----------------------------------------------------------------------

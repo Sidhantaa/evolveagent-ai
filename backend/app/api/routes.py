@@ -544,6 +544,13 @@ from app.services.agent_registry_service import AgentRegistryService  # noqa: E4
 agent_registry_service = AgentRegistryService(storage, governance_service)
 from app.services.agent_governance_service import AgentGovernanceService  # noqa: E402
 agent_governance_service = AgentGovernanceService(storage, governance_service, agent_registry_service)
+# Agent workforce: wire real execution + real policy enforcement into the
+# previously mock-only agent-to-agent handoff (registry -> real capability
+# lookup, custom_agent_service -> real execution, agent_governance -> the
+# policy decision that was computed but never checked before this).
+agent_network_service.agent_registry = agent_registry_service
+agent_network_service.custom_agent_service = custom_agent_service
+agent_network_service.agent_governance = agent_governance_service
 home_dashboard_service = HomeDashboardService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
