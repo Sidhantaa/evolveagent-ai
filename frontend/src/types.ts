@@ -13,7 +13,8 @@ export type PageId =
   | 'design-system'
   | 'command-center'
   | 'chief-of-staff'
-  | 'marketplace-hub';
+  | 'marketplace-hub'
+  | 'compliance';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
