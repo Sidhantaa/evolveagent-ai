@@ -12,7 +12,8 @@ export type PageId =
   | 'settings'
   | 'design-system'
   | 'command-center'
-  | 'chief-of-staff';
+  | 'chief-of-staff'
+  | 'marketplace-hub';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 

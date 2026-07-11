@@ -994,3 +994,133 @@ export async function updateChiefFollowupStatus(followupId: string, status: stri
   }).catch(() => null);
   return Boolean(res && res.ok);
 }
+
+// ---- v160 Agent Marketplace Hub ----------------------------------------------
+export interface MarketplaceListing {
+  listingId: string;
+  kind: string;
+  name: string;
+  summary: string;
+  publisher: string;
+  isFeatured: boolean;
+  installs: number;
+  ratingCount: number;
+  averageRating: number;
+  createdAt: string;
+  manifest: Record<string, any>;
+}
+
+export interface MarketplaceRating {
+  ratingId: string;
+  listingId: string;
+  rating: number;
+  review: string;
+  createdAt: string;
+}
+
+export interface MarketplaceInstall {
+  installId: string;
+  listingId: string;
+  kind: string;
+  installedName: string;
+  createdAt: string;
+}
+
+export interface MarketplaceSummary {
+  totalListings: number;
+  totalInstalls: number;
+  listingsByKind: Record<string, number>;
+  totalRatings: number;
+  kinds: string[];
+}
+
+function mapMarketplaceListing(l: any): MarketplaceListing {
+  return {
+    listingId: l.listing_id || '',
+    kind: l.kind || 'agent',
+    name: l.name || 'Untitled listing',
+    summary: l.summary || '',
+    publisher: l.publisher || 'local',
+    isFeatured: Boolean(l.is_featured),
+    installs: Number(l.installs ?? 0),
+    ratingCount: Number(l.rating_count ?? 0),
+    averageRating: Number(l.average_rating ?? 0),
+    createdAt: l.created_at || '',
+    manifest: l.manifest && typeof l.manifest === 'object' ? l.manifest : {},
+  };
+}
+
+export async function fetchMarketplaceListings(
+  kind?: string, sort?: 'featured' | 'popular' | 'top_rated',
+): Promise<MarketplaceListing[] | null> {
+  const params = new URLSearchParams();
+  if (kind) params.set('kind', kind);
+  if (sort) params.set('sort', sort);
+  const qs = params.toString();
+  const data = await getJson<any>(`/api/marketplace-hub/listings${qs ? `?${qs}` : ''}`);
+  if (!data?.listings) return null;
+  return data.listings.map(mapMarketplaceListing);
+}
+
+export async function fetchMarketplaceListing(listingId: string): Promise<MarketplaceListing | null> {
+  const data = await getJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}`);
+  if (!data) return null;
+  return mapMarketplaceListing(data);
+}
+
+export async function fetchMarketplaceSummary(): Promise<MarketplaceSummary | null> {
+  const data = await getJson<any>('/api/marketplace-hub/summary');
+  if (!data) return null;
+  return {
+    totalListings: Number(data.marketplace_hub_listings ?? 0),
+    totalInstalls: Number(data.marketplace_hub_installs ?? 0),
+    listingsByKind: data.marketplace_hub_listings_by_kind || {},
+    totalRatings: Number(data.marketplace_hub_ratings ?? 0),
+    kinds: Array.isArray(data.kinds) ? data.kinds.map(String) : [],
+  };
+}
+
+export async function fetchMarketplaceRatings(listingId: string): Promise<MarketplaceRating[] | null> {
+  const data = await getJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}/ratings`);
+  if (!data?.ratings) return null;
+  return data.ratings.map((r: any): MarketplaceRating => ({
+    ratingId: r.rating_id || '',
+    listingId: r.listing_id || '',
+    rating: Number(r.rating ?? 0),
+    review: r.review || '',
+    createdAt: r.created_at || '',
+  }));
+}
+
+export async function fetchMarketplaceInstalls(): Promise<MarketplaceInstall[] | null> {
+  const data = await getJson<any>('/api/marketplace-hub/installs');
+  if (!data?.installs) return null;
+  return data.installs.map((i: any): MarketplaceInstall => ({
+    installId: i.install_id || '',
+    listingId: i.listing_id || '',
+    kind: i.kind || '',
+    installedName: (i.installed && i.installed.name) || '',
+    createdAt: i.created_at || '',
+  }));
+}
+
+export async function installMarketplaceListing(listingId: string): Promise<boolean> {
+  const data = await postJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}/install`, {});
+  return data !== null;
+}
+
+export async function rateMarketplaceListing(listingId: string, rating: number, review: string): Promise<MarketplaceListing | null> {
+  const data = await postJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}/rate`, { rating, review });
+  if (!data?.listing) return null;
+  return mapMarketplaceListing(data.listing);
+}
+
+export async function publishMarketplaceListing(
+  kind: string, name: string, summary: string, publisher: string,
+): Promise<MarketplaceListing | null> {
+  const data = await postJson<any>('/api/marketplace-hub/listings', {
+    kind, name, summary, publisher, manifest: { name, role: summary },
+  });
+  if (!data) return null;
+  return mapMarketplaceListing(data);
+}
