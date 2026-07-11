@@ -25,6 +25,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { CommandCenterPage } from './pages/CommandCenterPage';
 import { ChiefOfStaffPage } from './pages/ChiefOfStaffPage';
+import { MarketplaceHubPage } from './pages/MarketplaceHubPage';
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -54,6 +55,7 @@ const MainContent: React.FC = () => {
           {activePage === 'design-system' && <DesignSystemPage />}
           {activePage === 'command-center' && <CommandCenterPage />}
           {activePage === 'chief-of-staff' && <ChiefOfStaffPage />}
+          {activePage === 'marketplace-hub' && <MarketplaceHubPage />}
         </main>
       </div>
 
