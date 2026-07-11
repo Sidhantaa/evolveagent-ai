@@ -1124,3 +1124,128 @@ export async function publishMarketplaceListing(
   if (!data) return null;
   return mapMarketplaceListing(data);
 }
+
+// ---- v190 Enterprise AI OS: Compliance Audit Packages -----------------------
+export interface AuditPackageSummary {
+  packageId: string;
+  title: string;
+  generatedAt: string;
+  governanceEventCount: number;
+  blockedActionCount: number;
+  sensitiveFindingsCount: number;
+  highRiskFindings: number;
+  policyCount: number;
+  contents: string[];
+  disclaimer: string;
+}
+
+export interface AuditSensitiveFinding {
+  findingId: string;
+  label: string;
+  secretsDetected: boolean;
+  secretTypes: string[];
+  piiDetected: boolean;
+  piiTypes: string[];
+  phiDetected: boolean;
+  phiTerms: string[];
+  hipaaWarning: boolean;
+  riskLevel: string;
+  recommendation: string;
+}
+
+export interface AuditPolicy {
+  policyId: string;
+  name: string;
+  category: string;
+  rules: string[];
+  status: string;
+}
+
+export interface AuditChecklist {
+  checklistId: string;
+  title: string;
+  framework: string;
+  items: { item: string; done: boolean }[];
+}
+
+export interface AuditContractReview {
+  reviewId: string;
+  title: string;
+  riskFlags: string[];
+  riskLevel: string;
+}
+
+export interface AuditPackageDetail extends AuditPackageSummary {
+  sensitiveFindings: AuditSensitiveFinding[];
+  policies: AuditPolicy[];
+  checklists: AuditChecklist[];
+  contractReviews: AuditContractReview[];
+}
+
+function mapAuditPackageSummary(p: any): AuditPackageSummary {
+  return {
+    packageId: p.package_id || '',
+    title: p.title || 'Untitled package',
+    generatedAt: p.generated_at || '',
+    governanceEventCount: Number(p.governance_event_count ?? 0),
+    blockedActionCount: Number(p.blocked_action_count ?? 0),
+    sensitiveFindingsCount: Number(p.sensitive_findings_count ?? 0),
+    highRiskFindings: Number(p.high_risk_findings ?? 0),
+    policyCount: Number(p.policy_count ?? 0),
+    contents: Array.isArray(p.contents) ? p.contents.map(String) : [],
+    disclaimer: p.disclaimer || '',
+  };
+}
+
+export async function fetchAuditPackages(): Promise<AuditPackageSummary[] | null> {
+  const data = await getJson<any>('/api/compliance/audit-packages');
+  if (!data?.audit_packages) return null;
+  return data.audit_packages.map(mapAuditPackageSummary);
+}
+
+export async function fetchAuditPackageDetail(packageId: string): Promise<AuditPackageDetail | null> {
+  const data = await getJson<any>(`/api/compliance/audit-packages/${encodeURIComponent(packageId)}`);
+  if (!data) return null;
+  const bundle = data.bundle || {};
+  return {
+    ...mapAuditPackageSummary(data),
+    sensitiveFindings: (Array.isArray(bundle.sensitive_findings) ? bundle.sensitive_findings : []).slice(0, 25).map((f: any): AuditSensitiveFinding => ({
+      findingId: f.finding_id || '',
+      label: f.label || '',
+      secretsDetected: Boolean(f.secrets_detected),
+      secretTypes: Array.isArray(f.secret_types) ? f.secret_types.map(String) : [],
+      piiDetected: Boolean(f.pii_detected),
+      piiTypes: Array.isArray(f.pii_types) ? f.pii_types.map(String) : [],
+      phiDetected: Boolean(f.phi_detected),
+      phiTerms: Array.isArray(f.phi_terms) ? f.phi_terms.map(String) : [],
+      hipaaWarning: Boolean(f.hipaa_warning),
+      riskLevel: f.risk_level || 'low',
+      recommendation: f.recommendation || '',
+    })),
+    policies: (Array.isArray(bundle.policies) ? bundle.policies : []).slice(0, 25).map((p: any): AuditPolicy => ({
+      policyId: p.policy_id || '',
+      name: p.name || '',
+      category: p.category || '',
+      rules: Array.isArray(p.rules) ? p.rules.map(String) : [],
+      status: p.status || 'active',
+    })),
+    checklists: (Array.isArray(bundle.checklists) ? bundle.checklists : []).slice(0, 15).map((c: any): AuditChecklist => ({
+      checklistId: c.checklist_id || '',
+      title: c.title || '',
+      framework: c.framework || '',
+      items: Array.isArray(c.items) ? c.items.map((i: any) => ({ item: String(i.item || ''), done: Boolean(i.done) })) : [],
+    })),
+    contractReviews: (Array.isArray(bundle.contract_reviews) ? bundle.contract_reviews : []).slice(0, 15).map((r: any): AuditContractReview => ({
+      reviewId: r.review_id || '',
+      title: r.title || '',
+      riskFlags: Array.isArray(r.risk_flags) ? r.risk_flags.map(String) : [],
+      riskLevel: r.risk_level || 'low',
+    })),
+  };
+}
+
+export async function createAuditPackage(title: string): Promise<AuditPackageSummary | null> {
+  const data = await postJson<any>('/api/compliance/audit-packages', { title });
+  if (!data) return null;
+  return mapAuditPackageSummary(data);
+}
