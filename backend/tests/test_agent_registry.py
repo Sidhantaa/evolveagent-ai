@@ -64,6 +64,26 @@ def test_get_by_registry_id(tmp_path):
         reg.get("studio:nope")
 
 
+def test_find_capable_filters_by_tool_and_source(tmp_path):
+    reg = _service(tmp_path)
+    matches = reg.find_capable(capability="files", source="custom_agents")
+    assert len(matches) == 1
+    assert matches[0]["name"] == "Resume Agent"
+    assert reg.find_capable(capability="zzz-nomatch") == []
+
+
+def test_find_capable_excludes_approval_gated_when_all_gated(tmp_path):
+    reg = _service(tmp_path)
+    # Every fixture entry is approval_gated=True (studio requires_approval,
+    # custom approval_level=manual, department approve_to_run).
+    assert reg.find_capable(exclude_approval_gated=True) == []
+
+
+def test_find_capable_endpoint():
+    body = client.get("/api/agent-registry/find-capable", params={"capability": "zzz-no-such-capability"}).json()
+    assert body == {"candidates": [], "count": 0}
+
+
 def test_endpoints_and_analytics():
     r = client.get("/api/agent-registry").json()
     assert "agents" in r and "count" in r

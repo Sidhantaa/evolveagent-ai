@@ -16,18 +16,37 @@ class AgentNetworkService:
     """v23.0 Agent-to-Agent Network foundation.
 
     A local protocol for agent task contracts, handoffs, result verification, and
-    cross-system audit logs. No real external agent calls are made — handoffs are
-    either local or labelled external_mock and produce mock results. Every stateful
-    action writes an audit record and a governance event.
+    cross-system audit logs. By default handoffs are either local or labelled
+    external_mock and produce mock results — this remains the behavior whenever a
+    caller doesn't opt in to real execution.
+
+    Real execution (the "agent workforce" upgrade): when a caller passes
+    ``execute=True`` and a ``target_registry_id`` (or a ``capability`` query to
+    resolve one via AgentRegistryService.find_capable), and the optional
+    collaborators below are wired, the handoff is dispatched to a REAL
+    CustomAgentService.run() call instead of a canned mock string — genuine
+    agent-to-agent delegation. Every real dispatch is checked against
+    AgentGovernanceService's already-computed policy decision first (previously
+    that decision was computed but never enforced anywhere): a policy-denied or
+    unapproved high-risk agent is refused, never silently run. Any missing
+    collaborator, unresolved target, or non-custom_agents source degrades safely
+    to the original mock result with a clear note — never a crash, never a silent
+    upgrade to "real" without the safety checks above.
     """
 
     contracts_file = "agent_network_contracts.json"
     handoffs_file = "agent_network_handoffs.json"
     audits_file = "agent_network_audits.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, agent_registry=None, custom_agent_service=None, agent_governance=None):
         self.storage = storage
         self.governance = governance_service
+        # Optional collaborators, wired post-init in routes.py once these other
+        # services exist. Mirrors the optional-collaborator pattern used across
+        # the app (e.g. durable_workflow_service.github).
+        self.agent_registry = agent_registry
+        self.custom_agent_service = custom_agent_service
+        self.agent_governance = agent_governance
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -135,22 +154,81 @@ class AgentNetworkService:
     def get_handoff(self, handoff_id: str) -> dict | None:
         return next((h for h in self.storage.read_list(self.handoffs_file) if h.get("handoff_id") == handoff_id), None)
 
-    def create_handoff(self, contract_id: str, handoff_type: str | None, payload: dict | None) -> dict:
+    def _resolve_execution_target(self, target_registry_id: str | None, capability: str | None) -> tuple[dict | None, str | None]:
+        if self.agent_registry is None:
+            return None, "Agent registry not wired; cannot resolve a real execution target."
+        if target_registry_id:
+            try:
+                return self.agent_registry.get(target_registry_id), None
+            except ValueError:
+                return None, f"Registry agent not found: {target_registry_id}"
+        if capability:
+            candidates = self.agent_registry.find_capable(capability=capability, source="custom_agents", limit=1)
+            if not candidates:
+                return None, f"No registry agent found matching capability '{capability}'."
+            return candidates[0], None
+        return None, "No target_registry_id or capability provided for real execution."
+
+    def _execute_real(self, contract: dict, target_registry_id: str | None, capability: str | None, approved: bool) -> tuple[dict | None, str]:
+        entry, resolve_error = self._resolve_execution_target(target_registry_id, capability)
+        if resolve_error:
+            return None, resolve_error
+        if entry.get("source") != "custom_agents":
+            return None, f"Real execution is only supported for custom_agents-source targets today (got '{entry.get('source')}')."
+        if self.custom_agent_service is None:
+            return None, "Custom agent runtime not wired; cannot execute for real."
+        if self.agent_governance is not None:
+            try:
+                risk = self.agent_governance.get_agent_risk(entry["id"])
+            except ValueError:
+                return None, "Could not score agent risk before execution."
+            if not risk["policy_allowed"]:
+                return None, risk["policy_reason"]
+            if risk["requires_approval"] and not approved:
+                return None, "This agent requires approval before real execution. Pass approved=true after human review."
+        output, _config = self.custom_agent_service.run(entry["source_id"], contract.get("task", ""), contract.get("expected_output", ""))
+        if output is None:
+            return None, "Target custom agent not found or disabled."
+        return {
+            "produced_by": entry["name"],
+            "output": output.output,
+            "provider": output.provider,
+            "model": output.model,
+            "success": output.success,
+            "latency_ms": output.latency_ms,
+            "note": "Real execution via CustomAgentService.",
+        }, ""
+
+    def create_handoff(
+        self, contract_id: str, handoff_type: str | None, payload: dict | None,
+        target_registry_id: str | None = None, execute: bool = False,
+        approved: bool = False, capability: str | None = None,
+    ) -> dict:
         contract = self.get_contract(contract_id)
         if contract is None:
             raise ValueError("Contract not found")
         resolved_type = self._enum(handoff_type, HANDOFF_TYPES, "local")
-        # Mock execution only — never calls a real external agent.
-        result = {
-            "produced_by": contract.get("target_agent"),
-            "output": f"[mock {resolved_type} result] {contract.get('task', '')[:160]}",
-            "note": "Mock handoff result — no real external agent was contacted.",
-        }
+
+        result = None
+        execution_note = ""
+        if execute:
+            result, execution_note = self._execute_real(contract, target_registry_id, capability, approved)
+
+        executed = result is not None
+        if result is None:
+            result = {
+                "produced_by": contract.get("target_agent"),
+                "output": f"[mock {resolved_type} result] {contract.get('task', '')[:160]}",
+                "note": execution_note or "Mock handoff result — no real external agent was contacted.",
+            }
+
         handoff = {
             "handoff_id": str(uuid4()),
             "contract_id": contract_id,
             "handoff_type": resolved_type,
             "payload": payload if isinstance(payload, dict) else {},
+            "executed": executed,
+            "target_registry_id": target_registry_id,
             "result": result,
             "verification": {},
             "status": "completed",
@@ -159,8 +237,8 @@ class AgentNetworkService:
         }
         self.storage.append(self.handoffs_file, handoff)
         self._set_contract_status(contract_id, "completed")
-        self._audit("handoff_created", handoff["handoff_id"], f"{resolved_type} handoff for contract {contract_id}.")
-        self._log("agent_network_handoff_created", f"Created {resolved_type} handoff {handoff['handoff_id']}.")
+        self._audit("handoff_created", handoff["handoff_id"], f"{resolved_type} handoff for contract {contract_id} (executed={executed}).")
+        self._log("agent_network_handoff_created", f"Created {resolved_type} handoff {handoff['handoff_id']} (executed={executed}).")
         return handoff
 
     def verify_handoff(self, handoff_id: str) -> dict:

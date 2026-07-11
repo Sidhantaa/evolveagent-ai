@@ -52,8 +52,15 @@ def update_agent_network_contract(contract_id: str, request: AgentContractUpdate
 def create_agent_network_handoff(contract_id: str, request: AgentHandoffCreateRequest | None = None) -> dict:
     handoff_type = request.handoff_type if request else "local"
     payload = request.payload if request else {}
+    target_registry_id = request.target_registry_id if request else None
+    capability = request.capability if request else None
+    execute = request.execute if request else False
+    approved = request.approved if request else False
     try:
-        return agent_network_service.create_handoff(contract_id, handoff_type, payload)
+        return agent_network_service.create_handoff(
+            contract_id, handoff_type, payload,
+            target_registry_id=target_registry_id, execute=execute, approved=approved, capability=capability,
+        )
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Contract not found") from error
 
