@@ -270,24 +270,46 @@ class AgentDepartmentService:
     def templates(self) -> list[dict]:
         return [dict(template) for template in DEFAULT_DEPARTMENTS]
 
+    # Illustrative default monthly budget for a newly-seeded template
+    # department (estimates only -- no billing, same guarantee UsageLedgerService
+    # already makes). Flat and uniform on purpose: differentiating amounts per
+    # department would be an arbitrary guess, not a real signal.
+    _STARTER_BUDGET_MONTHLY_LIMIT = 100.0
+
     def seed_templates(self) -> dict:
         existing_names = {item.get("name", "").lower() for item in self.storage.read_list(self.departments_file)}
         created: list[dict] = []
         for template in DEFAULT_DEPARTMENTS:
             if template["name"].lower() in existing_names:
                 continue
-            created.append(
-                self.create_department(
-                    name=template["name"],
-                    description=template["description"],
-                    manager_agent=template["manager_agent"],
-                    worker_agents=template["worker_agents"],
-                    reviewer_agents=template["reviewer_agents"],
-                    auditor_agents=template["auditor_agents"],
-                    allowed_tools=template["allowed_tools"],
-                    permission_level=template["permission_level"],
-                )
+            department = self.create_department(
+                name=template["name"],
+                description=template["description"],
+                manager_agent=template["manager_agent"],
+                worker_agents=template["worker_agents"],
+                reviewer_agents=template["reviewer_agents"],
+                auditor_agents=template["auditor_agents"],
+                allowed_tools=template["allowed_tools"],
+                permission_level=template["permission_level"],
             )
+            # v300: a newly-seeded template department gets a real starter goal
+            # and budget for free, using the same goals/budgets wiring already
+            # available on this service -- best-effort, never blocks seeding.
+            if self.goal_service is not None:
+                try:
+                    self.create_department_goal(
+                        department["department_id"],
+                        title=f"Establish the {template['name']} operating rhythm",
+                        description=f"Starter goal seeded when the {template['name']} department template was created.",
+                    )
+                except Exception:
+                    pass
+            if self.usage_ledger is not None:
+                try:
+                    self.set_department_budget(department["department_id"], self._STARTER_BUDGET_MONTHLY_LIMIT)
+                except Exception:
+                    pass
+            created.append(department)
         self._log("department_templates_seeded", f"Seeded {len(created)} default department(s).")
         return {
             "seeded_count": len(created),

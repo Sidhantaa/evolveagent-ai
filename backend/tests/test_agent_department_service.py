@@ -52,6 +52,54 @@ def test_seed_default_templates():
     assert second["seeded_count"] == 0
 
 
+def test_seed_default_templates_gives_each_newly_seeded_department_a_real_goal_and_budget(tmp_path):
+    # Isolated instance (fresh tmp_path storage) rather than the shared
+    # app-level singleton -- avoids any dependency on whether the shared
+    # dev-data store already has these template names seeded from an earlier
+    # test/run, which would make seed_templates() a no-op (idempotent skip)
+    # and give a false negative for goal/budget seeding.
+    from app.services.agent_department_service import AgentDepartmentService
+    from app.services.goal_service import GoalService
+    from app.services.governance_service import GovernanceService
+    from app.services.permission_service import PermissionService
+    from app.services.storage_service import StorageService
+    from app.services.usage_ledger_service import UsageLedgerService
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    governance = GovernanceService(storage)
+    service = AgentDepartmentService(
+        storage, governance, PermissionService(),
+        goal_service=GoalService(storage), usage_ledger=UsageLedgerService(storage, governance),
+    )
+    body = service.seed_templates()
+    assert body["seeded_count"] == 7
+    for department in body["departments"]:
+        scorecard = service.department_scorecard(department["department_id"])
+        assert scorecard["goals"], f"{department['name']} has no starter goal"
+        assert scorecard["goals"][0]["workspace_id"] == f"dept:{department['department_id']}"
+        assert scorecard["budget"]["monthly_limit"] == 100.0
+
+    # Idempotent: seeding again creates no duplicate goals/budgets either.
+    second = service.seed_templates()
+    assert second["seeded_count"] == 0
+    first_dept_id = body["departments"][0]["department_id"]
+    assert len(service.list_department_goals(first_dept_id)) == 1
+
+
+def test_seed_default_templates_without_collaborators_still_creates_departments(tmp_path):
+    from app.services.agent_department_service import AgentDepartmentService
+    from app.services.governance_service import GovernanceService
+    from app.services.permission_service import PermissionService
+    from app.services.storage_service import StorageService
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    service = AgentDepartmentService(storage, GovernanceService(storage), PermissionService())
+    body = service.seed_templates()
+    assert body["seeded_count"] == 7  # missing collaborators never block department creation
+    for department in body["departments"]:
+        assert service.list_department_goals(department["department_id"]) == []
+
+
 def test_department_templates_listing():
     body = client.get("/api/departments/templates").json()
     assert body["count"] == 7
