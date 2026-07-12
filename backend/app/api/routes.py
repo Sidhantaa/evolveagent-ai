@@ -495,7 +495,7 @@ durable_workflow_service = DurableWorkflowService(storage, governance_service, a
 # v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402
-scheduler_tick_worker = SchedulerTickWorker(scheduled_tasks_service, agent_scheduler=agent_scheduler)
+scheduler_tick_worker = SchedulerTickWorker(scheduled_tasks_service, agent_scheduler=agent_scheduler, kaggle_worker=kaggle_worker_service)
 # v120: the event bus dispatches subscription actions through the two engines
 # above; wire it back into them as an optional collaborator (post-init, since
 # they were constructed first) so their own state transitions can emit events.
