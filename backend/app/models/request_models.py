@@ -531,6 +531,22 @@ class DepartmentBudgetRequest(BaseModel):
     monthly_limit: float = Field(..., ge=0)
 
 
+class WorkerRegisterRequest(BaseModel):
+    worker_type: str = Field(..., min_length=1, max_length=60)
+    capabilities: list[str] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)
+
+
+class WorkerHeartbeatRequest(BaseModel):
+    status: str = Field(default="online", max_length=20)
+
+
+class KaggleJobSubmitRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=20000)
+    title: str = Field(default="", max_length=200)
+    workspace_id: str | None = Field(default=None, max_length=120)
+
+
 # ----------------------------------------------------------------------
 # v18.0 Real Business Automation Layer
 # ----------------------------------------------------------------------

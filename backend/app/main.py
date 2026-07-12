@@ -92,6 +92,7 @@ from app.api.training_lab_routes import router as training_lab_router
 from app.api.departments_routes import router as departments_router
 from app.api.research_routes import router as research_router
 from app.api.feature_routes import router as feature_router
+from app.api.worker_registry_routes import router as worker_registry_router
 from app.config import settings
 
 
@@ -207,4 +208,5 @@ app.include_router(training_lab_router, prefix="/api")
 app.include_router(departments_router, prefix="/api")
 app.include_router(research_router, prefix="/api")
 app.include_router(feature_router, prefix="/api")
+app.include_router(worker_registry_router, prefix="/api")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
