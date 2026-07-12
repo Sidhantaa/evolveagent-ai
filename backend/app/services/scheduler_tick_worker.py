@@ -16,6 +16,12 @@ so a single failure is recorded and skipped, not fatal.
 Each tick also sweeps AgentSchedulerService for genuinely stale running jobs
 (real heartbeat-timeout detection that previously had no automated consumer)
 and fails them for real -- isolated from due-task firing, optional collaborator.
+
+Before that sweep, each tick also polls any in-flight KaggleWorkerService jobs
+(previously only polled from the manual API route) so their agent_scheduler
+heartbeat gets refreshed -- otherwise the stale-job sweep above would
+eventually auto-fail a Kaggle kernel that is still genuinely running, since
+nothing else was ever refreshing its heartbeat.
 """
 
 from __future__ import annotations
@@ -28,8 +34,11 @@ from app.config import settings
 from app.services.scheduled_tasks_service import ScheduledTasksService
 
 
+_KAGGLE_NONTERMINAL_STATUSES = {"submitted", "running", "queued"}
+
+
 class SchedulerTickWorker:
-    def __init__(self, scheduled_tasks: ScheduledTasksService, agent_scheduler=None):
+    def __init__(self, scheduled_tasks: ScheduledTasksService, agent_scheduler=None, kaggle_worker=None):
         self.scheduled_tasks = scheduled_tasks
         # Optional AgentSchedulerService collaborator. health() already does
         # real stale-heartbeat detection (a running job whose heartbeat hasn't
@@ -40,12 +49,20 @@ class SchedulerTickWorker:
         # genuinely stale job for real, using the engine's own already-real
         # fail() transition -- never touches jobs that are still healthy.
         self.agent_scheduler = agent_scheduler
+        # Optional KaggleWorkerService collaborator. poll_job() was only ever
+        # invoked from the manual API route, so a Kaggle kernel nobody polled
+        # would eventually get its agent_scheduler job auto-failed as "stale
+        # heartbeat" by the sweep above even while genuinely still running.
+        # Each tick now refreshes every in-flight Kaggle job's real status
+        # (and heartbeat) BEFORE the stale sweep runs.
+        self.kaggle_worker = kaggle_worker
         self.running = False
         self._task: asyncio.Task | None = None
         self.last_tick_at: str | None = None
         self.last_error: str | None = None
         self.last_fired: list[dict[str, Any]] = []
         self.last_stale_jobs_failed: list[dict[str, Any]] = []
+        self.last_kaggle_jobs_polled: list[dict[str, Any]] = []
 
     async def start(self) -> None:
         if self.running or not settings.scheduler_tick_enabled:
@@ -92,8 +109,32 @@ class SchedulerTickWorker:
             except Exception as exc:  # noqa: BLE001 — isolate one bad task from the rest
                 fired.append({"task_id": task_id, "name": item.get("name"), "status": "error", "error": str(exc)})
         self.last_fired = fired
+        self.last_kaggle_jobs_polled = self._poll_kaggle_jobs()
         self.last_stale_jobs_failed = self._fail_stale_jobs()
         return fired
+
+    def _poll_kaggle_jobs(self) -> list[dict[str, Any]]:
+        """Isolated from everything else -- a broken Kaggle poll can never
+        affect due-task firing or the stale-job sweep, and runs BEFORE that
+        sweep so a freshly-refreshed heartbeat prevents a false stale-fail in
+        the same tick."""
+        if self.kaggle_worker is None:
+            return []
+        polled: list[dict[str, Any]] = []
+        try:
+            jobs = self.kaggle_worker.list_jobs(limit=50)
+        except Exception:  # noqa: BLE001
+            return polled
+        for job in jobs:
+            if job.get("status") not in _KAGGLE_NONTERMINAL_STATUSES:
+                continue
+            job_id = job.get("job_id")
+            try:
+                updated = self.kaggle_worker.poll_job(job_id)
+                polled.append({"job_id": job_id, "status": updated.get("status")})
+            except Exception:  # noqa: BLE001 — one bad job can never stop the sweep
+                continue
+        return polled
 
     def _fail_stale_jobs(self) -> list[dict[str, Any]]:
         """Isolated from due-task firing above -- a failure here must never
@@ -123,4 +164,5 @@ class SchedulerTickWorker:
             "last_error": self.last_error,
             "last_fired": self.last_fired,
             "last_stale_jobs_failed": self.last_stale_jobs_failed,
+            "last_kaggle_jobs_polled": self.last_kaggle_jobs_polled,
         }

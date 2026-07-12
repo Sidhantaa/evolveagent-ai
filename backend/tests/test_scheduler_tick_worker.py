@@ -3,13 +3,17 @@ opt-in background tick worker."""
 
 import pytest
 
+from app.config import settings
 from app.services.agent_scheduler_service import AgentSchedulerService
 from app.services.durable_workflow_service import DurableWorkflowService
 from app.services.governance_service import GovernanceService
+from app.services.kaggle_worker_service import KaggleWorkerService
 from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.scheduler_tick_worker import SchedulerTickWorker
 from app.services.storage_service import StorageService
+from app.services.worker_registry_service import WorkerRegistryService
 from app.services.workspace_service import WorkspaceService
+from tests.test_kaggle_worker_service import _StubKaggleRunner, _ok
 
 
 def _services(tmp_path):
@@ -205,6 +209,93 @@ def test_tick_status_endpoint_includes_stale_jobs_field():
     client = TestClient(app)
     status = client.get("/api/scheduled-tasks/tick-status").json()
     assert "last_stale_jobs_failed" in status
+
+
+# ------------------------------------------------------------------
+# Kaggle job polling: poll_job() was only ever invoked from the manual API
+# route, so a Kaggle kernel nobody polled would eventually get its
+# agent_scheduler job auto-failed by the stale sweep above even while
+# genuinely still running. Each tick now refreshes every in-flight Kaggle
+# job's real status BEFORE the stale sweep runs, in the same tick.
+# ------------------------------------------------------------------
+def test_tick_once_polls_an_in_flight_kaggle_job_and_prevents_a_false_stale_fail(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s), timeout_seconds=1)
+    registry = WorkerRegistryService(s, g)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    kaggle_worker = KaggleWorkerService(s, g, worker_registry=registry, agent_scheduler=scheduler, kaggle_runner=runner)
+    job = kaggle_worker.submit_job(code="print(1)", title="Long running job")
+    assert job["submitted"] is True
+
+    import time
+    time.sleep(1.2)  # exceed the 1s scheduler timeout so the job WOULD be stale without a fresh poll
+
+    # The kernel is still genuinely running -- poll must refresh its heartbeat.
+    runner.responses["status"] = _ok('Kernel has status "running"')
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler, kaggle_worker=kaggle_worker)
+    worker.tick_once()
+
+    polled_ids = {p["job_id"] for p in worker.last_kaggle_jobs_polled}
+    assert job["job_id"] in polled_ids
+    # The scheduler job tied to this Kaggle job must NOT have been auto-failed --
+    # the poll refreshed its heartbeat before the stale sweep ran.
+    sched_job_id = job["agent_scheduler_job_id"]
+    updated_sched_job = next(j for j in scheduler.list_jobs() if j["job_id"] == sched_job_id)
+    assert updated_sched_job["status"] == "running"
+    assert sched_job_id not in {f["job_id"] for f in worker.last_stale_jobs_failed}
+
+
+def test_tick_once_stops_polling_a_completed_kaggle_job(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    kaggle_worker = KaggleWorkerService(s, g, kaggle_runner=runner)
+    job = kaggle_worker.submit_job(code="print(1)", title="Finished job")
+    runner.responses["status"] = _ok('Kernel has status "complete"')
+    kaggle_worker.poll_job(job["job_id"])  # manually mark it complete, as if polled once already
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=kaggle_worker)
+    worker.tick_once()
+    assert worker.last_kaggle_jobs_polled == []  # already-terminal jobs are never re-polled
+
+
+def test_tick_once_without_kaggle_worker_never_polls(tmp_path):
+    _, _, _, scheduled = _services(tmp_path)
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=None)
+    worker.tick_once()
+    assert worker.last_kaggle_jobs_polled == []
+
+
+def test_tick_once_isolates_a_broken_kaggle_poll_from_everything_else(tmp_path, monkeypatch):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    kaggle_worker = KaggleWorkerService(s, g, kaggle_runner=_StubKaggleRunner({}))
+    monkeypatch.setattr(kaggle_worker, "list_jobs", lambda limit=25: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    scheduled.create_task({"name": "due-anyway", "schedule": "hourly"})
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=kaggle_worker)
+    fired = worker.tick_once()
+
+    assert len(fired) == 1  # due-task firing unaffected by the broken poll
+    assert worker.last_kaggle_jobs_polled == []
+
+
+def test_tick_status_endpoint_includes_kaggle_jobs_polled_field():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    status = client.get("/api/scheduled-tasks/tick-status").json()
+    assert "last_kaggle_jobs_polled" in status
 
 
 def test_endpoints_end_to_end():
