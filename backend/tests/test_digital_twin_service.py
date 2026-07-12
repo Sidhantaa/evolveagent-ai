@@ -2,7 +2,10 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
+from app.agents.master_agent import MasterOrchestratorAgent
+from app.agents.memory_agent import MemoryAgent
 from app.main import app
+from app.models.request_models import RunRequest
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
@@ -147,3 +150,54 @@ def test_digital_twin_export_reset_and_delete_privacy_controls():
     # Deleting again is a no-op (nothing left to remove).
     second_delete = client.delete(f"/api/digital-twin/profile?workspace_id={workspace_id}")
     assert second_delete.json()["deleted"] is False
+
+
+# ------------------------------------------------------------------
+# MasterOrchestratorAgent wiring: the real derived style profile (previously
+# never consulted by any agent run) is now folded into shared_context on
+# every run -- read-only, best-effort, never blocks or fails a run.
+# ------------------------------------------------------------------
+def test_master_agent_run_consults_and_creates_a_real_digital_twin_profile(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    workspace_id = agent.workspace.resolve_workspace_id(None)
+
+    # Seed a strong, unambiguous preference signal BEFORE the run.
+    storage.write_list("user_preferences.json", [
+        {"workspace_id": workspace_id, "preference": "concise", "score": 5, "evidence": ["short answers preferred"]},
+    ])
+
+    # No profile exists yet -- get_profile() during run() must lazily create one.
+    assert storage.read_list("digital_twin_profiles.json") == []
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+
+    profiles = storage.read_list("digital_twin_profiles.json")
+    assert len(profiles) == 1
+    assert profiles[0]["workspace_id"] == workspace_id
+    assert profiles[0]["style_profile"]["detail_level"] == "concise"
+
+
+def test_master_agent_run_degrades_safely_with_no_preference_history(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+    # A default (balanced/adaptive/mixed) profile is still created -- the run
+    # never fails or is left without a profile just because there's no history.
+    assert len(storage.read_list("digital_twin_profiles.json")) == 1
+
+
+def test_master_agent_run_survives_a_broken_digital_twin_collaborator(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("digital twin storage unavailable")
+
+    monkeypatch.setattr(agent.digital_twin, "get_profile", _boom)
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
