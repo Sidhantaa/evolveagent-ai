@@ -34,6 +34,7 @@ from app.models.response_models import (
 from app.config import settings
 from app.services.file_service import CODE_EXTENSIONS, FileService
 from app.services.custom_agent_service import CustomAgentService
+from app.services.adaptive_learning_service import AdaptiveLearningService
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.goal_service import GoalService
 from app.services.governance_service import GovernanceService
@@ -80,6 +81,15 @@ class MasterOrchestratorAgent:
         # approval surface -- same pattern as the memory/conversation appends
         # already in shared_context below.
         self.digital_twin = DigitalTwinService(storage, self.workspace, self.governance)
+        # Adaptive Learning: a real retrieval-memory layer (auto-ingested
+        # topics/references from repo searches, few-shot examples from
+        # high-graded evaluations, action patterns from workflow effects,
+        # keyword or -- when Memory v2 is in pgvector mode -- semantic
+        # search) explicitly designed to "augment future answers with the
+        # most relevant learned context," but had zero callers outside its
+        # own on-demand routes. Same read-only, best-effort pattern as
+        # Digital Twin above.
+        self.adaptive_learning = AdaptiveLearningService(storage, self.governance)
         self.knowledge_service = KnowledgeService(storage, self.workspace)
         self.assistant_commands = AssistantCommandService(self.workspace, self.knowledge_service)
         self.tool_registry = ToolRegistryService(storage, self.permission_service)
@@ -277,6 +287,14 @@ class MasterOrchestratorAgent:
                     f" detail={style_profile.get('detail_level')}, format={style_profile.get('format')},"
                     f" technical_level={style_profile.get('technical_level')}, planning={style_profile.get('planning_style')}."
                 )
+        except Exception:
+            pass
+        try:
+            learned = self.adaptive_learning.recommend(request.user_input, limit=3)
+            recs = learned.get("recommendations") or []
+            if recs:
+                learned_lines = "\n".join(f"- ({r.get('kind')}) {r.get('text')}" for r in recs)
+                shared_context += f"\n\nLearned context from past usage ({learned.get('engine')} match):\n{learned_lines}"
         except Exception:
             pass
         tool_trace = self.tool_router.route_and_run(request.user_input, workspace_id=workspace_id)
