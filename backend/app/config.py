@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     codex_worker_enabled: bool = Field(default=False, alias="CODEX_WORKER_ENABLED")
     linear_autonomous_codex_worker: bool = Field(default=False, alias="LINEAR_AUTONOMOUS_CODEX_WORKER")
     codex_cli_command: str = Field(default="codex", alias="CODEX_CLI_COMMAND")
+    # v220 Compute Fabric: real (opt-in) Kaggle GPU worker. Off by default --
+    # submitting a job creates a real, quota-consuming kernel on the
+    # configured Kaggle account, so it must be explicitly turned on.
+    kaggle_worker_enabled: bool = Field(default=False, alias="KAGGLE_WORKER_ENABLED")
+    kaggle_worker_private: bool = Field(default=True, alias="KAGGLE_WORKER_PRIVATE")
     codex_worker_mode: str = Field(default="manual_trigger", alias="CODEX_WORKER_MODE")
     codex_max_files_changed: int = Field(default=8, alias="CODEX_MAX_FILES_CHANGED")
     auto_git_push: bool = Field(default=False, alias="AUTO_GIT_PUSH")

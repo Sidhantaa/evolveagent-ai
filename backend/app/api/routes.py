@@ -298,6 +298,8 @@ from app.services.multimodal_agent_service import MultimodalAgentService
 from app.services.industry_mode_service import IndustryModeService
 from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
+from app.services.worker_registry_service import WorkerRegistryService
+from app.services.kaggle_worker_service import KaggleWorkerService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
 from app.services.training_lab_service import TrainingLabService
@@ -447,6 +449,8 @@ multimodal_agent_service = MultimodalAgentService(storage, governance_service)
 industry_mode_service = IndustryModeService(storage, governance_service)
 agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
+worker_registry_service = WorkerRegistryService(storage, governance_service)
+kaggle_worker_service = KaggleWorkerService(storage, governance_service, worker_registry=worker_registry_service, agent_scheduler=agent_scheduler)
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
@@ -487,7 +491,7 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
-durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service, self_healing=self_healing_service, eval_harness=eval_harness_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service, self_healing=self_healing_service, eval_harness=eval_harness_service, kaggle_worker=kaggle_worker_service)
 # v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402
