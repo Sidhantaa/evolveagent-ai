@@ -614,6 +614,130 @@ codex_worker_service = CodexWorkerService(
 )
 linear_poll_worker = LinearPollWorker(linear_service, linear_orchestration, codex_worker=codex_worker_service)
 
+# ----------------------------------------------------------------------
+# Capability Directory -- the "feature/control center" the v200 strategy doc's
+# Current Execution Priority #2 asks for. Built last, since it references
+# ~20 already-constructed services' own real status()-style methods. Every
+# classification below reads a real field this session already verified by
+# hand (never a hardcoded verdict) -- see capability_directory_service.py.
+# ----------------------------------------------------------------------
+from app.services.capability_directory_service import (  # noqa: E402
+    CapabilityDirectoryService,
+    classify_available,
+    classify_key_gated_per_call,
+    classify_mode_string,
+    classify_optin_global,
+    classify_static,
+    STATUS_LOCAL,
+    STATUS_MOCK,
+    STATUS_NEEDS_CONFIG,
+    STATUS_REAL,
+)
+
+
+def _classify_llm_router() -> dict:
+    s = llm_router.status().model_dump()
+    if s.get("llm_mode") == "mock":
+        return {"status": STATUS_MOCK, "detail": "LLM_MODE=mock"}
+    if s.get("real_mode_ready"):
+        return {"status": STATUS_REAL, "detail": f"default_provider={s.get('default_provider')}"}
+    return {"status": STATUS_NEEDS_CONFIG, "detail": "LLM_MODE=real but no provider API key is configured"}
+
+
+def _classify_code_writer() -> dict:
+    s = code_writer_service.status()
+    if not s.get("writes_enabled"):
+        return {"status": STATUS_MOCK, "detail": "CODE_WRITES_ENABLED=false"}
+    if not s.get("allowed_repos"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "writes enabled but CODE_WRITER_ALLOWED_REPOS is empty"}
+    return {"status": STATUS_REAL, "detail": f"{len(s['allowed_repos'])} repo(s) allow-listed"}
+
+
+def _classify_github_connector() -> dict:
+    s = github_connector_service.status()
+    if not s.get("token_configured"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "GITHUB_TOKEN not set"}
+    if not s.get("writes_enabled"):
+        return {"status": STATUS_MOCK, "detail": "reads are real; writes disabled (GITHUB_WRITES_ENABLED=false)"}
+    return {"status": STATUS_REAL, "detail": "reads and writes both real"}
+
+
+def _classify_mcp_github_adapter() -> dict:
+    s = mcp_execution_service.github_adapter.status()
+    if not s.get("token_configured"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "GITHUB_TOKEN not set"}
+    if not s.get("real_github_enabled"):
+        return {"status": STATUS_MOCK, "detail": "MCP_REAL_GITHUB not enabled"}
+    return {"status": STATUS_REAL, "detail": "real read-only GitHub calls via MCP execution"}
+
+
+def _classify_chief_of_staff_github() -> dict:
+    s = chief_of_staff_service.status()
+    if not s.get("github_repos_configured"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "CHIEF_OF_STAFF_GITHUB_REPOS is empty"}
+    return {"status": STATUS_REAL, "detail": f"{len(s['github_repos_configured'])} repo(s) configured"}
+
+
+CAPABILITY_REGISTRY: list[dict] = [
+    {"name": "LLM Router (multi-provider text generation)", "category": "Model & Vision", "route": "/api/providers",
+     "safety_level": "model_call", "tool_used": None, "classify": _classify_llm_router},
+    {"name": "Design Agent (UI/UX vision analysis)", "category": "Model & Vision", "route": "/api/design-agent",
+     "safety_level": "model_call", "tool_used": "DesignAgentService",
+     "classify": lambda: classify_key_gated_per_call(design_agent_service.status(), "key_configured")},
+    {"name": "Multimodal Agent (screenshots/diagrams/documents)", "category": "Model & Vision", "route": "/api/multimodal",
+     "safety_level": "model_call", "tool_used": "Multi-Modal Agent",
+     "classify": lambda: classify_key_gated_per_call(multimodal_agent_service.status(), "key_configured")},
+    {"name": "Image Generation", "category": "Model & Vision", "route": "/api/images",
+     "safety_level": "model_call", "tool_used": None,
+     "classify": lambda: classify_mode_string(image_service.status(), "image_mode", {"real"}, "openai_configured")},
+    {"name": "Transcription", "category": "Model & Vision", "route": "/api/recordings",
+     "safety_level": "model_call", "tool_used": None,
+     "classify": lambda: classify_mode_string(recording_service.transcription.status(), "transcription_mode", {"openai"}, "openai_configured")},
+    {"name": "Code Writer (real commits + PRs)", "category": "Code & Git", "route": "/api/code-writer",
+     "safety_level": "approval_gated_write", "tool_used": None, "classify": _classify_code_writer},
+    {"name": "GitHub Connector", "category": "Code & Git", "route": "/api/github",
+     "safety_level": "approval_gated_write", "tool_used": None, "classify": _classify_github_connector},
+    {"name": "Git Reader (read-only local git)", "category": "Code & Git", "route": "/api/git",
+     "safety_level": "read_only", "tool_used": None,
+     "classify": lambda: classify_available(git_reader_service.status(), real_status=STATUS_LOCAL)},
+    {"name": "Git Discovery (local repo metadata scan)", "category": "Code & Git", "route": "/api/git-intel",
+     "safety_level": "read_only", "tool_used": None,
+     "classify": lambda: classify_static(STATUS_LOCAL, f"{git_discovery_service.status().get('indexed_repos', 0)} real repo(s) indexed")},
+    {"name": "Repo Finder (GitHub search)", "category": "Code & Git", "route": "/api/repo-finder",
+     "safety_level": "read_only", "tool_used": None, "classify": lambda: classify_available(repo_finder_service.status())},
+    {"name": "Quality Gate (real pytest/npm build)", "category": "Code & Git", "route": "/api/durable-workflows",
+     "safety_level": "approval_gated_write", "tool_used": "Test Quality Service",
+     "classify": lambda: classify_static(STATUS_LOCAL, "runs real pytest/npm-build via SafeCommandRunner once a run_quality_checks step is approved")},
+    {"name": "Memory v2 (semantic recall)", "category": "Memory & Learning", "route": "/api/memory-v2",
+     "safety_level": "local_write", "tool_used": None,
+     "classify": lambda: classify_static(STATUS_REAL, "pgvector mode") if memory_service.status().get("mode") == "pgvector"
+     else classify_static(STATUS_LOCAL, "keyword fallback mode (no Postgres)")},
+    {"name": "Adaptive Learning (retrieval memory + few-shot)", "category": "Memory & Learning", "route": "/api/adaptive-learning",
+     "safety_level": "local_write", "tool_used": None, "classify": lambda: classify_static(STATUS_LOCAL, "local retrieval only; never trains a model")},
+    {"name": "Slack Notifications", "category": "Integrations", "route": "/api/slack",
+     "safety_level": "opt_in_call", "tool_used": None,
+     "classify": lambda: classify_optin_global(slack_notifications.status(), "enabled", "configured")},
+    {"name": "Notion Export", "category": "Integrations", "route": "/api/notion",
+     "safety_level": "opt_in_call", "tool_used": None,
+     "classify": lambda: classify_optin_global(notion_exports.status(), "enabled", "configured")},
+    {"name": "Linear Sync", "category": "Integrations", "route": "/api/linear",
+     "safety_level": "opt_in_call", "tool_used": None,
+     "classify": lambda: classify_optin_global(linear_poll_worker.status(), "enabled", "configured")},
+    {"name": "Voice Console", "category": "Integrations", "route": "/api/voice-console",
+     "safety_level": "read_only", "tool_used": None, "classify": lambda: classify_static(STATUS_LOCAL, "runs entirely in the browser; nothing recorded or uploaded")},
+    {"name": "MCP Read-only Execution", "category": "MCP & Automation", "route": "/api/mcp/executions",
+     "safety_level": "read_only", "tool_used": None,
+     "classify": lambda: classify_optin_global(mcp_execution_service.readonly_adapter.status(), "real_readonly_enabled")},
+    {"name": "MCP GitHub Adapter", "category": "MCP & Automation", "route": "/api/mcp/executions",
+     "safety_level": "read_only", "tool_used": None, "classify": _classify_mcp_github_adapter},
+    {"name": "Scheduler Tick Worker", "category": "MCP & Automation", "route": "/api/scheduled-tasks",
+     "safety_level": "local_write", "tool_used": None,
+     "classify": lambda: classify_optin_global(scheduler_tick_worker.status(), "enabled")},
+    {"name": "Chief of Staff (real GitHub signal)", "category": "Personal & Org", "route": "/api/chief-of-staff",
+     "safety_level": "read_only", "tool_used": None, "classify": _classify_chief_of_staff_github},
+]
+capability_directory_service = CapabilityDirectoryService(storage, governance_service, CAPABILITY_REGISTRY)
+
 
 def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> list[dict]:
     if not workspace_id:
@@ -1275,6 +1399,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **scheduled_tasks_service.analytics_summary(),
         **data_export_service.analytics_summary(),
         **evolveagent_os2_service.analytics_summary(),
+        **capability_directory_service.analytics_summary(),
         **master_agent_service.analytics_summary(),
         **git_discovery_service.analytics_summary(),
         **agent_profile_service.analytics_summary(),
