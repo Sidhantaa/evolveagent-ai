@@ -122,6 +122,73 @@ def test_department_run_not_found():
     assert response.status_code == 404
 
 
+# ----------------------------------------------------------------------
+# v300 Digital Departments: real goals, real budgets, measurable outcomes
+# ----------------------------------------------------------------------
+def test_create_and_list_department_goal():
+    created = _create_department(name="Goals-Test Dept")
+    dept_id = created["department_id"]
+    goal = client.post(f"/api/departments/{dept_id}/goals", json={
+        "title": "Ship the v300 rollout", "description": "Real department goal.",
+    }).json()
+    assert goal["goal_id"]
+    assert goal["title"] == "Ship the v300 rollout"
+    assert goal["workspace_id"] == f"dept:{dept_id}"
+    listed = client.get(f"/api/departments/{dept_id}/goals").json()
+    assert listed["count"] == 1
+    assert listed["goals"][0]["goal_id"] == goal["goal_id"]
+    # a goal for a DIFFERENT department must not leak into this one's list
+    other = _create_department(name="Other-Goals-Test Dept")
+    other_listed = client.get(f"/api/departments/{other['department_id']}/goals").json()
+    assert other_listed["count"] == 0
+
+
+def test_department_goal_not_found():
+    response = client.post("/api/departments/does-not-exist/goals", json={"title": "x"})
+    assert response.status_code == 404
+
+
+def test_set_and_read_department_budget():
+    created = _create_department(name="Budget-Test Dept")
+    dept_id = created["department_id"]
+    budget = client.post(f"/api/departments/{dept_id}/budget", json={"monthly_limit": 50.0}).json()
+    assert budget["workspace_id"] == f"dept:{dept_id}"
+    assert budget["monthly_limit"] == 50.0
+    scorecard = client.get(f"/api/departments/{dept_id}/scorecard").json()
+    assert scorecard["budget"]["workspace_id"] == f"dept:{dept_id}"
+    assert scorecard["department"]["department_id"] == dept_id
+
+
+def test_department_budget_not_found():
+    response = client.post("/api/departments/does-not-exist/budget", json={"monthly_limit": 10})
+    assert response.status_code == 404
+
+
+def test_department_scorecard_reflects_real_run_outcomes():
+    created = _create_department(name="Scorecard-Test Dept", permission_level="read_only")
+    dept_id = created["department_id"]
+    client.post(f"/api/departments/{dept_id}/runs", json={"task": "Draft a research brief"})
+    scorecard = client.get(f"/api/departments/{dept_id}/scorecard").json()
+    assert scorecard["measurable_outcomes"]["total_runs"] == 1
+    assert scorecard["measurable_outcomes"]["planned"] == 1
+    assert scorecard["measurable_outcomes"]["blocked"] == 0
+
+
+def test_department_scorecard_not_found():
+    response = client.get("/api/departments/does-not-exist/scorecard")
+    assert response.status_code == 404
+
+
+def test_department_goal_governance_logged():
+    created = _create_department(name="Goal-Governance-Test Dept")
+    before = client.get("/api/governance").json()["total_events"]
+    client.post(f"/api/departments/{created['department_id']}/goals", json={"title": "Track this"})
+    after = client.get("/api/governance").json()
+    assert after["total_events"] > before
+    actions = {event.get("action_type") for event in after["recent_events"]}
+    assert "department_goal_created" in actions
+
+
 def test_governance_event_written_for_department_actions():
     before = client.get("/api/governance").json()["total_events"]
     _create_department(name="Governance-Test Dept")

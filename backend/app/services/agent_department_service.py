@@ -117,10 +117,23 @@ class AgentDepartmentService:
         storage: StorageService,
         governance_service: GovernanceService,
         permission_service: PermissionService,
+        goal_service=None,
+        usage_ledger=None,
     ):
         self.storage = storage
         self.governance = governance_service
         self.permission = permission_service
+        # v300 Digital Departments: optional GoalService collaborator. Each
+        # department's goals are real GoalService records scoped by a synthetic
+        # workspace_id ("dept:<department_id>") -- reuses the already-real goal
+        # storage/tracking instead of inventing a parallel goal system.
+        self.goal_service = goal_service
+        # v300 Digital Departments: optional UsageLedgerService collaborator.
+        # Each department's budget reuses the already-real per-workspace budget
+        # engine the same way (synthetic workspace_id), so limits/spend/status
+        # come from the real ledger, not a new parallel one. Estimates only --
+        # no billing, same guarantee UsageLedgerService already makes.
+        self.usage_ledger = usage_ledger
 
     # ------------------------------------------------------------------
     # Helpers
@@ -406,6 +419,74 @@ class AgentDepartmentService:
 
     def list_collaborations(self, limit: int = 25) -> list[dict]:
         return list(reversed(self.storage.read_list(self.collaboration_file)[-limit:]))
+
+    # ------------------------------------------------------------------
+    # v300 Digital Departments: goals, budgets, measurable outcomes
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _dept_workspace_key(department_id: str) -> str:
+        # Departments aren't workspace-scoped, but GoalService/UsageLedgerService
+        # both key on workspace_id -- a synthetic, prefixed key lets each
+        # department reuse those already-real engines with zero changes to them.
+        return f"dept:{department_id}"
+
+    def create_department_goal(self, department_id: str, title: str, description: str = "") -> dict:
+        department = self.get_department(department_id)
+        if department is None:
+            raise ValueError("Department not found")
+        if self.goal_service is None:
+            raise ValueError("No goal service wired; cannot create a real department goal.")
+        goal, _ = self.goal_service.create_manual(
+            title=title,
+            description=description,
+            tags=["department", department.get("name", "")],
+            workspace_id=self._dept_workspace_key(department_id),
+        )
+        self._log("department_goal_created", f"Created goal '{title}' for department {department.get('name')}.")
+        return goal.model_dump()
+
+    def list_department_goals(self, department_id: str) -> list[dict]:
+        if self.goal_service is None:
+            return []
+        return self.goal_service.list_goals(workspace_id=self._dept_workspace_key(department_id))
+
+    def set_department_budget(self, department_id: str, monthly_limit: float) -> dict:
+        department = self.get_department(department_id)
+        if department is None:
+            raise ValueError("Department not found")
+        if self.usage_ledger is None:
+            raise ValueError("No usage ledger service wired; cannot set a real department budget.")
+        budget = self.usage_ledger.set_budget({
+            "workspace_id": self._dept_workspace_key(department_id),
+            "monthly_limit": monthly_limit,
+        })
+        self._log("department_budget_set", f"Set budget ${monthly_limit} for department {department.get('name')}.")
+        return budget
+
+    def department_budget_status(self, department_id: str) -> dict | None:
+        if self.usage_ledger is None:
+            return None
+        return self.usage_ledger.summary(workspace_id=self._dept_workspace_key(department_id))
+
+    def department_scorecard(self, department_id: str) -> dict:
+        """Real goals + real budget status + real run-outcome counts in one view --
+        the doc's "goals, budgets, ... measurable outcomes" for a single department.
+        Run-outcome counts already existed (list_runs); this just surfaces them
+        alongside the two newly-wired real pillars instead of adding a 4th system."""
+        department = self.get_department(department_id)
+        if department is None:
+            raise ValueError("Department not found")
+        runs = [r for r in self.storage.read_list(self.runs_file) if r.get("department_id") == department_id]
+        return {
+            "department": department,
+            "goals": self.list_department_goals(department_id),
+            "budget": self.department_budget_status(department_id),
+            "measurable_outcomes": {
+                "total_runs": len(runs),
+                "planned": sum(1 for r in runs if r.get("status") == "planned"),
+                "blocked": sum(1 for r in runs if r.get("status") == "blocked"),
+            },
+        }
 
     # ------------------------------------------------------------------
     # Analytics
