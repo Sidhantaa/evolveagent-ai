@@ -439,7 +439,7 @@ digital_twin_service = DigitalTwinService(storage, workspace_service, governance
 evaluation_lab_service = EvaluationLabService(storage, governance_service)
 project_manager_service = ProjectManagerService(storage, goal_service, governance_service)
 portfolio_service = PortfolioService(storage, workspace_service, governance_service)
-agent_department_service = AgentDepartmentService(storage, governance_service, permission_service)
+agent_department_service = AgentDepartmentService(storage, governance_service, permission_service, goal_service=goal_service)
 business_operator_service = BusinessOperatorService(storage, governance_service)
 chief_of_staff_service = ChiefOfStaffService(storage, governance_service)
 business_simulator_service = BusinessSimulatorService(storage, governance_service)
@@ -472,6 +472,9 @@ mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_servi
 unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
 health_monitor_service = HealthMonitorService(storage, governance_service)
 usage_ledger_service = UsageLedgerService(storage, governance_service)
+# v300 Digital Departments: wired post-init since UsageLedgerService is
+# constructed after AgentDepartmentService.
+agent_department_service.usage_ledger = usage_ledger_service
 local_retrieval_service = LocalRetrievalService(storage, governance_service)
 eval_harness_service = EvalHarnessService(storage, governance_service)
 playbook_library_service = PlaybookLibraryService(storage, governance_service)
@@ -484,7 +487,7 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
-durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service, self_healing=self_healing_service, eval_harness=eval_harness_service)
 # v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402

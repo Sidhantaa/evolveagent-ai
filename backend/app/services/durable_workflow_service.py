@@ -19,8 +19,9 @@ RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post",
 # through this approval-gated path (never called directly by an agent) and only
 # when the backing service's own opt-in flag(s) are on; otherwise it degrades to
 # a safe refusal recorded as the step's output, never a silent no-op. Anything
-# not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request", "run_quality_checks"}
+# not in this set is simulated, not executed. run_eval_suite (v250) mirrors
+# run_quality_checks: a real regression signal can also fail the run.
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request", "run_quality_checks", "run_eval_suite"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
@@ -91,7 +92,7 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None, test_quality=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None, test_quality=None, self_healing=None, eval_harness=None):
         self.storage = storage
         self.governance = governance_service
         # Verification layer: optional TestQualityService collaborator backing the
@@ -100,6 +101,18 @@ class DurableWorkflowService:
         # fails the run for real -- the first time this engine's dead "failed"
         # terminal status is ever actually reached.
         self.test_quality = test_quality
+        # Optional SelfHealingService collaborator -- when a quality gate is
+        # genuinely blocked, turns the first failing command's real output into
+        # a structured finding + drafted (never auto-applied) repair task via
+        # SelfHealingService's own real failure parser, instead of a bare text
+        # reason. Without it, a blocked gate behaves exactly as before.
+        self.self_healing = self_healing
+        # v250 Self-Evaluating System: optional EvalHarnessService collaborator
+        # backing the run_eval_suite whitelisted effect with a real deterministic
+        # regression check (previously an orphaned service reachable only via its
+        # own routes). A genuine regression fails the run, same as a blocked
+        # quality gate.
+        self.eval_harness = eval_harness
         # v120: optional EventBusService — lets a run's completion/approval-halt/
         # cancellation chain into another action. Emitting is best-effort and must
         # never break the workflow engine itself.
@@ -337,12 +350,47 @@ class DurableWorkflowService:
                         "passed": False, "blocked": True,
                         "reason": f"Quality check execution failed: {type(exc).__name__}: {exc}",
                     }}
+                gate = result.get("quality_gate") or {}
+                if gate.get("blocked") and self.self_healing is not None:
+                    failing = next(
+                        (c for c in result.get("command_results", []) if not c.get("success")),
+                        None,
+                    )
+                    if failing is not None:
+                        try:
+                            check_result = self.self_healing.create_check(
+                                command=failing.get("command", "pytest"),
+                                mode="mock",
+                                mock_stdout=failing.get("stdout", ""),
+                                mock_stderr=failing.get("stderr", ""),
+                                mock_exit_code=failing.get("exit_code") or 1,
+                                workspace_id=None,
+                            )
+                            findings = check_result.get("findings") or []
+                            if findings:
+                                result["self_healing_repair"] = self.self_healing.create_repair_task(findings[0]["finding_id"])
+                        except Exception:
+                            pass
             else:
                 # Missing collaborator degrades to a safe decline (run proceeds
                 # normally), same as every other whitelisted action without its
                 # backing service -- only a REAL gate failure below fails the run.
                 result = {"executed": False, "quality_gate": None,
                            "note": "No test quality service wired; simulated only."}
+        elif action_type == "run_eval_suite":
+            suite_id = params.get("suite_id", "")
+            if self.eval_harness is not None and suite_id:
+                try:
+                    eval_result = self.eval_harness.run_suite(suite_id)
+                    result = {"executed": True, "eval_result": eval_result}
+                except ValueError as exc:
+                    result = {"executed": False, "eval_result": None, "note": str(exc)}
+            else:
+                # Missing collaborator or suite_id degrades to a safe decline
+                # (run proceeds normally) -- only a REAL regression below fails
+                # the run, same pattern as run_quality_checks.
+                result = {"executed": False, "eval_result": None,
+                           "note": "No eval harness service wired or suite_id missing; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
@@ -376,8 +424,20 @@ class DurableWorkflowService:
                 return f"[declined] run_quality_checks: {(result or {}).get('note', 'unavailable')}"
             gate = result.get("quality_gate") or {}
             if gate.get("blocked"):
+                repair = result.get("self_healing_repair")
+                if repair:
+                    return (f"[blocked] run_quality_checks: {gate.get('reason', 'Quality gate blocked.')} "
+                            f"— repair drafted ({repair['repair_id']}, requires approval, never auto-applied).")
                 return f"[blocked] run_quality_checks: {gate.get('reason', 'Quality gate blocked.')}"
             return f"[executed] run_quality_checks: {gate.get('reason', 'Quality gate passed.')}"
+        if action_type == "run_eval_suite":
+            if not result or not result.get("executed"):
+                return f"[declined] run_eval_suite: {(result or {}).get('note', 'unavailable')}"
+            eval_result = result.get("eval_result") or {}
+            if eval_result.get("regressed"):
+                return (f"[blocked] run_eval_suite: score regressed from {eval_result.get('previous_score')} "
+                        f"to {eval_result.get('score')} (delta {eval_result.get('delta')}).")
+            return f"[executed] run_eval_suite: score={eval_result.get('score')} ({eval_result.get('pass_count')}/{eval_result.get('case_count')} passed)."
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 

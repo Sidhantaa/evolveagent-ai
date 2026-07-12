@@ -522,6 +522,15 @@ class DepartmentCollaborationRequest(BaseModel):
     lead_department: str | None = Field(default=None, max_length=120)
 
 
+class DepartmentGoalRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=2000)
+
+
+class DepartmentBudgetRequest(BaseModel):
+    monthly_limit: float = Field(..., ge=0)
+
+
 # ----------------------------------------------------------------------
 # v18.0 Real Business Automation Layer
 # ----------------------------------------------------------------------
