@@ -12,6 +12,10 @@ approval gates. The tick can start work; it can never approve it.
 
 One bad task can never stop the loop — every trigger is isolated in a try/except
 so a single failure is recorded and skipped, not fatal.
+
+Each tick also sweeps AgentSchedulerService for genuinely stale running jobs
+(real heartbeat-timeout detection that previously had no automated consumer)
+and fails them for real -- isolated from due-task firing, optional collaborator.
 """
 
 from __future__ import annotations
@@ -25,13 +29,23 @@ from app.services.scheduled_tasks_service import ScheduledTasksService
 
 
 class SchedulerTickWorker:
-    def __init__(self, scheduled_tasks: ScheduledTasksService):
+    def __init__(self, scheduled_tasks: ScheduledTasksService, agent_scheduler=None):
         self.scheduled_tasks = scheduled_tasks
+        # Optional AgentSchedulerService collaborator. health() already does
+        # real stale-heartbeat detection (a running job whose heartbeat hasn't
+        # updated within its timeout) but previously had zero automated
+        # consumer -- a run that died mid-step (uncaught exception, process
+        # restart) before reaching complete/fail/pause left its job "running"
+        # forever with nothing ever noticing. Each tick now fails any
+        # genuinely stale job for real, using the engine's own already-real
+        # fail() transition -- never touches jobs that are still healthy.
+        self.agent_scheduler = agent_scheduler
         self.running = False
         self._task: asyncio.Task | None = None
         self.last_tick_at: str | None = None
         self.last_error: str | None = None
         self.last_fired: list[dict[str, Any]] = []
+        self.last_stale_jobs_failed: list[dict[str, Any]] = []
 
     async def start(self) -> None:
         if self.running or not settings.scheduler_tick_enabled:
@@ -78,7 +92,27 @@ class SchedulerTickWorker:
             except Exception as exc:  # noqa: BLE001 — isolate one bad task from the rest
                 fired.append({"task_id": task_id, "name": item.get("name"), "status": "error", "error": str(exc)})
         self.last_fired = fired
+        self.last_stale_jobs_failed = self._fail_stale_jobs()
         return fired
+
+    def _fail_stale_jobs(self) -> list[dict[str, Any]]:
+        """Isolated from due-task firing above -- a failure here must never
+        affect it, and vice versa."""
+        if self.agent_scheduler is None:
+            return []
+        failed: list[dict[str, Any]] = []
+        try:
+            stale = self.agent_scheduler.health().get("stale_running_jobs", [])
+        except Exception:  # noqa: BLE001
+            return failed
+        for job in stale:
+            job_id = job.get("job_id")
+            try:
+                self.agent_scheduler.fail(job_id, error="Stale heartbeat — no progress reported within timeout.")
+                failed.append({"job_id": job_id, "title": job.get("title")})
+            except Exception:  # noqa: BLE001 — one bad job can never stop the sweep
+                continue
+        return failed
 
     def status(self) -> dict:
         return {
@@ -88,4 +122,5 @@ class SchedulerTickWorker:
             "last_tick_at": self.last_tick_at,
             "last_error": self.last_error,
             "last_fired": self.last_fired,
+            "last_stale_jobs_failed": self.last_stale_jobs_failed,
         }

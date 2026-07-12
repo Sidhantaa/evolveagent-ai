@@ -3,11 +3,13 @@ opt-in background tick worker."""
 
 import pytest
 
+from app.services.agent_scheduler_service import AgentSchedulerService
 from app.services.durable_workflow_service import DurableWorkflowService
 from app.services.governance_service import GovernanceService
 from app.services.scheduled_tasks_service import ScheduledTasksService
 from app.services.scheduler_tick_worker import SchedulerTickWorker
 from app.services.storage_service import StorageService
+from app.services.workspace_service import WorkspaceService
 
 
 def _services(tmp_path):
@@ -128,6 +130,81 @@ def test_status_reports_shape(tmp_path):
     worker = SchedulerTickWorker(scheduled)
     status = worker.status()
     assert set(["enabled", "running", "interval_seconds", "last_tick_at", "last_error", "last_fired"]) <= set(status)
+
+
+# ------------------------------------------------------------------
+# Stale-job watchdog: AgentSchedulerService.health() already does real
+# heartbeat-timeout detection but had zero automated consumer -- a workflow
+# run that died mid-step left its job "running" forever. Each tick now fails
+# genuinely stale jobs for real, isolated from due-task firing.
+# ------------------------------------------------------------------
+def test_tick_once_fails_a_genuinely_stale_running_job(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s), timeout_seconds=1)
+    job = scheduler.create_job({"job_type": "test", "title": "Stale job"})
+    scheduler.heartbeat(job["job_id"])
+    import time
+    time.sleep(1.2)  # exceed the 1s timeout so health() flags it stale
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler)
+    worker.tick_once()
+
+    failed_ids = {f["job_id"] for f in worker.last_stale_jobs_failed}
+    assert job["job_id"] in failed_ids
+    updated = next(j for j in scheduler.list_jobs() if j["job_id"] == job["job_id"])
+    assert updated["status"] == "failed"
+    assert "stale heartbeat" in updated["error"].lower()
+
+
+def test_tick_once_never_touches_healthy_running_jobs(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s), timeout_seconds=600)
+    job = scheduler.create_job({"job_type": "test", "title": "Healthy job"})
+    scheduler.heartbeat(job["job_id"])
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler)
+    worker.tick_once()
+
+    assert worker.last_stale_jobs_failed == []
+    updated = next(j for j in scheduler.list_jobs() if j["job_id"] == job["job_id"])
+    assert updated["status"] == "running"
+
+
+def test_tick_once_without_agent_scheduler_never_sweeps(tmp_path):
+    _, _, _, scheduled = _services(tmp_path)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=None)
+    worker.tick_once()
+    assert worker.last_stale_jobs_failed == []
+
+
+def test_tick_once_isolates_a_broken_health_check_from_due_task_firing(tmp_path, monkeypatch):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s))
+    monkeypatch.setattr(scheduler, "health", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    scheduled.create_task({"name": "due-anyway", "schedule": "hourly"})
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler)
+    fired = worker.tick_once()
+
+    assert len(fired) == 1  # due-task firing unaffected by the broken health check
+    assert worker.last_stale_jobs_failed == []
+
+
+def test_tick_status_endpoint_includes_stale_jobs_field():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    status = client.get("/api/scheduled-tasks/tick-status").json()
+    assert "last_stale_jobs_failed" in status
 
 
 def test_endpoints_end_to_end():
