@@ -34,6 +34,7 @@ from app.models.response_models import (
 from app.config import settings
 from app.services.file_service import CODE_EXTENSIONS, FileService
 from app.services.custom_agent_service import CustomAgentService
+from app.services.digital_twin_service import DigitalTwinService
 from app.services.goal_service import GoalService
 from app.services.governance_service import GovernanceService
 from app.services.llm_router import llm_router
@@ -71,6 +72,14 @@ class MasterOrchestratorAgent:
         self.secret_scanner = SecretScanner()
         self.permission_service = PermissionService()
         self.governance = GovernanceService(storage)
+        # Digital Twin: a workspace's real derived work-style profile (detail
+        # level, format, planning style, recommendations from actual feedback/
+        # preference/run history) had zero callers outside its own routes --
+        # every run built shared_context from memory/conversation/tools but
+        # never the user's own preferences. Read-only, additive, no new
+        # approval surface -- same pattern as the memory/conversation appends
+        # already in shared_context below.
+        self.digital_twin = DigitalTwinService(storage, self.workspace, self.governance)
         self.knowledge_service = KnowledgeService(storage, self.workspace)
         self.assistant_commands = AssistantCommandService(self.workspace, self.knowledge_service)
         self.tool_registry = ToolRegistryService(storage, self.permission_service)
@@ -260,6 +269,16 @@ class MasterOrchestratorAgent:
             shared_context += f"\n\nRelevant workspace memory:\n{workspace_memory_context}"
         if conversation_context:
             shared_context += f"\n\nRecent conversation context:\n{conversation_context}"
+        try:
+            style_profile = self.digital_twin.get_profile(workspace_id).get("style_profile", {})
+            if style_profile:
+                shared_context += (
+                    f"\n\nUser working-style preferences (from real feedback/usage history):"
+                    f" detail={style_profile.get('detail_level')}, format={style_profile.get('format')},"
+                    f" technical_level={style_profile.get('technical_level')}, planning={style_profile.get('planning_style')}."
+                )
+        except Exception:
+            pass
         tool_trace = self.tool_router.route_and_run(request.user_input, workspace_id=workspace_id)
         if tool_trace:
             executed_tools = [item for item in tool_trace if item.get("executed")]
