@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 from datetime import UTC, datetime
 
 from app.models.response_models import GovernanceEvent
@@ -82,8 +83,29 @@ class ProviderControlService:
     def preferred_model_for_task(self, task_type: str) -> str | None:
         """The stored free-text model preference for a task, or None. Read by
         LLMRouter.route_for_agent to give this preference real routing effect —
-        previously it was display-only."""
-        return self._config()["model_by_task"].get(task_type) or None
+        previously it was display-only. A manual preference always wins; when
+        none is set, falls back to a real learned preference from judge-scored
+        Deep Mode consensus tournaments (see _learned_model_for_task) — data
+        LearningAgent already computes every run but that previously dead-ended
+        at a dashboard, never reaching an actual routing decision."""
+        return self._config()["model_by_task"].get(task_type) or self._learned_model_for_task(task_type)
+
+    def _learned_model_for_task(self, task_type: str, min_samples: int = 3) -> str | None:
+        records = self.storage.read_list("model_performance.json")
+        winners = Counter(
+            r.get("model")
+            for r in records
+            if r.get("record_type") == "consensus_candidate"
+            and r.get("task_type") == task_type
+            and r.get("selected_as_winner")
+            and r.get("model")
+        )
+        # min_samples counts decided WINS, not raw candidate rows (a run
+        # typically compares several losing candidates per winner) -- a low
+        # win count is a weak signal and should not yet steer real routing.
+        if not winners or sum(winners.values()) < min_samples:
+            return None
+        return winners.most_common(1)[0][0]
 
     def provider_health(self) -> dict:
         if self.llm_router is None:
