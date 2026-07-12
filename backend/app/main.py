@@ -31,6 +31,7 @@ from app.api.notifications_inbox_routes import router as notifications_inbox_rou
 from app.api.approvals_center_routes import router as approvals_center_router
 from app.api.retrieval_routes import router as retrieval_router
 from app.api.os2_routes import router as os2_router
+from app.api.capability_directory_routes import router as capability_directory_router
 from app.api.usage_ledger_routes import router as usage_ledger_router
 from app.api.features_routes import router as features_router
 from app.api.export_center_routes import router as export_center_router
@@ -145,6 +146,7 @@ app.include_router(notifications_inbox_router, prefix="/api")
 app.include_router(approvals_center_router, prefix="/api")
 app.include_router(retrieval_router, prefix="/api")
 app.include_router(os2_router, prefix="/api")
+app.include_router(capability_directory_router, prefix="/api")
 app.include_router(usage_ledger_router, prefix="/api")
 app.include_router(features_router, prefix="/api")
 app.include_router(export_center_router, prefix="/api")
