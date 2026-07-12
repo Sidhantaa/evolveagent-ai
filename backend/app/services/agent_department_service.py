@@ -349,7 +349,16 @@ class AgentDepartmentService:
         permission_level = self._normalize_permission(department.get("permission_level"))
         risk_level = _RISK_BY_PERMISSION.get(permission_level, "low")
         requires_approval = permission_level in _APPROVAL_PERMISSIONS
-        status = "blocked" if permission_level == "blocked" else "planned"
+        # v300: department_budget_status() already computes a real "over" signal
+        # (UsageLedgerService.summary()) but was display-only in the scorecard --
+        # a department over its own budget still got a new run planned exactly
+        # like one with budget to spare. No-op for departments with no budget
+        # set (today's default) or no usage_ledger wired.
+        budget = self.department_budget_status(department_id) if self.usage_ledger is not None else None
+        over_budget = bool(budget and budget.get("budget_status") == "over")
+        blocked = permission_level == "blocked" or over_budget
+        status = "blocked" if blocked else "planned"
+        block_reason = "permission_blocked" if permission_level == "blocked" else ("budget_exceeded" if over_budget else None)
         run = {
             "department_run_id": str(uuid4()),
             "department_id": department_id,
@@ -365,12 +374,14 @@ class AgentDepartmentService:
             "requires_approval": requires_approval,
             "risk_level": risk_level,
             "status": status,
+            "block_reason": block_reason,
             "created_at": self._now(),
         }
         self.storage.append(self.runs_file, run)
+        reason_suffix = f" (blocked: {block_reason})" if block_reason else ""
         self._log(
             "department_run_planned",
-            f"Planned run for department {department.get('name')}: {task[:80]}",
+            f"Planned run for department {department.get('name')}: {task[:80]}{reason_suffix}",
             permission_level=permission_level,
             risk_score=70 if risk_level == "high" else 35 if risk_level == "medium" else 5,
         )

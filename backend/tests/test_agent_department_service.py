@@ -86,6 +86,75 @@ def test_seed_default_templates_gives_each_newly_seeded_department_a_real_goal_a
     assert len(service.list_department_goals(first_dept_id)) == 1
 
 
+def test_plan_run_blocked_when_department_is_over_its_own_budget(tmp_path):
+    from app.services.agent_department_service import AgentDepartmentService
+    from app.services.governance_service import GovernanceService
+    from app.services.permission_service import PermissionService
+    from app.services.storage_service import StorageService
+    from app.services.usage_ledger_service import UsageLedgerService
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    governance = GovernanceService(storage)
+    usage_ledger = UsageLedgerService(storage, governance)
+    service = AgentDepartmentService(storage, governance, PermissionService(), usage_ledger=usage_ledger)
+    department = service.create_department(name="Over-Budget Dept", permission_level="read_only")
+    service.set_department_budget(department["department_id"], 10.0)
+    usage_ledger.record_usage({
+        "workspace_id": f"dept:{department['department_id']}", "capability": "text",
+        "units": 1, "estimated_cost": 20.0,
+    })
+    run = service.plan_run(department["department_id"], "Do some work")
+    assert run["status"] == "blocked"
+    assert run["block_reason"] == "budget_exceeded"
+
+
+def test_plan_run_not_blocked_when_department_is_under_budget(tmp_path):
+    from app.services.agent_department_service import AgentDepartmentService
+    from app.services.governance_service import GovernanceService
+    from app.services.permission_service import PermissionService
+    from app.services.storage_service import StorageService
+    from app.services.usage_ledger_service import UsageLedgerService
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    governance = GovernanceService(storage)
+    usage_ledger = UsageLedgerService(storage, governance)
+    service = AgentDepartmentService(storage, governance, PermissionService(), usage_ledger=usage_ledger)
+    department = service.create_department(name="Under-Budget Dept", permission_level="read_only")
+    service.set_department_budget(department["department_id"], 100.0)
+    usage_ledger.record_usage({
+        "workspace_id": f"dept:{department['department_id']}", "capability": "text",
+        "units": 1, "estimated_cost": 5.0,
+    })
+    run = service.plan_run(department["department_id"], "Do some work")
+    assert run["status"] == "planned"
+    assert run["block_reason"] is None
+
+
+def test_plan_run_permission_block_takes_priority_over_budget_state():
+    """A permission-blocked department still reports permission_blocked as the
+    reason even if it happens to also be within budget -- permission is the
+    stricter, human-set gate."""
+    created = _create_department(name="Permission-Block-Test Dept", permission_level="blocked")
+    response = client.post(f"/api/departments/{created['department_id']}/runs", json={"task": "x"})
+    run = response.json()
+    assert run["status"] == "blocked"
+    assert run["block_reason"] == "permission_blocked"
+
+
+def test_plan_run_never_blocks_when_no_usage_ledger_wired(tmp_path):
+    from app.services.agent_department_service import AgentDepartmentService
+    from app.services.governance_service import GovernanceService
+    from app.services.permission_service import PermissionService
+    from app.services.storage_service import StorageService
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    service = AgentDepartmentService(storage, GovernanceService(storage), PermissionService())
+    department = service.create_department(name="No-Ledger Dept", permission_level="read_only")
+    run = service.plan_run(department["department_id"], "Do some work")
+    assert run["status"] == "planned"
+    assert run["block_reason"] is None
+
+
 def test_seed_default_templates_without_collaborators_still_creates_departments(tmp_path):
     from app.services.agent_department_service import AgentDepartmentService
     from app.services.governance_service import GovernanceService
