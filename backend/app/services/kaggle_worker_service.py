@@ -124,7 +124,14 @@ class KaggleWorkerService:
         (tmp_dir / "script.py").write_text(code, encoding="utf-8")
         metadata = {
             "id": self._kernel_ref(kernel_slug),
-            "title": title.strip()[:60] or kernel_slug,
+            # Kaggle derives the ACTUAL kernel slug from `title`, not `id`, if
+            # they diverge (confirmed live: a human-readable title caused the
+            # kernel to land at a different ref than `id` specified, silently).
+            # Using kernel_slug itself as the title guarantees they always
+            # resolve to the same kernel -- the human-readable title is kept
+            # separately in this job's own record (job["title"]), never sent
+            # to Kaggle's metadata.
+            "title": kernel_slug,
             "code_file": "script.py",
             "language": "python",
             "kernel_type": "script",
@@ -142,7 +149,7 @@ class KaggleWorkerService:
             "job_id": str(uuid4()),
             "kernel_slug": kernel_slug,
             "kernel_ref": metadata["id"],
-            "title": metadata["title"],
+            "title": title.strip()[:60] or kernel_slug,
             "workspace_id": workspace_id,
             "status": "submitted" if submitted else "submit_failed",
             "submitted": submitted,
@@ -163,7 +170,7 @@ class KaggleWorkerService:
         if self.agent_scheduler is not None and submitted:
             try:
                 sched_job = self.agent_scheduler.create_job({
-                    "job_type": "kaggle_gpu_job", "title": metadata["title"], "workspace_id": workspace_id,
+                    "job_type": "kaggle_gpu_job", "title": job["title"], "workspace_id": workspace_id,
                 })
                 job["agent_scheduler_job_id"] = sched_job.get("job_id")
             except Exception:
