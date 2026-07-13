@@ -1470,6 +1470,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **product_launch_service.analytics_summary(),
         **worker_registry_service.analytics_summary(),
         **kaggle_worker_service.analytics_summary(),
+        **self_healing_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 

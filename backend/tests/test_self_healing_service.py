@@ -95,6 +95,26 @@ def test_dashboard_shape():
     assert body["auto_apply"] is False
 
 
+def test_analytics_summary_counts_checks_findings_repairs():
+    check = client.post(
+        "/api/self-healing/checks",
+        json={"command": "pytest", "mode": "mock", "mock_exit_code": 1, "mock_stderr": "FAILED test_a - AssertionError"},
+    ).json()
+    finding_id = check["findings"][0]["finding_id"]
+    repair = client.post(f"/api/self-healing/findings/{finding_id}/repair-task").json()
+    client.post(
+        f"/api/self-healing/repairs/{repair['repair_id']}/verify",
+        json={"mode": "mock", "mock_exit_code": 0, "mock_stdout": "all passed"},
+    )
+
+    analytics = client.get("/api/analytics").json()
+    for key in ("self_healing_checks", "self_healing_blocked_checks", "self_healing_open_findings",
+                "self_healing_repair_drafts", "self_healing_verified_repairs"):
+        assert key in analytics
+    assert analytics["self_healing_checks"] >= 1
+    assert analytics["self_healing_verified_repairs"] >= 1
+
+
 def test_governance_event_written():
     before = client.get("/api/governance").json()["total_events"]
     client.post("/api/self-healing/checks", json={"command": "pytest", "mode": "mock", "mock_exit_code": 0})
