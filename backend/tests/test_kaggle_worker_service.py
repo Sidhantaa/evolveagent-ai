@@ -196,6 +196,37 @@ def test_analytics_summary_counts_jobs(kaggle_env):
 
 
 # ------------------------------------------------------------------
+# status() -- consumed by CapabilityDirectoryService to classify this real
+# capability as real/mock without inventing a fake always-on status.
+# ------------------------------------------------------------------
+def test_status_reports_enabled_and_disabled(kaggle_env, monkeypatch):
+    storage, governance = kaggle_env
+    service = KaggleWorkerService(storage, governance)
+    assert service.status()["enabled"] is True  # kaggle_env fixture sets it True
+
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", False)
+    assert service.status()["enabled"] is False
+
+
+def test_status_counts_real_jobs(kaggle_env):
+    storage, governance = kaggle_env
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    service = KaggleWorkerService(storage, governance, kaggle_runner=runner)
+    assert service.status()["total_jobs"] == 0
+    service.submit_job(code="print(1)", title="A")
+    assert service.status()["total_jobs"] == 1
+
+
+def test_capability_directory_lists_kaggle_gpu_worker():
+    data = client.get("/api/capability-directory").json()
+    names = {c["name"] for c in data["capabilities"]}
+    assert "Kaggle GPU Worker (real kernel submission)" in names
+    entry = next(c for c in data["capabilities"] if c["name"] == "Kaggle GPU Worker (real kernel submission)")
+    assert entry["status"] in ("real", "mock")  # off by default in test settings -> mock
+    assert entry["route"] == "/api/worker-registry"
+
+
+# ------------------------------------------------------------------
 # DurableWorkflowService: run_kaggle_job whitelisted action wiring.
 # ------------------------------------------------------------------
 def test_run_kaggle_job_disabled_declines_safely(tmp_path):

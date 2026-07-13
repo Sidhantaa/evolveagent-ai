@@ -744,6 +744,9 @@ CAPABILITY_REGISTRY: list[dict] = [
     {"name": "Scheduler Tick Worker", "category": "MCP & Automation", "route": "/api/scheduled-tasks",
      "safety_level": "local_write", "tool_used": None,
      "classify": lambda: classify_optin_global(scheduler_tick_worker.status(), "enabled")},
+    {"name": "Kaggle GPU Worker (real kernel submission)", "category": "MCP & Automation", "route": "/api/worker-registry",
+     "safety_level": "approval_gated_write", "tool_used": "KaggleWorkerService",
+     "classify": lambda: classify_optin_global(kaggle_worker_service.status(), "enabled")},
     {"name": "Chief of Staff (real GitHub signal)", "category": "Personal & Org", "route": "/api/chief-of-staff",
      "safety_level": "read_only", "tool_used": None, "classify": _classify_chief_of_staff_github},
 ]
