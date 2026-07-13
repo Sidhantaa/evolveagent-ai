@@ -201,3 +201,31 @@ def test_master_agent_run_survives_a_broken_digital_twin_collaborator(tmp_path, 
     response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
     assert response.run_id
     assert isinstance(response.final_output, str) and response.final_output
+
+
+def test_master_agent_specialist_loop_forwards_resolved_workspace_id_to_llm_router(tmp_path, monkeypatch):
+    """workspace_id was already resolved and used for memory/digital-twin/tool
+    routing on every real run, but never reached LLMRouter's real per-call
+    cost recording (PR #234) -- the main specialist loop (4 real agents:
+    Research/Logic/Risk/Strategy) is the highest-value real call site fixed
+    here. Other agent-output methods elsewhere in run() (writer, judge,
+    evolution, etc.) are a deliberately separate, out-of-scope follow-up --
+    this test checks the specialist loop specifically, not every LLM call in
+    a full run."""
+    from app.services.llm_router import LLMResult, llm_router
+
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    workspace = agent.workspace.create_workspace({"name": "Cost Tracking Test Workspace"})
+    workspace_id = workspace["workspace_id"]
+    specialist_names = {s.name for s in agent.specialists}
+
+    generate_spy = MagicMock(return_value=LLMResult(
+        output="ok", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate", generate_spy)
+    agent.run(RunRequest(user_input="Explain how EvolveAgent AI works.", workspace_id=workspace_id))
+
+    specialist_calls = [c for c in generate_spy.call_args_list if c.args and c.args[0] in specialist_names]
+    assert len(specialist_calls) == len(agent.specialists)
+    assert all(c.kwargs.get("workspace_id") == workspace_id for c in specialist_calls)

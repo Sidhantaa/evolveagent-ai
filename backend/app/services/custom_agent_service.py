@@ -23,13 +23,17 @@ class RuntimeCustomAgent(BaseAgent):
         # (or anything unrecognized) keeps the original agent-name routing
         # unchanged, matching prior behavior exactly.
         self.model_preference = _MODEL_PREFERENCE_PROVIDER.get(str(config.get("model_preference") or "").lower())
+        # A custom agent already carries its own real workspace_id (set at
+        # creation) -- pass it through to real per-call cost recording
+        # (PR #234), same as the main specialist loop now does.
+        self.workspace_id = config.get("workspace_id")
 
     def run_with_metadata(self, user_input: str, context: str = "", avoid_provider: str | None = None) -> AgentOutput:
         if self.model_preference is None:
-            return super().run_with_metadata(user_input, context, avoid_provider=avoid_provider)
+            return super().run_with_metadata(user_input, context, avoid_provider=avoid_provider, workspace_id=self.workspace_id)
         prompt = f"User task:\n{user_input}\n\nShared context:\n{context}".strip()
         model = llm_router.model_for_provider(self.model_preference)
-        result = llm_router.generate_for_provider(self.model_preference, model, self.system_prompt, prompt)
+        result = llm_router.generate_for_provider(self.model_preference, model, self.system_prompt, prompt, workspace_id=self.workspace_id)
         return AgentOutput(
             agent_name=self.name,
             provider=result.provider,
