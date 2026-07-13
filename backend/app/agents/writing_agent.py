@@ -18,10 +18,12 @@ class WritingAgent(BaseAgent):
         agent_outputs: list[AgentOutput],
         judge_summary: str,
         avoid_provider: str | None = None,
+        workspace_id: str | None = None,
     ) -> AgentOutput:
         context = "\n\n".join(f"{item.agent_name}:\n{item.output}" for item in agent_outputs)
         return self.run_with_metadata(
             user_input,
             context=f"{context}\n\nJudge summary:\n{judge_summary}",
             avoid_provider=avoid_provider,
+            workspace_id=workspace_id,
         )
