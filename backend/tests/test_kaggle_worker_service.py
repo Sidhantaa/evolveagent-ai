@@ -217,6 +217,18 @@ def test_status_counts_real_jobs(kaggle_env):
     assert service.status()["total_jobs"] == 1
 
 
+# ------------------------------------------------------------------
+# Platform-wide /api/analytics aggregation: worker_registry_service and
+# kaggle_worker_service were both built in #221 but never folded into the
+# hand-maintained rollup, silently under-reporting compute/GPU-job activity.
+# ------------------------------------------------------------------
+def test_analytics_endpoint_includes_worker_services():
+    analytics = client.get("/api/analytics").json()
+    for key in ("compute_workers_total", "compute_workers_online",
+                "kaggle_jobs_total", "kaggle_jobs_submitted", "kaggle_jobs_complete"):
+        assert key in analytics
+
+
 def test_capability_directory_lists_kaggle_gpu_worker():
     data = client.get("/api/capability-directory").json()
     names = {c["name"] for c in data["capabilities"]}
