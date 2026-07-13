@@ -375,6 +375,103 @@ def test_tick_status_endpoint_includes_learn_result_field():
     assert "last_learn_result" in status
 
 
+# ------------------------------------------------------------------
+# Kaggle output mirroring: a completed real GPU job's output previously had
+# no downstream consumer beyond the manual /output route. The first tick
+# that observes a job go non-terminal -> "complete" now mirrors its output
+# into Adaptive Learning's retrieval memory (same idiom WorkspaceService/
+# GoalService already use), so a future run can actually recall it.
+# ------------------------------------------------------------------
+def test_tick_once_mirrors_kaggle_job_output_into_adaptive_learning_on_completion(tmp_path, monkeypatch):
+    from app.services.adaptive_learning_service import AdaptiveLearningService
+
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    kaggle_worker = KaggleWorkerService(s, g, kaggle_runner=runner)
+    job = kaggle_worker.submit_job(code="print(1)", title="Output mirror job")
+
+    runner.responses["status"] = _ok('Kernel has status "complete"')
+    # get_job_output() downloads via `kaggle kernels output` -- stub it to
+    # report a real-looking downloaded file without touching the filesystem.
+    monkeypatch.setattr(kaggle_worker, "get_job_output", lambda job_id: {
+        "job_id": job_id, "downloaded": True, "files": ["notebook.log"], "output_dir": "/tmp/x",
+    })
+
+    adaptive_learning = AdaptiveLearningService(s, g)
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=kaggle_worker, adaptive_learning=adaptive_learning)
+    worker.tick_once()
+
+    items = adaptive_learning.items()["items"]
+    assert any("Output mirror job" in i["text"] and "notebook.log" in i["text"] for i in items)
+
+
+def test_tick_once_does_not_remirror_an_already_complete_job(tmp_path, monkeypatch):
+    from app.services.adaptive_learning_service import AdaptiveLearningService
+
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    kaggle_worker = KaggleWorkerService(s, g, kaggle_runner=runner)
+    job = kaggle_worker.submit_job(code="print(1)", title="Already done job")
+    runner.responses["status"] = _ok('Kernel has status "complete"')
+    kaggle_worker.poll_job(job["job_id"])  # already complete BEFORE the tick
+
+    get_output_spy_calls = []
+    monkeypatch.setattr(kaggle_worker, "get_job_output", lambda job_id: get_output_spy_calls.append(job_id) or {
+        "job_id": job_id, "downloaded": True, "files": ["x"], "output_dir": "/tmp/x",
+    })
+
+    adaptive_learning = AdaptiveLearningService(s, g)
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=kaggle_worker, adaptive_learning=adaptive_learning)
+    worker.tick_once()
+    assert get_output_spy_calls == []  # already-terminal jobs are never re-polled or re-mirrored
+
+
+def test_tick_once_does_not_mirror_when_output_download_fails(tmp_path, monkeypatch):
+    from app.services.adaptive_learning_service import AdaptiveLearningService
+
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    kaggle_worker = KaggleWorkerService(s, g, kaggle_runner=runner)
+    kaggle_worker.submit_job(code="print(1)", title="Failed download job")
+    runner.responses["status"] = _ok('Kernel has status "complete"')
+    monkeypatch.setattr(kaggle_worker, "get_job_output", lambda job_id: {
+        "job_id": job_id, "downloaded": False, "files": [], "output_dir": None,
+    })
+
+    adaptive_learning = AdaptiveLearningService(s, g)
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=kaggle_worker, adaptive_learning=adaptive_learning)
+    worker.tick_once()
+    assert adaptive_learning.items()["items"] == []
+
+
+def test_tick_once_mirroring_never_fails_without_adaptive_learning_wired(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "kaggle_worker_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    kaggle_worker = KaggleWorkerService(s, g, kaggle_runner=runner)
+    kaggle_worker.submit_job(code="print(1)", title="No learning wired job")
+    runner.responses["status"] = _ok('Kernel has status "complete"')
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, kaggle_worker=kaggle_worker, adaptive_learning=None)
+    polled = worker.tick_once()  # must not raise
+    assert isinstance(polled, list)
+
+
 def test_endpoints_end_to_end():
     from fastapi.testclient import TestClient
     from app.main import app
