@@ -158,9 +158,37 @@ class SchedulerTickWorker:
             try:
                 updated = self.kaggle_worker.poll_job(job_id)
                 polled.append({"job_id": job_id, "status": updated.get("status")})
+                # The job's stored status was still non-terminal before this
+                # poll (the filter above), so a "complete" result here is
+                # this job's first-ever completion -- on every later tick
+                # it's already terminal and skipped by that same filter, so
+                # this fires exactly once per job.
+                if updated.get("status") == "complete":
+                    self._mirror_kaggle_completion(updated)
             except Exception:  # noqa: BLE001 — one bad job can never stop the sweep
                 continue
         return polled
+
+    def _mirror_kaggle_completion(self, job: dict[str, Any]) -> None:
+        """A completed real GPU job's output previously had no downstream
+        consumer beyond the manual /output route -- mirror it into Adaptive
+        Learning's retrieval memory (same idiom WorkspaceService/GoalService
+        already use for their own real-content mirrors) so a future run can
+        actually recall it. Best-effort; never raises into the caller."""
+        if self.adaptive_learning is None or self.kaggle_worker is None:
+            return
+        try:
+            output = self.kaggle_worker.get_job_output(job["job_id"])
+            if not output.get("downloaded"):
+                return
+            files = ", ".join(output.get("files") or []) or "no output files"
+            self.adaptive_learning.ingest(
+                f"Kaggle job '{job.get('title')}' ({job.get('kernel_ref')}) completed -- output: {files}",
+                kind="reference",
+                source="kaggle_worker",
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
     def _fail_stale_jobs(self) -> list[dict[str, Any]]:
         """Isolated from due-task firing above -- a failure here must never
