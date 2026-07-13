@@ -1,13 +1,32 @@
 from app.config import settings
 from app.services.governance_service import GovernanceService
-from app.services.llm_router import llm_router
+from app.services.llm_router import LLMRouter, RouteChoice, llm_router
 from app.services.provider_control_service import ProviderControlService
 from app.services.storage_service import StorageService
+from app.services.usage_ledger_service import UsageLedgerService
 
 
 def _isolated_provider_control(tmp_path) -> ProviderControlService:
     storage = StorageService(data_dir=str(tmp_path / "data"))
     return ProviderControlService(storage, GovernanceService(storage))
+
+
+def _isolated_usage_ledger(tmp_path) -> UsageLedgerService:
+    storage = StorageService(data_dir=str(tmp_path / "usage-data"))
+    return UsageLedgerService(storage, GovernanceService(storage))
+
+
+class _StaticProvider:
+    def __init__(self, output: str = "provider ok"):
+        self.output = output
+
+    def generate(self, system_prompt: str, user_prompt: str, model: str | None = None) -> str:
+        return self.output
+
+
+class _BrokenUsageLedger:
+    def record_usage(self, data: dict) -> dict:
+        raise RuntimeError("ledger unavailable")
 
 
 def test_real_mode_openai_failure_falls_back_to_mock(monkeypatch):
@@ -213,3 +232,83 @@ def test_provider_health_unavailable_when_storage_not_wired(monkeypatch):
 
     assert health["available"] is False
     assert health["providers"] == []
+
+
+# ------------------------------------------------------------------
+# Real per-call cost tracking: UsageLedgerService existed, but no real LLM
+# execution path recorded estimated usage until LLMRouter wired it here.
+# ------------------------------------------------------------------
+def test_llm_router_records_real_usage_for_successful_call(tmp_path, monkeypatch):
+    ledger = _isolated_usage_ledger(tmp_path)
+    router = LLMRouter(usage_ledger=ledger)
+    router.providers["openai"] = _StaticProvider("real response")
+    monkeypatch.setattr(settings, "llm_mode", "real")
+
+    result = router.generate_with_route(
+        RouteChoice("openai", "gpt-test"),
+        "system",
+        "user",
+        workspace_id="workspace-cost-a",
+    )
+
+    entries = ledger.list_entries("workspace-cost-a")
+    assert result.output == "real response"
+    assert result.provider == "openai"
+    assert len(entries) == 1
+    assert entries[0]["workspace_id"] == "workspace-cost-a"
+    assert entries[0]["capability"] == "text"
+    assert entries[0]["units"] == 1
+    assert entries[0]["mode"] == "real"
+    assert entries[0]["estimated_cost"] > 0
+
+
+def test_llm_router_records_mock_usage_for_default_workspace(tmp_path, monkeypatch):
+    ledger = _isolated_usage_ledger(tmp_path)
+    router = LLMRouter(usage_ledger=ledger)
+    monkeypatch.setattr(settings, "llm_mode", "mock")
+
+    result = router.generate("Any Agent", "system", "user")
+
+    entries = ledger.list_entries("default")
+    assert result.provider == "mock"
+    assert len(entries) == 1
+    assert entries[0]["workspace_id"] == "default"
+    assert entries[0]["mode"] == "mock"
+
+
+def test_llm_router_ledger_failure_never_breaks_generation(monkeypatch):
+    router = LLMRouter(usage_ledger=_BrokenUsageLedger())
+    router.providers["openai"] = _StaticProvider("still works")
+    monkeypatch.setattr(settings, "llm_mode", "real")
+
+    result = router.generate_with_route(RouteChoice("openai", "gpt-test"), "system", "user")
+
+    assert result.success is True
+    assert result.output == "still works"
+    assert result.provider == "openai"
+
+
+def test_llm_router_without_usage_ledger_keeps_existing_behavior(monkeypatch):
+    router = LLMRouter()
+    router.providers["openai"] = _StaticProvider("unchanged")
+    monkeypatch.setattr(settings, "llm_mode", "real")
+
+    result = router.generate_with_route(RouteChoice("openai", "gpt-test"), "system", "user")
+
+    assert result.success is True
+    assert result.output == "unchanged"
+    assert result.provider == "openai"
+
+
+def test_usage_ledger_analytics_moves_after_router_call(tmp_path, monkeypatch):
+    ledger = _isolated_usage_ledger(tmp_path)
+    router = LLMRouter(usage_ledger=ledger)
+    router.providers["openai"] = _StaticProvider("tracked")
+    monkeypatch.setattr(settings, "llm_mode", "real")
+
+    before = ledger.analytics_summary()
+    router.generate_with_route(RouteChoice("openai", "gpt-test"), "system", "user", workspace_id="analytics-workspace")
+    after = ledger.analytics_summary()
+
+    assert after["usage_entries"] == before["usage_entries"] + 1
+    assert after["usage_total_estimated_cost"] > before["usage_total_estimated_cost"]
