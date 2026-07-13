@@ -65,6 +65,26 @@ def test_repair_task_finding_not_found():
     assert client.post("/api/self-healing/findings/missing/repair-task").status_code == 404
 
 
+def test_list_and_get_repairs():
+    """verify_repair() requires a repair_id, but until now nothing returned
+    one -- list_repairs()/get_repair() were real but had no route."""
+    check = client.post(
+        "/api/self-healing/checks",
+        json={"command": "pytest", "mode": "mock", "mock_exit_code": 1, "mock_stderr": "FAILED test_a - AssertionError"},
+    ).json()
+    finding_id = check["findings"][0]["finding_id"]
+    repair = client.post(f"/api/self-healing/findings/{finding_id}/repair-task").json()
+
+    listed = client.get("/api/self-healing/repairs").json()
+    assert any(r["repair_id"] == repair["repair_id"] for r in listed["repairs"])
+
+    fetched = client.get(f"/api/self-healing/repairs/{repair['repair_id']}").json()
+    assert fetched["repair_id"] == repair["repair_id"]
+    assert fetched["finding_id"] == finding_id
+
+    assert client.get("/api/self-healing/repairs/missing").status_code == 404
+
+
 def test_verify_repair():
     check = client.post(
         "/api/self-healing/checks",
