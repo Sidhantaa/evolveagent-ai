@@ -1,100 +1,79 @@
-# EvolveAgent AI — Local-First Multi-Agent AI Operating System
+# EvolveAgent AI — Governed AI Operating System
 
-**Current completed version:** v90 — EvolveAgent Product Launch Console (capstone) &nbsp;•&nbsp; **Latest pass:** v45.1 — MCP Hub UI &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current platform state:** v200 command center shipped, v220 Compute Fabric work in progress, latest `main` includes PR #242.
+**Core loop:** Goal -> Plan -> Agents -> Tools -> Approval -> Execution -> Verification -> Memory -> Improvement.
 
-EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
+EvolveAgent AI is a local-first, governance-first AI operating system built with FastAPI and React. It coordinates model providers, durable memory, specialist agents, tool connectors, approval gates, verification, and project/workspace history so the product can complete real work safely instead of only returning chat answers.
 
-**Scale:** 44 implementation versions · 85 backend services · ~480 API routes · 48 test modules · **494 passing backend tests** · ~10,200-line React UI. See [Portfolio Pack](docs/PORTFOLIO_PACK.md) · [Version History](VERSIONS.md) · [Release Notes v44](docs/RELEASE_NOTES_v44.md).
+**Current scale:** 143 backend service modules · 87 split API route modules · ~790 route handlers · 131 backend test files · premium React/Vite UI with Simple Mode and Developer Mode. Runtime data stays out of Git and flows through `StorageService`.
 
-EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
+## Current Highlights
 
-### v36–v40 (latest milestones)
+- **v100 Real Foundation:** pluggable storage abstraction with JSON fallback, PostgreSQL/JSONB support, pgvector-ready Memory v2, migration tooling, optional Redis, and storage-status visibility.
+- **v140 Workspace Brain:** workspace/project memory, semantic recall, knowledge search, source/provenance context, and durable project history.
+- **v150 Autonomous Software Team:** approval-gated code-change pipeline with pending code-write/PR steps, diff/status visibility, safe push/PR handling, and verification-first behavior.
+- **v200 Command Center:** unified capability directory and platform scorecard over the full EvolveAgent OS surface.
+- **v220 Compute Fabric:** worker registry, opt-in Kaggle GPU worker adapter, scheduler polling, worker lifecycle cleanup, and analytics visibility for distributed-execution foundations.
+- **Cost tracking:** `LLMRouter` now records per-call usage estimates through `UsageLedgerService`, so real model usage accrues against workspace budgets.
+- **Governance moat:** prompt-injection checks, secret scanning, permission profiles, approval queues, audit logs, blocked-action explanations, and no unrestricted shell or silent external mutation.
+- **Developer observability:** storage status, Memory v2, Agent Registry, MCP Hub, Code Changes, Approvals, Governance, Command Center, usage/cost, and worker status panels.
 
-- **v36 — Autonomous Research + Innovation Lab:** local research items, competitors, trends, scored ideas, experiment/prototype plans, and innovation reports (no web browsing/scraping).
-- **v37 — AI Simulation World:** safe local sandbox to model decisions, personas, and scenarios with deterministic mock scoring, comparison, and reports (no real-world actions).
-- **v38 — Multi-User Organization OS:** local organizations, member profiles, roles, permission profiles, workspace links, and activity — **local records only, no production auth**.
-- **v39 — AI Hardware / Always-On Companion:** device-readiness and session-planning layer — **no mic recording, no wake-word listener, no hardware access**; always requires explicit user activation.
-- **v40 — EvolveAgent Operating Layer:** a governed orchestration dashboard summarizing the capability map across v15–v39, with readiness snapshots, cross-system recommendations, safety boundaries, and a final report.
-- **v41 — MCP Connector Hub:** a local connector registry for MCP-style tools (GitHub, Linear, Filesystem, Git, Context7, Playwright, Slack, Notion, Desktop Commander). The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs — **no real MCP execution by default, no secrets exposed, no unrestricted shell, no full desktop control**. High-risk connectors (Filesystem, Playwright, Desktop Commander) stay approval-required or disabled by default; status checks report only whether required env keys are set (true/false), never their values.
-- **v42 — MCP Execution Adapter:** a governed *request → approve → run → record* loop on top of v41. It reuses the connector planning rules to validate every request (blocked/allow-list/risk), auto-approves read-only low-risk actions, holds everything else for explicit human approval, and runs approved requests through a **mock executor** — **execution is always simulated (`EXECUTION_MODE = "mock"`); no real MCP server, network call, shell command, or device action is performed, and no secrets are used**. Every step is governance-logged.
-- **v43 — MCP Read-Only Adapter:** turns the v42 mock executor into a **real, opt-in, read-only** executor for a small allow-list of safe actions (`git_current_branch`, `git_list_branches`, `fs_list_directory`, `fs_file_metadata`). Real execution happens only when the `MCP_REAL_READONLY` env opt-in is set **and** the connector is enabled **and** the request is approved **and** the action is allow-listed; otherwise it falls back to mock. It is **standard-library only — no shell, no network, no writes/deletes, no secrets, and never returns file contents** — sandboxed to the repo root with traversal + absolute-path blocking and a sensitive-name denylist. This mirrors the project's "real opt-in with mock fallback" pattern (v9/v10).
-- **v44 — MCP Approvals Inbox:** a unified, prioritized queue of everything on the MCP surface awaiting human approval (starting with v42 execution requests). Each item is enriched with connector name, risk level, and age, and sorted **high-risk / oldest first** so reviewers triage what matters. Approve/reject **delegate to the governed execution service** (which does the governance logging) — the inbox adds no new execution power, only aggregation and prioritization.
-- **v45 — MCP Policy Engine:** declarative **deny** policies evaluated *before* connector planning. A policy matches on connector slug / action / risk level (with `*` wildcards and an `except_actions` carve-out) and can only **tighten** — it adds blocks, never grants access (there is no "allow" effect). With no policies defined, behavior is unchanged. Denials are governance-logged.
-- **v45.1 — MCP Hub UI:** reorganized the MCP Hub Developer-Mode panel into clean internal tabs (Connectors · Policies · Approvals · Executions · Audit) with live counts and styled risk badges. Frontend-only; no behavior change.
-- **v46 — MCP Audit & Replay:** a **read-only unified audit timeline** across connector events, executions, and MCP governance — with filtering and markdown/JSON export — plus a **dry replay** that re-derives what a past execution request *would* do today (via the planning layer) **without executing anything**. The only write is a stored replay record; replays are governance-logged.
-- **v47 — Secret Reference Registry:** a local catalog of *which* secret/env keys connectors need — with readiness (is the env var set? true/false), owner, category, and rotation reminders. It records **only the key name**; it never stores, reads, logs, or returns the secret value. Governance-logged.
-- **v48 — Unified Approvals Center:** generalizes the v44 MCP inbox across **all** approval sources (MCP executions + v33 business-operator) into one prioritized queue (high-risk / oldest first, with a source filter). Approve/reject **delegate to the owning governed service** at `/api/approvals-center` — no new execution power, only aggregation and routing.
-- **v49 — Health & Readiness Monitor:** a **read-only scored health dashboard** aggregating governance (blocked ratio), approvals backlog, secret-key readiness, MCP connectors, and policy posture into per-check statuses (ok/warn/critical) + an overall score + recommendations, with persisted snapshots at `/api/health-monitor`. No actions taken.
-- **v50 — Cost & Usage Ledger:** a local ledger of API **usage estimates** (mock/real) with **per-workspace budgets** and near/over threshold warnings (extends v11 cost visibility). Costs are estimates from illustrative rates at `/api/usage-ledger` — **no billing, charging, or payment** is performed.
-- **v51 — Local Retrieval Layer:** deepens v6 memory with **local chunking + keyword retrieval** over workspace documents, returning best-matching chunks with citations at `/api/retrieval`. Standard-library only — **no external vector database and no network**.
-- **v52 — Evaluation Harness 2.0:** repeatable eval **suites + scorecards** with **regression tracking** across runs. Scoring is **deterministic and mock-safe** (expected-keyword coverage over reference answers — no real LLM call), so scores are stable and regressions detectable. At `/api/eval-harness`.
-- **v53 — Playbook Library:** reusable, governed multi-step **playbooks** users save and re-run. Runs are **planning-first** — each step is planned, informational, or (for risky steps) **held for approval** — **nothing is executed**. At `/api/playbooks`.
-- **v55 — EvolveAgent Operating Layer 2.0:** refreshes the v40 capstone to cover **v41–v53** in an expanded capability map (19 groups), and adds a platform-wide **readiness & governance scorecard** (capability coverage, governance, health, approvals backlog → graded dimensions + overall grade) with snapshots and a final report at `/api/operating-layer-2`. Read-only; the v40 layer is untouched. *(v54 was folded into the v44.5 portfolio pass.)*
-- **v56 — Notifications & Alerts Center:** a **local in-app digest** that turns platform signals (governance blocks, degraded health, approvals backlog) into acknowledgeable notifications at `/api/notifications`. Generation is idempotent per signal. **No external delivery** — no email, SMS, or push.
-- **v57 — Workspace Templates & Cloning:** define reusable **workspace templates** (name, tags, preset) and **instantiate** them into new local workspaces at `/api/workspace-templates`. Local records only — **no production provisioning or auth**.
-- **v58 — Scheduled Tasks:** a local registry of scheduled tasks (manual/hourly/daily/weekly). **Planning-first — no real background scheduler and no timer execution**; a `trigger` produces a mock/planned run (risky steps held for approval). `due` is informational only. At `/api/scheduled-tasks`.
-- **v90 — EvolveAgent Product Launch Console (capstone):** the finale — a single **launch dashboard** unifying **product positioning**, a **feature matrix**, **demo-mode** pointers, **portfolio/resume/case-study exports**, a **launch report**, and a **final readiness score**. Read-only; explicitly **not AGI**. At `/api/launch-console`.
-- **v89 — Release Manager:** read-only release-prep generators — a **version checklist**, a **changelog**, a **PR summary** generator, **release notes**, a **GitHub tag planner**, and **demo + Linear sync checklists**. Text only; no tagging/pushing/external calls. At `/api/release-manager`.
-- **v88 — Quality Assurance Center:** a **feature verification matrix**, a **manual QA checklist**, a **failed-feature tracker**, a **regression dashboard**, and a **release-readiness score**. Records QA results locally; does not run tests itself (CI/local report status). At `/api/qa-center`.
-- **v87 — Integration Hub 3.0:** clean **integration cards** for Slack/Notion/Linear/GitHub — **connection status** (boolean, no secret display), **scopes**, **last sync**, **error explanation**, and a **dry-run test** (no real network call). At `/api/integration-hub`.
-- **v86 — Plugin Marketplace 3.0:** a safer local plugin **catalog** with **validation**, **permission review** (high-risk flags), **enable/disable**, an **activity log**, a **mock test runner** (nothing executed), and a **health score**. High-risk plugins stay disabled until reviewed. Additive to the core loader. At `/api/plugin-marketplace`.
-- **v85 — Export Center:** read-only **portable exports** — chats, reports, goals, memory, imported records — as **markdown/JSON**, plus a **portfolio case-study** and a **package builder** that bundles several kinds. Excludes secrets/governance/analytics; PDF via client print. At `/api/export-center`.
-- **v84 — Import Center:** import external data (documents, CSV, markdown notes, chat history, project notes) — **validated + sanitized** (emails/keys redacted) with an **import preview** before anything is saved. Imports land in a dedicated collection, never core data. At `/api/import-center`.
-- **v83 — Local Data Manager:** a read-only / planning-first view over local JSON storage — **collection browser**, **storage usage**, **cleanup suggestions** (advisory), a **backup** helper, and a **redaction preview** (counts sensitive matches, writes nothing). Never deletes or overwrites autonomously. At `/api/data-manager`.
-- **v82 — Governance Console 3.0:** a read-only **governance console** — dashboard (blocked ratio, risk mix), **policy violations**, **secret/PII events**, **prompt-injection warnings**, **approval audit**, **external-action audit**, and an **exportable governance report** (markdown/JSON). At `/api/governance-console`.
-- **v81 — Permission System 3.0:** declarative **permission profiles** (global/workspace/agent/tool) with **deny / require_approval / allow** effects, **most-restrictive** evaluation, **approval chains by risk**, a side-effect-free **policy preview**, and **blocked-action explanations**. Additive advisory layer that can only tighten. At `/api/permissions`.
-- **v80 — Multi-Agent Collaboration 2.0:** deterministic, read-only analysis of agent **contributions** on a topic — **conversation view**, **consensus summary**, **disagreement notes**, a **reviewer/auditor pass**, and a **final decision + rationale**. At `/api/collaboration`.
-- **v79 — Meeting Intelligence 2.0:** deterministic, read-only extraction from a meeting **transcript** — **summary**, **decisions**, **action items** with **owners**, **follow-up drafts** (never sent), a **timeline**, and a **planning-only** proposed goal/task plan (nothing created). At `/api/meeting-intel`.
-- **v78 — Business Intelligence 2.0:** read-only business analytics — **KPI dashboard**, **lead pipeline**, **proposal tracker**, a **mock revenue forecast** (illustrative, never real money), a **risk register**, and a **business report / executive summary**. At `/api/business-intel`.
-- **v77 — Research Agent 2.0:** a deterministic, local **research toolkit** — **source comparison**, **claim/evidence table**, **contradiction detection**, **citation quality score**, **research brief generator**, and **bias/risk flags**. No web browsing, no model calls. At `/api/research-agent`.
-- **v76 — Code Intelligence 2.0:** a deterministic, **read-only static analyzer** for pasted code — **bug-risk scan** (eval/exec, hard-coded secrets, shell usage, bare except…), **refactor plan**, **complexity metrics**, **route map**, **dependency list**, and **test-coverage summary**. Never reads the filesystem or edits code. At `/api/code-intel`.
-- **v75 — Document Intelligence 2.0:** a **deterministic, local** document toolkit — **comparison**, **resume ATS scoring**, **contract/risk summary**, **CSV insight**, and **document Q&A** (keyword retrieval, no LLM). At `/api/doc-intel`.
-- **v74 — Personal Productivity Brain:** helps you decide what to do next — **priority recommendations**, a **daily focus list**, **blocker detection**, **overdue review**, a **goal-progress summary**, and a "**what should I work on now?**" pick. Read-only. At `/api/productivity`.
-- **v73 — Workflow Recommendation Engine:** recommends the best **workflow** for a goal — **expected steps**, **similar past runs**, **risk level**, **approval requirements**, and **time/complexity** estimate. Read-only and planning-only. At `/api/workflow-recommend`.
-- **v72 — Agent Quality Optimizer:** read-only analysis of recorded run analytics + feedback — per-agent **score trends**, **weak-agent detection**, **prompt improvement suggestions**, **best agent by task type**, **regression checks**, and **human-feedback correlation**. No prompts changed; nothing executed. At `/api/agent-quality`.
-- **v71 — Smart Context Engine:** a read-only **context planner** that picks which **memory / files / goals** feed an answer — with a **selection reason** per item, a **context budget**, **duplicate removal**, and **sensitive-content filtering** (emails, key-like tokens, etc. are never included), plus a Developer-Mode **context trace**. At `/api/context`.
-- **v70 — Workspace Operating System 2.0:** makes each workspace its own AI OS — a per-workspace **dashboard** with a **memory graph** (nodes + knowledge-link edges), **feature usage**, **agents**, **reports**, a scoped **timeline**, and a derived **health score**. Read-only and workspace-scoped. At `/api/workspace-os`.
-- **v69 — Unified Notifications Inbox 2.0:** an **actionable inbox** that unifies approval alerts, failed-run alerts, provider-fallback alerts, scheduled-task reminders, and health warnings — **grouped by severity**, with **mark-resolved** and **links to the source event**. Generation is **idempotent** and it's **additive** to the v56 center. At `/api/notifications-inbox`.
-- **v68 — Real Provider Control Center 2.0:** a **readiness dashboard** for OpenAI / Claude / Gemini / Mistral / local, with **model-per-task** and **real/mock-per-capability** preferences, a **cost estimate** (from the usage ledger), **latency** stats, and a **fallback policy**. **API key checks report booleans only** — no secret values are ever exposed. At `/api/provider-control`.
-- **v67 — Settings Center:** one central place for local **preferences** — provider defaults, mode/feature toggles, a safety preference, workspace defaults, voice, and theme. Allow-list validated; **secret-like keys are rejected and no secret values are ever stored**; hard safety boundaries are enforced read-only. Export/import + reset. At `/api/settings`.
-- **v66 — Demo / Portfolio Mode 2.0:** a **one-click demo script**, guided walkthrough, auto-open feature sequence, refreshed **resume bullets**, and a **case-study export** — plus a **demo-safe sample workspace** you can **seed and reset**. Reset removes **only** demo-tagged records (`demo_seed=true`) — your data is never touched. Governance-logged. At `/api/demo`.
-- **v65 — Feature Registry + Capability Map 3.0:** a **canonical, searchable registry** of every feature — owning service, primary route, category, and **status** (active / demo-safe / mock / needs-config) — with a **route → feature map** and a **"try this feature"** launcher. Read-only discovery; governance-logged. At `/api/features`.
-- **v64 — Dashboard Home 2.0:** one professional **homepage** over the whole OS — a **Today** overview, active workspace summary, pending approvals, recent runs, system health, upcoming tasks, rule-based **suggested next actions**, and **quick-launch cards**. Read-only aggregation of existing state; governance-logged. At `/api/home`.
-- **v63 — Unified Activity Timeline:** one **chronological** view of everything the OS did — runs, approvals, tool executions, memory changes, file events, reports, and goals — merged newest-first, with **type/workspace/actor/status/date filters**, expandable event detail, **governance-linked** events, and **markdown/JSON export**. Read-only; governance-logged. At `/api/activity`.
-- **v62 — Global Search Across Everything:** one **read-only** search bar across the whole OS — chats, files, goals, agents, memory, workflows, reports, simulations, schedules, ideas, and documents — with **type/workspace/date filters**, result **previews**, a Developer-Mode **source trace**, and a **"use as context"** action that seeds the composer. Excludes secrets/governance/analytics; governance-logged. At `/api/search`.
-- **v61 — Unified Command Router 2.0:** the Master Agent now routes more reliably and **explainably** — every route carries a **confidence** score, a **"why this route"** explanation (the keywords that matched), and a **suggested workflow to reach for before execution**. When nothing matches strongly it uses a **safe fallback route** instead of guessing, and you can **rate routes** (correct/wrong) to drive **route-accuracy analytics**. Backward-compatible (response only gains fields); surfaced in the hero and the Master Agent Developer-Mode panel. At `/api/master-agent`.
-- **v60.1 — Master Agent Voice Console:** the **Master Agent** is now the single top-level routing experience across **v1–v60** — a clean **AI-native hero** where you speak (**push-to-talk voice input**) or type one request and it classifies intent, routes to the right subsystem, and answers. The system can **speak answers back** using the browser's speech synthesis. A **`mcp:` prefix** routes tool-connection-style requests to the connector hub, a **CLI palette** (`/help`, `/health`, `/approvals`, `/scorecard`, …) supports command-style interaction, and **task-aware MCP suggestions** (with key-readiness booleans, never values) appear when relevant. Every route stays **planning-first, approval-gated, and governance-aware** — risky actions (send/pay/delete/deploy) are always held for human approval. At `/api/master-agent`.
-- **v60 — EvolveAgent OS 2.0 (capstone):** one **unified command center** indexing every system built across v1–v59 (grouped by domain, active-by-data with route + record counts), a live **platform scorecard** (reusing the v55 Operating Layer 2.0 grade + v49 health), milestone stats, and a governance-logged **snapshot/report**. Read-only aggregation of local data — and explicitly **not AGI**. At `/api/os2`.
-- **v59 — Data Export & Backup:** export a curated set of local content collections to a downloadable **JSON bundle**, and import one back. **Local only — no external upload**; import is **non-destructive** (merges by id, never overwrites/deletes). Excludes secret values, governance logs, and analytics. At `/api/data-export`.
+## What Makes It Different
 
-> **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
->
-> **Roadmap after v40 (future-only / not built):** real provider expansions, streaming, vector/RAG retrieval, and deployment remain future work outside the current local-first, mock/planning-first scope.
+Claude, OpenAI, Gemini, local models, and future models are intelligence providers. EvolveAgent is the operating layer around them:
 
-> **Documentation:** [Version History](VERSIONS.md) · [Architecture](docs/ARCHITECTURE.md) · [Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md) · [Case Study](docs/CASE_STUDY.md) · [Interview Guide](docs/INTERVIEW_EXPLANATION.md) · [Resume Bullets](docs/RESUME_BULLETS.md) · [Screenshots Guide](screenshots/README.md) · [Demo Guide](DEMO.md) · [Final Checklist](FINAL_CHECKLIST.md)
+```text
+User goal
+  -> EVA / Master Agent
+  -> workspace memory + knowledge
+  -> model router + specialist agents
+  -> tool / connector planning
+  -> governance + approval
+  -> execution or safe simulation
+  -> verification
+  -> durable memory + analytics
+```
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with governed research sessions, citation tracking, source credibility scoring, real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+The target is not "a model smarter than Claude." The target is a governed system that can use the best available model, remember long-running work, enforce permissions, verify outcomes, and preserve an audit trail.
+
+> **This is not AGI.** EvolveAgent does not self-train a base model, does not bypass human approval, and does not run destructive or sensitive actions autonomously.
+
+## Key Docs
+
+- [Architecture](docs/architecture/Project-Architecture.md)
+- [v200 Strategy](docs/roadmap/EvolveAgent-v200-Strategy.md)
+- [Route/Page Coverage Audit](docs/architecture/Route-Page-Coverage-Audit.md)
+- [Codex Handoff](docs/CODEX_HANDOFF.md)
+- [Portfolio Pack](docs/PORTFOLIO_PACK.md)
+- [Version History](VERSIONS.md)
+- [Demo Guide](DEMO.md)
+- [Final Checklist](FINAL_CHECKLIST.md)
+
+> **Safety posture:** real integrations and compute adapters are opt-in, approval-gated, secret-safe, and designed to fail closed. Mock/local fallback remains the default demo path.
+
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating system with governed research, Memory v2 semantic recall, Agent Registry, MCP tooling, durable workflows, approval-gated code changes, usage/cost tracking, worker orchestration foundations, real-provider readiness, and Developer Mode observability.
 
 ## Project Overview
 
-EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-agent orchestration without overbuilding into a production platform. A Master Orchestrator Agent classifies each request, chooses the correct workflow, coordinates specialist agents, evaluates output quality, stores memory and analytics, and returns one clean answer through a modern chat UI.
+EvolveAgent AI is a full-stack agent operating system that turns a user goal into a governed workflow. The Master Orchestrator / EVA classifies the request, loads workspace context, chooses agents and tools, checks policies, creates or runs approved steps, verifies results, stores evidence, and updates memory/analytics for future runs.
 
-The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
+The app supports normal chat, files, recordings, image/transcription providers, Mission Control goals, custom agents, durable workflows, code-change pipelines, approval queues, MCP-style connectors, workspace memory, Memory v2 semantic recall, Agent Registry, usage/cost tracking, worker registry, and portfolio/project dashboards. Simple Mode keeps the user experience clean. Developer Mode exposes traces, provider metadata, storage status, governance/audit records, approvals, code-change status, tool state, worker state, and raw technical details.
 
-The latest completed roadmap checkpoint is **v25.0 — AI Company Brain**. The current active work is **v26.0 — Personal Device Operator / Phone Autopilot**, which is adding a governed, permission-first foundation for phone/device-style command planning without unrestricted device automation.
+The current roadmap center of gravity is **post-v200 platform hardening**:
 
-Completed milestones after the v15.0 OS release:
+- **v100 Real Foundation** — storage abstraction, PostgreSQL/JSONB support, pgvector-ready Memory v2, migration tooling, optional Redis, and storage-status visibility.
+- **v140 Workspace Brain** — memory + knowledge retrieval around workspaces, projects, goals, decisions, and source context.
+- **v150 Autonomous Software Team** — approval-gated issue-to-code-change workflow with diff/status visibility and verification-first controls.
+- **v200 Model-Independent AI Operating System** — unified Command Center, capability directory, and platform scorecard.
+- **v220 Compute Fabric foundation** — worker registry, opt-in Kaggle GPU worker, scheduler polling, terminal-state deregistration, and analytics integration.
 
-- **v16.0 — Multi-Agent Organization** — AI departments, manager/worker/reviewer/auditor roles, department dashboards, and cross-agent collaboration planning.
-- **v17.0 — Agent Workforce Marketplace** — reusable agent team templates, import/export, workflow packs, ratings, benchmark metadata, and safe permission profiles.
-- **v18.0 — Real Business Automation Layer** — local lead tracking, support triage drafts, document/invoice processing, proposals, marketing calendar, and business KPI dashboards.
-- **v19.0 — AI Chief of Staff** — daily/weekly planning, priority ranking, reminders, progress summaries, and next-action recommendations.
-- **v20.0 — Autonomous Business Simulator** — decision, cost, time, risk, and business-impact simulations for comparing plans before execution.
-- **v21.0 — Multi-Modal Real-World Agent** — screenshot/image/diagram-style inputs, UI bug analysis, visual workflow interpretation, and real-world input summarization through the governed agent stack.
-- **v22.0 — Industry Workflow Modes** — specialized workflow profiles for pharmacy, healthcare admin, construction, business, student, software, legal, and finance-style tasks.
-- **v23.0 — Agent-to-Agent Network** — agent communication protocol, external handoffs, task contracts, result verification, and cross-system audit logs.
-- **v24.0 — Self-Healing Project System** — build/test failure monitoring, dependency and route issue detection, frontend error analysis, repair task generation, and safe repair planning.
-- **v25.0 — AI Company Brain** — company-level dashboard, strategy and operations memory, business workflow suite, enterprise audit/compliance center, and executive mode.
+Earlier milestones remain part of the platform:
+
+- **v16–v17** — Multi-Agent Organization and Agent Workforce Marketplace.
+- **v18–v20** — Business Automation, Chief of Staff, and Business Simulator layers.
+- **v21–v25** — Multimodal agent, industry modes, agent network, self-healing project system, and AI Company Brain.
+- **v26–v30** — Device/operator, training lab, avatar/persona, Life OS, and Universal App Operator foundations.
+- **v31–v90** — team/business/compliance/simulation/launch tooling, quality centers, import/export, research, meeting, permission, governance, and release/launch consoles.
 
 The v15.0 checkpoint introduced **EvolveAgent OS**, a platform-readiness layer added on top of the existing system. It is additive and safe — no feature was removed, no hosting/auth/payments were added. EvolveAgent OS adds:
 
@@ -106,7 +85,7 @@ The v15.0 checkpoint introduced **EvolveAgent OS**, a platform-readiness layer a
 
 EvolveAgent OS is local-first and governed: it is **not** fully autonomous without approval, does **not** self-train any base model, is **not** a production hosted SaaS, and provides **no** unrestricted shell access.
 
-The earlier v11.5 checkpoint added the Autonomous Research Agent foundation. Research sessions are governed by approval state, sources are registered with local credibility scores, claims can be linked to citations, and Developer Mode includes a Research Agent panel for reviewing reports, evidence gaps, source counts, and citation counts. This foundation does not perform unrestricted web browsing; it stores and evaluates approved research artifacts safely.
+The later research stack expands that foundation with controlled research search, citation tracking, report generation, credibility scoring, bias/contradiction analysis, and Developer Mode research panels. It does not perform unrestricted browsing; it stores and evaluates approved research artifacts safely.
 
 The v11.0 checkpoint added real API QA and cost-control visibility. Developer Mode includes a Real API Control panel with paid-capability readiness, dry-check defaults, live-call warnings, provider/model/size notes, and simple cost-estimate guidance before text, image, or transcription workflows use paid provider APIs.
 
@@ -232,7 +211,10 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - OpenAI SDK
 - pypdf
 - python-docx
-- JSON storage
+- JSON fallback storage
+- PostgreSQL / JSONB storage backend
+- pgvector-ready semantic memory
+- Optional Redis cache
 
 **Frontend**
 
@@ -901,14 +883,21 @@ Backend:
 
 ```bash
 cd backend
-pytest
+python -m pytest -q
 ```
 
 Frontend:
 
 ```bash
 cd frontend
+npm test
 npm run build
+```
+
+Smoke test:
+
+```bash
+python scripts/smoke_test.py http://127.0.0.1:8000
 ```
 
 ## Demo Prompts
@@ -1052,21 +1041,20 @@ Required configuration stays in `backend/.env` only. Linear API keys are never e
 ## Limitations
 
 - No authentication
-- No cloud database
+- No production multi-tenant auth
 - No deployment setup
-- No Docker
-- No vector database or RAG search
+- No managed cloud database setup
 - No OCR or scanned PDF support
-- No real image-generation API
 - No speaker diarization
-- No full video frame understanding
-- No autonomous file editing
+- No unrestricted full video frame understanding
+- No silent autonomous file editing
 - No self-modifying agents
 - No unrestricted shell execution
 - No package installation through automation
 - No destructive file deletion
 - File context is capped before being sent to agents
-- Analytics are JSON-based for MVP simplicity
+- Real external mutations remain approval-gated or disabled by default
+- Compute Fabric is an early worker foundation, not a production cluster
 
 ## Safety
 
@@ -1100,19 +1088,20 @@ Automation safety rules:
 
 ## Future Improvements
 
-- Complete and merge **v26.0 — Personal Device Operator / Phone Autopilot**
-- v27.0 — Real Fine-Tuning + Private Training Lab
-- v28.0 — Personal AI Avatar / Voice Twin
-- v29.0 — Real-Time Life Operating System
-- v30.0 — Universal App Operator
-- v31.0+ — AI team lead, autonomous SaaS builder, business operator, compliance, simulation, organization OS, and always-on companion tracks
+- Continue v220 Compute Fabric: worker registration, heartbeats, queue priorities, cancellation, checkpoints, and resource accounting.
+- Deepen Memory v2: consolidation, provenance, contradiction handling, retention controls, and "why remembered" explanations.
+- Strengthen EVA orchestration: measurable success criteria, outcome evidence, retries, rollback plans, and human escalation.
+- Expand real connectors carefully: GitHub, Gmail, Calendar, Drive, Slack, Notion, Linear/Jira, always behind governance and approval.
+- Improve frontend coverage for remaining backend capability surfaces and add more UI tests around Developer Mode panels.
+- Prepare enterprise controls: RBAC, SSO/SCIM, tenant isolation, audit export, policy engine, and data residency controls.
 
 ## Project Status
 
-- **Status:** v25.0 completed and merged; v26.0 in progress
-- **Platform release:** EvolveAgent OS
-- **Backend tests:** 311 passing on the merged v25 main verification
-- **Frontend build:** passing on the merged v25 main verification
+- **Status:** v200 command center shipped; v220 Compute Fabric foundations in progress
+- **Latest merged main:** PR #242, Kaggle worker deregistration on terminal job state
+- **Platform release:** EvolveAgent OS / v200 Command Center
+- **Backend scale:** 143 service modules, 87 split route modules, ~790 route handlers, 131 backend test files
+- **Frontend build:** React/Vite UI with Simple Mode, Developer Mode, Command Center, Code Changes, Project Brain, Governance, Tools/MCP, and Dev Console surfaces
 - See [`FINAL_CHECKLIST.md`](FINAL_CHECKLIST.md) for the full release-readiness checklist and known limitations.
 
 ## Resume Bullets
