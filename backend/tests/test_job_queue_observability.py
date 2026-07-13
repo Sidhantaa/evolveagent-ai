@@ -137,3 +137,53 @@ def test_existing_agent_jobs_manual_flow_still_works():
     assert job["status"] == "queued"
     paused = client.post(f"/api/agent-jobs/{job['job_id']}/pause", json={"reason": "test"}).json()
     assert paused["status"] == "paused"
+
+
+# ------------------------------------------------------------------
+# concurrency_limit visibility: it's only actually enforced by start_next()
+# (the manual dequeue flow) -- real automated producers (DurableWorkflowService,
+# KaggleWorkerService) create+heartbeat jobs directly, bypassing that gate by
+# design (their own engines are the real throttle). health() now surfaces
+# real running-vs-limit status as pure observability -- it must never block
+# a real run or job.
+# ------------------------------------------------------------------
+def test_health_reports_concurrency_limit_status(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    ws = WorkspaceService(s)
+    scheduler = AgentSchedulerService(s, g, ws, concurrency_limit=2)
+    health = scheduler.health()
+    assert health["concurrency_limit"] == 2
+    assert health["running"] == 0
+    assert health["over_concurrency_limit"] is False
+
+
+def test_health_flags_over_concurrency_limit_without_blocking_anything(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    ws = WorkspaceService(s)
+    scheduler = AgentSchedulerService(s, g, ws, concurrency_limit=1)
+    workflows = DurableWorkflowService(s, g, agent_scheduler=scheduler)
+    # Two real workflow runs, both must actually execute -- concurrency_limit
+    # must never block a real run, only be visible after the fact.
+    d1 = workflows.create_definition({"name": "A", "steps": [{"name": "x", "action": "send"}]})
+    d2 = workflows.create_definition({"name": "B", "steps": [{"name": "y", "action": "send"}]})
+    run1 = workflows.start_run({"definition_id": d1["definition_id"]})
+    run2 = workflows.start_run({"definition_id": d2["definition_id"]})
+    assert run1["status"] == "waiting_approval"  # both real runs proceeded, unthrottled
+    assert run2["status"] == "waiting_approval"
+
+    health = scheduler.health()
+    assert health["running"] == 0  # waiting_approval maps to "paused", not "running"
+    assert health["concurrency_limit"] == 1
+    assert health["over_concurrency_limit"] is False
+
+
+def test_agent_jobs_health_endpoint_includes_concurrency_fields():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    health = client.get("/api/agent-jobs/health").json()
+    assert "concurrency_limit" in health
+    assert "over_concurrency_limit" in health
+    assert isinstance(health["over_concurrency_limit"], bool)

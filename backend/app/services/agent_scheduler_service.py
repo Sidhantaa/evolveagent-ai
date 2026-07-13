@@ -121,10 +121,11 @@ class AgentSchedulerService:
                 continue
             if (now - parsed).total_seconds() > self.timeout_seconds:
                 stale.append(job)
+        running_count = sum(1 for job in jobs if job.get("status") == "running")
         return {
             "total_jobs": len(jobs),
             "queued": sum(1 for job in jobs if job.get("status") == "queued"),
-            "running": sum(1 for job in jobs if job.get("status") == "running"),
+            "running": running_count,
             "paused": sum(1 for job in jobs if job.get("status") == "paused"),
             "completed": sum(1 for job in jobs if job.get("status") == "completed"),
             "failed": sum(1 for job in jobs if job.get("status") == "failed"),
@@ -134,6 +135,16 @@ class AgentSchedulerService:
                 for job in stale
             ],
             "healthy": not stale,
+            # concurrency_limit is only actually ENFORCED by start_next() (the
+            # manual dequeue-one-at-a-time flow) -- real automated job
+            # producers (DurableWorkflowService, KaggleWorkerService) create
+            # and heartbeat jobs directly, bypassing that gate by design (their
+            # own execution engines are the real throttle, not this queue).
+            # Surfaced here as real, visible signal only -- never blocks a
+            # real run/job, matching this app's existing "observability, not
+            # enforcement" contract for those two paths.
+            "concurrency_limit": self.concurrency_limit,
+            "over_concurrency_limit": running_count > self.concurrency_limit,
         }
 
     def _transition(
