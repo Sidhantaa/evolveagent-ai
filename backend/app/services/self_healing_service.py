@@ -286,3 +286,15 @@ class SelfHealingService:
                 else "Draft a repair task for an open finding, then verify after human approval."
             ),
         }
+
+    def analytics_summary(self) -> dict:
+        checks = self.storage.read_list(self.checks_file)
+        findings = self.storage.read_list(self.findings_file)
+        repairs = self.storage.read_list(self.repairs_file)
+        return {
+            "self_healing_checks": len(checks),
+            "self_healing_blocked_checks": sum(1 for c in checks if c.get("blocked")),
+            "self_healing_open_findings": sum(1 for f in findings if f.get("status") == "open"),
+            "self_healing_repair_drafts": sum(1 for r in repairs if r.get("status") == "draft"),
+            "self_healing_verified_repairs": sum(1 for r in repairs if r.get("status") == "verified"),
+        }
