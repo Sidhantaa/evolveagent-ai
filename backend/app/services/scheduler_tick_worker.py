@@ -22,6 +22,13 @@ Before that sweep, each tick also polls any in-flight KaggleWorkerService jobs
 heartbeat gets refreshed -- otherwise the stale-job sweep above would
 eventually auto-fail a Kaggle kernel that is still genuinely running, since
 nothing else was ever refreshing its heartbeat.
+
+Each tick also calls AdaptiveLearningService.learn() -- the same shape of gap:
+MasterOrchestratorAgent consults recommend() on every single run (an earlier
+fix this session), but the one method that actually ingests fresh signal from
+repo searches/high-grade evaluations/workflow effects was manual-button-only,
+silently starving that now-automated consumer of anything learned since the
+last time a human happened to click it.
 """
 
 from __future__ import annotations
@@ -38,7 +45,7 @@ _KAGGLE_NONTERMINAL_STATUSES = {"submitted", "running", "queued"}
 
 
 class SchedulerTickWorker:
-    def __init__(self, scheduled_tasks: ScheduledTasksService, agent_scheduler=None, kaggle_worker=None):
+    def __init__(self, scheduled_tasks: ScheduledTasksService, agent_scheduler=None, kaggle_worker=None, adaptive_learning=None):
         self.scheduled_tasks = scheduled_tasks
         # Optional AgentSchedulerService collaborator. health() already does
         # real stale-heartbeat detection (a running job whose heartbeat hasn't
@@ -56,6 +63,13 @@ class SchedulerTickWorker:
         # Each tick now refreshes every in-flight Kaggle job's real status
         # (and heartbeat) BEFORE the stale sweep runs.
         self.kaggle_worker = kaggle_worker
+        # Optional AdaptiveLearningService collaborator. recommend() (real
+        # retrieval memory) is consulted on every MasterOrchestratorAgent run,
+        # but learn() -- the only thing that ingests fresh signal from repo
+        # searches/high-grade evaluations/workflow effects -- was manual-only
+        # (POST /adaptive-learning/learn). Each tick now keeps it current for
+        # free; idempotent (learn() dedupes via its own fingerprinting).
+        self.adaptive_learning = adaptive_learning
         self.running = False
         self._task: asyncio.Task | None = None
         self.last_tick_at: str | None = None
@@ -63,6 +77,7 @@ class SchedulerTickWorker:
         self.last_fired: list[dict[str, Any]] = []
         self.last_stale_jobs_failed: list[dict[str, Any]] = []
         self.last_kaggle_jobs_polled: list[dict[str, Any]] = []
+        self.last_learn_result: dict[str, Any] | None = None
 
     async def start(self) -> None:
         if self.running or not settings.scheduler_tick_enabled:
@@ -111,7 +126,18 @@ class SchedulerTickWorker:
         self.last_fired = fired
         self.last_kaggle_jobs_polled = self._poll_kaggle_jobs()
         self.last_stale_jobs_failed = self._fail_stale_jobs()
+        self.last_learn_result = self._learn_from_history()
         return fired
+
+    def _learn_from_history(self) -> dict[str, Any] | None:
+        """Isolated from everything else -- a broken learn() call can never
+        affect due-task firing or either sweep above."""
+        if self.adaptive_learning is None:
+            return None
+        try:
+            return self.adaptive_learning.learn()
+        except Exception:  # noqa: BLE001
+            return None
 
     def _poll_kaggle_jobs(self) -> list[dict[str, Any]]:
         """Isolated from everything else -- a broken Kaggle poll can never
@@ -165,4 +191,5 @@ class SchedulerTickWorker:
             "last_fired": self.last_fired,
             "last_stale_jobs_failed": self.last_stale_jobs_failed,
             "last_kaggle_jobs_polled": self.last_kaggle_jobs_polled,
+            "last_learn_result": self.last_learn_result,
         }

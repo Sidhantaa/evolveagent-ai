@@ -298,6 +298,83 @@ def test_tick_status_endpoint_includes_kaggle_jobs_polled_field():
     assert "last_kaggle_jobs_polled" in status
 
 
+# ------------------------------------------------------------------
+# Adaptive learning refresh: recommend() (real retrieval memory) is consulted
+# on every MasterOrchestratorAgent run, but learn() -- the only thing that
+# ingests fresh signal from repo searches/high-grade evaluations/workflow
+# effects -- was manual-button-only, silently starving that now-automated
+# consumer. Same shape as the Kaggle heartbeat fix above.
+# ------------------------------------------------------------------
+def test_tick_once_learns_from_real_history(tmp_path):
+    from app.services.adaptive_learning_service import AdaptiveLearningService
+
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    adaptive_learning = AdaptiveLearningService(s, g)
+    s.write_list("repo_finder_searches.json", [{"query": "kubernetes helm migration", "top": "acme/helm-charts"}])
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, adaptive_learning=adaptive_learning)
+    worker.tick_once()
+
+    assert worker.last_learn_result is not None
+    assert worker.last_learn_result["ingested"] >= 1
+    items = adaptive_learning.items()["items"]
+    assert any("kubernetes helm migration" in i["text"] for i in items)
+
+
+def test_tick_once_learn_is_idempotent_across_ticks(tmp_path):
+    from app.services.adaptive_learning_service import AdaptiveLearningService
+
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    adaptive_learning = AdaptiveLearningService(s, g)
+    s.write_list("repo_finder_searches.json", [{"query": "kubernetes helm migration", "top": "acme/helm-charts"}])
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    worker = SchedulerTickWorker(scheduled, adaptive_learning=adaptive_learning)
+    worker.tick_once()
+    first_total = worker.last_learn_result["total"]
+    worker.tick_once()
+    second_total = worker.last_learn_result["total"]
+    assert second_total == first_total  # no duplicate items from re-running learn()
+
+
+def test_tick_once_without_adaptive_learning_never_learns(tmp_path):
+    _, _, _, scheduled = _services(tmp_path)
+    worker = SchedulerTickWorker(scheduled, adaptive_learning=None)
+    worker.tick_once()
+    assert worker.last_learn_result is None
+
+
+def test_tick_once_isolates_a_broken_learn_call_from_everything_else(tmp_path, monkeypatch):
+    from app.services.adaptive_learning_service import AdaptiveLearningService
+
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    adaptive_learning = AdaptiveLearningService(s, g)
+    monkeypatch.setattr(adaptive_learning, "learn", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    scheduled.create_task({"name": "due-anyway", "schedule": "hourly"})
+    worker = SchedulerTickWorker(scheduled, adaptive_learning=adaptive_learning)
+    fired = worker.tick_once()
+
+    assert len(fired) == 1  # due-task firing unaffected by the broken learn() call
+    assert worker.last_learn_result is None
+
+
+def test_tick_status_endpoint_includes_learn_result_field():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    status = client.get("/api/scheduled-tasks/tick-status").json()
+    assert "last_learn_result" in status
+
+
 def test_endpoints_end_to_end():
     from fastapi.testclient import TestClient
     from app.main import app
