@@ -724,7 +724,14 @@ CAPABILITY_REGISTRY: list[dict] = [
      "classify": lambda: classify_static(STATUS_REAL, "pgvector mode") if memory_service.status().get("mode") == "pgvector"
      else classify_static(STATUS_LOCAL, "keyword fallback mode (no Postgres)")},
     {"name": "Adaptive Learning (retrieval memory + few-shot)", "category": "Memory & Learning", "route": "/api/adaptive-learning",
-     "safety_level": "local_write", "tool_used": None, "classify": lambda: classify_static(STATUS_LOCAL, "local retrieval only; never trains a model")},
+     "safety_level": "local_write", "tool_used": None,
+     "classify": lambda: classify_static(
+         STATUS_LOCAL,
+         "local retrieval only; never trains a model — auto-learns every scheduler tick from repo "
+         "searches/agent examples/workflow effects and ingests completed Kaggle GPU job output "
+         f"(recall_engine={adaptive_learning_service.status().get('recall_engine')}, "
+         f"last_tick_ingested={(scheduler_tick_worker.last_learn_result or {}).get('ingested', 0)})",
+     )},
     {"name": "Slack Notifications", "category": "Integrations", "route": "/api/slack",
      "safety_level": "opt_in_call", "tool_used": None,
      "classify": lambda: classify_optin_global(slack_notifications.status(), "enabled", "configured")},
