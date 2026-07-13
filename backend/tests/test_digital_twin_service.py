@@ -79,6 +79,46 @@ def test_digital_twin_manual_override_is_persisted(tmp_path):
     assert loaded["manual_overrides"]["notes"] == "Prefer implementation steps."
 
 
+# ------------------------------------------------------------------
+# get_profile() was cache-first forever: once a profile existed, new
+# preferences/feedback/run data written by the rest of the app after that
+# point was never reflected, since nothing besides the manual /refresh route
+# ever called refresh_profile() again. Bounded staleness check closes this
+# without adding a write+governance-log entry on every single consuming run.
+# ------------------------------------------------------------------
+def test_get_profile_returns_cached_profile_when_fresh(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    workspace = MagicMock()
+    workspace.resolve_workspace_id.return_value = "workspace-1"
+    service = DigitalTwinService(storage, workspace, GovernanceService(storage))
+
+    first = service.refresh_profile("workspace-1")
+    second = service.get_profile("workspace-1")
+    assert second["profile_id"] == first["profile_id"]
+    assert second["updated_at"] == first["updated_at"]  # not re-refreshed
+
+
+def test_get_profile_auto_refreshes_a_stale_profile(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    workspace = MagicMock()
+    workspace.resolve_workspace_id.return_value = "workspace-1"
+    service = DigitalTwinService(storage, workspace, GovernanceService(storage))
+
+    first = service.refresh_profile("workspace-1")
+    profiles = storage.read_list(service.filename)
+    profiles[0]["updated_at"] = "2020-01-01T00:00:00+00:00"  # force stale
+    storage.write_list(service.filename, profiles)
+
+    storage.write_list(
+        "user_preferences.json",
+        [{"workspace_id": "workspace-1", "preference": "detailed", "score": 5, "evidence": []}],
+    )
+    refreshed = service.get_profile("workspace-1")
+    assert refreshed["profile_id"] == first["profile_id"]  # same identity
+    assert refreshed["updated_at"] != "2020-01-01T00:00:00+00:00"
+    assert refreshed["style_profile"]["detail_level"] == "detailed"  # picked up new data
+
+
 def test_digital_twin_api_profile_refresh_and_update():
     workspace_response = client.post(
         "/api/workspaces",
