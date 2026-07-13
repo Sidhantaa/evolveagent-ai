@@ -574,6 +574,7 @@ provider_control_service = ProviderControlService(storage, governance_service, l
 # observability into real call success/latency).
 llm_router.provider_control = provider_control_service
 llm_router.storage = storage
+llm_router.usage_ledger = usage_ledger_service
 notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
 workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
 smart_context_service = SmartContextService(storage, governance_service)
