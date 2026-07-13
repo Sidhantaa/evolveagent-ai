@@ -159,7 +159,7 @@ class KaggleWorkerService:
             "created_at": self._now(),
             "updated_at": self._now(),
         }
-        if self.worker_registry is not None:
+        if self.worker_registry is not None and submitted:
             try:
                 worker = self.worker_registry.register_worker(
                     "kaggle_gpu", capabilities=["gpu", "python"], metadata={"kernel_ref": metadata["id"]},

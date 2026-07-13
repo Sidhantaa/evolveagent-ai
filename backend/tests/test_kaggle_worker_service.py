@@ -141,6 +141,21 @@ def test_submit_job_registers_with_worker_registry_and_scheduler(kaggle_env):
     assert scheduler.list_jobs()
 
 
+def test_submit_job_failure_never_registers_a_worker(kaggle_env):
+    """A failed CLI push (bad creds/quota/network) previously still registered
+    a permanent "online" worker with no cleanup path (unlike the agent_scheduler
+    job, which was already correctly gated on `submitted`). register_worker()
+    must be gated the same way."""
+    storage, governance = kaggle_env
+    registry = WorkerRegistryService(storage, governance)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _fail("quota exceeded")})
+    service = KaggleWorkerService(storage, governance, worker_registry=registry, kaggle_runner=runner)
+    job = service.submit_job(code="print(1)", title="Failing job")
+    assert job["submitted"] is False
+    assert job.get("worker_id") is None
+    assert registry.list_workers() == []
+
+
 def test_poll_job_updates_status_to_complete(kaggle_env):
     storage, governance = kaggle_env
     runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
