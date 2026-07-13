@@ -419,7 +419,7 @@ class MasterOrchestratorAgent:
             )
         )
         if request.deep_mode:
-            consensus_outputs = self.run_consensus_candidates(request.user_input, shared_context)
+            consensus_outputs = self.run_consensus_candidates(request.user_input, shared_context, workspace_id=workspace_id)
             consensus_winner, consensus_judge_reason, consensus_disagreement_notes = self.summarize_consensus(consensus_outputs)
             agent_outputs.extend(consensus_outputs)
             shared_context += "\n\nConsensus candidates:\n" + "\n\n".join(
@@ -451,6 +451,7 @@ class MasterOrchestratorAgent:
             request.user_input,
             agent_outputs,
             judge_summary=preliminary_judge.model_dump_json(),
+            workspace_id=workspace_id,
         )
         final_output = writing_output.output
         agent_outputs.append(writing_output)
@@ -481,6 +482,7 @@ class MasterOrchestratorAgent:
                 agent_outputs,
                 judge_result.overall_score,
                 writing_provider=writing_output.provider,
+                workspace_id=workspace_id,
             )
             final_output = retry_output["final_output"]
             agent_outputs = retry_output["agent_outputs"]
@@ -1853,7 +1855,7 @@ class MasterOrchestratorAgent:
         return compact[:41].rstrip() + "..."
 
     @staticmethod
-    def run_consensus_candidates(user_input: str, shared_context: str) -> list[AgentOutput]:
+    def run_consensus_candidates(user_input: str, shared_context: str, workspace_id: str | None = None) -> list[AgentOutput]:
         system_prompt = (
             "You are a consensus candidate model. Answer the task independently, focusing on completeness, "
             "clear reasoning, safety, and useful next steps. Do not judge other models."
@@ -1862,7 +1864,7 @@ class MasterOrchestratorAgent:
         candidates = llm_router.consensus_routes()
         outputs: list[AgentOutput] = []
         for route in candidates:
-            result = llm_router.generate_for_provider(route.provider, route.model, system_prompt, user_prompt)
+            result = llm_router.generate_for_provider(route.provider, route.model, system_prompt, user_prompt, workspace_id=workspace_id)
             label = route.label or llm_router.provider_label(route.provider)
             outputs.append(
                 AgentOutput(
@@ -1940,6 +1942,7 @@ class MasterOrchestratorAgent:
         agent_outputs: list[AgentOutput],
         previous_score: int,
         writing_provider: str,
+        workspace_id: str | None = None,
     ) -> dict:
         retry_trace: list[WorkflowStep] = [
             WorkflowStep(
@@ -1953,6 +1956,7 @@ class MasterOrchestratorAgent:
         risk_retry = self.specialists[2].run_with_metadata(
             user_input,
             context=f"{shared_context}\n\nRetry focus: be more specific and actionable.",
+            workspace_id=workspace_id,
         )
         risk_retry.agent_name = "Risk Agent Retry"
         agent_outputs.append(risk_retry)
@@ -1970,6 +1974,7 @@ class MasterOrchestratorAgent:
             agent_outputs,
             judge_summary=f"Previous score was {previous_score}. Improve risk handling and final readiness.",
             avoid_provider=writing_provider,
+            workspace_id=workspace_id,
         )
         writing_retry.agent_name = "Writing Agent Retry"
         final_output = writing_retry.output

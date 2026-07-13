@@ -229,3 +229,40 @@ def test_master_agent_specialist_loop_forwards_resolved_workspace_id_to_llm_rout
     specialist_calls = [c for c in generate_spy.call_args_list if c.args and c.args[0] in specialist_names]
     assert len(specialist_calls) == len(agent.specialists)
     assert all(c.kwargs.get("workspace_id") == workspace_id for c in specialist_calls)
+
+
+def test_run_consensus_candidates_forwards_workspace_id(tmp_path, monkeypatch):
+    """Round 13: the remaining real LLM call sites in master_agent.py --
+    consensus candidates (Deep Mode) and the risk/writing retry path -- had
+    the same gap as the main specialist loop, and workspace_id was already in
+    scope at both call sites (no new parameter plumbing needed)."""
+    from app.services.llm_router import LLMResult, llm_router
+
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    generate_for_provider_spy = MagicMock(return_value=LLMResult(
+        output="candidate answer", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate_for_provider", generate_for_provider_spy)
+    agent.run_consensus_candidates("do a task", "some context", workspace_id="workspace-consensus")
+    assert generate_for_provider_spy.called
+    assert all(c.kwargs.get("workspace_id") == "workspace-consensus" for c in generate_for_provider_spy.call_args_list)
+
+
+def test_risk_retry_forwards_workspace_id_to_both_retried_agents(tmp_path, monkeypatch):
+    from app.models.response_models import AgentOutput
+    from app.services.llm_router import LLMResult, llm_router
+
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    generate_spy = MagicMock(return_value=LLMResult(
+        output="retry output", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate", generate_spy)
+    outputs = [AgentOutput(agent_name="Research Agent", provider="mock", model="m", success=True, output="finding")]
+    agent.risk_retry(
+        "do a task", "some context", outputs, previous_score=40,
+        writing_provider="mock", workspace_id="workspace-retry",
+    )
+    assert generate_spy.called
+    assert all(c.kwargs.get("workspace_id") == "workspace-retry" for c in generate_spy.call_args_list)
