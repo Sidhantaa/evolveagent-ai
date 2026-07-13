@@ -175,6 +175,22 @@ def test_department_templates_listing():
     assert all("permission_level" in template for template in body["templates"])
 
 
+def test_department_overview_endpoint():
+    """overview() was real, purpose-built for the Developer Mode Agent
+    Organization panel, but had no route -- every other aggregation on this
+    service already has one. Also confirms /departments/overview resolves to
+    the static overview route, not the /departments/{department_id} matcher."""
+    _create_department(name="Overview-Test Dept")
+    body = client.get("/api/departments/overview").json()
+    assert "departments" in body and isinstance(body["departments"], list)
+    assert "recent_runs" in body
+    assert "recent_collaborations" in body
+    assert "permission_levels" in body
+    assert "permission_level_counts" in body
+    assert "total_departments" in body  # from analytics_summary()
+    assert any(d["name"] == "Overview-Test Dept" for d in body["departments"])
+
+
 def test_update_department():
     created = _create_department(name="Update-Test Dept")
     response = client.patch(
