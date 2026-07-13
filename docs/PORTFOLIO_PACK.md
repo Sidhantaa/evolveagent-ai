@@ -1,128 +1,172 @@
 # EvolveAgent AI — Portfolio Pack
 
-A single reference for presenting EvolveAgent AI in a portfolio, résumé, or interview.
+A concise, accurate reference for presenting EvolveAgent AI in a portfolio, resume, GitHub profile, interview, or demo.
 
----
+## One-Line Pitch
 
-## 1. One-line pitch
+EvolveAgent AI is a local-first, governance-first AI operating system that turns goals into planned, approved, verified work across agents, memory, tools, workflows, and audit logs.
 
-EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI + React, featuring governed automation, JSON persistence, workspace memory, agent orchestration, project/business/personal operating layers, MCP connector planning, and Developer Mode observability.
+## 30-Second Explanation
 
-## 2. 30-second explanation
+EvolveAgent is not a new foundation model. It is the operating layer around models like OpenAI, Claude, Gemini, Mistral, and local models. A normal chatbot answers one prompt; EvolveAgent tries to understand the larger goal, load workspace memory, choose agents and tools, ask for approval when actions are risky, verify the result, and remember what happened for the next run.
 
-EvolveAgent AI takes a user request, routes it through a **Master Agent** to a team of specialized sub-agents (research, logic, risk, strategy, writing, judge), and returns an auditable, governed result. Every stateful action is logged by a governance layer, all data is stored locally as JSON, and real provider calls are opt-in with a mock fallback. On top of that core it layers 44 versions of capabilities — memory, tools, project/business/personal "operating systems," and an MCP tool-connection layer — all behind a two-mode UI: a clean **Simple Mode** for users and a detailed **Developer Mode** for inspection.
+## 1-Minute Explanation
 
-## 3. 1-minute explanation
+EvolveAgent AI is a full-stack AI command center built with FastAPI and React. A user request enters through chat, voice, files, workflows, or Developer Mode. EVA / Master Agent classifies the task, retrieves relevant workspace memory, selects specialist agents or tools, runs governance checks, creates approval gates for risky actions, verifies the result where possible, and stores memory, analytics, cost, and audit history.
 
-Most AI apps are a thin wrapper over one model call. EvolveAgent AI is instead built like an **operating system for agents**. A request enters through `/api/run`; the Master Agent detects the task type and selects sub-agents; they run (with a judge/consensus step) and produce a final output. Around that core, every feature follows one strict pattern — a thin route delegates to a service, which persists to local JSON via `StorageService` and logs every stateful action to `GovernanceService`, and surfaces a Developer-Mode panel.
+The product is deliberately local-first and safety-first. It supports real providers and integrations only when configured, but keeps mock/local fallback so the app can run anywhere. Developer Mode exposes routing decisions, provider metadata, Memory v2 details, tool traces, storage status, approvals, governance logs, worker status, and code-change state.
 
-The platform grew across 44 versions: an Agent-OS foundation (tools, plugins, approvals, jobs), memory intelligence (locally scored/tiered/retrieved), real-API control (opt-in with mock fallback), then "operating layers" for projects, business, and personal life, an agent organization/marketplace, simulation and innovation labs, an executive board, and most recently a four-version **MCP arc**: register tool connectors → govern their execution → add a real (but sandboxed, read-only, opt-in) execution path → a unified approvals inbox.
+## Current Platform Snapshot
 
-The whole thing is deliberately **safe by construction**: local-first, mock/planning-first, permission-aware, and governance-logged. It does not add production auth, payments, unrestricted shell, real device/hardware control, or model self-training — and it is explicit that it is *not AGI*.
-
-## 4. Technical architecture summary
-
-```
-User → /api/run → Master Agent (task detection, sub-agent selection)
-       → sub-agents (real LLM opt-in, mock fallback) → judge/consensus → output
-
-Every feature:  thin route → service → StorageService (local JSON)
-                            → GovernanceService (logs every stateful action)
-                            → Simple Mode / Developer Mode UI
-```
-
-- **Backend:** Python 3 / FastAPI / Pydantic / Uvicorn — 85 services, ~480 routes.
-- **Frontend:** React + Vite (single-file `App.jsx`, ~10,200 lines), two-mode UI.
-- **Storage:** local JSON via `StorageService` (no external database).
-- **Governance:** `GovernanceService` records agent, action, risk, approved/blocked, reason.
-- **Providers:** OpenAI / Anthropic, opt-in with mock fallback everywhere.
-- **Tests:** 48 test modules, 494 passing backend tests; green frontend build.
-
-## 5. What makes it different from ChatGPT
-
-- **Multi-agent, not single-shot** — a Master Agent orchestrates specialized sub-agents with a judge/consensus step.
-- **Governed & auditable** — every stateful action is logged; risky actions are approval-gated.
-- **Local-first** — all data is local JSON; no hosted account or external DB required.
-- **Planning-first** — risky/real actions are drafted or simulated by default; real execution is opt-in and bounded.
-- **Two modes** — clean for end users, fully transparent for technical review.
-- **Operating layers** — project, business, and personal "OS" surfaces, plus an MCP tool-connection layer — not just chat.
-
-## 6. Main feature categories
-
-- **Core:** multi-agent orchestration, workspace memory, tools/plugins, approvals, jobs, evaluation.
-- **Project/Portfolio:** AI project manager, portfolio dashboards, self-healing checks.
-- **Business:** business automation, advanced business operator, simulator, executive board, compliance intelligence.
-- **Personal:** chief of staff, life OS, digital twin, avatar (settings only), device operator (planning only).
-- **Organization:** multi-agent departments, agent marketplace, multi-user organization OS (local records).
-- **Research/Simulation:** innovation lab, simulation world.
-- **MCP arc:** connector hub, execution adapter, read-only adapter, approvals inbox.
-- **Operating layer:** a governed cross-system orchestration dashboard.
-
-## 7. Safety / governance summary
-
-Local-first · mock/planning-first · permission-aware · governance-logged · additive. **Not present by design:** unrestricted shell, destructive autonomous file operations, real sending/payment without approval, production auth, real phone/hardware control, microphone recording / wake-word listening, base-model self-training. Real capabilities are opt-in with mock fallback; secrets are never exposed to the frontend, logs, or API responses.
-
-> **This is not AGI. It is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards.**
-
-## 8. Scale metrics
-
-| Metric | Value |
+| Area | Current State |
 |---|---|
-| Implementation versions | 44 (+ v44.5 consolidation) |
-| Backend services | 85 |
-| API routes | ~480 |
-| Backend test modules | 48 |
-| Passing backend tests | 494 |
-| React UI | single-file `App.jsx`, ~10,200 lines |
+| Platform direction | EvolveAgent OS / v200 Command Center |
+| Current foundation | v220 Compute Fabric |
+| Backend | FastAPI with 143 service modules, 87 split route modules, roughly 790 API route handlers |
+| Frontend | React + Vite premium UI with Simple Mode and Developer Mode |
+| Storage | `StorageService` with JSON fallback, PostgreSQL/JSONB support, pgvector-ready Memory v2, optional Redis |
+| Safety model | Governance logs, approval gates, permission profiles, prompt-injection checks, secret scanning |
+| Recent emphasis | Cost tracking, code-change workflows, worker lifecycle, Compute Fabric readiness |
 
-## 9. Résumé bullet
+## Architecture Summary
 
-> Designed and built **EvolveAgent AI**, a local-first multi-agent AI operating system (FastAPI + React) spanning **44 iterative versions**, **85 services**, **~480 API routes**, and **494 passing tests** — with a governed architecture (per-action audit logging, approval gates, opt-in real providers with mock fallback) and a four-version MCP tool-connection layer that safely advances from planning to sandboxed, read-only execution.
+```text
+User
+  -> React UI
+  -> FastAPI API
+  -> EVA / Master Agent
+  -> Workspace Brain + Memory v2
+  -> Specialist Agents / Custom Agents
+  -> Tool Router + MCP Hub
+  -> Governance + Approvals
+  -> Durable Workflows / Safe Services
+  -> Verification
+  -> Storage + Memory + Analytics + Audit Logs
+```
 
-## 10. Interview talking points
+## Core Product Areas
 
-- **Why multi-agent?** Separation of concerns + a judge/consensus step improves reliability over a single call.
-- **Governance by construction** — one pattern (route → service → storage → governance) applied across 44 versions kept the suite green throughout.
-- **Safety trade-offs** — planning/mock-first, opt-in real capability with mock fallback, hard boundaries (no shell/auth/payments/hardware). The MCP arc shows judgment: real execution is introduced only as sandboxed, read-only, opt-in, approval-gated.
-- **Additive versioning** — each version layered on top without breaking API contracts, which is why 44 versions coexist.
-- **Honest scoping** — explicitly *not AGI*; a governed orchestration layer.
+### EVA / Master Agent
 
-## 11. Demo flow (5–7 min)
+EVA is the top-level router. It decides whether a request is chat, research, code work, document analysis, workflow planning, tool usage, memory retrieval, or a higher-level operating-system task.
 
-1. What it is (multi-agent OS, local-first, governed).
-2. Architecture: Master Agent → sub-agents → governance.
-3. Simple Mode vs Developer Mode.
-4. A governance/safety example (approval-gated action).
-5. Memory / project / portfolio dashboards.
-6. MCP Hub (connectors, execution, read-only adapter, approvals inbox).
-7. Operating Layer dashboard.
-8. Why it's different from a chatbot.
-9. Close: local-first, governed, planning-first, *not AGI*.
+### Workspace Brain + Memory v2
 
-(See `docs/DEMO_VIDEO_SCRIPT.md` for the full script and `screenshots/README.md` for the capture list.)
+The memory layer stores project facts, user preferences, decisions, task results, workflow history, and knowledge context. Memory v2 supports pgvector-ready semantic recall with keyword fallback.
 
-## 12. Known limitations
+### Mission Control
 
-- Real provider calls require configuration; default behavior is mock so it runs anywhere.
-- MCP execution is mock by default; the only real path (v43) is opt-in, sandboxed, and read-only.
-- Organization/team features are local records — no production authentication.
-- Personal device/app operators are planning/mock only — no real device or app control.
-- Single-file React UI is large; a component split is future work.
+Mission Control turns large goals into phases, subtasks, dependencies, priorities, blockers, and next-best-task recommendations.
 
-## 13. Future roadmap (v45–v55)
+### Agent Registry
 
-| Ver | Name | Theme |
-|---|---|---|
-| v45 | MCP Policy Engine | Declarative allow/deny policies before planning |
-| v46 | MCP Audit & Replay | Unified audit timeline + read-only replay/export |
-| v47 | Secret Reference Registry | Key-reference readiness + rotation (never values) |
-| v48 | Unified Approvals Center | Generalize the inbox across all approval sources |
-| v49 | Health & Readiness Monitor | Aggregate dry-checks into a scored dashboard |
-| v50 | Cost & Usage Ledger | Usage estimates + per-workspace budgets |
-| v51 | Local Retrieval Layer | Local chunking/retrieval grounding (no external DB) |
-| v52 | Evaluation Harness 2.0 | Repeatable scorecards + regression tracking |
-| v53 | Playbook Library | Saved, governed multi-step plans (mock/planning) |
-| v54 | (folded into this v44.5 pass) | Portfolio/demo consolidation |
-| v55 | Operating Layer 2.0 | Refresh the capability map across v41–v54 |
+Agents are reusable specialists with roles, prompts, tools, permissions, versions, and performance history. The platform supports built-in agents, custom agents, departments, agent teams, and marketplace-style skill packs.
 
-**Recommended next step:** v45 — MCP Policy Engine, after this portfolio pass.
+### Tool + MCP Hub
+
+The tool layer plans connector usage for systems like GitHub, Linear, filesystem, Git, Slack, Notion, and other MCP-style tools. Connectors are governed by policies, approvals, risk levels, audit logs, and read-only or mock-safe defaults.
+
+### Governance + Approvals
+
+Governance checks prompt injection, secret exposure, permission rules, approval requirements, blocked actions, and audit logging. Risky actions such as editing files, pushing code, sending external messages, deleting data, or running commands must go through approval gates.
+
+### Autonomous Software Team
+
+The code-change pipeline is approval-gated. It can propose changes, surface diffs, wait for approval, write files through safe services, run checks, push branches, and prepare PR state. The design goal is verified work, not blind autonomy.
+
+### Compute Fabric
+
+The v220 foundation introduces worker registration and opt-in compute adapters such as a Kaggle GPU worker. This is the beginning of a distributed execution layer where approved jobs can be routed to workers with lifecycle tracking and analytics.
+
+## What Makes It Different
+
+- **Not just chat:** it manages goals, agents, tools, approvals, verification, memory, and outcomes.
+- **Governance-first:** stateful/risky actions are logged, permission-checked, and approval-gated.
+- **Local-first:** it can run in mock/local mode without API keys and stores runtime data locally by default.
+- **Model-independent:** it is designed to route across OpenAI, Claude, Gemini, Mistral, local models, and future providers.
+- **Inspectable:** Developer Mode exposes traces, metadata, memory, approvals, tool activity, storage, workers, and cost state.
+- **Outcome-focused:** the product aims to prove work was completed through checks, reports, and audit history.
+
+## Demo Flow
+
+1. Start in **Simple Mode** and ask: "Explain how EvolveAgent works."
+2. Switch to **Developer Mode** to inspect routing, agents, memory, and governance metadata.
+3. Open **Project Brain** and add/search a memory item.
+4. Open **Mission Control** and create: "Build an AI resume analyzer."
+5. Open **Approvals** to show how risky actions are held before execution.
+6. Open **Code Changes** to inspect the approval-gated software-team workflow.
+7. Open **Command Center** to show platform coverage and readiness.
+8. Open storage/worker/status panels to show the v200/v220 foundation.
+
+## Resume Bullet
+
+> Built **EvolveAgent AI**, a full-stack AI operating system with FastAPI + React, 143 backend service modules, 87 split route modules, workspace memory, governed MCP-style tool execution, approval-gated code workflows, usage/cost tracking, and a premium Simple/Developer Mode UI.
+
+## Case Study Summary
+
+**Problem:** Most AI tools answer a prompt but do not reliably manage long-running work, approvals, memory, tools, verification, and audit history.
+
+**Solution:** EvolveAgent AI wraps models with an operating layer: EVA routes work, Workspace Brain retrieves context, agents and tools execute through governed services, approvals gate risky actions, verification checks results, and memory/analytics record what happened.
+
+**Result:** A portfolio-grade AI platform demonstrating full-stack engineering, AI orchestration, safety design, backend architecture, frontend product UX, and incremental delivery through protected GitHub workflows.
+
+## Safety Statement
+
+EvolveAgent is designed to be useful without giving AI unchecked power.
+
+- No unrestricted shell execution
+- No silent file edits
+- No destructive file deletion
+- No secret values shown in UI, logs, or API responses
+- Risky actions require approval
+- External sending/posting/payment/deployment is blocked or approval-gated
+- Runtime data is excluded from Git
+- The system does not self-train a base model
+- The product is not AGI
+
+## Portfolio Talking Points
+
+- I built the project as an operating layer around AI models, not a single-model chatbot.
+- I used a consistent backend pattern: route -> service -> storage -> governance.
+- I preserved local/mock fallback so the project remains demoable without live provider keys.
+- I added governance as a first-class product feature, not an afterthought.
+- I separated Simple Mode from Developer Mode so non-technical users get a clean UI while technical reviewers can inspect the system.
+- I evolved the project through many small, test-backed versions instead of one risky rewrite.
+
+## Recommended Screenshots
+
+- Home Dashboard / Command Center
+- Simple Mode chat response
+- Developer Mode trace panel
+- Project Brain memory search
+- Mission Control goal/task graph
+- Approvals queue
+- Governance logs
+- Code Changes approval/diff panel
+- Tool / MCP Hub
+- Storage or Memory v2 status
+- Worker / Compute Fabric status
+
+## Known Limitations
+
+- Real provider calls require configuration; mock/local mode is the safe default.
+- Many external integrations are planning, read-only, or approval-gated by design.
+- Production auth and multi-tenant enterprise controls are not the current focus.
+- Compute Fabric is a foundation, not a full distributed supercomputing platform yet.
+- The system is an AI operating layer, not a foundation model or AGI.
+
+## Future Direction
+
+The long-term direction is to keep strengthening the foundation:
+
+- deeper Memory v2 and Workspace Brain
+- stronger model-independent routing
+- durable workflows and retries
+- richer agent registry and evaluation
+- real integrations under governance
+- broader Compute Fabric worker support
+- better frontend coverage and manual demo polish
+
+The positioning remains:
+
+> Claude, OpenAI, Gemini, and local models are intelligence engines. EvolveAgent is the control plane that gives those models memory, tools, governance, workflows, verification, and long-running project context.
