@@ -223,6 +223,17 @@ class KaggleWorkerService:
                     self.agent_scheduler.heartbeat(job["agent_scheduler_job_id"])
             except Exception:
                 pass
+
+        # The worker_registry entry created at submit time (register_worker())
+        # was never closed on the other end -- every job leaked a permanent
+        # "online" phantom GPU worker regardless of how it actually finished.
+        # Mirror the same terminal-status handling used for agent_scheduler
+        # above, via the worker_id already stored on this job.
+        if self.worker_registry is not None and job.get("worker_id") and job["status"] in ("complete", "error"):
+            try:
+                self.worker_registry.deregister_worker(job["worker_id"])
+            except Exception:
+                pass
         return job
 
     def get_job_output(self, job_id: str) -> dict:

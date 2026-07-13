@@ -168,6 +168,49 @@ def test_poll_job_not_found_raises(kaggle_env):
         service.poll_job("does-not-exist")
 
 
+# ------------------------------------------------------------------
+# worker_registry lifecycle closure: register_worker() at submit time was
+# never balanced by a deregister on completion, so every job leaked a
+# permanent "online" phantom worker (inflating WorkerRegistryService's
+# dashboard/analytics_summary indefinitely).
+# ------------------------------------------------------------------
+def test_poll_job_complete_deregisters_worker(kaggle_env):
+    storage, governance = kaggle_env
+    registry = WorkerRegistryService(storage, governance)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    service = KaggleWorkerService(storage, governance, worker_registry=registry, kaggle_runner=runner)
+    job = service.submit_job(code="print(1)", title="Poll complete job")
+    assert registry.get_worker(job["worker_id"])["status"] == "online"
+
+    runner.responses["status"] = _ok("Kernel has status \"complete\"")
+    service.poll_job(job["job_id"])
+    assert registry.get_worker(job["worker_id"])["status"] == "offline"
+
+
+def test_poll_job_error_deregisters_worker(kaggle_env):
+    storage, governance = kaggle_env
+    registry = WorkerRegistryService(storage, governance)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    service = KaggleWorkerService(storage, governance, worker_registry=registry, kaggle_runner=runner)
+    job = service.submit_job(code="print(1)", title="Poll error job")
+
+    runner.responses["status"] = _ok("Kernel has status \"error\"")
+    service.poll_job(job["job_id"])
+    assert registry.get_worker(job["worker_id"])["status"] == "offline"
+
+
+def test_poll_job_still_running_does_not_deregister_worker(kaggle_env):
+    storage, governance = kaggle_env
+    registry = WorkerRegistryService(storage, governance)
+    runner = _StubKaggleRunner({"view": _ok("- username: testuser\n"), "push": _ok("pushed")})
+    service = KaggleWorkerService(storage, governance, worker_registry=registry, kaggle_runner=runner)
+    job = service.submit_job(code="print(1)", title="Poll running job")
+
+    runner.responses["status"] = _ok("Kernel has status \"running\"")
+    service.poll_job(job["job_id"])
+    assert registry.get_worker(job["worker_id"])["status"] == "online"
+
+
 def test_get_job_output_not_found_raises(kaggle_env):
     storage, governance = kaggle_env
     service = KaggleWorkerService(storage, governance, kaggle_runner=_StubKaggleRunner({}))
