@@ -389,7 +389,13 @@ class MasterOrchestratorAgent:
                     )
                 )
         for agent in self.specialists:
-            agent_output = agent.run_with_metadata(request.user_input, context=shared_context)
+            # workspace_id was already resolved above (used for memory/digital-twin/
+            # tool routing) but never reached LLMRouter's real per-call cost
+            # recording (PR #234), so every real call from the app's main
+            # execution loop recorded against "default" -- meaning
+            # AgentDepartmentService's real department budget gate (round 6)
+            # could never see real usage no matter how much was actually spent.
+            agent_output = agent.run_with_metadata(request.user_input, context=shared_context, workspace_id=workspace_id)
             agent_outputs.append(agent_output)
             workflow_trace.append(
                 WorkflowStep(

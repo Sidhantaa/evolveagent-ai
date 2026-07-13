@@ -12,6 +12,7 @@ def _create_agent(storage: StorageService, **overrides) -> dict:
         "role": "test",
         "prompt": overrides.get("prompt", "You are a test agent."),
         "model_preference": overrides.get("model_preference", "default"),
+        "workspace_id": overrides.get("workspace_id"),
     })
     return service.get(result.agent_id)
 
@@ -103,3 +104,45 @@ def test_custom_agent_service_run_with_default_preference_unaffected(tmp_path, m
     assert config["model_preference"] == "default"
     generate_spy.assert_called_once()
     assert output.success is True
+
+
+# ------------------------------------------------------------------
+# A custom agent already carries its own real workspace_id (set at creation)
+# but it never reached LLMRouter's real per-call cost recording (PR #234) --
+# every custom-agent run recorded cost against "default" regardless of which
+# workspace actually owned the agent.
+# ------------------------------------------------------------------
+def test_custom_agent_forwards_its_own_workspace_id_with_default_preference(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent_record = _create_agent(storage, name="WS Default Agent", model_preference="default", workspace_id="ws-abc")
+    generate_spy = MagicMock(return_value=LLMResult(
+        output="ok", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate", generate_spy)
+    service = CustomAgentService(storage)
+    service.run(agent_record["agent_id"], "Explain the deployment plan.")
+    assert generate_spy.call_args.kwargs["workspace_id"] == "ws-abc"
+
+
+def test_custom_agent_forwards_its_own_workspace_id_with_pinned_preference(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent_record = _create_agent(storage, name="WS Pinned Agent", model_preference="claude", workspace_id="ws-xyz")
+    generate_for_provider_spy = MagicMock(return_value=LLMResult(
+        output="ok", provider="anthropic", model="claude-opus-4-8", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate_for_provider", generate_for_provider_spy)
+    service = CustomAgentService(storage)
+    service.run(agent_record["agent_id"], "Explain the deployment plan.")
+    assert generate_for_provider_spy.call_args.kwargs["workspace_id"] == "ws-xyz"
+
+
+def test_custom_agent_without_workspace_id_forwards_none(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent_record = _create_agent(storage, name="No WS Agent", model_preference="default")
+    generate_spy = MagicMock(return_value=LLMResult(
+        output="ok", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate", generate_spy)
+    service = CustomAgentService(storage)
+    service.run(agent_record["agent_id"], "Explain the deployment plan.")
+    assert generate_spy.call_args.kwargs["workspace_id"] is None
