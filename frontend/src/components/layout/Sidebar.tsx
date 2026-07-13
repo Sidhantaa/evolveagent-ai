@@ -110,7 +110,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
   };
 
   const badgeClass = (color?: 'purple' | 'amber' | 'emerald') => {
-    if (color === 'purple') return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+    if (color === 'purple') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
     if (color === 'amber') return 'bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse';
     if (color === 'emerald') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
     return 'bg-white/10 text-gray-300 border-white/10';
@@ -125,12 +125,12 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
         onClick={() => handleNav(item.id)}
         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 group ${
           isActive
-            ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/10 text-white border border-purple-500/30 shadow-[0_0_15px_-3px_rgba(160,120,255,0.15)] font-semibold'
+            ? 'bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-white border border-cyan-500/30 shadow-[0_0_15px_-3px_rgba(34,211,238,0.15)] font-semibold'
             : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
         }`}
       >
         <div className="flex items-center gap-3">
-          <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-purple-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+          <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
           <span>{item.label}</span>
         </div>
         {item.badge !== undefined && (
@@ -161,12 +161,12 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
         <div className="p-4 border-b border-white/[0.08]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div>
                 <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                  EvolveAgent <span className="text-purple-400 font-mono text-xs">AI</span>
+                  EvolveAgent <span className="text-cyan-400 font-mono text-xs">AI</span>
                 </h1>
                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
                   <span>vNext 2.4.0</span>
@@ -218,12 +218,12 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
             </div>
             
             <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden p-0.5">
-              <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-emerald-500 to-purple-500" />
+              <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
             </div>
 
             <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-1 border-t border-white/5">
               <span>Mode: {safetySettings.planningFirst ? 'Planning-First' : 'Direct'}</span>
-              <span className="text-purple-400">Mock-Safe</span>
+              <span className="text-cyan-400">Mock-Safe</span>
             </div>
           </div>
         </div>

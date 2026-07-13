@@ -63,10 +63,10 @@ export const DevModeConsole: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Backend', value: health ? (health.online ? 'Online' : 'Down') : '—', sub: health ? 'health :8000' : 'checking…', color: health?.online ? 'text-emerald-400' : 'text-gray-400' },
-          { label: 'Gov Events', value: health ? `${health.totalEvents}` : `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-indigo-400' },
+          { label: 'Gov Events', value: health ? `${health.totalEvents}` : `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-sky-400' },
           { label: 'Blocked', value: health ? `${health.blocked}` : '0', sub: 'Safety blocks', color: 'text-rose-400' },
           { label: 'Approvals', value: health ? `${health.approvals}` : '0', sub: 'Granted', color: 'text-emerald-400' },
-          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-purple-400' },
+          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-cyan-400' },
           { label: 'Workflow Runs', value: health ? `${health.workflowRuns}` : '0', sub: 'Durable', color: 'text-amber-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
@@ -121,7 +121,7 @@ export const DevModeConsole: React.FC = () => {
               label: 'Collections',
               value: storageStatus ? storageStatus.collections.toLocaleString() : '—',
               sub: 'Storage collections',
-              color: 'text-purple-300',
+              color: 'text-cyan-300',
             },
             {
               label: 'Documents',
@@ -169,13 +169,13 @@ export const DevModeConsole: React.FC = () => {
       {/* 2. Header & Control Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#141418] border border-white/10">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
             <Terminal className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-white">Current Workflow Trace</h2>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
                 Trace ID: TR-9942-AX
               </span>
             </div>
@@ -196,7 +196,7 @@ export const DevModeConsole: React.FC = () => {
           </button>
           <button
             onClick={runMockWorkflowStep}
-            className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg shadow-purple-500/20"
+            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg shadow-cyan-500/20"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Step Into Next</span>
@@ -226,11 +226,11 @@ export const DevModeConsole: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                   activeTab === tab.id
-                    ? 'bg-purple-600/20 text-white border border-purple-500/40 shadow-md'
+                    ? 'bg-cyan-600/20 text-white border border-cyan-500/40 shadow-md'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 text-purple-400" />
+                <Icon className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
@@ -255,21 +255,21 @@ export const DevModeConsole: React.FC = () => {
                     onClick={() => setSelectedStep(s.step)}
                     className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                       isSelected
-                        ? 'bg-purple-900/20 border-purple-500/50 shadow-[0_0_20px_-5px_rgba(160,120,255,0.2)]'
+                        ? 'bg-cyan-900/20 border-cyan-500/50 shadow-[0_0_20px_-5px_rgba(34,211,238,0.2)]'
                         : 'bg-[#171717]/60 border-white/5 hover:bg-[#1a1a20]/80 hover:border-white/15'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold ${
-                          isSelected ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300'
+                          isSelected ? 'bg-cyan-600 text-white' : 'bg-white/10 text-gray-300'
                         }`}>
                           #{s.step}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-semibold text-white">{s.action}</span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-purple-300 border border-white/10">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-cyan-300 border border-white/10">
                               {s.agent}
                             </span>
                           </div>
@@ -297,7 +297,7 @@ export const DevModeConsole: React.FC = () => {
             <GlassCard className="h-fit sticky top-20 space-y-4 font-mono">
               <div className="flex items-center justify-between pb-3 border-b border-white/10 text-xs font-sans font-semibold text-white">
                 <span>Step #{currentStepData?.step} Inspector</span>
-                <span className="text-purple-400 font-mono">{currentStepData?.id}</span>
+                <span className="text-cyan-400 font-mono">{currentStepData?.id}</span>
               </div>
 
               <div className="space-y-3 text-xs">
@@ -308,7 +308,7 @@ export const DevModeConsole: React.FC = () => {
 
                 <div>
                   <span className="text-gray-500 text-[10px] uppercase">Action Name</span>
-                  <div className="text-purple-300 mt-0.5">{currentStepData?.action}</div>
+                  <div className="text-cyan-300 mt-0.5">{currentStepData?.action}</div>
                 </div>
 
                 {currentStepData?.toolUsed && (
@@ -369,7 +369,7 @@ export const DevModeConsole: React.FC = () => {
                     <tr key={log.id} className="hover:bg-white/[0.02]">
                       <td className="py-3 px-3 text-gray-400">{log.timestamp}</td>
                       <td className="py-3 px-3 font-semibold text-white">{log.agentName}</td>
-                      <td className="py-3 px-3 text-purple-300 font-semibold">{log.action}</td>
+                      <td className="py-3 px-3 text-cyan-300 font-semibold">{log.action}</td>
                       <td className="py-3 px-3"><RiskBadge level={log.risk} size="sm" /></td>
                       <td className="py-3 px-3"><StatusBadge status={log.status} size="sm" /></td>
                     </tr>
@@ -385,7 +385,7 @@ export const DevModeConsole: React.FC = () => {
           <GlassCard>
             <div className="flex items-center justify-between pb-3 border-b border-white/10 font-mono text-xs">
               <span className="text-white font-semibold flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-purple-400" /> Real-time Operating System State Dump
+                <Code2 className="w-4 h-4 text-cyan-400" /> Real-time Operating System State Dump
               </span>
               <span className="text-gray-400">Updated automatically</span>
             </div>
@@ -406,7 +406,7 @@ export const DevModeConsole: React.FC = () => {
       {/* 4. Live Agent Execution Progress Bars */}
       <GlassCard>
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-purple-400" />
+          <Cpu className="w-4 h-4 text-cyan-400" />
           <span>Active Agent Resource Consumption & Pipeline Health</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -417,10 +417,10 @@ export const DevModeConsole: React.FC = () => {
                   <span>{agent.avatar}</span>
                   <span className="truncate">{agent.name}</span>
                 </span>
-                <span className="text-[10px] font-mono text-purple-400">{agent.qualityScore}% Q-Score</span>
+                <span className="text-[10px] font-mono text-cyan-400">{agent.qualityScore}% Q-Score</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${agent.qualityScore}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${agent.qualityScore}%` }} />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono text-gray-500">
                 <span>Tokens: {agent.tokensUsed}</span>

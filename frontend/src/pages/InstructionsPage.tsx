@@ -62,10 +62,10 @@ export const InstructionsPage: React.FC = () => {
   return (
     <div className="space-y-8 animate-fadeIn pb-16">
       {/* Header Banner */}
-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl" />
+      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-600/20 rounded-full blur-3xl" />
         <div className="relative">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
             <BookOpen className="w-3.5 h-3.5" />
             Start Here
           </div>
@@ -83,7 +83,7 @@ export const InstructionsPage: React.FC = () => {
       {/* Quick Start Steps */}
       <div>
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Zap className="w-4 h-4 text-purple-400" /> Quick Start
+          <Zap className="w-4 h-4 text-cyan-400" /> Quick Start
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -93,13 +93,13 @@ export const InstructionsPage: React.FC = () => {
           ].map((s) => (
             <GlassCard key={s.step} hover onClick={() => setActivePage(s.page)} className="group">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
                   {s.step}
                 </div>
                 <h3 className="text-sm font-semibold text-white">{s.title}</h3>
               </div>
               <p className="text-xs text-gray-400 leading-relaxed mb-3">{s.desc}</p>
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-purple-400 group-hover:gap-2 transition-all">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-400 group-hover:gap-2 transition-all">
                 Go there <ArrowRight className="w-3 h-3" />
               </span>
             </GlassCard>
@@ -110,14 +110,14 @@ export const InstructionsPage: React.FC = () => {
       {/* Simple Mode vs Dev Mode */}
       <div>
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-400" /> Two Ways to Work
+          <Sparkles className="w-4 h-4 text-cyan-400" /> Two Ways to Work
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <GlassCard glow="purple">
             <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-purple-400" />
+              <MessageSquare className="w-4 h-4 text-cyan-400" />
               <h3 className="text-sm font-semibold text-white">Simple Mode</h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 Everyday use
               </span>
             </div>
@@ -145,12 +145,12 @@ export const InstructionsPage: React.FC = () => {
       {/* Trust & Safety */}
       <div>
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Lock className="w-4 h-4 text-purple-400" /> How Safety Works Here
+          <Lock className="w-4 h-4 text-cyan-400" /> How Safety Works Here
         </h2>
         <GlassCard>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div className="flex gap-3">
-              <Eye className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+              <Eye className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-xs font-semibold text-white mb-1">Everything is visible</h4>
                 <p className="text-[11px] text-gray-400 leading-relaxed">
@@ -184,7 +184,7 @@ export const InstructionsPage: React.FC = () => {
       {/* Sidebar Guide */}
       <div>
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Compass className="w-4 h-4 text-purple-400" /> What's in the Sidebar
+          <Compass className="w-4 h-4 text-cyan-400" /> What's in the Sidebar
         </h2>
         <GlassCard padding="none">
           <div className="divide-y divide-white/[0.06]">
@@ -196,14 +196,14 @@ export const InstructionsPage: React.FC = () => {
                   onClick={() => setActivePage(item.id)}
                   className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.03] transition-colors group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-purple-500/30">
-                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-purple-400" />
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-cyan-500/30">
+                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-cyan-400" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-semibold text-white mb-0.5">{item.label}</h4>
                     <p className="text-[11px] text-gray-400 leading-relaxed">{item.desc}</p>
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-purple-400 shrink-0 mt-1 transition-colors" />
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-cyan-400 shrink-0 mt-1 transition-colors" />
                 </button>
               );
             })}
@@ -214,7 +214,7 @@ export const InstructionsPage: React.FC = () => {
       {/* FAQ */}
       <div>
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-purple-400" /> Common Questions
+          <BookOpen className="w-4 h-4 text-cyan-400" /> Common Questions
         </h2>
         <div className="space-y-2">
           {faqs.map((f, i) => (

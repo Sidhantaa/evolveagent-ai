@@ -127,11 +127,11 @@ export const ProjectBrain: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* 1. Workspace Search Hero Card */}
-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#1b1928] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1b1928] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
             <Brain className="w-3.5 h-3.5" />
             <span>Workspace Vector Memory & Knowledge Graph</span>
           </div>
@@ -145,17 +145,17 @@ export const ProjectBrain: React.FC = () => {
 
           {/* Search bar */}
           <div className="mt-6 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search memories, ADRs, hex tokens, or goals (e.g. 'Dark graphite', 'ADR-12')..."
-              className="w-full bg-black/60 border border-white/15 focus:border-purple-500 rounded-xl pl-10 pr-28 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner"
+              className="w-full bg-black/60 border border-white/15 focus:border-cyan-500 rounded-xl pl-10 pr-28 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner"
             />
             <button
               onClick={() => setIsAddingModalOpen(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center gap-1 transition-all"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Add Memory</span>
@@ -169,7 +169,7 @@ export const ProjectBrain: React.FC = () => {
             }`}>
               {semanticResults?.length ? `Memory v2: ${semanticMode}` : 'Mock fallback ready'}
             </span>
-            {semanticBusy && <span className="text-purple-300">Searching semantic memory…</span>}
+            {semanticBusy && <span className="text-cyan-300">Searching semantic memory…</span>}
           </div>
 
           {/* Filter Chips */}
@@ -181,7 +181,7 @@ export const ProjectBrain: React.FC = () => {
                 onClick={() => setActiveChip(chip)}
                 className={`px-3 py-1 rounded-lg text-xs font-mono capitalize transition-all ${
                   activeChip === chip
-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
+                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
                     : 'bg-white/[0.04] hover:bg-white/[0.09] text-gray-400'
                 }`}
               >
@@ -196,7 +196,7 @@ export const ProjectBrain: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Index Quality', value: '98%', sub: 'High relevance', color: 'text-emerald-400' },
-          { label: 'Indexed Sources', value: '128', sub: 'ADRs & docs', color: 'text-purple-400' },
+          { label: 'Indexed Sources', value: '128', sub: 'ADRs & docs', color: 'text-cyan-400' },
           { label: 'Active Memories', value: `${memories.length}`, sub: 'Vector store', color: 'text-white' },
           { label: 'Files Indexed', value: '19', sub: 'in /src tree', color: 'text-blue-400' },
           { label: 'Decisions Saved', value: '31', sub: 'ADR records', color: 'text-amber-400' },
@@ -216,7 +216,7 @@ export const ProjectBrain: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" />
+              <Sparkles className="w-4 h-4 text-cyan-400" />
               <span>Relevant Findings ({displayMemories.length})</span>
             </h3>
             <span className="text-xs text-gray-400 font-mono">
@@ -232,7 +232,7 @@ export const ProjectBrain: React.FC = () => {
                     <button
                       onClick={(e) => { e.stopPropagation(); togglePinMemory(mem.id); }}
                       className={`p-2 rounded-xl transition-colors ${
-                        mem.pinned ? 'bg-purple-500/20 text-purple-300' : 'bg-white/5 text-gray-500 hover:text-white'
+                        mem.pinned ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/5 text-gray-500 hover:text-white'
                       }`}
                       title={mem.pinned ? 'Unpin' : 'Pin to top'}
                     >
@@ -266,10 +266,10 @@ export const ProjectBrain: React.FC = () => {
 
                   {/* Relevance Score Bar */}
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-bold font-mono text-purple-300">{mem.relevance}%</div>
+                    <div className="text-sm font-bold font-mono text-cyan-300">{mem.relevance}%</div>
                     <div className="text-[10px] font-mono text-gray-500">Relevance Match</div>
                     <div className="mt-1 w-16 h-1 rounded-full bg-black/60 overflow-hidden ml-auto">
-                      <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${mem.relevance}%` }} />
+                      <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mem.relevance}%` }} />
                     </div>
                   </div>
                 </div>
@@ -294,7 +294,7 @@ export const ProjectBrain: React.FC = () => {
                     ))}
                     <button
                       onClick={() => showToast(`Loaded "${mem.title}" directly into active agent context!`, 'success')}
-                      className="ml-2 px-2.5 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-semibold text-xs border border-purple-500/30 transition-colors flex items-center gap-1"
+                      className="ml-2 px-2.5 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-semibold text-xs border border-cyan-500/30 transition-colors flex items-center gap-1"
                     >
                       <span>Use in Chat</span>
                       <ExternalLink className="w-3 h-3" />
@@ -325,11 +325,11 @@ export const ProjectBrain: React.FC = () => {
             {/* Interactive Graph Simulation Area */}
             <div className="mt-4 h-64 rounded-2xl bg-[#0e0e12] border border-white/10 relative overflow-hidden flex items-center justify-center p-4">
               {/* Connecting grid lines */}
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#8b5cf6_1px,transparent_1px)] [background-size:16px_16px]" />
+              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#22d3ee_1px,transparent_1px)] [background-size:16px_16px]" />
               
               {/* Central Hub Node */}
               <div className="relative z-10 flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-purple-500/30 border-2 border-white/20 animate-pulse">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-cyan-500/30 border-2 border-white/20 animate-pulse">
                   <Brain className="w-7 h-7" />
                 </div>
                 <span className="mt-2 text-xs font-mono font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10">
@@ -338,7 +338,7 @@ export const ProjectBrain: React.FC = () => {
 
                 {/* Satellite nodes */}
                 <div className="absolute -top-16 -left-20 flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-purple-900/80 border border-purple-400/50 flex items-center justify-center text-xs">🎨</div>
+                  <div className="w-8 h-8 rounded-full bg-cyan-900/80 border border-cyan-400/50 flex items-center justify-center text-xs">🎨</div>
                   <span className="text-[9px] font-mono text-gray-400 mt-1">Tokens</span>
                 </div>
 
@@ -359,7 +359,7 @@ export const ProjectBrain: React.FC = () => {
 
                 {/* SVG connecting lines */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none -z-10 overflow-visible" style={{ width: '200px', height: '200px', top: '-70px', left: '-70px' }}>
-                  <line x1="100" y1="100" x2="30" y2="30" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="4" />
+                  <line x1="100" y1="100" x2="30" y2="30" stroke="#22d3ee" strokeWidth="1.5" strokeDasharray="4" />
                   <line x1="100" y1="100" x2="170" y2="30" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4" />
                   <line x1="100" y1="100" x2="30" y2="170" stroke="#10b981" strokeWidth="1.5" strokeDasharray="4" />
                   <line x1="100" y1="100" x2="170" y2="170" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
@@ -405,7 +405,7 @@ export const ProjectBrain: React.FC = () => {
       {/* Add Memory Modal */}
       {isAddingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-lg rounded-3xl border border-purple-500/40 bg-[#17171d] p-6 shadow-2xl relative">
+          <div className="w-full max-w-lg rounded-3xl border border-cyan-500/40 bg-[#17171d] p-6 shadow-2xl relative">
             <button
               onClick={() => setIsAddingModalOpen(false)}
               className="absolute top-5 right-5 p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
@@ -414,7 +414,7 @@ export const ProjectBrain: React.FC = () => {
             </button>
 
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Plus className="w-5 h-5 text-purple-400" />
+              <Plus className="w-5 h-5 text-cyan-400" />
               <span>Add Manual Memory to Project Brain</span>
             </h3>
             <p className="text-xs text-gray-400 mt-1">Inject custom architectural guidelines or user decisions directly into the vector index.</p>
@@ -427,7 +427,7 @@ export const ProjectBrain: React.FC = () => {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="E.g., ADR #13: Tailwind v4 Color Palettes"
-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-sans"
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans"
                   required
                 />
               </div>
@@ -437,7 +437,7 @@ export const ProjectBrain: React.FC = () => {
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as any)}
-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
                 >
                   <option value="Decision">Decision (ADR)</option>
                   <option value="Memory">General Memory</option>
@@ -454,7 +454,7 @@ export const ProjectBrain: React.FC = () => {
                   value={newSnippet}
                   onChange={(e) => setNewSnippet(e.target.value)}
                   placeholder="E.g., Always use #171717 for glass card backgrounds with border-white/[0.07]..."
-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-sans"
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans"
                   required
                 />
               </div>
@@ -465,7 +465,7 @@ export const ProjectBrain: React.FC = () => {
                   type="text"
                   value={newTags}
                   onChange={(e) => setNewTags(e.target.value)}
-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
@@ -480,7 +480,7 @@ export const ProjectBrain: React.FC = () => {
                 <button
                   type="submit"
                   disabled={addBusy}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors shadow-lg"
+                  className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors shadow-lg"
                 >
                   {addBusy ? 'Saving…' : 'Save & Index'}
                 </button>

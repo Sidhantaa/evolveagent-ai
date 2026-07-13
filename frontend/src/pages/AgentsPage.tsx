@@ -37,7 +37,7 @@ export const AgentsPage: React.FC = () => {
 
   const permissionProfiles: { level: PermissionLevel; label: string; desc: string; color: string }[] = [
     { level: 'read-only', label: 'Read-Only', desc: 'Can only query Project Brain & read workspace files. No side effects.', color: 'border-blue-500/30 bg-blue-500/5 text-blue-300' },
-    { level: 'planning-only', label: 'Planning-Only', desc: 'Can formulate code modifications and dry-run AST checks without writing.', color: 'border-purple-500/30 bg-purple-500/5 text-purple-300' },
+    { level: 'planning-only', label: 'Planning-Only', desc: 'Can formulate code modifications and dry-run AST checks without writing.', color: 'border-cyan-500/30 bg-cyan-500/5 text-cyan-300' },
     { level: 'approval-gated', label: 'Approval-Gated', desc: 'High-risk operations (filesystem writes, shell CLI, API calls) enter Approvals queue.', color: 'border-amber-500/30 bg-amber-500/5 text-amber-300' },
     { level: 'high-trust', label: 'High-Trust', desc: 'Reserved for Master Orchestrator to delegate tasks across worker sandboxes.', color: 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' },
   ];
@@ -50,8 +50,8 @@ export const AgentsPage: React.FC = () => {
           { label: 'Total Agents', value: `${agents.length}`, sub: '7 system + 3 custom', color: 'text-white' },
           { label: 'Active Now', value: `${agents.filter(a => a.status === 'active' || a.status === 'running').length}`, sub: 'Executing tasks', color: 'text-emerald-400' },
           { label: 'Waiting Approval', value: `${agents.filter(a => a.status === 'waiting').length}`, sub: 'Gating writes', color: 'text-amber-400' },
-          { label: 'Custom Agents', value: '03', sub: 'Workspace templates', color: 'text-purple-400' },
-          { label: 'Avg Quality Score', value: '96%', sub: 'A+ Compliance', color: 'text-indigo-400' },
+          { label: 'Custom Agents', value: '03', sub: 'Workspace templates', color: 'text-cyan-400' },
+          { label: 'Avg Quality Score', value: '96%', sub: 'A+ Compliance', color: 'text-sky-400' },
           { label: 'Blocked / Error', value: '00', sub: 'Zero failures', color: 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
@@ -63,24 +63,24 @@ export const AgentsPage: React.FC = () => {
       </div>
 
       {/* 2. Featured Active Agent Spotlight Card */}
-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1b1928] via-[#15151c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1b1928] via-[#15151c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="flex items-start gap-4 max-w-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-3xl shrink-0 shadow-lg shadow-purple-500/30">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-3xl shrink-0 shadow-lg shadow-cyan-500/30">
               {featuredAgent.avatar}
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 uppercase font-semibold">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 uppercase font-semibold">
                   Featured Spotlight
                 </span>
                 <StatusBadge status={featuredAgent.status} size="sm" />
                 <RiskBadge level={featuredAgent.riskLevel} size="sm" />
               </div>
               <h2 className="text-2xl font-extrabold text-white tracking-tight">{featuredAgent.name}</h2>
-              <p className="text-xs sm:text-sm text-purple-300 font-mono">{featuredAgent.role}</p>
+              <p className="text-xs sm:text-sm text-cyan-300 font-mono">{featuredAgent.role}</p>
               <p className="text-xs text-gray-300 leading-relaxed pt-1">{featuredAgent.description}</p>
             </div>
           </div>
@@ -98,14 +98,14 @@ export const AgentsPage: React.FC = () => {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-gray-400">Permission:</span>
-                <span className="text-purple-300 font-semibold capitalize">{featuredAgent.permissionLevel}</span>
+                <span className="text-cyan-300 font-semibold capitalize">{featuredAgent.permissionLevel}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => toggleAgentStatus(featuredAgent.id)}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-md"
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-md"
               >
                 {featuredAgent.status === 'idle' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                 <span>{featuredAgent.status === 'idle' ? 'Start Agent' : 'Pause Execution'}</span>
@@ -125,10 +125,10 @@ export const AgentsPage: React.FC = () => {
         {featuredAgent.currentTask && (
           <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono text-gray-400">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
               <span>Current Task: <strong className="text-white">{featuredAgent.currentTask}</strong></span>
             </span>
-            <span className="text-purple-300">Tokens: {featuredAgent.tokensUsed} today</span>
+            <span className="text-cyan-300">Tokens: {featuredAgent.tokensUsed} today</span>
           </div>
         )}
       </div>
@@ -137,7 +137,7 @@ export const AgentsPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-purple-400" />
+            <Users className="w-4 h-4 text-cyan-400" />
             <h3 className="text-sm font-semibold text-white">Specialized Agent Squad ({filteredAgents.length})</h3>
           </div>
           
@@ -149,7 +149,7 @@ export const AgentsPage: React.FC = () => {
                 onClick={() => setFilterLevel(lvl)}
                 className={`px-3 py-1 rounded-lg text-xs font-mono capitalize transition-all ${
                   filterLevel === lvl
-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
+                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
                     : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
                 }`}
               >
@@ -168,7 +168,7 @@ export const AgentsPage: React.FC = () => {
                 onClick={() => setSelectedAgentId(agent.id)}
                 className={`cursor-pointer rounded-2xl border transition-all duration-200 p-5 flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-[#1e1e28]/90 border-purple-500/50 shadow-[0_4px_25px_-5px_rgba(160,120,255,0.2)]'
+                    ? 'bg-[#1e1e28]/90 border-cyan-500/50 shadow-[0_4px_25px_-5px_rgba(34,211,238,0.2)]'
                     : 'bg-[#171717]/80 border-white/[0.07] hover:bg-[#1a1a20]/90 hover:border-white/15'
                 }`}
               >
@@ -180,7 +180,7 @@ export const AgentsPage: React.FC = () => {
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-white">{agent.name}</h4>
-                        <p className="text-xs text-purple-300 font-mono">{agent.role}</p>
+                        <p className="text-xs text-cyan-300 font-mono">{agent.role}</p>
                       </div>
                     </div>
                     <StatusBadge status={agent.status} size="sm" />
@@ -195,7 +195,7 @@ export const AgentsPage: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between text-gray-400">
                       <span>Permission Level:</span>
-                      <span className="text-purple-300 font-semibold capitalize">{agent.permissionLevel}</span>
+                      <span className="text-cyan-300 font-semibold capitalize">{agent.permissionLevel}</span>
                     </div>
                     <div className="flex items-center justify-between text-gray-400">
                       <span>Quality Score:</span>
@@ -230,7 +230,7 @@ export const AgentsPage: React.FC = () => {
       {/* 4. Permission Profiles & Safety Rules Grid */}
       <GlassCard>
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Shield className="w-4 h-4 text-purple-400" />
+          <Shield className="w-4 h-4 text-cyan-400" />
           <span>Global Permission Profiles & Sandboxing Rules</span>
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

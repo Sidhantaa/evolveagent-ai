@@ -72,7 +72,7 @@ export const CommandModal: React.FC = () => {
       <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-[#141418] shadow-2xl overflow-hidden relative">
         {/* Top Search bar */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/10 bg-[#1a1a20]/60">
-          <Search className="w-5 h-5 text-purple-400" />
+          <Search className="w-5 h-5 text-cyan-400" />
           <input
             type="text"
             value={query}
@@ -104,11 +104,11 @@ export const CommandModal: React.FC = () => {
                     className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.06] text-left transition-colors group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 group-hover:text-purple-300 transition-colors">
+                      <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 transition-colors">
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-medium text-white group-hover:text-purple-200 transition-colors">{item.title}</div>
+                        <div className="text-xs font-medium text-white group-hover:text-cyan-200 transition-colors">{item.title}</div>
                         <div className="text-[11px] text-gray-500">{item.tag}</div>
                       </div>
                     </div>
@@ -130,7 +130,7 @@ export const CommandModal: React.FC = () => {
                     onClick={() => navigateTo(page)}
                     className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 text-xs text-gray-300 capitalize transition-colors"
                   >
-                    <Layers className="w-3.5 h-3.5 text-purple-400" />
+                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
                     <span>{page.replace('-', ' ')}</span>
                   </button>
                 ))}
@@ -177,10 +177,10 @@ export const CommandModal: React.FC = () => {
                     className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                      <Brain className="w-3.5 h-3.5 text-sky-400" />
                       <span className="text-xs text-gray-300 truncate max-w-md">{mem.title}</span>
                     </div>
-                    <span className="text-[10px] font-mono text-purple-400">{mem.relevance}% Match</span>
+                    <span className="text-[10px] font-mono text-cyan-400">{mem.relevance}% Match</span>
                   </button>
                 ))}
               </div>

@@ -61,11 +61,11 @@ export const SettingsPage: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium shrink-0 transition-all ${
                   activeTab === tab.id
-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
+                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
                     : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 text-purple-400" />
+                <Icon className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -88,7 +88,7 @@ export const SettingsPage: React.FC = () => {
                   {cap}: {mode}
                 </span>
               ))}
-              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">fallback on</span>}
+              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">fallback on</span>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
               {providers.providers.map(p => (
@@ -109,7 +109,7 @@ export const SettingsPage: React.FC = () => {
           <GlassCard>
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Settings className="w-4 h-4 text-purple-400" /> Workspace Profile & Storage
+                <Settings className="w-4 h-4 text-cyan-400" /> Workspace Profile & Storage
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -120,7 +120,7 @@ export const SettingsPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleAction('Workspace settings saved')}
-                  className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold"
+                  className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold"
                 >
                   Save Changes
                 </button>
@@ -133,7 +133,7 @@ export const SettingsPage: React.FC = () => {
                 <input
                   type="text"
                   defaultValue="EvolveAgent AI Core Workspace"
-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-purple-500"
+                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
@@ -141,12 +141,12 @@ export const SettingsPage: React.FC = () => {
                 <input
                   type="text"
                   defaultValue="EvolveAgent Systems Inc."
-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-purple-500"
+                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
                 <label className="text-gray-400 block mb-1">Default Operating Mode</label>
-                <select className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-purple-300 focus:outline-none">
+                <select className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-cyan-300 focus:outline-none">
                   <option>Planning-First & Mock-Safe</option>
                   <option>High-Trust Autonomous</option>
                   <option>Read-Only Inspector</option>
@@ -170,7 +170,7 @@ export const SettingsPage: React.FC = () => {
           <GlassCard glow="purple">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-purple-400" /> AI Model Routing & Fallback Engines
+                <Cpu className="w-4 h-4 text-cyan-400" /> AI Model Routing & Fallback Engines
               </span>
               <span className="text-xs font-mono text-emerald-400 font-semibold">● ACTIVE ROUTER</span>
             </div>
@@ -179,7 +179,7 @@ export const SettingsPage: React.FC = () => {
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
                 <div className="text-gray-400 text-[10px] uppercase">Primary Reasoning Engine</div>
                 <div className="text-sm font-bold text-white">Gemini 2.5 Pro / GPT-4o</div>
-                <div className="text-[11px] text-purple-300">Used for Master Orchestration & Code Synthesis</div>
+                <div className="text-[11px] text-cyan-300">Used for Master Orchestration & Code Synthesis</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
                 <div className="text-gray-400 text-[10px] uppercase">Secondary Backup Engine</div>
@@ -201,7 +201,7 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <div className="shrink-0">
                     {item.state ? (
-                      <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner">
+                      <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
                         <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                       </div>
                     ) : (
@@ -242,7 +242,7 @@ export const SettingsPage: React.FC = () => {
                     </div>
                     <div className="shrink-0">
                       {isChecked ? (
-                        <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner">
+                        <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
                           <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                         </div>
                       ) : (
@@ -263,10 +263,10 @@ export const SettingsPage: React.FC = () => {
           <GlassCard>
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Brain className="w-4 h-4 text-indigo-400" /> Project Brain & Vector Indexing
+                <Brain className="w-4 h-4 text-sky-400" /> Project Brain & Vector Indexing
               </span>
               <div className="flex items-center gap-2 font-mono text-xs">
-                <button onClick={() => handleAction('Rebuilding vector index from /src files...')} className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-purple-300">
+                <button onClick={() => handleAction('Rebuilding vector index from /src files...')} className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-cyan-300">
                   Rebuild Index
                 </button>
                 <button onClick={() => handleAction('Cleared cached transient memories')} className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300">
@@ -283,7 +283,7 @@ export const SettingsPage: React.FC = () => {
                 </div>
                 <div className="shrink-0">
                   {autoSaveDecisions ? (
-                    <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner">
+                    <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
                       <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                     </div>
                   ) : (
@@ -296,7 +296,7 @@ export const SettingsPage: React.FC = () => {
 
               <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs font-mono">
                 <span className="text-gray-400">Vector Index Sync Frequency:</span>
-                <select className="bg-black/50 border border-white/10 rounded px-2 py-1 text-purple-300">
+                <select className="bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-300">
                   <option>Every 2 minutes (Real-Time)</option>
                   <option>Every 15 minutes</option>
                   <option>Manual Trigger Only</option>
@@ -311,16 +311,16 @@ export const SettingsPage: React.FC = () => {
           <GlassCard>
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Palette className="w-4 h-4 text-purple-400" /> Appearance & Theme Tokens
+                <Palette className="w-4 h-4 text-cyan-400" /> Appearance & Theme Tokens
               </span>
               <span className="text-xs font-mono text-gray-400">Dark Graphite Default</span>
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { id: 'dark-graphite' as const, title: 'Dark Graphite (Default)', desc: '#0a0a0a background + #171717 charcoal glass cards.', color: 'border-purple-500 bg-purple-500/10' },
+                { id: 'dark-graphite' as const, title: 'Dark Graphite (Default)', desc: '#0a0a0a background + #171717 charcoal glass cards.', color: 'border-cyan-500 bg-cyan-500/10' },
                 { id: 'charcoal-blue' as const, title: 'Charcoal Royal Blue', desc: '#0d0f17 background + electric blue glow accents.', color: 'border-blue-500/30 bg-blue-500/5' },
-                { id: 'cosmic-purple' as const, title: 'Cosmic Violet Slate', desc: '#120f1c background + deep violet gradients.', color: 'border-indigo-500/30 bg-indigo-500/5' },
+                { id: 'cosmic-purple' as const, title: 'Cosmic Violet Slate', desc: '#120f1c background + deep violet gradients.', color: 'border-sky-500/30 bg-sky-500/5' },
               ].map(th => (
                 <div
                   key={th.id}
@@ -331,7 +331,7 @@ export const SettingsPage: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white">{th.title}</span>
-                    {selectedTheme === th.id && <CheckCircle2 className="w-4 h-4 text-purple-400" />}
+                    {selectedTheme === th.id && <CheckCircle2 className="w-4 h-4 text-cyan-400" />}
                   </div>
                   <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{th.desc}</p>
                 </div>
@@ -346,7 +346,7 @@ export const SettingsPage: React.FC = () => {
         <GlassCard className="sticky top-20 space-y-4 font-mono text-xs">
           <div className="flex items-center justify-between pb-3 border-b border-white/10 font-sans">
             <span className="font-bold text-white flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-purple-400" /> System Summary
+              <Terminal className="w-4 h-4 text-cyan-400" /> System Summary
             </span>
             <span className="text-emerald-400 font-mono">● LIVE</span>
           </div>
@@ -358,7 +358,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-400">Frontend Stack:</span>
-              <strong className="text-purple-300">React 19 + Vite + Tailwind v4</strong>
+              <strong className="text-cyan-300">React 19 + Vite + Tailwind v4</strong>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-400">Backend Engine:</span>
@@ -398,7 +398,7 @@ export const SettingsPage: React.FC = () => {
           <div className="pt-3 border-t border-white/10">
             <button
               onClick={() => handleAction('System diagnostics check passed!')}
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
+              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
             >
               Run Full Diagnostic Suite
             </button>

@@ -72,7 +72,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-gray-400 hover:text-gray-200 text-xs transition-all w-36 sm:w-56"
         >
           <div className="flex items-center gap-2 truncate">
-            <Search className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <span className="truncate">Search or ⌘ K</span>
           </div>
           <kbd className="hidden sm:inline-block font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-400 border border-white/10">
@@ -85,7 +85,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           <button
             onClick={() => { setActivePage('chat'); showToast('Switched to Simple Chat Mode', 'info'); }}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              activePage === 'chat' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              activePage === 'chat' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -94,7 +94,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           <button
             onClick={() => { setActivePage('dev-console'); showToast('Switched to Developer Console', 'info'); }}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              activePage === 'dev-console' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              activePage === 'dev-console' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
@@ -103,7 +103,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           <button
             onClick={() => { setActivePage('mission-control'); showToast('Switched to Mission Control', 'info'); }}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              activePage === 'mission-control' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              activePage === 'mission-control' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
             }`}
           >
             <Compass className="w-3.5 h-3.5" />

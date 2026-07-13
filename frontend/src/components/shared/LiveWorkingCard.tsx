@@ -48,7 +48,7 @@ export const LiveWorkingCard: React.FC = () => {
         </span>
         <button 
           onClick={() => setIsStopped(false)} 
-          className="text-xs text-purple-400 hover:text-purple-300 underline"
+          className="text-xs text-cyan-400 hover:text-cyan-300 underline"
         >
           Restart Pipeline
         </button>
@@ -57,21 +57,21 @@ export const LiveWorkingCard: React.FC = () => {
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-purple-500/30 bg-[#141418] p-5 shadow-2xl relative overflow-hidden">
+    <div className="mt-3 rounded-2xl border border-cyan-500/30 bg-[#141418] p-5 shadow-2xl relative overflow-hidden">
       {/* Background ambient glow */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 relative z-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
             <Sparkles className={`w-4 h-4 text-white ${isPaused ? '' : 'animate-spin'}`} style={{ animationDuration: '4s' }} />
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white flex items-center gap-2">
               EvolveAgent is working…
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 {isPaused ? 'PAUSED' : 'LIVE ORCHESTRATION'}
               </span>
             </h4>
@@ -91,7 +91,7 @@ export const LiveWorkingCard: React.FC = () => {
             onClick={() => setIsEditing(prev => !prev)}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition-colors"
           >
-            <Edit3 className="w-3.5 h-3.5 text-purple-400" />
+            <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
             <span>Edit</span>
           </button>
           <button
@@ -106,18 +106,18 @@ export const LiveWorkingCard: React.FC = () => {
 
       {/* Edit Instructions Drawer */}
       {isEditing && (
-        <form onSubmit={handleEditSubmit} className="mt-4 p-3 rounded-xl bg-[#1d1d23] border border-purple-500/30 flex gap-2 animate-fadeIn">
+        <form onSubmit={handleEditSubmit} className="mt-4 p-3 rounded-xl bg-[#1d1d23] border border-cyan-500/30 flex gap-2 animate-fadeIn">
           <input
             type="text"
             value={customInstruction}
             onChange={(e) => setCustomInstruction(e.target.value)}
             placeholder="E.g., Prioritize dark theme contrast over animation speed..."
-            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
             autoFocus
           />
           <button
             type="submit"
-            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-colors"
           >
             Send
           </button>
@@ -144,16 +144,16 @@ export const LiveWorkingCard: React.FC = () => {
           </div>
 
           {/* UI Design Agent */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-500/5 border border-purple-500/20">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
             <div className="flex items-center gap-2.5">
               <span className="text-base">🎨</span>
               <div>
-                <div className="text-xs font-medium text-purple-200">UI Design Agent</div>
-                <div className="text-[11px] text-purple-300/80">Synthesizing responsive glassmorphism cards</div>
+                <div className="text-xs font-medium text-cyan-200">UI Design Agent</div>
+                <div className="text-[11px] text-cyan-300/80">Synthesizing responsive glassmorphism cards</div>
               </div>
             </div>
-            <span className="flex items-center gap-1 text-[11px] font-mono text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" /> Running
+            <span className="flex items-center gap-1 text-[11px] font-mono text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" /> Running
             </span>
           </div>
 
@@ -207,11 +207,11 @@ export const LiveWorkingCard: React.FC = () => {
       <div className="mt-4 pt-3 border-t border-white/10 relative z-10">
         <div className="flex items-center justify-between text-xs mb-1.5">
           <span className="text-gray-400 font-mono">Pipeline Progress</span>
-          <span className="text-purple-300 font-mono font-semibold">{mission.progress}%</span>
+          <span className="text-cyan-300 font-mono font-semibold">{mission.progress}%</span>
         </div>
         <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
           <div 
-            className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 transition-all duration-500"
             style={{ width: `${mission.progress}%` }}
           />
         </div>
@@ -244,7 +244,7 @@ export const LiveWorkingCard: React.FC = () => {
           </span>
           <button
             onClick={() => showToast('Advancing orchestration to next checkpoint...', 'info')}
-            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium"
+            className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium"
           >
             <span>Next Phase</span>
             <ArrowRight className="w-3.5 h-3.5" />

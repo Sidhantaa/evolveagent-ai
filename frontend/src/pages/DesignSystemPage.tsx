@@ -36,15 +36,15 @@ export const DesignSystemPage: React.FC = () => {
     { name: 'Professional Slate (Background)', hex: '#0a0a0b', tailwind: 'bg-[#0a0a0b]', border: 'border-white/10' },
     { name: 'Graphite Surface (Sidebar/Cards)', hex: '#0d0d0f / #141416', tailwind: 'bg-[#141416]/90 backdrop-blur-xl', border: 'border-white/[0.08]' },
     { name: 'Elevated Glass (Hover State)', hex: '#1a1a1d (90% opacity)', tailwind: 'bg-[#1a1a1d]/90 backdrop-blur-lg', border: 'border-white/15' },
-    { name: 'Indigo Purple Polish (Primary)', hex: '#6366f1 / #9333ea', tailwind: 'bg-gradient-to-r from-indigo-600 to-purple-600', border: 'border-indigo-500/50' },
-    { name: 'Professional Accent (Active State)', hex: '#4f46e5 / #3b82f6', tailwind: 'bg-gradient-to-r from-indigo-500 to-blue-600', border: 'border-blue-500/50' },
-    { name: 'Indigo Soft Chip (Text/Badges)', hex: '#818cf8 / #c4b5fd', tailwind: 'bg-indigo-500/15 text-indigo-300', border: 'border-indigo-500/30' },
+    { name: 'Sky Cyan Polish (Primary)', hex: '#0284c7 / #0891b2', tailwind: 'bg-gradient-to-r from-sky-600 to-cyan-600', border: 'border-sky-500/50' },
+    { name: 'Professional Accent (Active State)', hex: '#4f46e5 / #3b82f6', tailwind: 'bg-gradient-to-r from-sky-500 to-blue-600', border: 'border-blue-500/50' },
+    { name: 'Indigo Soft Chip (Text/Badges)', hex: '#818cf8 / #c4b5fd', tailwind: 'bg-sky-500/15 text-sky-300', border: 'border-sky-500/30' },
   ];
 
   const typographyTokens = [
     { name: 'Display Headings', font: 'Inter Display', style: 'text-xl sm:text-2xl font-extrabold tracking-tight text-white', sample: 'What mission shall we delegate today?' },
     { name: 'UI Base Text', font: 'Inter UI Base', style: 'text-xs sm:text-sm text-slate-300 leading-relaxed', sample: 'EvolveAgent AI routes high-level intents across specialized agents with deep knowledge.' },
-    { name: 'Technical / Monospace', font: 'Geist Mono', style: 'text-xs font-mono text-indigo-300', sample: 'component_generator --target=AgentsGrid --tokens=ADR12' },
+    { name: 'Technical / Monospace', font: 'Geist Mono', style: 'text-xs font-mono text-sky-300', sample: 'component_generator --target=AgentsGrid --tokens=ADR12' },
   ];
 
   const radiusTokens = [
@@ -77,11 +77,11 @@ export const DesignSystemPage: React.FC = () => {
   return (
     <div className="space-y-8 animate-fadeIn pb-16">
       {/* Header Banner */}
-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-3">
             <Palette className="w-3.5 h-3.5" />
             <span>ADR #12 Design System Manifest</span>
           </div>
@@ -97,7 +97,7 @@ export const DesignSystemPage: React.FC = () => {
       {/* 1. Brand Tokens: Color Palette Swatches */}
       <GlassCard>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Palette className="w-4 h-4 text-purple-400" />
+          <Palette className="w-4 h-4 text-cyan-400" />
           <span>1. Brand Color Palette Swatches</span>
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
@@ -108,7 +108,7 @@ export const DesignSystemPage: React.FC = () => {
               </div>
               <div>
                 <div className="font-bold text-white">{col.name}</div>
-                <div className="text-gray-400 text-[11px] mt-0.5">Hex / Rule: <span className="text-purple-300">{col.hex}</span></div>
+                <div className="text-gray-400 text-[11px] mt-0.5">Hex / Rule: <span className="text-cyan-300">{col.hex}</span></div>
                 <div className="text-gray-500 text-[10px] mt-0.5 truncate">Class: <code>{col.tailwind}</code></div>
               </div>
             </div>
@@ -120,7 +120,7 @@ export const DesignSystemPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GlassCard>
           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <Code2 className="w-4 h-4 text-purple-400" />
+            <Code2 className="w-4 h-4 text-cyan-400" />
             <span>2. Typography Scale & Fonts</span>
           </h3>
           <div className="space-y-4">
@@ -128,7 +128,7 @@ export const DesignSystemPage: React.FC = () => {
               <div key={idx} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
                 <div className="flex items-center justify-between text-xs font-mono text-gray-400">
                   <span className="font-bold text-white">{typ.name}</span>
-                  <span className="text-purple-300">{typ.font}</span>
+                  <span className="text-cyan-300">{typ.font}</span>
                 </div>
                 <div className={`${typ.style} pt-1`}>{typ.sample}</div>
               </div>
@@ -157,7 +157,7 @@ export const DesignSystemPage: React.FC = () => {
       {/* 3. Core Component Library Previews */}
       <GlassCard>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-400" />
+          <Sparkles className="w-4 h-4 text-cyan-400" />
           <span>4. Core Component Library Previews</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -181,9 +181,9 @@ export const DesignSystemPage: React.FC = () => {
           {/* Component 2: Nav Items & Command Input */}
           <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
             <span className="text-xs font-mono uppercase text-gray-400 block border-b border-white/10 pb-2">Command & Nav Elements</span>
-            <div className="p-2 rounded-xl bg-gradient-to-r from-purple-600/20 to-blue-600/10 border border-purple-500/30 flex items-center justify-between text-xs text-white font-semibold">
-              <span className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4 text-purple-400" /> Active Nav Item</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">Live</span>
+            <div className="p-2 rounded-xl bg-gradient-to-r from-cyan-600/20 to-blue-600/10 border border-cyan-500/30 flex items-center justify-between text-xs text-white font-semibold">
+              <span className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4 text-cyan-400" /> Active Nav Item</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">Live</span>
             </div>
             <div className="p-2 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between text-xs text-gray-400">
               <span className="flex items-center gap-2"><Search className="w-4 h-4 text-gray-500" /> Search input trigger</span>
@@ -192,16 +192,16 @@ export const DesignSystemPage: React.FC = () => {
           </div>
 
           {/* Component 3: Mini Agent Card */}
-          <div className="p-4 rounded-2xl bg-[#1e1e28]/90 border border-purple-500/40 space-y-2">
+          <div className="p-4 rounded-2xl bg-[#1e1e28]/90 border border-cyan-500/40 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono uppercase text-purple-300">Agent Spotlight Preview</span>
+              <span className="text-xs font-mono uppercase text-cyan-300">Agent Spotlight Preview</span>
               <StatusBadge status="running" size="sm" />
             </div>
             <div className="flex items-center gap-2 pt-1">
               <span className="text-2xl">🎨</span>
               <div>
                 <div className="text-xs font-bold text-white">UI Design Agent</div>
-                <div className="text-[10px] font-mono text-purple-300">Frontend Architect</div>
+                <div className="text-[10px] font-mono text-cyan-300">Frontend Architect</div>
               </div>
             </div>
             <div className="text-[11px] text-gray-300 font-mono bg-black/30 p-2 rounded-lg border border-white/5">
@@ -214,7 +214,7 @@ export const DesignSystemPage: React.FC = () => {
       {/* 4. Live Orchestration Pattern Preview */}
       <GlassCard glow="purple">
         <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-          <Bot className="w-4 h-4 text-purple-400" />
+          <Bot className="w-4 h-4 text-cyan-400" />
           <span>5. Live Orchestration Card Pattern ("EvolveAgent is working...")</span>
         </h3>
         <p className="text-xs text-gray-400 mb-4">
@@ -226,7 +226,7 @@ export const DesignSystemPage: React.FC = () => {
       {/* 5. Page Layout Patterns (10 Wireframe Thumbnails) */}
       <GlassCard>
         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <LayoutDashboard className="w-4 h-4 text-purple-400" />
+          <LayoutDashboard className="w-4 h-4 text-cyan-400" />
           <span>6. Page Layout Patterns & Navigation Blueprints (Click to Jump)</span>
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -236,17 +236,17 @@ export const DesignSystemPage: React.FC = () => {
               <div
                 key={thm.id}
                 onClick={() => { setActivePage(thm.id); showToast(`Jumped to ${thm.label}`, 'info'); }}
-                className="cursor-pointer p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-purple-500/40 transition-all group flex flex-col justify-between space-y-3"
+                className="cursor-pointer p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-cyan-500/40 transition-all group flex flex-col justify-between space-y-3"
               >
                 <div>
                   <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
-                    <Icon className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-mono text-gray-500 group-hover:text-purple-300 uppercase">Screen</span>
+                    <Icon className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-mono text-gray-500 group-hover:text-cyan-300 uppercase">Screen</span>
                   </div>
-                  <h4 className="text-xs font-bold text-white group-hover:text-purple-200 transition-colors">{thm.label}</h4>
+                  <h4 className="text-xs font-bold text-white group-hover:text-cyan-200 transition-colors">{thm.label}</h4>
                   <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{thm.desc}</p>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-purple-400 pt-2 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400 pt-2 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span>Open Screen</span>
                   <ArrowRight className="w-3 h-3" />
                 </div>

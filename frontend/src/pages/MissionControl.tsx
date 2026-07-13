@@ -51,7 +51,7 @@ export const MissionControl: React.FC = () => {
 
   const columns: { id: TaskStatus; label: string; color: string }[] = [
     { id: 'planned', label: 'Planned / Backlog', color: 'border-blue-500/30' },
-    { id: 'running', label: 'In Progress / Running', color: 'border-purple-500/40' },
+    { id: 'running', label: 'In Progress / Running', color: 'border-cyan-500/40' },
     { id: 'waiting_approval', label: 'Waiting Approval', color: 'border-amber-500/40' },
     { id: 'completed', label: 'Completed', color: 'border-emerald-500/40' }
   ];
@@ -59,13 +59,13 @@ export const MissionControl: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* 1. Active Mission Overview Header Card */}
-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
                 Active Mission #01
               </span>
               <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
@@ -99,10 +99,10 @@ export const MissionControl: React.FC = () => {
             <div className="w-full sm:w-44 space-y-1.5">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-gray-400">Total Progress</span>
-                <span className="text-purple-300 font-bold">{mission.progress}%</span>
+                <span className="text-cyan-300 font-bold">{mission.progress}%</span>
               </div>
               <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
-                <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ export const MissionControl: React.FC = () => {
             <button
               onClick={handleStartRun}
               disabled={starting}
-              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 transition-colors disabled:opacity-50"
+              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-200 transition-colors disabled:opacity-50"
             >
               {starting ? 'Starting…' : '▶ Start real run'}
             </button>
@@ -127,7 +127,7 @@ export const MissionControl: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
             {liveRuns.map(run => {
               const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
-              const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-purple-300';
+              const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-cyan-300';
               return (
                 <div key={run.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
                   <div className="flex items-center justify-between gap-2">
@@ -135,7 +135,7 @@ export const MissionControl: React.FC = () => {
                     <span className={`text-[10px] font-mono ${tone}`}>{run.status.replace('_', ' ')}</span>
                   </div>
                   <div className="mt-2 w-full h-1.5 rounded-full bg-black/50 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="text-[10px] text-gray-500 font-mono mt-1">{run.done}/{run.total} steps</div>
                 </div>
@@ -146,21 +146,21 @@ export const MissionControl: React.FC = () => {
       )}
 
       {/* 2. Next Best Action Recommendation Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-blue-900/30 border border-purple-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-900/30 via-sky-900/20 to-blue-900/30 border border-cyan-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 shrink-0">
+          <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 shrink-0">
             <Sparkles className="w-5 h-5 animate-spin" style={{ animationDuration: '8s' }} />
           </div>
           <div>
-            <div className="text-xs font-semibold text-purple-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
+            <div className="text-xs font-semibold text-cyan-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
             <p className="text-xs sm:text-sm text-white font-medium mt-0.5">
-              UI Design Agent recommends synthesizing the <span className="text-purple-300 font-bold">Agents Overview grid</span> and verifying Mock-Safe permission profiles next.
+              UI Design Agent recommends synthesizing the <span className="text-cyan-300 font-bold">Agents Overview grid</span> and verifying Mock-Safe permission profiles next.
             </p>
           </div>
         </div>
         <button
           onClick={handleApproveNext}
-          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
+          className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
         >
           <Check className="w-4 h-4 stroke-[3]" />
           <span>Approve Next Task</span>
@@ -170,7 +170,7 @@ export const MissionControl: React.FC = () => {
       {/* 3. Mission Phase Tracker (5 Phases Step Bar) */}
       <GlassCard>
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Layers className="w-4 h-4 text-purple-400" />
+          <Layers className="w-4 h-4 text-cyan-400" />
           <span>Mission Phase Tracker</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -182,7 +182,7 @@ export const MissionControl: React.FC = () => {
                 key={phase.id}
                 className={`p-3 rounded-xl border transition-all ${
                   isDone ? 'bg-emerald-500/[0.04] border-emerald-500/20 text-emerald-300' :
-                  isCurr ? 'bg-purple-500/[0.08] border-purple-500/40 text-purple-200 shadow-md' :
+                  isCurr ? 'bg-cyan-500/[0.08] border-cyan-500/40 text-cyan-200 shadow-md' :
                   'bg-white/[0.01] border-white/5 text-gray-500'
                 }`}
               >
@@ -205,7 +205,7 @@ export const MissionControl: React.FC = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-purple-400" />
+            <CheckSquare className="w-4 h-4 text-cyan-400" />
             <span>Task Graph & Execution Pipeline</span>
           </h3>
           <span className="text-xs text-gray-400 font-mono">Showing {tasks.length} atomic operations</span>
@@ -236,7 +236,7 @@ export const MissionControl: React.FC = () => {
                         </div>
                         <p className="text-[11px] text-gray-400 line-clamp-2">{t.description}</p>
                         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-500">
-                          <span className="text-purple-300">{t.assignedAgentName}</span>
+                          <span className="text-cyan-300">{t.assignedAgentName}</span>
                           <span>{t.timestamp}</span>
                         </div>
                       </div>
@@ -252,13 +252,13 @@ export const MissionControl: React.FC = () => {
       {/* 5. Mission Intelligence & Health Panel */}
       <GlassCard glow="purple">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-purple-400" />
+          <Activity className="w-4 h-4 text-cyan-400" />
           <span>Mission Intelligence & Agent Confidence Scores</span>
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
             <div className="text-xs font-mono text-gray-400">Agent Confidence</div>
-            <div className="text-2xl font-bold font-mono text-purple-300 mt-1">94%</div>
+            <div className="text-2xl font-bold font-mono text-cyan-300 mt-1">94%</div>
             <div className="text-[10px] text-emerald-400 mt-1">High predictability</div>
           </div>
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">

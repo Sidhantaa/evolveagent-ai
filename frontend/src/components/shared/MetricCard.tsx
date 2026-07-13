@@ -26,7 +26,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       <div className="flex items-start justify-between gap-2">
         <span className="text-xs font-medium text-gray-400">{label}</span>
         {icon && (
-          <div className="p-1.5 rounded-lg bg-white/[0.04] text-purple-400 border border-white/5">
+          <div className="p-1.5 rounded-lg bg-white/[0.04] text-cyan-400 border border-white/5">
             {icon}
           </div>
         )}

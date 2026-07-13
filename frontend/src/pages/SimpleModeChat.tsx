@@ -76,7 +76,7 @@ export const SimpleModeChat: React.FC = () => {
         {/* Chat Header */}
         <div className="p-4 border-b border-white/10 bg-[#16161c]/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
               <Bot className="w-5 h-5" />
             </div>
             <div>
@@ -110,7 +110,7 @@ export const SimpleModeChat: React.FC = () => {
                 <div
                   className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0 ${
                     isUser
-                      ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-tr from-blue-600 to-sky-600 text-white shadow-lg'
                       : 'bg-[#1e1e26] border border-white/10 text-white shadow-md'
                   }`}
                 >
@@ -127,7 +127,7 @@ export const SimpleModeChat: React.FC = () => {
                   <div
                     className={`p-4 rounded-2xl text-sm leading-relaxed ${
                       isUser
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-tr-none shadow-lg'
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-tr-none shadow-lg'
                         : 'bg-[#1a1a22] border border-white/10 text-gray-200 rounded-tl-none shadow-md'
                     }`}
                   >
@@ -138,7 +138,7 @@ export const SimpleModeChat: React.FC = () => {
                       <div className="mt-3 pt-3 border-t border-white/15 flex flex-wrap gap-2">
                         {msg.attachments.map((file, idx) => (
                           <div key={idx} className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/30 border border-white/10 text-xs text-gray-300 font-mono">
-                            <FileCode className="w-3.5 h-3.5 text-purple-400" />
+                            <FileCode className="w-3.5 h-3.5 text-cyan-400" />
                             <span>{file.name}</span>
                             <span className="text-gray-500">({file.size})</span>
                           </div>
@@ -163,7 +163,7 @@ export const SimpleModeChat: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 px-2">
               <span className="text-[11px] font-mono text-gray-400">Attached:</span>
               {attachments.map((file, i) => (
-                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono animate-fadeIn">
+                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono animate-fadeIn">
                   <FileCode className="w-3.5 h-3.5" />
                   <span>{file.name}</span>
                   <button
@@ -179,7 +179,7 @@ export const SimpleModeChat: React.FC = () => {
 
           {/* Main Input Form */}
           <form onSubmit={handleSend} className="relative flex items-center gap-2">
-            <div className="relative flex-1 flex items-center bg-black/60 rounded-2xl border border-white/15 focus-within:border-purple-500 transition-all shadow-inner px-3 py-2">
+            <div className="relative flex-1 flex items-center bg-black/60 rounded-2xl border border-white/15 focus-within:border-cyan-500 transition-all shadow-inner px-3 py-2">
               {/* Attachment Button */}
               <button
                 type="button"
@@ -195,7 +195,7 @@ export const SimpleModeChat: React.FC = () => {
                 <select
                   value={selectedDb}
                   onChange={(e) => setSelectedDb(e.target.value)}
-                  className="bg-transparent text-xs text-purple-300 font-mono focus:outline-none cursor-pointer pr-1"
+                  className="bg-transparent text-xs text-cyan-300 font-mono focus:outline-none cursor-pointer pr-1"
                 >
                   <option className="bg-[#171717]">Workspace Memory + Postgres</option>
                   <option className="bg-[#171717]">Project Brain (Vector Index)</option>
@@ -232,7 +232,7 @@ export const SimpleModeChat: React.FC = () => {
             <button
               type="submit"
               disabled={!inputText.trim() && attachments.length === 0}
-              className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center shrink-0"
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center shrink-0"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -264,10 +264,10 @@ export const SimpleModeChat: React.FC = () => {
         <GlassCard>
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-purple-400" />
+              <CheckSquare className="w-4 h-4 text-cyan-400" />
               <h4 className="text-xs font-semibold text-white">Active Mission</h4>
             </div>
-            <button onClick={() => setActivePage('mission-control')} className="text-[11px] text-purple-400 hover:underline">
+            <button onClick={() => setActivePage('mission-control')} className="text-[11px] text-cyan-400 hover:underline">
               View
             </button>
           </div>
@@ -275,10 +275,10 @@ export const SimpleModeChat: React.FC = () => {
             <div className="text-xs font-semibold text-white">{mission.title}</div>
             <div className="flex items-center justify-between text-[11px] font-mono text-gray-400">
               <span>Progress</span>
-              <span className="text-purple-300 font-semibold">{mission.progress}%</span>
+              <span className="text-cyan-300 font-semibold">{mission.progress}%</span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
             </div>
             <div className="flex items-center justify-between text-[10px] text-gray-500 font-mono pt-1">
               <span>5 phases</span>
@@ -291,10 +291,10 @@ export const SimpleModeChat: React.FC = () => {
         <GlassCard>
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4 text-indigo-400" />
+              <Brain className="w-4 h-4 text-sky-400" />
               <h4 className="text-xs font-semibold text-white">Brain Context</h4>
             </div>
-            <button onClick={() => setActivePage('project-brain')} className="text-[11px] text-purple-400 hover:underline">
+            <button onClick={() => setActivePage('project-brain')} className="text-[11px] text-cyan-400 hover:underline">
               {memories.length} matches
             </button>
           </div>
@@ -303,7 +303,7 @@ export const SimpleModeChat: React.FC = () => {
               <div key={mem.id} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-gray-200 truncate max-w-[150px]">{mem.title}</span>
-                  <span className="text-[10px] font-mono text-purple-400">{mem.relevance}%</span>
+                  <span className="text-[10px] font-mono text-cyan-400">{mem.relevance}%</span>
                 </div>
                 <p className="text-[10px] text-gray-400 line-clamp-2">{mem.snippet}</p>
               </div>

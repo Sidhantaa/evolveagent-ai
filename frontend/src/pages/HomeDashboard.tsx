@@ -60,13 +60,13 @@ export const HomeDashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* 1. AI Command Center Hero Card */}
-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden">
         {/* Glow backdrop */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
             <span>AI Command Center & Multi-Agent OS</span>
           </div>
@@ -81,13 +81,13 @@ export const HomeDashboard: React.FC = () => {
           {/* Quick Prompt Input Bar */}
           <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col sm:flex-row gap-2.5">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
               <input
                 type="text"
                 value={quickPrompt}
                 onChange={(e) => setQuickPrompt(e.target.value)}
                 placeholder="Ask anything or command agents (e.g. 'Redesign our dashboard cards', 'Scan GitHub repo')..."
-                className="w-full bg-black/60 border border-white/15 focus:border-purple-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
+                className="w-full bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
               />
               <kbd 
                 onClick={() => setIsCommandModalOpen(true)}
@@ -98,7 +98,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
             >
               <span>Launch Mission</span>
               <ArrowRight className="w-4 h-4" />
@@ -121,7 +121,7 @@ export const HomeDashboard: React.FC = () => {
                   onClick={() => { setActivePage(action.page); showToast(`Navigated to ${action.label}`, 'info'); }}
                   className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
                 >
-                  <Icon className="w-3.5 h-3.5 text-purple-400" />
+                  <Icon className="w-3.5 h-3.5 text-cyan-400" />
                   <span>{action.label}</span>
                 </button>
               );
@@ -185,15 +185,15 @@ export const HomeDashboard: React.FC = () => {
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-purple-400 animate-pulse" />
+                  <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
                   <h3 className="text-sm font-semibold text-white">Live Agent Activity Log</h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">
                     Real-Time Stream
                   </span>
                 </div>
                 <button
                   onClick={() => { setActivePage('dev-console'); showToast('Viewing full trace inspector', 'info'); }}
-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1"
                 >
                   <span>View Full Trace</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -259,7 +259,7 @@ export const HomeDashboard: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setActivePage('approvals')}
-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
                 >
                   View All
                 </button>
@@ -312,7 +312,7 @@ export const HomeDashboard: React.FC = () => {
             {pendingApprovals.some(a => a.riskLevel === 'low') && (
               <button
                 onClick={approveBatchLowRisk}
-                className="mt-4 w-full py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-medium text-xs transition-colors"
+                className="mt-4 w-full py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium text-xs transition-colors"
               >
                 Approve Low-Risk Batch
               </button>
@@ -332,7 +332,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => setActivePage('tools')}
-              className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
             >
               Manage Hub ({connectors.length})
             </button>
@@ -367,7 +367,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => setActivePage('governance')}
-              className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
             >
               Policy Matrix
             </button>

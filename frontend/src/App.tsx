@@ -34,7 +34,7 @@ const MainContent: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-purple-500/30 font-sans">
+    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-cyan-500/30 font-sans">
       {/* Sidebar navigation */}
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
