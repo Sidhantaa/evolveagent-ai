@@ -529,6 +529,9 @@ from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
 # Memory v2 powers adaptive-learning recall (semantic when on pgvector).
 adaptive_learning_service = AdaptiveLearningService(storage, governance_service, memory=memory_service)
+# Wired post-init since AdaptiveLearningService is constructed after
+# SchedulerTickWorker.
+scheduler_tick_worker.adaptive_learning = adaptive_learning_service
 # v140 Workspace Brain: wire Memory v2 into BOTH WorkspaceService instances now
 # that it exists — the routes.py singleton (used by /api/workspaces/*) and the
 # one MasterOrchestratorAgent built internally (used by the live /api/run
