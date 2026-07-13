@@ -6,6 +6,7 @@ from math import exp
 from uuid import uuid4
 
 from app.services.memory_intelligence_service import MemoryIntelligenceService
+from app.services.smart_context_service import SmartContextService
 from app.services.storage_service import StorageService
 
 
@@ -274,15 +275,24 @@ class WorkspaceService:
             selected.extend(fallback[: max(limit - len(selected), 0)])
         self._record_memory_usage(workspace_id, [item.get("memory_id") for item in selected if item.get("memory_id")])
         parts = []
+        used: list[dict] = []
         remaining = char_limit
         for item in selected:
             text = f"{item.get('type')}: {item.get('title')}\n{item.get('content')}"
+            # This is the real production path every LLM prompt's shared_context is
+            # built from -- reuse SmartContextService's already-real sensitive-content
+            # filter (previously only reachable via its own standalone /smart-context
+            # route) so an email, card-like number, API key, or password never flows
+            # into the prompt just because it was saved to workspace memory.
+            if SmartContextService._sensitive(text):
+                continue
             clipped = text[:remaining]
             if not clipped:
                 break
             parts.append(clipped)
+            used.append(item)
             remaining -= len(clipped)
-        return "\n\n".join(parts), selected
+        return "\n\n".join(parts), used
 
     def memory_importance_score(self, memory: dict) -> float:
         importance_weight = {"high": 50.0, "medium": 25.0, "low": 10.0}

@@ -1,6 +1,10 @@
 from fastapi.testclient import TestClient
 
+from app.agents.master_agent import MasterOrchestratorAgent
+from app.agents.memory_agent import MemoryAgent
 from app.main import app
+from app.models.request_models import RunRequest
+from app.services.storage_service import StorageService
 
 client = TestClient(app)
 
@@ -61,3 +65,40 @@ def test_analytics_and_governance():
 def test_existing_endpoints_still_work():
     assert client.get("/api/repo-finder/status").status_code == 200
     assert client.get("/api/agent-studio/summary").status_code == 200
+
+
+# ------------------------------------------------------------------
+# MasterOrchestratorAgent wiring: AdaptiveLearningService.recommend() (real
+# retrieval memory -- topics/references/few-shot examples/action patterns,
+# keyword or semantic search) previously had zero callers outside its own
+# on-demand routes. It's now folded into shared_context on every run,
+# read-only and best-effort, same pattern as the Digital Twin wiring.
+# ------------------------------------------------------------------
+def test_master_agent_run_consults_learned_items_and_never_fails(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    agent.adaptive_learning.ingest("kubernetes helm migration best practices", kind="topic", source="manual")
+    response = agent.run(RunRequest(user_input="Explain the kubernetes helm migration process."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+
+
+def test_master_agent_run_survives_a_broken_adaptive_learning_collaborator(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("adaptive learning storage unavailable")
+
+    monkeypatch.setattr(agent.adaptive_learning, "recommend", _boom)
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+
+
+def test_master_agent_run_with_no_learned_items_behaves_normally(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output

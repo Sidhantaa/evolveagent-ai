@@ -994,3 +994,258 @@ export async function updateChiefFollowupStatus(followupId: string, status: stri
   }).catch(() => null);
   return Boolean(res && res.ok);
 }
+
+// ---- v160 Agent Marketplace Hub ----------------------------------------------
+export interface MarketplaceListing {
+  listingId: string;
+  kind: string;
+  name: string;
+  summary: string;
+  publisher: string;
+  isFeatured: boolean;
+  installs: number;
+  ratingCount: number;
+  averageRating: number;
+  createdAt: string;
+  manifest: Record<string, any>;
+}
+
+export interface MarketplaceRating {
+  ratingId: string;
+  listingId: string;
+  rating: number;
+  review: string;
+  createdAt: string;
+}
+
+export interface MarketplaceInstall {
+  installId: string;
+  listingId: string;
+  kind: string;
+  installedName: string;
+  createdAt: string;
+}
+
+export interface MarketplaceSummary {
+  totalListings: number;
+  totalInstalls: number;
+  listingsByKind: Record<string, number>;
+  totalRatings: number;
+  kinds: string[];
+}
+
+function mapMarketplaceListing(l: any): MarketplaceListing {
+  return {
+    listingId: l.listing_id || '',
+    kind: l.kind || 'agent',
+    name: l.name || 'Untitled listing',
+    summary: l.summary || '',
+    publisher: l.publisher || 'local',
+    isFeatured: Boolean(l.is_featured),
+    installs: Number(l.installs ?? 0),
+    ratingCount: Number(l.rating_count ?? 0),
+    averageRating: Number(l.average_rating ?? 0),
+    createdAt: l.created_at || '',
+    manifest: l.manifest && typeof l.manifest === 'object' ? l.manifest : {},
+  };
+}
+
+export async function fetchMarketplaceListings(
+  kind?: string, sort?: 'featured' | 'popular' | 'top_rated',
+): Promise<MarketplaceListing[] | null> {
+  const params = new URLSearchParams();
+  if (kind) params.set('kind', kind);
+  if (sort) params.set('sort', sort);
+  const qs = params.toString();
+  const data = await getJson<any>(`/api/marketplace-hub/listings${qs ? `?${qs}` : ''}`);
+  if (!data?.listings) return null;
+  return data.listings.map(mapMarketplaceListing);
+}
+
+export async function fetchMarketplaceListing(listingId: string): Promise<MarketplaceListing | null> {
+  const data = await getJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}`);
+  if (!data) return null;
+  return mapMarketplaceListing(data);
+}
+
+export async function fetchMarketplaceSummary(): Promise<MarketplaceSummary | null> {
+  const data = await getJson<any>('/api/marketplace-hub/summary');
+  if (!data) return null;
+  return {
+    totalListings: Number(data.marketplace_hub_listings ?? 0),
+    totalInstalls: Number(data.marketplace_hub_installs ?? 0),
+    listingsByKind: data.marketplace_hub_listings_by_kind || {},
+    totalRatings: Number(data.marketplace_hub_ratings ?? 0),
+    kinds: Array.isArray(data.kinds) ? data.kinds.map(String) : [],
+  };
+}
+
+export async function fetchMarketplaceRatings(listingId: string): Promise<MarketplaceRating[] | null> {
+  const data = await getJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}/ratings`);
+  if (!data?.ratings) return null;
+  return data.ratings.map((r: any): MarketplaceRating => ({
+    ratingId: r.rating_id || '',
+    listingId: r.listing_id || '',
+    rating: Number(r.rating ?? 0),
+    review: r.review || '',
+    createdAt: r.created_at || '',
+  }));
+}
+
+export async function fetchMarketplaceInstalls(): Promise<MarketplaceInstall[] | null> {
+  const data = await getJson<any>('/api/marketplace-hub/installs');
+  if (!data?.installs) return null;
+  return data.installs.map((i: any): MarketplaceInstall => ({
+    installId: i.install_id || '',
+    listingId: i.listing_id || '',
+    kind: i.kind || '',
+    installedName: (i.installed && i.installed.name) || '',
+    createdAt: i.created_at || '',
+  }));
+}
+
+export async function installMarketplaceListing(listingId: string): Promise<boolean> {
+  const data = await postJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}/install`, {});
+  return data !== null;
+}
+
+export async function rateMarketplaceListing(listingId: string, rating: number, review: string): Promise<MarketplaceListing | null> {
+  const data = await postJson<any>(`/api/marketplace-hub/listings/${encodeURIComponent(listingId)}/rate`, { rating, review });
+  if (!data?.listing) return null;
+  return mapMarketplaceListing(data.listing);
+}
+
+export async function publishMarketplaceListing(
+  kind: string, name: string, summary: string, publisher: string,
+): Promise<MarketplaceListing | null> {
+  const data = await postJson<any>('/api/marketplace-hub/listings', {
+    kind, name, summary, publisher, manifest: { name, role: summary },
+  });
+  if (!data) return null;
+  return mapMarketplaceListing(data);
+}
+
+// ---- v190 Enterprise AI OS: Compliance Audit Packages -----------------------
+export interface AuditPackageSummary {
+  packageId: string;
+  title: string;
+  generatedAt: string;
+  governanceEventCount: number;
+  blockedActionCount: number;
+  sensitiveFindingsCount: number;
+  highRiskFindings: number;
+  policyCount: number;
+  contents: string[];
+  disclaimer: string;
+}
+
+export interface AuditSensitiveFinding {
+  findingId: string;
+  label: string;
+  secretsDetected: boolean;
+  secretTypes: string[];
+  piiDetected: boolean;
+  piiTypes: string[];
+  phiDetected: boolean;
+  phiTerms: string[];
+  hipaaWarning: boolean;
+  riskLevel: string;
+  recommendation: string;
+}
+
+export interface AuditPolicy {
+  policyId: string;
+  name: string;
+  category: string;
+  rules: string[];
+  status: string;
+}
+
+export interface AuditChecklist {
+  checklistId: string;
+  title: string;
+  framework: string;
+  items: { item: string; done: boolean }[];
+}
+
+export interface AuditContractReview {
+  reviewId: string;
+  title: string;
+  riskFlags: string[];
+  riskLevel: string;
+}
+
+export interface AuditPackageDetail extends AuditPackageSummary {
+  sensitiveFindings: AuditSensitiveFinding[];
+  policies: AuditPolicy[];
+  checklists: AuditChecklist[];
+  contractReviews: AuditContractReview[];
+}
+
+function mapAuditPackageSummary(p: any): AuditPackageSummary {
+  return {
+    packageId: p.package_id || '',
+    title: p.title || 'Untitled package',
+    generatedAt: p.generated_at || '',
+    governanceEventCount: Number(p.governance_event_count ?? 0),
+    blockedActionCount: Number(p.blocked_action_count ?? 0),
+    sensitiveFindingsCount: Number(p.sensitive_findings_count ?? 0),
+    highRiskFindings: Number(p.high_risk_findings ?? 0),
+    policyCount: Number(p.policy_count ?? 0),
+    contents: Array.isArray(p.contents) ? p.contents.map(String) : [],
+    disclaimer: p.disclaimer || '',
+  };
+}
+
+export async function fetchAuditPackages(): Promise<AuditPackageSummary[] | null> {
+  const data = await getJson<any>('/api/compliance/audit-packages');
+  if (!data?.audit_packages) return null;
+  return data.audit_packages.map(mapAuditPackageSummary);
+}
+
+export async function fetchAuditPackageDetail(packageId: string): Promise<AuditPackageDetail | null> {
+  const data = await getJson<any>(`/api/compliance/audit-packages/${encodeURIComponent(packageId)}`);
+  if (!data) return null;
+  const bundle = data.bundle || {};
+  return {
+    ...mapAuditPackageSummary(data),
+    sensitiveFindings: (Array.isArray(bundle.sensitive_findings) ? bundle.sensitive_findings : []).slice(0, 25).map((f: any): AuditSensitiveFinding => ({
+      findingId: f.finding_id || '',
+      label: f.label || '',
+      secretsDetected: Boolean(f.secrets_detected),
+      secretTypes: Array.isArray(f.secret_types) ? f.secret_types.map(String) : [],
+      piiDetected: Boolean(f.pii_detected),
+      piiTypes: Array.isArray(f.pii_types) ? f.pii_types.map(String) : [],
+      phiDetected: Boolean(f.phi_detected),
+      phiTerms: Array.isArray(f.phi_terms) ? f.phi_terms.map(String) : [],
+      hipaaWarning: Boolean(f.hipaa_warning),
+      riskLevel: f.risk_level || 'low',
+      recommendation: f.recommendation || '',
+    })),
+    policies: (Array.isArray(bundle.policies) ? bundle.policies : []).slice(0, 25).map((p: any): AuditPolicy => ({
+      policyId: p.policy_id || '',
+      name: p.name || '',
+      category: p.category || '',
+      rules: Array.isArray(p.rules) ? p.rules.map(String) : [],
+      status: p.status || 'active',
+    })),
+    checklists: (Array.isArray(bundle.checklists) ? bundle.checklists : []).slice(0, 15).map((c: any): AuditChecklist => ({
+      checklistId: c.checklist_id || '',
+      title: c.title || '',
+      framework: c.framework || '',
+      items: Array.isArray(c.items) ? c.items.map((i: any) => ({ item: String(i.item || ''), done: Boolean(i.done) })) : [],
+    })),
+    contractReviews: (Array.isArray(bundle.contract_reviews) ? bundle.contract_reviews : []).slice(0, 15).map((r: any): AuditContractReview => ({
+      reviewId: r.review_id || '',
+      title: r.title || '',
+      riskFlags: Array.isArray(r.risk_flags) ? r.risk_flags.map(String) : [],
+      riskLevel: r.risk_level || 'low',
+    })),
+  };
+}
+
+export async function createAuditPackage(title: string): Promise<AuditPackageSummary | null> {
+  const data = await postJson<any>('/api/compliance/audit-packages', { title });
+  if (!data) return null;
+  return mapAuditPackageSummary(data);
+}

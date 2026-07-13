@@ -298,6 +298,8 @@ from app.services.multimodal_agent_service import MultimodalAgentService
 from app.services.industry_mode_service import IndustryModeService
 from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
+from app.services.worker_registry_service import WorkerRegistryService
+from app.services.kaggle_worker_service import KaggleWorkerService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
 from app.services.training_lab_service import TrainingLabService
@@ -439,7 +441,7 @@ digital_twin_service = DigitalTwinService(storage, workspace_service, governance
 evaluation_lab_service = EvaluationLabService(storage, governance_service)
 project_manager_service = ProjectManagerService(storage, goal_service, governance_service)
 portfolio_service = PortfolioService(storage, workspace_service, governance_service)
-agent_department_service = AgentDepartmentService(storage, governance_service, permission_service)
+agent_department_service = AgentDepartmentService(storage, governance_service, permission_service, goal_service=goal_service)
 business_operator_service = BusinessOperatorService(storage, governance_service)
 chief_of_staff_service = ChiefOfStaffService(storage, governance_service)
 business_simulator_service = BusinessSimulatorService(storage, governance_service)
@@ -447,6 +449,8 @@ multimodal_agent_service = MultimodalAgentService(storage, governance_service)
 industry_mode_service = IndustryModeService(storage, governance_service)
 agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
+worker_registry_service = WorkerRegistryService(storage, governance_service)
+kaggle_worker_service = KaggleWorkerService(storage, governance_service, worker_registry=worker_registry_service, agent_scheduler=agent_scheduler)
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
@@ -472,6 +476,9 @@ mcp_secret_registry_service = MCPSecretRegistryService(storage, governance_servi
 unified_approvals_service = UnifiedApprovalsService(mcp_execution_service, business_operator_advanced_service)
 health_monitor_service = HealthMonitorService(storage, governance_service)
 usage_ledger_service = UsageLedgerService(storage, governance_service)
+# v300 Digital Departments: wired post-init since UsageLedgerService is
+# constructed after AgentDepartmentService.
+agent_department_service.usage_ledger = usage_ledger_service
 local_retrieval_service = LocalRetrievalService(storage, governance_service)
 eval_harness_service = EvalHarnessService(storage, governance_service)
 playbook_library_service = PlaybookLibraryService(storage, governance_service)
@@ -484,11 +491,11 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
-durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service, self_healing=self_healing_service, eval_harness=eval_harness_service, kaggle_worker=kaggle_worker_service)
 # v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402
-scheduler_tick_worker = SchedulerTickWorker(scheduled_tasks_service)
+scheduler_tick_worker = SchedulerTickWorker(scheduled_tasks_service, agent_scheduler=agent_scheduler, kaggle_worker=kaggle_worker_service)
 # v120: the event bus dispatches subscription actions through the two engines
 # above; wire it back into them as an optional collaborator (post-init, since
 # they were constructed first) so their own state transitions can emit events.
@@ -522,6 +529,9 @@ from app.services.memory_service import MemoryService  # noqa: E402
 memory_service = MemoryService(storage, governance_service)
 # Memory v2 powers adaptive-learning recall (semantic when on pgvector).
 adaptive_learning_service = AdaptiveLearningService(storage, governance_service, memory=memory_service)
+# Wired post-init since AdaptiveLearningService is constructed after
+# SchedulerTickWorker.
+scheduler_tick_worker.adaptive_learning = adaptive_learning_service
 # v140 Workspace Brain: wire Memory v2 into BOTH WorkspaceService instances now
 # that it exists — the routes.py singleton (used by /api/workspaces/*) and the
 # one MasterOrchestratorAgent built internally (used by the live /api/run
@@ -544,6 +554,13 @@ from app.services.agent_registry_service import AgentRegistryService  # noqa: E4
 agent_registry_service = AgentRegistryService(storage, governance_service)
 from app.services.agent_governance_service import AgentGovernanceService  # noqa: E402
 agent_governance_service = AgentGovernanceService(storage, governance_service, agent_registry_service)
+# Agent workforce: wire real execution + real policy enforcement into the
+# previously mock-only agent-to-agent handoff (registry -> real capability
+# lookup, custom_agent_service -> real execution, agent_governance -> the
+# policy decision that was computed but never checked before this).
+agent_network_service.agent_registry = agent_registry_service
+agent_network_service.custom_agent_service = custom_agent_service
+agent_network_service.agent_governance = agent_governance_service
 home_dashboard_service = HomeDashboardService(storage, governance_service)
 global_search_service = GlobalSearchService(storage, governance_service)
 activity_timeline_service = ActivityTimelineService(storage, governance_service)
@@ -557,6 +574,7 @@ provider_control_service = ProviderControlService(storage, governance_service, l
 # observability into real call success/latency).
 llm_router.provider_control = provider_control_service
 llm_router.storage = storage
+llm_router.usage_ledger = usage_ledger_service
 notifications_inbox_service = NotificationsInboxService(storage, governance_service, health_monitor_service, provider_control_service)
 workspace_os_service = WorkspaceOSService(storage, governance_service, activity_timeline_service)
 smart_context_service = SmartContextService(storage, governance_service)
@@ -606,6 +624,140 @@ codex_worker_service = CodexWorkerService(
     linear_orchestration=linear_orchestration,
 )
 linear_poll_worker = LinearPollWorker(linear_service, linear_orchestration, codex_worker=codex_worker_service)
+
+# ----------------------------------------------------------------------
+# Capability Directory -- the "feature/control center" the v200 strategy doc's
+# Current Execution Priority #2 asks for. Built last, since it references
+# ~20 already-constructed services' own real status()-style methods. Every
+# classification below reads a real field this session already verified by
+# hand (never a hardcoded verdict) -- see capability_directory_service.py.
+# ----------------------------------------------------------------------
+from app.services.capability_directory_service import (  # noqa: E402
+    CapabilityDirectoryService,
+    classify_available,
+    classify_key_gated_per_call,
+    classify_mode_string,
+    classify_optin_global,
+    classify_static,
+    STATUS_LOCAL,
+    STATUS_MOCK,
+    STATUS_NEEDS_CONFIG,
+    STATUS_REAL,
+)
+
+
+def _classify_llm_router() -> dict:
+    s = llm_router.status().model_dump()
+    if s.get("llm_mode") == "mock":
+        return {"status": STATUS_MOCK, "detail": "LLM_MODE=mock"}
+    if s.get("real_mode_ready"):
+        return {"status": STATUS_REAL, "detail": f"default_provider={s.get('default_provider')}"}
+    return {"status": STATUS_NEEDS_CONFIG, "detail": "LLM_MODE=real but no provider API key is configured"}
+
+
+def _classify_code_writer() -> dict:
+    s = code_writer_service.status()
+    if not s.get("writes_enabled"):
+        return {"status": STATUS_MOCK, "detail": "CODE_WRITES_ENABLED=false"}
+    if not s.get("allowed_repos"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "writes enabled but CODE_WRITER_ALLOWED_REPOS is empty"}
+    return {"status": STATUS_REAL, "detail": f"{len(s['allowed_repos'])} repo(s) allow-listed"}
+
+
+def _classify_github_connector() -> dict:
+    s = github_connector_service.status()
+    if not s.get("token_configured"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "GITHUB_TOKEN not set"}
+    if not s.get("writes_enabled"):
+        return {"status": STATUS_MOCK, "detail": "reads are real; writes disabled (GITHUB_WRITES_ENABLED=false)"}
+    return {"status": STATUS_REAL, "detail": "reads and writes both real"}
+
+
+def _classify_mcp_github_adapter() -> dict:
+    s = mcp_execution_service.github_adapter.status()
+    if not s.get("token_configured"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "GITHUB_TOKEN not set"}
+    if not s.get("real_github_enabled"):
+        return {"status": STATUS_MOCK, "detail": "MCP_REAL_GITHUB not enabled"}
+    return {"status": STATUS_REAL, "detail": "real read-only GitHub calls via MCP execution"}
+
+
+def _classify_chief_of_staff_github() -> dict:
+    s = chief_of_staff_service.status()
+    if not s.get("github_repos_configured"):
+        return {"status": STATUS_NEEDS_CONFIG, "detail": "CHIEF_OF_STAFF_GITHUB_REPOS is empty"}
+    return {"status": STATUS_REAL, "detail": f"{len(s['github_repos_configured'])} repo(s) configured"}
+
+
+CAPABILITY_REGISTRY: list[dict] = [
+    {"name": "LLM Router (multi-provider text generation)", "category": "Model & Vision", "route": "/api/providers",
+     "safety_level": "model_call", "tool_used": None, "classify": _classify_llm_router},
+    {"name": "Design Agent (UI/UX vision analysis)", "category": "Model & Vision", "route": "/api/design-agent",
+     "safety_level": "model_call", "tool_used": "DesignAgentService",
+     "classify": lambda: classify_key_gated_per_call(design_agent_service.status(), "key_configured")},
+    {"name": "Multimodal Agent (screenshots/diagrams/documents)", "category": "Model & Vision", "route": "/api/multimodal",
+     "safety_level": "model_call", "tool_used": "Multi-Modal Agent",
+     "classify": lambda: classify_key_gated_per_call(multimodal_agent_service.status(), "key_configured")},
+    {"name": "Image Generation", "category": "Model & Vision", "route": "/api/images",
+     "safety_level": "model_call", "tool_used": None,
+     "classify": lambda: classify_mode_string(image_service.status(), "image_mode", {"real"}, "openai_configured")},
+    {"name": "Transcription", "category": "Model & Vision", "route": "/api/recordings",
+     "safety_level": "model_call", "tool_used": None,
+     "classify": lambda: classify_mode_string(recording_service.transcription.status(), "transcription_mode", {"openai"}, "openai_configured")},
+    {"name": "Code Writer (real commits + PRs)", "category": "Code & Git", "route": "/api/code-writer",
+     "safety_level": "approval_gated_write", "tool_used": None, "classify": _classify_code_writer},
+    {"name": "GitHub Connector", "category": "Code & Git", "route": "/api/github",
+     "safety_level": "approval_gated_write", "tool_used": None, "classify": _classify_github_connector},
+    {"name": "Git Reader (read-only local git)", "category": "Code & Git", "route": "/api/git",
+     "safety_level": "read_only", "tool_used": None,
+     "classify": lambda: classify_available(git_reader_service.status(), real_status=STATUS_LOCAL)},
+    {"name": "Git Discovery (local repo metadata scan)", "category": "Code & Git", "route": "/api/git-intel",
+     "safety_level": "read_only", "tool_used": None,
+     "classify": lambda: classify_static(STATUS_LOCAL, f"{git_discovery_service.status().get('indexed_repos', 0)} real repo(s) indexed")},
+    {"name": "Repo Finder (GitHub search)", "category": "Code & Git", "route": "/api/repo-finder",
+     "safety_level": "read_only", "tool_used": None, "classify": lambda: classify_available(repo_finder_service.status())},
+    {"name": "Quality Gate (real pytest/npm build)", "category": "Code & Git", "route": "/api/durable-workflows",
+     "safety_level": "approval_gated_write", "tool_used": "Test Quality Service",
+     "classify": lambda: classify_static(STATUS_LOCAL, "runs real pytest/npm-build via SafeCommandRunner once a run_quality_checks step is approved")},
+    {"name": "Memory v2 (semantic recall)", "category": "Memory & Learning", "route": "/api/memory-v2",
+     "safety_level": "local_write", "tool_used": None,
+     "classify": lambda: classify_static(STATUS_REAL, "pgvector mode") if memory_service.status().get("mode") == "pgvector"
+     else classify_static(STATUS_LOCAL, "keyword fallback mode (no Postgres)")},
+    {"name": "Adaptive Learning (retrieval memory + few-shot)", "category": "Memory & Learning", "route": "/api/adaptive-learning",
+     "safety_level": "local_write", "tool_used": None,
+     "classify": lambda: classify_static(
+         STATUS_LOCAL,
+         "local retrieval only; never trains a model — auto-learns every scheduler tick from repo "
+         "searches/agent examples/workflow effects and ingests completed Kaggle GPU job output "
+         f"(recall_engine={adaptive_learning_service.status().get('recall_engine')}, "
+         f"last_tick_ingested={(scheduler_tick_worker.last_learn_result or {}).get('ingested', 0)})",
+     )},
+    {"name": "Slack Notifications", "category": "Integrations", "route": "/api/slack",
+     "safety_level": "opt_in_call", "tool_used": None,
+     "classify": lambda: classify_optin_global(slack_notifications.status(), "enabled", "configured")},
+    {"name": "Notion Export", "category": "Integrations", "route": "/api/notion",
+     "safety_level": "opt_in_call", "tool_used": None,
+     "classify": lambda: classify_optin_global(notion_exports.status(), "enabled", "configured")},
+    {"name": "Linear Sync", "category": "Integrations", "route": "/api/linear",
+     "safety_level": "opt_in_call", "tool_used": None,
+     "classify": lambda: classify_optin_global(linear_poll_worker.status(), "enabled", "configured")},
+    {"name": "Voice Console", "category": "Integrations", "route": "/api/voice-console",
+     "safety_level": "read_only", "tool_used": None, "classify": lambda: classify_static(STATUS_LOCAL, "runs entirely in the browser; nothing recorded or uploaded")},
+    {"name": "MCP Read-only Execution", "category": "MCP & Automation", "route": "/api/mcp/executions",
+     "safety_level": "read_only", "tool_used": None,
+     "classify": lambda: classify_optin_global(mcp_execution_service.readonly_adapter.status(), "real_readonly_enabled")},
+    {"name": "MCP GitHub Adapter", "category": "MCP & Automation", "route": "/api/mcp/executions",
+     "safety_level": "read_only", "tool_used": None, "classify": _classify_mcp_github_adapter},
+    {"name": "Scheduler Tick Worker", "category": "MCP & Automation", "route": "/api/scheduled-tasks",
+     "safety_level": "local_write", "tool_used": None,
+     "classify": lambda: classify_optin_global(scheduler_tick_worker.status(), "enabled")},
+    {"name": "Kaggle GPU Worker (real kernel submission)", "category": "MCP & Automation", "route": "/api/worker-registry",
+     "safety_level": "approval_gated_write", "tool_used": "KaggleWorkerService",
+     "classify": lambda: classify_optin_global(kaggle_worker_service.status(), "enabled")},
+    {"name": "Chief of Staff (real GitHub signal)", "category": "Personal & Org", "route": "/api/chief-of-staff",
+     "safety_level": "read_only", "tool_used": None, "classify": _classify_chief_of_staff_github},
+]
+capability_directory_service = CapabilityDirectoryService(storage, governance_service, CAPABILITY_REGISTRY)
 
 
 def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> list[dict]:
@@ -1268,6 +1420,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **scheduled_tasks_service.analytics_summary(),
         **data_export_service.analytics_summary(),
         **evolveagent_os2_service.analytics_summary(),
+        **capability_directory_service.analytics_summary(),
         **master_agent_service.analytics_summary(),
         **git_discovery_service.analytics_summary(),
         **agent_profile_service.analytics_summary(),
@@ -1315,6 +1468,9 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **qa_center_service.analytics_summary(),
         **release_manager_service.analytics_summary(),
         **product_launch_service.analytics_summary(),
+        **worker_registry_service.analytics_summary(),
+        **kaggle_worker_service.analytics_summary(),
+        **self_healing_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 

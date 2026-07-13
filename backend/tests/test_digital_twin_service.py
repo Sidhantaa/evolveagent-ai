@@ -2,7 +2,10 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
+from app.agents.master_agent import MasterOrchestratorAgent
+from app.agents.memory_agent import MemoryAgent
 from app.main import app
+from app.models.request_models import RunRequest
 from app.services.digital_twin_service import DigitalTwinService
 from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
@@ -76,6 +79,46 @@ def test_digital_twin_manual_override_is_persisted(tmp_path):
     assert loaded["manual_overrides"]["notes"] == "Prefer implementation steps."
 
 
+# ------------------------------------------------------------------
+# get_profile() was cache-first forever: once a profile existed, new
+# preferences/feedback/run data written by the rest of the app after that
+# point was never reflected, since nothing besides the manual /refresh route
+# ever called refresh_profile() again. Bounded staleness check closes this
+# without adding a write+governance-log entry on every single consuming run.
+# ------------------------------------------------------------------
+def test_get_profile_returns_cached_profile_when_fresh(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    workspace = MagicMock()
+    workspace.resolve_workspace_id.return_value = "workspace-1"
+    service = DigitalTwinService(storage, workspace, GovernanceService(storage))
+
+    first = service.refresh_profile("workspace-1")
+    second = service.get_profile("workspace-1")
+    assert second["profile_id"] == first["profile_id"]
+    assert second["updated_at"] == first["updated_at"]  # not re-refreshed
+
+
+def test_get_profile_auto_refreshes_a_stale_profile(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    workspace = MagicMock()
+    workspace.resolve_workspace_id.return_value = "workspace-1"
+    service = DigitalTwinService(storage, workspace, GovernanceService(storage))
+
+    first = service.refresh_profile("workspace-1")
+    profiles = storage.read_list(service.filename)
+    profiles[0]["updated_at"] = "2020-01-01T00:00:00+00:00"  # force stale
+    storage.write_list(service.filename, profiles)
+
+    storage.write_list(
+        "user_preferences.json",
+        [{"workspace_id": "workspace-1", "preference": "detailed", "score": 5, "evidence": []}],
+    )
+    refreshed = service.get_profile("workspace-1")
+    assert refreshed["profile_id"] == first["profile_id"]  # same identity
+    assert refreshed["updated_at"] != "2020-01-01T00:00:00+00:00"
+    assert refreshed["style_profile"]["detail_level"] == "detailed"  # picked up new data
+
+
 def test_digital_twin_api_profile_refresh_and_update():
     workspace_response = client.post(
         "/api/workspaces",
@@ -147,3 +190,119 @@ def test_digital_twin_export_reset_and_delete_privacy_controls():
     # Deleting again is a no-op (nothing left to remove).
     second_delete = client.delete(f"/api/digital-twin/profile?workspace_id={workspace_id}")
     assert second_delete.json()["deleted"] is False
+
+
+# ------------------------------------------------------------------
+# MasterOrchestratorAgent wiring: the real derived style profile (previously
+# never consulted by any agent run) is now folded into shared_context on
+# every run -- read-only, best-effort, never blocks or fails a run.
+# ------------------------------------------------------------------
+def test_master_agent_run_consults_and_creates_a_real_digital_twin_profile(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    workspace_id = agent.workspace.resolve_workspace_id(None)
+
+    # Seed a strong, unambiguous preference signal BEFORE the run.
+    storage.write_list("user_preferences.json", [
+        {"workspace_id": workspace_id, "preference": "concise", "score": 5, "evidence": ["short answers preferred"]},
+    ])
+
+    # No profile exists yet -- get_profile() during run() must lazily create one.
+    assert storage.read_list("digital_twin_profiles.json") == []
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+
+    profiles = storage.read_list("digital_twin_profiles.json")
+    assert len(profiles) == 1
+    assert profiles[0]["workspace_id"] == workspace_id
+    assert profiles[0]["style_profile"]["detail_level"] == "concise"
+
+
+def test_master_agent_run_degrades_safely_with_no_preference_history(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+    # A default (balanced/adaptive/mixed) profile is still created -- the run
+    # never fails or is left without a profile just because there's no history.
+    assert len(storage.read_list("digital_twin_profiles.json")) == 1
+
+
+def test_master_agent_run_survives_a_broken_digital_twin_collaborator(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("digital twin storage unavailable")
+
+    monkeypatch.setattr(agent.digital_twin, "get_profile", _boom)
+    response = agent.run(RunRequest(user_input="Explain how EvolveAgent AI works."))
+    assert response.run_id
+    assert isinstance(response.final_output, str) and response.final_output
+
+
+def test_master_agent_specialist_loop_forwards_resolved_workspace_id_to_llm_router(tmp_path, monkeypatch):
+    """workspace_id was already resolved and used for memory/digital-twin/tool
+    routing on every real run, but never reached LLMRouter's real per-call
+    cost recording (PR #234) -- the main specialist loop (4 real agents:
+    Research/Logic/Risk/Strategy) is the highest-value real call site fixed
+    here. Other agent-output methods elsewhere in run() (writer, judge,
+    evolution, etc.) are a deliberately separate, out-of-scope follow-up --
+    this test checks the specialist loop specifically, not every LLM call in
+    a full run."""
+    from app.services.llm_router import LLMResult, llm_router
+
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    workspace = agent.workspace.create_workspace({"name": "Cost Tracking Test Workspace"})
+    workspace_id = workspace["workspace_id"]
+    specialist_names = {s.name for s in agent.specialists}
+
+    generate_spy = MagicMock(return_value=LLMResult(
+        output="ok", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate", generate_spy)
+    agent.run(RunRequest(user_input="Explain how EvolveAgent AI works.", workspace_id=workspace_id))
+
+    specialist_calls = [c for c in generate_spy.call_args_list if c.args and c.args[0] in specialist_names]
+    assert len(specialist_calls) == len(agent.specialists)
+    assert all(c.kwargs.get("workspace_id") == workspace_id for c in specialist_calls)
+
+
+def test_run_consensus_candidates_forwards_workspace_id(tmp_path, monkeypatch):
+    """Round 13: the remaining real LLM call sites in master_agent.py --
+    consensus candidates (Deep Mode) and the risk/writing retry path -- had
+    the same gap as the main specialist loop, and workspace_id was already in
+    scope at both call sites (no new parameter plumbing needed)."""
+    from app.services.llm_router import LLMResult, llm_router
+
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    generate_for_provider_spy = MagicMock(return_value=LLMResult(
+        output="candidate answer", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate_for_provider", generate_for_provider_spy)
+    agent.run_consensus_candidates("do a task", "some context", workspace_id="workspace-consensus")
+    assert generate_for_provider_spy.called
+    assert all(c.kwargs.get("workspace_id") == "workspace-consensus" for c in generate_for_provider_spy.call_args_list)
+
+
+def test_risk_retry_forwards_workspace_id_to_both_retried_agents(tmp_path, monkeypatch):
+    from app.models.response_models import AgentOutput
+    from app.services.llm_router import LLMResult, llm_router
+
+    storage = StorageService(data_dir=str(tmp_path))
+    agent = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    generate_spy = MagicMock(return_value=LLMResult(
+        output="retry output", provider="mock", model="mock-agent-model", latency_ms=1, success=True,
+    ))
+    monkeypatch.setattr(llm_router, "generate", generate_spy)
+    outputs = [AgentOutput(agent_name="Research Agent", provider="mock", model="m", success=True, output="finding")]
+    agent.risk_retry(
+        "do a task", "some context", outputs, previous_score=40,
+        writing_provider="mock", workspace_id="workspace-retry",
+    )
+    assert generate_spy.called
+    assert all(c.kwargs.get("workspace_id") == "workspace-retry" for c in generate_spy.call_args_list)

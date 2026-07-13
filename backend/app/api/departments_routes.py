@@ -7,8 +7,10 @@ from app.api.routes import (
     agent_department_service,
 )
 from app.models.request_models import (
+    DepartmentBudgetRequest,
     DepartmentCollaborationRequest,
     DepartmentCreateRequest,
+    DepartmentGoalRequest,
     DepartmentRunRequest,
     DepartmentUpdateRequest,
 )
@@ -71,6 +73,11 @@ def create_department_collaboration(request: DepartmentCollaborationRequest) -> 
     )
 
 
+@router.get("/departments/overview")
+def get_department_overview() -> dict:
+    return agent_department_service.overview()
+
+
 @router.get("/departments/{department_id}")
 def get_department(department_id: str) -> dict:
     department = agent_department_service.get_department(department_id)
@@ -99,5 +106,38 @@ def archive_department(department_id: str) -> dict:
 def create_department_run(department_id: str, request: DepartmentRunRequest) -> dict:
     try:
         return agent_department_service.plan_run(department_id, request.task)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+# ----------------------------------------------------------------------
+# v300 Digital Departments: real goals, real budgets, measurable outcomes
+# ----------------------------------------------------------------------
+@router.get("/departments/{department_id}/goals")
+def list_department_goals(department_id: str) -> dict:
+    goals = agent_department_service.list_department_goals(department_id)
+    return {"goals": goals, "count": len(goals)}
+
+
+@router.post("/departments/{department_id}/goals")
+def create_department_goal(department_id: str, request: DepartmentGoalRequest) -> dict:
+    try:
+        return agent_department_service.create_department_goal(department_id, request.title, request.description)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/departments/{department_id}/budget")
+def set_department_budget(department_id: str, request: DepartmentBudgetRequest) -> dict:
+    try:
+        return agent_department_service.set_department_budget(department_id, request.monthly_limit)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/departments/{department_id}/scorecard")
+def get_department_scorecard(department_id: str) -> dict:
+    try:
+        return agent_department_service.department_scorecard(department_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

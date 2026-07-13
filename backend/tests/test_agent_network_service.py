@@ -1,8 +1,24 @@
+import uuid
+
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 client = TestClient(app)
+
+
+def _create_custom_agent(**overrides) -> dict:
+    tag = uuid.uuid4().hex[:8]
+    payload = {
+        "name": overrides.get("name", f"Workforce Test Agent {tag}"),
+        "role": "Answer questions about testing.",
+        "prompt": "You are a test agent. Reply with a short confirmation.",
+        "tools_allowed": overrides.get("tools_allowed", [f"capability-{tag}"]),
+        "approval_level": overrides.get("approval_level", "read_only"),
+    }
+    response = client.post("/api/agents/custom", json=payload)
+    assert response.status_code == 200
+    return response.json()
 
 
 def _create_contract(**overrides) -> dict:
@@ -99,6 +115,99 @@ def test_governance_event_written():
     assert "agent_network_contract_created" in actions
 
 
+# ------------------------------------------------------------------
+# Agent workforce: real execution + real governance enforcement, previously
+# both mock-only (handoff) or computed-but-never-checked (governance policy).
+# ------------------------------------------------------------------
+def test_execute_true_without_target_falls_back_to_mock():
+    contract = _create_contract()
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True},
+    ).json()
+    assert handoff["executed"] is False
+    assert "no target_registry_id or capability" in handoff["result"]["note"].lower()
+
+
+def test_execute_declines_when_agent_requires_approval_and_not_approved():
+    agent = _create_custom_agent()
+    registry_id = f"custom:{agent['agent_id']}"
+    contract = _create_contract(task="Do the test task")
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "target_registry_id": registry_id},
+    ).json()
+    assert handoff["executed"] is False
+    assert "requires approval" in handoff["result"]["note"].lower()
+
+
+def test_execute_real_dispatches_to_custom_agent_when_approved():
+    agent = _create_custom_agent()
+    registry_id = f"custom:{agent['agent_id']}"
+    contract = _create_contract(task="Do the test task")
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "target_registry_id": registry_id, "approved": True},
+    ).json()
+    assert handoff["executed"] is True
+    assert handoff["result"]["produced_by"] == agent["name"]
+    assert handoff["result"]["output"]
+    assert "real execution" in handoff["result"]["note"].lower()
+
+
+def test_execute_resolves_target_by_capability():
+    agent = _create_custom_agent()
+    capability = agent["tools_allowed"][0]
+    contract = _create_contract(task="Do the capability-routed task")
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "capability": capability, "approved": True},
+    ).json()
+    assert handoff["executed"] is True
+    assert handoff["result"]["produced_by"] == agent["name"]
+
+
+def test_execute_unknown_target_registry_id_declines_safely():
+    contract = _create_contract()
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "target_registry_id": "custom:does-not-exist", "approved": True},
+    ).json()
+    assert handoff["executed"] is False
+    assert "not found" in handoff["result"]["note"].lower()
+
+
+def test_execute_blocked_by_deny_policy_even_when_approved():
+    tag = uuid.uuid4().hex[:8]
+    agent = _create_custom_agent(name=f"Policy Denied Agent {tag}")
+    registry_id = f"custom:{agent['agent_id']}"
+    policy = client.post("/api/governance/agent-policies", json={
+        "name": f"Deny test {tag}",
+        "source": "custom_agents",
+        "name_contains": f"policy denied agent {tag}".lower(),
+    }).json()
+    assert policy["effect"] == "deny"
+    contract = _create_contract(task="Should be blocked")
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "target_registry_id": registry_id, "approved": True},
+    ).json()
+    assert handoff["executed"] is False
+    assert "blocked by policy" in handoff["result"]["note"].lower()
+
+
+def test_execute_false_with_target_still_mocks():
+    agent = _create_custom_agent()
+    registry_id = f"custom:{agent['agent_id']}"
+    contract = _create_contract()
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"target_registry_id": registry_id},  # execute defaults to False
+    ).json()
+    assert handoff["executed"] is False
+    assert "mock" in handoff["result"]["note"].lower()
+
+
 def test_existing_endpoints_still_pass():
     response = client.post("/api/run", json={"user_input": "Explain how EvolveAgent AI works."})
     assert response.status_code == 200
@@ -106,3 +215,35 @@ def test_existing_endpoints_still_pass():
     assert client.get("/api/industry-modes/dashboard").status_code == 200
     assert client.get("/api/multimodal/dashboard").status_code == 200
     assert client.get("/api/business/dashboard").status_code == 200
+
+
+# ------------------------------------------------------------------
+# Verification layer: verify_handoff now includes a real execution-outcome
+# check (AgentOutput.success, not a heuristic) whenever the handoff actually
+# dispatched to CustomAgentService.run() -- previously it always used only the
+# keyword-overlap heuristic, even for handoffs that had a real success signal.
+# ------------------------------------------------------------------
+def test_verify_handoff_includes_real_execution_check_when_executed():
+    agent = _create_custom_agent()
+    registry_id = f"custom:{agent['agent_id']}"
+    contract = _create_contract(task="Do the verified test task")
+    handoff = client.post(
+        f"/api/agent-network/contracts/{contract['contract_id']}/handoff",
+        json={"execute": True, "target_registry_id": registry_id, "approved": True},
+    ).json()
+    assert handoff["executed"] is True
+    verified = client.post(f"/api/agent-network/handoffs/{handoff['handoff_id']}/verify").json()
+    checks = {c["check"]: c["passed"] for c in verified["verification"]["checks"]}
+    assert "real_execution_succeeded" in checks
+    assert checks["real_execution_succeeded"] is True
+    assert "not heuristic" in verified["verification"]["note"].lower()
+
+
+def test_verify_handoff_mock_path_has_no_real_execution_check():
+    contract = _create_contract(task="Summarize findings", expected_output="findings summary")
+    handoff = client.post(f"/api/agent-network/contracts/{contract['contract_id']}/handoff", json={}).json()
+    assert handoff["executed"] is False
+    verified = client.post(f"/api/agent-network/handoffs/{handoff['handoff_id']}/verify").json()
+    checks = {c["check"] for c in verified["verification"]["checks"]}
+    assert "real_execution_succeeded" not in checks
+    assert "heuristic only" in verified["verification"]["note"].lower()

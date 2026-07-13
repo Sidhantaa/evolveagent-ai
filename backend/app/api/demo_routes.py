@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 # ----------------------------------------------------------------------
-# v66.0 Demo Mode / Portfolio Mode 2.0 — demo-safe, impressive, resettable.
+# Demo Mode / Portfolio Mode — demo-safe, impressive, resettable.
 # ----------------------------------------------------------------------
 @router.get("/demo/script")
 def demo_script() -> dict:

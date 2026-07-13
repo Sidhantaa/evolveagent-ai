@@ -24,12 +24,28 @@ class DigitalTwinService:
         self.workspace_service = workspace_service
         self.governance = governance_service
 
+    # Profiles auto-refresh at most this often when consumed via get_profile()
+    # -- bounds the extra write + governance log that refresh_profile() causes
+    # to once per window per workspace, rather than on every single real
+    # orchestration run that consults this profile.
+    _STALE_AFTER_SECONDS = 3600
+
     def get_profile(self, workspace_id: str | None = None) -> dict[str, Any]:
         resolved = self.workspace_service.resolve_workspace_id(workspace_id)
         profile = self._profile_for(resolved)
-        if profile:
+        if profile and not self._is_stale(profile):
             return profile
         return self.refresh_profile(resolved)
+
+    def _is_stale(self, profile: dict[str, Any]) -> bool:
+        updated_at = profile.get("updated_at")
+        if not updated_at:
+            return True
+        try:
+            age = (datetime.now(UTC) - datetime.fromisoformat(updated_at)).total_seconds()
+        except ValueError:
+            return True
+        return age > self._STALE_AFTER_SECONDS
 
     def refresh_profile(self, workspace_id: str | None = None) -> dict[str, Any]:
         resolved = self.workspace_service.resolve_workspace_id(workspace_id)

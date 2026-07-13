@@ -3,13 +3,47 @@ from uuid import uuid4
 
 from app.agents.base_agent import BaseAgent
 from app.models.response_models import AgentOutput, CustomAgentResult
+from app.services.llm_router import llm_router
 from app.services.storage_service import StorageService
+
+# model_preference (validated by Create/UpdateCustomAgentRequest as one of
+# default|openai|claude|gemini|mock) -> real LLMRouter provider id. "claude"
+# is the only one that needs a name translation; the rest already match.
+_MODEL_PREFERENCE_PROVIDER = {"openai": "openai", "claude": "anthropic", "gemini": "gemini", "mock": "mock"}
 
 
 class RuntimeCustomAgent(BaseAgent):
     def __init__(self, config: dict):
         self.name = config.get("name", "Custom Agent")
         self.system_prompt = config.get("prompt") or config.get("role") or "You are a careful custom specialist agent."
+        # model_preference was validated, persisted, and API-exposed but never
+        # actually honored at execution time -- a custom agent explicitly
+        # pinned to (e.g.) "gemini" for cost/privacy reasons silently ran on
+        # whatever the default agent-name routing picked instead. "default"
+        # (or anything unrecognized) keeps the original agent-name routing
+        # unchanged, matching prior behavior exactly.
+        self.model_preference = _MODEL_PREFERENCE_PROVIDER.get(str(config.get("model_preference") or "").lower())
+        # A custom agent already carries its own real workspace_id (set at
+        # creation) -- pass it through to real per-call cost recording
+        # (PR #234), same as the main specialist loop now does.
+        self.workspace_id = config.get("workspace_id")
+
+    def run_with_metadata(self, user_input: str, context: str = "", avoid_provider: str | None = None) -> AgentOutput:
+        if self.model_preference is None:
+            return super().run_with_metadata(user_input, context, avoid_provider=avoid_provider, workspace_id=self.workspace_id)
+        prompt = f"User task:\n{user_input}\n\nShared context:\n{context}".strip()
+        model = llm_router.model_for_provider(self.model_preference)
+        result = llm_router.generate_for_provider(self.model_preference, model, self.system_prompt, prompt, workspace_id=self.workspace_id)
+        return AgentOutput(
+            agent_name=self.name,
+            provider=result.provider,
+            model=result.model,
+            latency_ms=result.latency_ms,
+            success=result.success,
+            fallback_used=result.fallback_used,
+            error=result.error,
+            output=result.output,
+        )
 
 
 class CustomAgentService:

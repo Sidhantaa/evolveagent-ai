@@ -75,7 +75,7 @@ class LLMRouter:
     _calls_file = "llm_router_calls.json"
     _MAX_CALL_RECORDS = 500
 
-    def __init__(self):
+    def __init__(self, usage_ledger=None):
         self.providers = {
             "openai": OpenAIProvider(),
             "anthropic": AnthropicProvider(),
@@ -85,6 +85,7 @@ class LLMRouter:
         }
         self.storage = None
         self.provider_control = None
+        self.usage_ledger = usage_ledger
 
     def generate(
         self,
@@ -94,15 +95,23 @@ class LLMRouter:
         avoid_provider: str | None = None,
         task_type: str | None = None,
         quality: str = "balanced",
+        workspace_id: str | None = None,
     ) -> LLMResult:
         route = self.route_for_agent(agent_name, avoid_provider=avoid_provider, task_type=task_type, quality=quality)
-        return self.generate_with_route(route, system_prompt, user_prompt, task_type=task_type)
+        return self.generate_with_route(route, system_prompt, user_prompt, task_type=task_type, workspace_id=workspace_id)
 
-    def generate_for_provider(self, provider: str, model: str, system_prompt: str, user_prompt: str) -> LLMResult:
-        return self.generate_with_route(RouteChoice(provider, model), system_prompt, user_prompt)
+    def generate_for_provider(
+        self, provider: str, model: str, system_prompt: str, user_prompt: str, workspace_id: str | None = None,
+    ) -> LLMResult:
+        return self.generate_with_route(RouteChoice(provider, model), system_prompt, user_prompt, workspace_id=workspace_id)
 
     def generate_with_route(
-        self, route: RouteChoice, system_prompt: str, user_prompt: str, task_type: str | None = None,
+        self,
+        route: RouteChoice,
+        system_prompt: str,
+        user_prompt: str,
+        task_type: str | None = None,
+        workspace_id: str | None = None,
     ) -> LLMResult:
         attempts = [route, *self.fallback_routes(route.provider)]
         last_error: str | None = None
@@ -119,7 +128,7 @@ class LLMRouter:
                 output = self.providers[attempt.provider].generate(system_prompt, user_prompt, attempt.model)
                 latency_ms = int((perf_counter() - started) * 1000)
                 self._record_call(attempt.provider, attempt.model, True, latency_ms, task_type)
-                return LLMResult(
+                result = LLMResult(
                     output=output,
                     provider=attempt.provider,
                     model=attempt.model,
@@ -128,6 +137,8 @@ class LLMRouter:
                     fallback_used=fallback_used,
                     error=last_error,
                 )
+                self._record_usage(result, workspace_id)
+                return result
             except Exception as exc:
                 latency_ms = int((perf_counter() - started) * 1000)
                 self._record_call(attempt.provider, attempt.model, False, latency_ms, task_type)
@@ -138,7 +149,7 @@ class LLMRouter:
         output = self.providers["mock"].generate(system_prompt, user_prompt, "mock-agent-model")
         latency_ms = int((perf_counter() - started) * 1000)
         self._record_call("mock", "mock-agent-model", True, latency_ms, task_type)
-        return LLMResult(
+        result = LLMResult(
             output=output,
             provider="mock",
             model="mock-agent-model",
@@ -147,6 +158,28 @@ class LLMRouter:
             fallback_used=True,
             error=last_error,
         )
+        self._record_usage(result, workspace_id)
+        return result
+
+    def _record_usage(self, result: LLMResult, workspace_id: str | None) -> None:
+        """Best-effort cost visibility belongs beside provider execution.
+
+        The usage ledger is a planning estimate only; recording it must never
+        change model routing, fallback behavior, or the final model response.
+        """
+        if self.usage_ledger is None:
+            return
+        try:
+            self.usage_ledger.record_usage(
+                {
+                    "workspace_id": workspace_id,
+                    "capability": "text",
+                    "units": 1,
+                    "mode": "mock" if result.provider == "mock" else "real",
+                }
+            )
+        except Exception:
+            pass
 
     def route_for_agent(
         self,

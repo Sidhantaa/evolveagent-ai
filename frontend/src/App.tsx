@@ -26,6 +26,8 @@ import { DesignSystemPage } from './pages/DesignSystemPage';
 import { CommandCenterPage } from './pages/CommandCenterPage';
 import { ChiefOfStaffPage } from './pages/ChiefOfStaffPage';
 import { InstructionsPage } from './pages/InstructionsPage';
+import { MarketplaceHubPage } from './pages/MarketplaceHubPage';
+import { CompliancePage } from './pages/CompliancePage';
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -56,6 +58,8 @@ const MainContent: React.FC = () => {
           {activePage === 'design-system' && <DesignSystemPage />}
           {activePage === 'command-center' && <CommandCenterPage />}
           {activePage === 'chief-of-staff' && <ChiefOfStaffPage />}
+          {activePage === 'marketplace-hub' && <MarketplaceHubPage />}
+          {activePage === 'compliance' && <CompliancePage />}
         </main>
       </div>
 

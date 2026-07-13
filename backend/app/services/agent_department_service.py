@@ -117,10 +117,23 @@ class AgentDepartmentService:
         storage: StorageService,
         governance_service: GovernanceService,
         permission_service: PermissionService,
+        goal_service=None,
+        usage_ledger=None,
     ):
         self.storage = storage
         self.governance = governance_service
         self.permission = permission_service
+        # v300 Digital Departments: optional GoalService collaborator. Each
+        # department's goals are real GoalService records scoped by a synthetic
+        # workspace_id ("dept:<department_id>") -- reuses the already-real goal
+        # storage/tracking instead of inventing a parallel goal system.
+        self.goal_service = goal_service
+        # v300 Digital Departments: optional UsageLedgerService collaborator.
+        # Each department's budget reuses the already-real per-workspace budget
+        # engine the same way (synthetic workspace_id), so limits/spend/status
+        # come from the real ledger, not a new parallel one. Estimates only --
+        # no billing, same guarantee UsageLedgerService already makes.
+        self.usage_ledger = usage_ledger
 
     # ------------------------------------------------------------------
     # Helpers
@@ -257,24 +270,46 @@ class AgentDepartmentService:
     def templates(self) -> list[dict]:
         return [dict(template) for template in DEFAULT_DEPARTMENTS]
 
+    # Illustrative default monthly budget for a newly-seeded template
+    # department (estimates only -- no billing, same guarantee UsageLedgerService
+    # already makes). Flat and uniform on purpose: differentiating amounts per
+    # department would be an arbitrary guess, not a real signal.
+    _STARTER_BUDGET_MONTHLY_LIMIT = 100.0
+
     def seed_templates(self) -> dict:
         existing_names = {item.get("name", "").lower() for item in self.storage.read_list(self.departments_file)}
         created: list[dict] = []
         for template in DEFAULT_DEPARTMENTS:
             if template["name"].lower() in existing_names:
                 continue
-            created.append(
-                self.create_department(
-                    name=template["name"],
-                    description=template["description"],
-                    manager_agent=template["manager_agent"],
-                    worker_agents=template["worker_agents"],
-                    reviewer_agents=template["reviewer_agents"],
-                    auditor_agents=template["auditor_agents"],
-                    allowed_tools=template["allowed_tools"],
-                    permission_level=template["permission_level"],
-                )
+            department = self.create_department(
+                name=template["name"],
+                description=template["description"],
+                manager_agent=template["manager_agent"],
+                worker_agents=template["worker_agents"],
+                reviewer_agents=template["reviewer_agents"],
+                auditor_agents=template["auditor_agents"],
+                allowed_tools=template["allowed_tools"],
+                permission_level=template["permission_level"],
             )
+            # v300: a newly-seeded template department gets a real starter goal
+            # and budget for free, using the same goals/budgets wiring already
+            # available on this service -- best-effort, never blocks seeding.
+            if self.goal_service is not None:
+                try:
+                    self.create_department_goal(
+                        department["department_id"],
+                        title=f"Establish the {template['name']} operating rhythm",
+                        description=f"Starter goal seeded when the {template['name']} department template was created.",
+                    )
+                except Exception:
+                    pass
+            if self.usage_ledger is not None:
+                try:
+                    self.set_department_budget(department["department_id"], self._STARTER_BUDGET_MONTHLY_LIMIT)
+                except Exception:
+                    pass
+            created.append(department)
         self._log("department_templates_seeded", f"Seeded {len(created)} default department(s).")
         return {
             "seeded_count": len(created),
@@ -314,7 +349,16 @@ class AgentDepartmentService:
         permission_level = self._normalize_permission(department.get("permission_level"))
         risk_level = _RISK_BY_PERMISSION.get(permission_level, "low")
         requires_approval = permission_level in _APPROVAL_PERMISSIONS
-        status = "blocked" if permission_level == "blocked" else "planned"
+        # v300: department_budget_status() already computes a real "over" signal
+        # (UsageLedgerService.summary()) but was display-only in the scorecard --
+        # a department over its own budget still got a new run planned exactly
+        # like one with budget to spare. No-op for departments with no budget
+        # set (today's default) or no usage_ledger wired.
+        budget = self.department_budget_status(department_id) if self.usage_ledger is not None else None
+        over_budget = bool(budget and budget.get("budget_status") == "over")
+        blocked = permission_level == "blocked" or over_budget
+        status = "blocked" if blocked else "planned"
+        block_reason = "permission_blocked" if permission_level == "blocked" else ("budget_exceeded" if over_budget else None)
         run = {
             "department_run_id": str(uuid4()),
             "department_id": department_id,
@@ -330,12 +374,14 @@ class AgentDepartmentService:
             "requires_approval": requires_approval,
             "risk_level": risk_level,
             "status": status,
+            "block_reason": block_reason,
             "created_at": self._now(),
         }
         self.storage.append(self.runs_file, run)
+        reason_suffix = f" (blocked: {block_reason})" if block_reason else ""
         self._log(
             "department_run_planned",
-            f"Planned run for department {department.get('name')}: {task[:80]}",
+            f"Planned run for department {department.get('name')}: {task[:80]}{reason_suffix}",
             permission_level=permission_level,
             risk_score=70 if risk_level == "high" else 35 if risk_level == "medium" else 5,
         )
@@ -406,6 +452,74 @@ class AgentDepartmentService:
 
     def list_collaborations(self, limit: int = 25) -> list[dict]:
         return list(reversed(self.storage.read_list(self.collaboration_file)[-limit:]))
+
+    # ------------------------------------------------------------------
+    # v300 Digital Departments: goals, budgets, measurable outcomes
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _dept_workspace_key(department_id: str) -> str:
+        # Departments aren't workspace-scoped, but GoalService/UsageLedgerService
+        # both key on workspace_id -- a synthetic, prefixed key lets each
+        # department reuse those already-real engines with zero changes to them.
+        return f"dept:{department_id}"
+
+    def create_department_goal(self, department_id: str, title: str, description: str = "") -> dict:
+        department = self.get_department(department_id)
+        if department is None:
+            raise ValueError("Department not found")
+        if self.goal_service is None:
+            raise ValueError("No goal service wired; cannot create a real department goal.")
+        goal, _ = self.goal_service.create_manual(
+            title=title,
+            description=description,
+            tags=["department", department.get("name", "")],
+            workspace_id=self._dept_workspace_key(department_id),
+        )
+        self._log("department_goal_created", f"Created goal '{title}' for department {department.get('name')}.")
+        return goal.model_dump()
+
+    def list_department_goals(self, department_id: str) -> list[dict]:
+        if self.goal_service is None:
+            return []
+        return self.goal_service.list_goals(workspace_id=self._dept_workspace_key(department_id))
+
+    def set_department_budget(self, department_id: str, monthly_limit: float) -> dict:
+        department = self.get_department(department_id)
+        if department is None:
+            raise ValueError("Department not found")
+        if self.usage_ledger is None:
+            raise ValueError("No usage ledger service wired; cannot set a real department budget.")
+        budget = self.usage_ledger.set_budget({
+            "workspace_id": self._dept_workspace_key(department_id),
+            "monthly_limit": monthly_limit,
+        })
+        self._log("department_budget_set", f"Set budget ${monthly_limit} for department {department.get('name')}.")
+        return budget
+
+    def department_budget_status(self, department_id: str) -> dict | None:
+        if self.usage_ledger is None:
+            return None
+        return self.usage_ledger.summary(workspace_id=self._dept_workspace_key(department_id))
+
+    def department_scorecard(self, department_id: str) -> dict:
+        """Real goals + real budget status + real run-outcome counts in one view --
+        the doc's "goals, budgets, ... measurable outcomes" for a single department.
+        Run-outcome counts already existed (list_runs); this just surfaces them
+        alongside the two newly-wired real pillars instead of adding a 4th system."""
+        department = self.get_department(department_id)
+        if department is None:
+            raise ValueError("Department not found")
+        runs = [r for r in self.storage.read_list(self.runs_file) if r.get("department_id") == department_id]
+        return {
+            "department": department,
+            "goals": self.list_department_goals(department_id),
+            "budget": self.department_budget_status(department_id),
+            "measurable_outcomes": {
+                "total_runs": len(runs),
+                "planned": sum(1 for r in runs if r.get("status") == "planned"),
+                "blocked": sum(1 for r in runs if r.get("status") == "blocked"),
+            },
+        }
 
     # ------------------------------------------------------------------
     # Analytics

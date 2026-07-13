@@ -35,6 +35,34 @@ def test_without_memory_v2_behavior_is_unchanged(tmp_path):
     assert ws.summarize_workspace(wid)["semantic_recall_engine"] == "heuristic"
 
 
+def test_relevant_memory_filters_sensitive_content_before_it_reaches_the_prompt(tmp_path):
+    """SmartContextService already had a real sensitive-content filter (emails,
+    card-like numbers, API-key-like tokens, secret assignments) but it was only
+    reachable via its own standalone /smart-context route -- the ACTUAL
+    production context-building path (this method) had no filtering at all
+    until now."""
+    _, ws = _services(tmp_path)
+    wid = ws.default_workspace_id()
+    ws.create_memory(wid, {"title": "API credentials", "content": "Use api_key: sk-abcdefghij1234567890 to authenticate."})
+    ws.create_memory(wid, {"title": "Deploy runbook", "content": "Use blue-green deploys for the API."})
+    context, selected = ws.relevant_memory(wid, "api authenticate deploy")
+    assert "sk-abcdefghij1234567890" not in context
+    assert "api_key" not in context.lower()
+    assert "blue-green" in context.lower()
+    assert all(item["title"] != "API credentials" for item in selected)
+
+
+def test_relevant_memory_filters_email_and_card_like_content(tmp_path):
+    _, ws = _services(tmp_path)
+    wid = ws.default_workspace_id()
+    ws.create_memory(wid, {"title": "Support contact", "content": "Reach out to support-team@example.com for urgent billing issues."})
+    ws.create_memory(wid, {"title": "Billing note", "content": "Card on file: 4111 1111 1111 1111 for the billing account."})
+    context, selected = ws.relevant_memory(wid, "billing support contact")
+    assert "support-team@example.com" not in context
+    assert "4111" not in context
+    assert selected == []
+
+
 def test_memory_v2_in_keyword_mode_falls_back_to_heuristic(tmp_path):
     """memory_v2 wired but not on Postgres (mode='keyword') -> still falls back
     to the original heuristic search; only pgvector mode changes retrieval."""

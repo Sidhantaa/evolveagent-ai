@@ -13,20 +13,25 @@ RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post",
 
 # Whitelisted effects a step may actually perform (once approved). These are
 # either internal/local/reversible (create_task, create_note, notify — write only
-# to the app's own effect store, never any external service) or a single real
-# external write (create_github_issue, write_code_change, open_pull_request) —
-# but ONLY reachable through this approval-gated path (never called directly by
-# an agent) and only when the backing service's own opt-in flag(s) are on;
-# otherwise it degrades to a safe refusal recorded as the step's output, never
-# a silent no-op. Anything not in this set is simulated, not executed.
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request"}
+# to the app's own effect store, never any external service), a single real
+# external write (create_github_issue, write_code_change, open_pull_request), or
+# a real local verification check (run_quality_checks) — but ONLY reachable
+# through this approval-gated path (never called directly by an agent) and only
+# when the backing service's own opt-in flag(s) are on; otherwise it degrades to
+# a safe refusal recorded as the step's output, never a silent no-op. Anything
+# not in this set is simulated, not executed. run_eval_suite (v250) mirrors
+# run_quality_checks: a real regression signal can also fail the run.
+# run_kaggle_job (v220) submits a real, quota-consuming Kaggle GPU kernel --
+# async by nature (submits only, does not block on completion).
+WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request", "run_quality_checks", "run_eval_suite", "run_kaggle_job"}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
 # v120: which run statuses are interesting enough to emit as system events
 # (chaining points for the event bus). Transitional states ("running", "paused")
 # are not emitted -- they're reversible/in-progress, not occurrences.
-_EMITTABLE_STATUSES = {"completed", "waiting_approval", "cancelled"}
+# "failed" (a real quality-gate block) is an occurrence too, same as completed.
+_EMITTABLE_STATUSES = {"completed", "waiting_approval", "cancelled", "failed"}
 
 # Starter durable workflows. Each step: name + optional action verb; risk is derived.
 STARTER_TEMPLATES = [
@@ -89,9 +94,33 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None, test_quality=None, self_healing=None, eval_harness=None, kaggle_worker=None):
         self.storage = storage
         self.governance = governance_service
+        # Verification layer: optional TestQualityService collaborator backing the
+        # run_quality_checks whitelisted effect with a real pytest/npm-build run
+        # (previously an orphaned service with no caller). A blocked quality gate
+        # fails the run for real -- the first time this engine's dead "failed"
+        # terminal status is ever actually reached.
+        self.test_quality = test_quality
+        # Optional SelfHealingService collaborator -- when a quality gate is
+        # genuinely blocked, turns the first failing command's real output into
+        # a structured finding + drafted (never auto-applied) repair task via
+        # SelfHealingService's own real failure parser, instead of a bare text
+        # reason. Without it, a blocked gate behaves exactly as before.
+        self.self_healing = self_healing
+        # v250 Self-Evaluating System: optional EvalHarnessService collaborator
+        # backing the run_eval_suite whitelisted effect with a real deterministic
+        # regression check (previously an orphaned service reachable only via its
+        # own routes). A genuine regression fails the run, same as a blocked
+        # quality gate.
+        self.eval_harness = eval_harness
+        # v220 Compute Fabric: optional KaggleWorkerService collaborator --
+        # backs the run_kaggle_job whitelisted effect with a real (opt-in,
+        # approval-gated) Kaggle GPU kernel submission. Async: only submits,
+        # never blocks the run waiting for completion. Without it, degrades to
+        # a safe simulated decline, same as every other collaborator-less path.
+        self.kaggle_worker = kaggle_worker
         # v120: optional EventBusService — lets a run's completion/approval-halt/
         # cancellation chain into another action. Emitting is best-effort and must
         # never break the workflow engine itself.
@@ -157,6 +186,8 @@ class DurableWorkflowService:
                 self.agent_scheduler.pause(job_id, reason="Waiting for human approval on a risky step.")
             elif status == "cancelled":
                 self.agent_scheduler.cancel(job_id, reason="Workflow run was cancelled.")
+            elif status == "failed":
+                self.agent_scheduler.fail(job_id, error=f"Workflow '{run['name']}' failed a verification gate.")
         except Exception:
             pass
 
@@ -308,6 +339,77 @@ class DurableWorkflowService:
             else:
                 result = {"pushed": False, "pull_request": None, "wrote": False,
                            "note": "No code writer or GitHub connector wired; simulated only."}
+        elif action_type == "run_quality_checks":
+            if self.test_quality is not None:
+                commands = None
+                commands_raw = params.get("commands")
+                if commands_raw:
+                    try:
+                        parsed_commands = json.loads(commands_raw)
+                        if isinstance(parsed_commands, list) and parsed_commands:
+                            commands = [str(c) for c in parsed_commands][:5]
+                    except (TypeError, ValueError):
+                        commands = None
+                try:
+                    result = self.test_quality.run_quality_checks(commands=commands, issue_id=run["run_id"])
+                    result["executed"] = True
+                except Exception as exc:
+                    result = {"executed": True, "quality_gate": {
+                        "passed": False, "blocked": True,
+                        "reason": f"Quality check execution failed: {type(exc).__name__}: {exc}",
+                    }}
+                gate = result.get("quality_gate") or {}
+                if gate.get("blocked") and self.self_healing is not None:
+                    failing = next(
+                        (c for c in result.get("command_results", []) if not c.get("success")),
+                        None,
+                    )
+                    if failing is not None:
+                        try:
+                            check_result = self.self_healing.create_check(
+                                command=failing.get("command", "pytest"),
+                                mode="mock",
+                                mock_stdout=failing.get("stdout", ""),
+                                mock_stderr=failing.get("stderr", ""),
+                                mock_exit_code=failing.get("exit_code") or 1,
+                                workspace_id=None,
+                            )
+                            findings = check_result.get("findings") or []
+                            if findings:
+                                result["self_healing_repair"] = self.self_healing.create_repair_task(findings[0]["finding_id"])
+                        except Exception:
+                            pass
+            else:
+                # Missing collaborator degrades to a safe decline (run proceeds
+                # normally), same as every other whitelisted action without its
+                # backing service -- only a REAL gate failure below fails the run.
+                result = {"executed": False, "quality_gate": None,
+                           "note": "No test quality service wired; simulated only."}
+        elif action_type == "run_eval_suite":
+            suite_id = params.get("suite_id", "")
+            if self.eval_harness is not None and suite_id:
+                try:
+                    eval_result = self.eval_harness.run_suite(suite_id)
+                    result = {"executed": True, "eval_result": eval_result}
+                except ValueError as exc:
+                    result = {"executed": False, "eval_result": None, "note": str(exc)}
+            else:
+                # Missing collaborator or suite_id degrades to a safe decline
+                # (run proceeds normally) -- only a REAL regression below fails
+                # the run, same pattern as run_quality_checks.
+                result = {"executed": False, "eval_result": None,
+                           "note": "No eval harness service wired or suite_id missing; simulated only."}
+        elif action_type == "run_kaggle_job":
+            code = params.get("code", "")
+            if self.kaggle_worker is not None and code:
+                try:
+                    job = self.kaggle_worker.submit_job(code=code, title=params.get("title", ""))
+                    result = {"executed": True, "job": job}
+                except Exception as exc:
+                    result = {"executed": False, "job": None, "note": str(exc)}
+            else:
+                result = {"executed": False, "job": None,
+                           "note": "No Kaggle worker wired or code missing; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
@@ -336,6 +438,32 @@ class DurableWorkflowService:
                 label = pr.get("url") or f"#{pr.get('number')}"
                 return f"[executed] open_pull_request: {label}"
             return f"[declined] open_pull_request: {(result or {}).get('note', 'unavailable')}"
+        if action_type == "run_quality_checks":
+            if not result or not result.get("executed"):
+                return f"[declined] run_quality_checks: {(result or {}).get('note', 'unavailable')}"
+            gate = result.get("quality_gate") or {}
+            if gate.get("blocked"):
+                repair = result.get("self_healing_repair")
+                if repair:
+                    return (f"[blocked] run_quality_checks: {gate.get('reason', 'Quality gate blocked.')} "
+                            f"— repair drafted ({repair['repair_id']}, requires approval, never auto-applied).")
+                return f"[blocked] run_quality_checks: {gate.get('reason', 'Quality gate blocked.')}"
+            return f"[executed] run_quality_checks: {gate.get('reason', 'Quality gate passed.')}"
+        if action_type == "run_eval_suite":
+            if not result or not result.get("executed"):
+                return f"[declined] run_eval_suite: {(result or {}).get('note', 'unavailable')}"
+            eval_result = result.get("eval_result") or {}
+            if eval_result.get("regressed"):
+                return (f"[blocked] run_eval_suite: score regressed from {eval_result.get('previous_score')} "
+                        f"to {eval_result.get('score')} (delta {eval_result.get('delta')}).")
+            return f"[executed] run_eval_suite: score={eval_result.get('score')} ({eval_result.get('pass_count')}/{eval_result.get('case_count')} passed)."
+        if action_type == "run_kaggle_job":
+            if not result or not result.get("executed"):
+                return f"[declined] run_kaggle_job: {(result or {}).get('note', 'unavailable')}"
+            job = result.get("job") or {}
+            if job.get("submitted"):
+                return f"[executed] run_kaggle_job: submitted {job.get('kernel_ref')} (job_id={job.get('job_id')}, poll for completion)."
+            return f"[declined] run_kaggle_job: submission failed -- {job.get('stderr_tail', 'unknown error')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 
@@ -498,11 +626,19 @@ class DurableWorkflowService:
             else:
                 step["output"] = f"[approved] {step['name']} executed" + (f" — {note}" if note else "")
             step["finished_at"] = self._now()
-            step["status"] = "done"
-            run["cursor"] += 1
-            run["status"] = "running"
-            self._log("workflow_step_approved", f"Approved '{step['name']}' in run '{run['name']}'", risk=4)
-            run = self._advance_in_place(run)
+            if step["output"].startswith("[blocked]"):
+                # A real verification gate failed (run_quality_checks) -- the run
+                # itself fails. The first genuine use of this engine's "failed"
+                # terminal status, which was declared but never reachable before.
+                step["status"] = "blocked"
+                run["status"] = "failed"
+                self._log("workflow_step_blocked", f"Step '{step['name']}' blocked run '{run['name']}' (verification gate failed)", risk=6, approved=False)
+            else:
+                step["status"] = "done"
+                run["cursor"] += 1
+                run["status"] = "running"
+                self._log("workflow_step_approved", f"Approved '{step['name']}' in run '{run['name']}'", risk=4)
+                run = self._advance_in_place(run)
         else:
             step["status"] = "skipped"
             step["output"] = f"[rejected] {step['name']} skipped" + (f" — {note}" if note else "")

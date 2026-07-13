@@ -57,6 +57,20 @@ def create_self_healing_repair_task(finding_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Finding not found") from error
 
 
+@router.get("/self-healing/repairs")
+def list_self_healing_repairs() -> dict:
+    repairs = self_healing_service.list_repairs()
+    return {"repairs": repairs, "count": len(repairs)}
+
+
+@router.get("/self-healing/repairs/{repair_id}")
+def get_self_healing_repair(repair_id: str) -> dict:
+    repair = self_healing_service.get_repair(repair_id)
+    if repair is None:
+        raise HTTPException(status_code=404, detail="Repair not found")
+    return repair
+
+
 @router.post("/self-healing/repairs/{repair_id}/verify")
 def verify_self_healing_repair(repair_id: str, request: SelfHealingVerifyRequest | None = None) -> dict:
     payload = request or SelfHealingVerifyRequest()
