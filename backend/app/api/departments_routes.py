@@ -73,6 +73,11 @@ def create_department_collaboration(request: DepartmentCollaborationRequest) -> 
     )
 
 
+@router.get("/departments/overview")
+def get_department_overview() -> dict:
+    return agent_department_service.overview()
+
+
 @router.get("/departments/{department_id}")
 def get_department(department_id: str) -> dict:
     department = agent_department_service.get_department(department_id)
