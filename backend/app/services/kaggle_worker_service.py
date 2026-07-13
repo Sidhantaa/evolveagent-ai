@@ -235,6 +235,16 @@ class KaggleWorkerService:
         files = [str(p.name) for p in tmp_dir.glob("*")] if result.returncode == 0 else []
         return {"job_id": job_id, "downloaded": result.returncode == 0, "files": files, "output_dir": str(tmp_dir) if files else None}
 
+    def status(self) -> dict:
+        """Real, honest opt-in status -- consumed by CapabilityDirectoryService
+        (previously this real capability had no entry there at all, since
+        nothing exposed a status() to classify it by)."""
+        jobs = self.storage.read_list(self.jobs_file)
+        return {
+            "enabled": settings.kaggle_worker_enabled,
+            "total_jobs": len(jobs),
+        }
+
     def analytics_summary(self) -> dict:
         jobs = self.storage.read_list(self.jobs_file)
         return {

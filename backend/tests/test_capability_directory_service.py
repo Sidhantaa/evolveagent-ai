@@ -160,6 +160,19 @@ def test_endpoint_lists_real_registry():
         assert entry["route"].startswith("/api/")
 
 
+def test_adaptive_learning_entry_reflects_real_tick_wiring():
+    """The entry used to be a hardcoded static string ('local retrieval only; never
+    trains a model') that undersold real round-10/11 wiring: learn() runs every
+    scheduler tick, and completed Kaggle job output gets ingested. Detail text must
+    now reflect the live recall_engine + last-tick-ingested count, not a frozen string."""
+    data = client.get("/api/capability-directory").json()
+    entry = next(c for c in data["capabilities"] if c["name"] == "Adaptive Learning (retrieval memory + few-shot)")
+    assert entry["status"] == "local"
+    assert "auto-learns every scheduler tick" in entry["detail"]
+    assert "recall_engine=" in entry["detail"]
+    assert "last_tick_ingested=" in entry["detail"]
+
+
 def test_summary_endpoint_shape():
     data = client.get("/api/capability-directory/summary").json()
     assert "total" in data and "by_status" in data and "categories" in data
