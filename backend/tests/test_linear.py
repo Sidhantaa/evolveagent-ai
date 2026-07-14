@@ -107,6 +107,51 @@ def test_linear_link_service_create_and_update(storage):
     assert refreshed["commits"][0]["hash"] == "abc123"
 
 
+# ------------------------------------------------------------------
+# Round 31: create_or_update_link/update_status/append_commit/append_push had
+# the same lost-update shape rounds 25-30 fixed elsewhere. Real concurrent
+# writers: the background Linear poll worker updates links every tick,
+# racing foreground routes (issue select/run/complete, git-webhook commit/
+# push events) for a DIFFERENT link. Independently confirmed via a standalone
+# repro against the true unmodified code before writing any fix: updating a
+# DIFFERENT link's status while another's update was in flight silently lost
+# the first (earlier-writing) update.
+# ------------------------------------------------------------------
+def test_update_status_does_not_lose_a_concurrent_update_of_a_different_link(storage):
+    import threading
+    import time
+
+    service = LinearLinkService(storage)
+    service.create_or_update_link({"linear_issue_id": "LIN-31-1", "linear_identifier": "LIN-31-1"})
+    service.create_or_update_link({"linear_issue_id": "LIN-31-2", "linear_identifier": "LIN-31-2"})
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _update_lin1():
+        service.update_status("LIN-31-1", "running")
+
+    thread = threading.Thread(target=_update_lin1)
+    thread.start()
+    entered.wait(timeout=2)
+    service.update_status("LIN-31-2", "selected")  # concurrent update of a DIFFERENT link
+    thread.join(timeout=2)
+
+    lin1 = service.get_link_by_issue("LIN-31-1")
+    lin2 = service.get_link_by_issue("LIN-31-2")
+    assert lin1["status"] == "running"  # must not be lost -- failed before the fix
+    assert lin2["status"] == "selected"  # must not be lost -- failed before the fix
+
+
 def test_git_service_excludes_unsafe_files():
     service = GitService()
     assert service.is_safe_path("backend/app/main.py") is True
