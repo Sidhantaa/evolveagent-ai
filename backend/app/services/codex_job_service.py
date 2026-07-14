@@ -56,10 +56,18 @@ class CodexJobService:
         return job
 
     def update_job(self, job_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
-        jobs = self.storage.read_list(self.filename)
-        job = next((item for item in jobs if item.get("job_id") == job_id), None)
-        if job is None:
-            return None
-        job.update(updates)
-        self.storage.write_list(self.filename, jobs)
-        return job
+        # Round 32: was read_list() -> mutate -> write_list(), the same
+        # lost-update shape rounds 25-31 fixed elsewhere. Real concurrent
+        # writers: CodexWorkerService.run_for_issue() calls update_job()
+        # ~15 times over a multi-second run (subprocess Codex CLI + git
+        # commit/push/verify) -- the background Linear poll worker can run
+        # one issue's job inline while a foreground POST runs a different
+        # issue's job, racing on this same file.
+        def _apply(jobs: list[dict[str, Any]]) -> dict[str, Any] | None:
+            job = next((item for item in jobs if item.get("job_id") == job_id), None)
+            if job is None:
+                return None
+            job.update(updates)
+            return dict(job)
+
+        return self.storage.update_list(self.filename, _apply)

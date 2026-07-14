@@ -118,6 +118,51 @@ def test_codex_job_creation(codex_env, monkeypatch):
     assert "EVO-170 completed" in job["summary"]
 
 
+# ------------------------------------------------------------------
+# Round 32: update_job() had the same lost-update shape rounds 25-31 fixed
+# elsewhere -- read_list() + write_list() as two separate lock acquisitions.
+# run_for_issue() calls update_job() ~15 times over a multi-second run
+# (subprocess Codex CLI + git commit/push/verify); the background Linear
+# poll worker can run one issue's job inline while a foreground request runs
+# a different issue's job, racing on this same file. Independently confirmed
+# via a standalone repro against the true unmodified code before writing any
+# fix: a concurrent update_job() for a DIFFERENT job silently lost its status
+# update.
+# ------------------------------------------------------------------
+def test_update_job_does_not_lose_a_concurrent_update_of_a_different_job(tmp_path):
+    import threading
+    import time
+
+    storage = StorageService(data_dir=str(tmp_path))
+    service = CodexJobService(storage)
+    job_x = service.create_job({"issue_id": "X"})
+    job_y = service.create_job({"issue_id": "Y"})
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _update_x():
+        service.update_job(job_x["job_id"], {"status": "running"})
+
+    thread = threading.Thread(target=_update_x)
+    thread.start()
+    entered.wait(timeout=2)
+    service.update_job(job_y["job_id"], {"commit_hash": "abc123"})  # concurrent update of a DIFFERENT job
+    thread.join(timeout=2)
+
+    assert service.get_job(job_x["job_id"])["status"] == "running"  # must not be lost -- failed before the fix
+    assert service.get_job(job_y["job_id"])["commit_hash"] == "abc123"  # must not be lost -- failed before the fix
+
+
 def test_worker_disabled_returns_safe_error(monkeypatch):
     monkeypatch.setattr(settings, "codex_worker_enabled", False)
     worker = CodexWorkerService(
