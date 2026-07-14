@@ -68,7 +68,7 @@ export const HomeDashboard: React.FC = () => {
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-3xl">
+        <div className="relative z-10 max-w-[85%] mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
             <span>AI Command Center & Multi-Agent OS</span>
@@ -82,7 +82,7 @@ export const HomeDashboard: React.FC = () => {
           </p>
 
           {/* Quick Prompt Input Bar */}
-          <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col sm:flex-row gap-2.5">
+          <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col gap-2.5">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
               <input
@@ -90,7 +90,7 @@ export const HomeDashboard: React.FC = () => {
                 value={quickPrompt}
                 onChange={(e) => setQuickPrompt(e.target.value)}
                 placeholder="Ask anything or command agents (e.g. 'Redesign our dashboard cards', 'Scan GitHub repo')..."
-                className="w-full bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
+                className="w-full text-left bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
               />
               <kbd 
                 onClick={() => setIsCommandModalOpen(true)}
@@ -109,7 +109,7 @@ export const HomeDashboard: React.FC = () => {
           </form>
 
           {/* Quick Action Chips */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
             <span className="text-xs text-gray-400 font-mono">Quick Actions:</span>
             {[
               { label: 'Review my repo', page: 'chat' as const, icon: Github },
@@ -122,7 +122,7 @@ export const HomeDashboard: React.FC = () => {
                 <button
                   key={i}
                   onClick={() => { setActivePage(action.page); showToast(`Navigated to ${action.label}`, 'info'); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
                 >
                   <Icon className="w-3.5 h-3.5 text-cyan-400" />
                   <span>{action.label}</span>
