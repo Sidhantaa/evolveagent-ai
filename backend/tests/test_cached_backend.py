@@ -66,6 +66,22 @@ def test_fail_open_on_broken_redis(tmp_path):
     assert b.read_list("a.json") == [{"ok": True}]   # read falls through
 
 
+def test_update_list_invalidates_cache(tmp_path):
+    inner = JsonBackend(str(tmp_path))
+    fake = FakeRedis()
+    b = CachedBackend(inner, fake, ttl_seconds=300)
+    b.write_list("a.json", [{"x": 1}])
+    assert b.read_list("a.json") == [{"x": 1}]  # cached
+
+    def _bump(items):
+        items[0]["x"] = 2
+        return items[0]
+
+    result = b.update_list("a.json", _bump)
+    assert result == {"x": 2}
+    assert b.read_list("a.json") == [{"x": 2}]  # fresh, not stale cache
+
+
 def test_stats_reports_cache(tmp_path):
     b = CachedBackend(JsonBackend(str(tmp_path)), FakeRedis())
     b.write_list("a.json", [{"x": 1}])
