@@ -55,6 +55,38 @@ def test_master_agent_returns_final_output(tmp_path):
     assert response.judge_result.weakest_agent
 
 
+def test_master_agent_continues_when_specialist_raises(tmp_path, monkeypatch):
+    """A mid-loop specialist exception is a real partial-failure path: earlier
+    specialists already updated the shared context, but the unmodified loop
+    raises and loses the entire workflow response. The run should instead
+    record a failed AgentOutput, keep the trace inspectable, and continue."""
+    storage = StorageService(data_dir=str(tmp_path))
+    master = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    failing_agent = master.specialists[1]
+
+    def fail_once(*args, **kwargs):
+        raise RuntimeError("specialist backend unavailable")
+
+    monkeypatch.setattr(failing_agent, "run_with_metadata", fail_once)
+
+    response = master.run(RunRequest(user_input="Explain the system architecture", task_type="general"))
+
+    failed_outputs = [item for item in response.agent_outputs if item.agent_name == failing_agent.name]
+    assert failed_outputs
+    assert failed_outputs[0].success is False
+    assert failed_outputs[0].error == "RuntimeError: specialist backend unavailable"
+    assert "could not complete" in failed_outputs[0].output
+    assert any(
+        step.agent_name == failing_agent.name
+        and step.status == "warning"
+        and "failed but workflow continued" in step.summary
+        for step in response.workflow_trace
+    )
+    # Later specialists still run, so the response remains useful instead of a 500.
+    assert any(item.agent_name == master.specialists[-1].name and item.success for item in response.agent_outputs)
+    assert response.final_output
+
+
 def test_app_automation_returns_approval_plan(tmp_path):
     storage = StorageService(data_dir=str(tmp_path))
     master = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
