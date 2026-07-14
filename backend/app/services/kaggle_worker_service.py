@@ -191,27 +191,53 @@ class KaggleWorkerService:
         return list(reversed(self.storage.read_list(self.jobs_file)[-limit:]))
 
     def poll_job(self, job_id: str) -> dict:
-        jobs = self.storage.read_list(self.jobs_file)
-        job = next((j for j in jobs if j.get("job_id") == job_id), None)
+        job = self.get_job(job_id)
         if job is None:
             raise ValueError("Job not found")
         if not job.get("submitted"):
             return job
 
+        # The real `kaggle kernels status` CLI call happens here, OUTSIDE any
+        # storage lock -- it can take up to 60s, and holding the (process-wide,
+        # single) storage lock for that long would serialize every unrelated
+        # read/write in the whole app for the duration of one Kaggle poll.
         argv = [KAGGLE_CLI, *_ALLOWED_SUBCOMMANDS["status"], job["kernel_ref"]]
         result = self._run(argv, None, 60)
         output = (result.stdout or "").lower()
         if "complete" in output:
-            job["status"] = "complete"
+            new_status = "complete"
         elif "error" in output or "cancelacknowledged" in output:
-            job["status"] = "error"
+            new_status = "error"
         elif "running" in output:
-            job["status"] = "running"
+            new_status = "running"
         elif "queued" in output:
-            job["status"] = "queued"
-        job["last_poll_output"] = (result.stdout or "")[-500:]
-        job["updated_at"] = self._now()
-        self.storage.write_list(self.jobs_file, jobs)
+            new_status = "queued"
+        else:
+            new_status = job.get("status")
+        last_poll_output = (result.stdout or "")[-500:]
+        updated_at = self._now()
+
+        def _apply(jobs: list[dict]) -> dict | None:
+            current = next((j for j in jobs if j.get("job_id") == job_id), None)
+            if current is None:
+                return None
+            current["status"] = new_status
+            current["last_poll_output"] = last_poll_output
+            current["updated_at"] = updated_at
+            return dict(current)
+
+        # Previously: read_list() then write_list() as two separate lock
+        # acquisitions, with the slow CLI call sitting in between them -- a
+        # concurrent submit_job()'s append() landing in that window would be
+        # silently overwritten by this call's stale snapshot on write-back
+        # (a real, reachable lost-update: two concurrent HTTP requests run in
+        # separate threads even under one worker, since FastAPI's sync `def`
+        # handlers run in a threadpool). update_list() re-reads fresh state
+        # and does the find-mutate-write as one atomic sequence.
+        updated = self.storage.update_list(self.jobs_file, _apply)
+        if updated is None:
+            raise ValueError("Job not found")
+        job = updated
 
         if self.agent_scheduler is not None and job.get("agent_scheduler_job_id"):
             try:

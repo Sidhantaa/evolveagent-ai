@@ -15,7 +15,7 @@ the psycopg (v3) driver.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -33,6 +33,12 @@ _SCHEMA = [
 ]
 
 _INSERT = text("INSERT INTO documents (collection, doc) VALUES (:c, CAST(:d AS jsonb))")
+# Transaction-scoped advisory lock keyed by the collection name -- serializes
+# every write against every other write (and update_list's read-mutate-write)
+# for the SAME collection, released automatically at commit/rollback. Mirrors
+# JsonBackend's single process-wide Lock, without locking unrelated collections
+# against each other.
+_ADVISORY_LOCK = text("SELECT pg_advisory_xact_lock(hashtext(:c))")
 
 
 def to_sync_url(url: str) -> str:
@@ -68,13 +74,29 @@ class PostgresBackend:
 
     def append(self, filename: str, item: dict[str, Any]) -> None:
         with self.engine.begin() as conn:
+            conn.execute(_ADVISORY_LOCK, {"c": filename})
             conn.execute(_INSERT, {"c": filename, "d": json.dumps(item)})
 
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
         with self.engine.begin() as conn:
+            conn.execute(_ADVISORY_LOCK, {"c": filename})
             conn.execute(text("DELETE FROM documents WHERE collection = :c"), {"c": filename})
             for item in items:
                 conn.execute(_INSERT, {"c": filename, "d": json.dumps(item)})
+
+    def update_list(self, filename: str, mutator: Callable[[list[dict[str, Any]]], Any]) -> Any:
+        with self.engine.begin() as conn:
+            conn.execute(_ADVISORY_LOCK, {"c": filename})
+            rows = conn.execute(
+                text("SELECT doc FROM documents WHERE collection = :c ORDER BY seq"),
+                {"c": filename},
+            ).fetchall()
+            data = [row[0] for row in rows if isinstance(row[0], dict)]
+            result = mutator(data)
+            conn.execute(text("DELETE FROM documents WHERE collection = :c"), {"c": filename})
+            for item in data:
+                conn.execute(_INSERT, {"c": filename, "d": json.dumps(item)})
+            return result
 
     def stats(self) -> dict[str, Any]:
         with self.engine.connect() as conn:
