@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.governance_service import GovernanceService
+from app.services.scheduled_tasks_service import ScheduledTasksService
+from app.services.storage_service import StorageService
 
 client = TestClient(app)
 
@@ -88,6 +91,50 @@ def test_governance_logged():
     assert after["total_events"] > before
     actions = {event.get("action_type") for event in after["recent_events"]}
     assert "scheduled_task_created" in actions or "scheduled_task_triggered" in actions
+
+
+# ------------------------------------------------------------------
+# Round 29: set_enabled()/trigger() had the same lost-update shape rounds
+# 25-28 fixed elsewhere. Independently confirmed against the true pre-fix
+# code (patching read_list to widen the window) that a concurrent
+# set_enabled(B, disabled) landing during trigger(A)'s wide window
+# (which may start a real durable workflow) got silently reverted -- a task
+# the user just disabled would fire again anyway. Background scheduler
+# ticks + foreground trigger/patch requests are the real concurrent writers.
+# ------------------------------------------------------------------
+def test_trigger_does_not_lose_a_concurrent_set_enabled(tmp_path):
+    import threading
+    import time
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    governance = GovernanceService(storage)
+    service = ScheduledTasksService(storage, governance)
+    a = service.create_task({"name": "A", "schedule": "manual", "action_type": "note"})
+    b = service.create_task({"name": "B", "schedule": "manual", "action_type": "note"})
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _trigger_a():
+        service.trigger(a["task_id"])
+
+    t = threading.Thread(target=_trigger_a)
+    t.start()
+    entered.wait(timeout=2)
+    service.set_enabled(b["task_id"], False)  # concurrent disable of a DIFFERENT task
+    t.join(timeout=2)
+
+    assert service.get_task(b["task_id"])["enabled"] is False  # must not be lost -- failed before the fix
+    assert service.get_task(a["task_id"])["trigger_count"] == 1  # trigger's own count must also survive
 
 
 def test_existing_endpoints_still_work():
