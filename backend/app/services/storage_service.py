@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 from app.config import DATA_DIR, settings
 from app.storage.backend import StorageBackend
@@ -252,6 +252,13 @@ class StorageService:
 
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
         self.backend.write_list(filename, items)
+
+    def update_list(self, filename: str, mutator: Callable[[list[dict[str, Any]]], Any]) -> Any:
+        """Atomic find-mutate-persist -- use this instead of a separate
+        read_list() + write_list() pair whenever the write depends on the
+        read, to avoid a lost-update race with a concurrent append()/
+        write_list()/update_list() on the same collection."""
+        return self.backend.update_list(filename, mutator)
 
     def backend_kind(self) -> str:
         inner = getattr(self.backend, "inner", self.backend)  # unwrap cache decorator

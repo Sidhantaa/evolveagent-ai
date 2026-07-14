@@ -1,9 +1,13 @@
+from unittest.mock import MagicMock
+
 from fastapi.testclient import TestClient
 
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.main import app
 from app.models.request_models import RunRequest
+from app.services.adaptive_learning_service import AdaptiveLearningService
+from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
 
 client = TestClient(app)
@@ -65,6 +69,87 @@ def test_analytics_and_governance():
 def test_existing_endpoints_still_work():
     assert client.get("/api/repo-finder/status").status_code == 200
     assert client.get("/api/agent-studio/summary").status_code == 200
+
+
+# ------------------------------------------------------------------
+# Round 28: learn()/ingest()/forget() were refactored to close a lost-update
+# race (see below), which required moving the Memory v2 mirror call out of
+# _upsert() (called while holding the storage lock) to after the atomic
+# update completes (avoiding a reentrant-lock deadlock, since MemoryService
+# shares the same storage/backend). Confirm mirroring still actually happens.
+# ------------------------------------------------------------------
+def test_ingest_still_mirrors_new_items_into_memory(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    memory = MagicMock()
+    service = AdaptiveLearningService(storage, GovernanceService(storage), memory=memory)
+
+    service.ingest("a brand new topic to mirror", kind="topic", source="manual")
+    memory.add.assert_called_once()
+    args, kwargs = memory.add.call_args
+    assert args[0] == "a brand new topic to mirror"
+    assert kwargs["kind"] == "topic"
+
+    memory.add.reset_mock()
+    service.ingest("a brand new topic to mirror", kind="topic", source="manual")  # reinforcement, not new
+    memory.add.assert_not_called()
+
+
+def test_learn_mirrors_only_newly_added_items(tmp_path):
+    storage = StorageService(data_dir=str(tmp_path))
+    memory = MagicMock()
+    service = AdaptiveLearningService(storage, GovernanceService(storage), memory=memory)
+    storage.append(service._repo_searches, {"query": "kubernetes helm", "top": "helm/helm"})
+
+    result = service.learn()
+    assert result["ingested"] >= 2  # topic + reference
+    assert memory.add.call_count == result["ingested"]
+
+    memory.add.reset_mock()
+    service.learn()  # idempotent -- same source data, nothing genuinely new to mirror
+    memory.add.assert_not_called()
+
+
+# ------------------------------------------------------------------
+# Round 28: learn()/ingest()/forget() previously did a plain read_list() +
+# write_list() on items_file -- the same lost-update shape rounds 25-27
+# fixed elsewhere. learn() in particular has a WIDE window (iterates 3 other
+# collections while holding the stale snapshot), and has a real background
+# writer (SchedulerTickWorker fires it every tick) racing real foreground
+# writers (manual ingest/forget). Verified against the true pre-fix code
+# that a concurrent ingest() landing during learn()'s window got lost.
+# ------------------------------------------------------------------
+def test_learn_does_not_lose_a_concurrent_ingest(tmp_path):
+    import threading
+    import time
+
+    storage = StorageService(data_dir=str(tmp_path))
+    service = AdaptiveLearningService(storage, GovernanceService(storage))
+    storage.append(service._repo_searches, {"query": "kubernetes helm", "top": ""})
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _learn():
+        service.learn()
+
+    t = threading.Thread(target=_learn)
+    t.start()
+    entered.wait(timeout=2)
+    service.ingest("a concurrent manual note", kind="topic", source="manual")
+    t.join(timeout=2)
+
+    texts = {item["text"] for item in service.items(limit=200)["items"]}
+    assert "a concurrent manual note" in texts  # must not be lost -- failed before the fix
+    assert any("kubernetes helm" in t for t in texts)  # learn()'s own item must also survive
 
 
 # ------------------------------------------------------------------

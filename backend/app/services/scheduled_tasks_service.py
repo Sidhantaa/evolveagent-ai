@@ -96,35 +96,63 @@ class ScheduledTasksService:
         return next((t for t in self.list_tasks() if t.get("task_id") == task_id), None)
 
     def set_enabled(self, task_id: str, enabled: bool) -> dict:
-        tasks = self.list_tasks()
-        task = next((t for t in tasks if t.get("task_id") == task_id), None)
-        if task is None:
+        # Round 29: was read_list() -> mutate -> write_list() -- the same
+        # lost-update shape rounds 25-28 fixed elsewhere. Concretely: a
+        # concurrent trigger() (background scheduler tick, or a manual
+        # request) holding a stale snapshot for its own wide window could
+        # write back over this call's enabled/disabled flag, silently
+        # un-doing it -- a task the user just disabled fires again anyway.
+        def _apply(tasks: list[dict]) -> dict | None:
+            task = next((t for t in tasks if t.get("task_id") == task_id), None)
+            if task is None:
+                return None
+            task["enabled"] = bool(enabled)
+            return dict(task)
+
+        updated = self.storage.update_list(self.tasks_file, _apply)
+        if updated is None:
             raise ValueError("Task not found")
-        task["enabled"] = bool(enabled)
-        self.storage.write_list(self.tasks_file, tasks)
         self._log("scheduled_task_updated", f"{'Enabled' if enabled else 'Disabled'} scheduled task {task_id}.")
-        return task
+        return updated
 
     # ------------------------------------------------------------------
     # Trigger (planning-first mock run — never real background execution)
     # ------------------------------------------------------------------
     def trigger(self, task_id: str) -> dict:
-        tasks = self.list_tasks()
-        task = next((t for t in tasks if t.get("task_id") == task_id), None)
+        task = self.get_task(task_id)
         if task is None:
             raise ValueError("Task not found")
         if not task.get("enabled", True):
             raise ValueError("Task is disabled")
 
+        # The real trigger (may start a real durable workflow run, touching
+        # OTHER collections via self.workflows) runs OUTSIDE any storage lock
+        # -- both because it can be slow, and because self.workflows shares
+        # this same storage/backend, so calling it from inside an
+        # update_list() mutator would self-deadlock (same caveat as round
+        # 28's Memory v2 mirror).
         workflow_definition_id = task.get("workflow_definition_id")
         if workflow_definition_id and self.workflows is not None:
             run = self._trigger_real_workflow(task_id, task, workflow_definition_id)
         else:
             run = self._trigger_mock(task_id, task)
 
-        task["last_triggered_at"] = self._now()
-        task["trigger_count"] = task.get("trigger_count", 0) + 1
-        self.storage.write_list(self.tasks_file, tasks)
+        now = self._now()
+
+        def _apply(tasks: list[dict]) -> dict | None:
+            current = next((t for t in tasks if t.get("task_id") == task_id), None)
+            if current is None:
+                return None
+            current["last_triggered_at"] = now
+            current["trigger_count"] = current.get("trigger_count", 0) + 1
+            return dict(current)
+
+        # Round 29: was read_list() -> mutate -> write_list(), the same
+        # lost-update shape as set_enabled() above. Concretely, a background
+        # scheduler tick's trigger() sitting in the (slow) real-workflow
+        # window above could silently overwrite a concurrent set_enabled()
+        # (or another trigger()'s count) that landed in that window.
+        self.storage.update_list(self.tasks_file, _apply)
         self._log("scheduled_task_triggered", f"Triggered scheduled task {task_id} → {run['status']}.")
         if self.event_bus is not None:
             try:

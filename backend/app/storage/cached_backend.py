@@ -10,7 +10,7 @@ startup, the app simply runs uncached.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Callable
 
 _PREFIX = "evolveagent:coll:"
 
@@ -58,6 +58,11 @@ class CachedBackend:
     def write_list(self, filename: str, items: list[dict[str, Any]]) -> None:
         self.inner.write_list(filename, items)
         self._invalidate(filename)
+
+    def update_list(self, filename: str, mutator: Callable[[list[dict[str, Any]]], Any]) -> Any:
+        result = self.inner.update_list(filename, mutator)
+        self._invalidate(filename)
+        return result
 
     def stats(self) -> dict[str, Any]:
         stats = self.inner.stats()

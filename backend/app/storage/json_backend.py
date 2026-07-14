@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import os
 from threading import Lock
-from typing import Any
+from typing import Any, Callable
 from uuid import uuid4
 
 
@@ -56,6 +56,25 @@ class JsonBackend:
         with self._lock:
             self.ensure(filename)
             self._atomic_write(filename, items)
+
+    def update_list(self, filename: str, mutator: Callable[[list[dict[str, Any]]], Any]) -> Any:
+        # Holds the SAME lock as read_list/append/write_list for the entire
+        # read-mutate-write sequence, closing the lost-update race a plain
+        # read_list() + write_list() pair has (another thread's append() or
+        # write_list() landing in the gap between them would otherwise be
+        # silently overwritten by this call's stale snapshot).
+        with self._lock:
+            self.ensure(filename)
+            with open(self._path(filename), "r", encoding="utf-8") as file:
+                try:
+                    data = json.load(file)
+                except json.JSONDecodeError:
+                    data = []
+            if not isinstance(data, list):
+                data = []
+            result = mutator(data)
+            self._atomic_write(filename, data)
+            return result
 
     def _atomic_write(self, filename: str, items: list[dict[str, Any]]) -> None:
         path = self._path(filename)

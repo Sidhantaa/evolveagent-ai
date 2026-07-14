@@ -187,3 +187,81 @@ def test_agent_jobs_health_endpoint_includes_concurrency_fields():
     assert "concurrency_limit" in health
     assert "over_concurrency_limit" in health
     assert isinstance(health["over_concurrency_limit"], bool)
+
+
+# ------------------------------------------------------------------
+# Round 27: create_job()/start_next()/_transition() had the same lost-update
+# shape rounds 25/26 fixed elsewhere -- a hand-rolled read_list() -> mutate ->
+# write_list() on the shared agent_jobs.json. Independently reproduced against
+# the real unmodified code (patching read_list to widen the window) before
+# writing the fix: one job's transition (e.g. complete()) silently vanished
+# when it raced a different job's transition (e.g. heartbeat()). These tests
+# prove the fix (update_list()/atomic append()) survives genuine concurrent
+# contention against the actual code path (patching storage.update_list,
+# which the fixed code genuinely calls, not read_list which it bypasses).
+# ------------------------------------------------------------------
+def test_transition_does_not_lose_a_concurrent_transition_of_a_different_job(tmp_path):
+    import threading
+    import time
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    governance = GovernanceService(storage)
+    ws = WorkspaceService(storage)
+    scheduler = AgentSchedulerService(storage, governance, ws)
+
+    j1 = scheduler.create_job({"title": "J1"})
+    j2 = scheduler.create_job({"title": "J2"})
+    scheduler._transition(j1["job_id"], "running", "start")
+    scheduler._transition(j2["job_id"], "running", "start")
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _heartbeat_j2():
+        scheduler.heartbeat(j2["job_id"])
+
+    t = threading.Thread(target=_heartbeat_j2)
+    t.start()
+    entered.wait(timeout=2)
+    scheduler.complete(j1["job_id"], "done")  # concurrent transition of a DIFFERENT job
+    t.join(timeout=2)
+
+    assert scheduler.get_job(j2["job_id"])["status"] == "running"  # heartbeat must not be lost
+    assert scheduler.get_job(j1["job_id"])["status"] == "completed"  # completion must not be lost
+
+
+def test_create_job_does_not_lose_jobs_under_real_concurrency(tmp_path):
+    """create_job() previously hand-rolled read_list() + append in memory +
+    write_list() -- the same lost-update shape as _transition(), just for job
+    creation instead of job transitions (real concurrent writers: a Kaggle
+    submit_job() and a durable workflow start can both create a job at once).
+    Now delegates to the already-atomic storage.append(); stress with many
+    genuinely concurrent threads to catch any regression back to a hand-rolled
+    read-modify-write."""
+    import threading
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    governance = GovernanceService(storage)
+    ws = WorkspaceService(storage)
+    scheduler = AgentSchedulerService(storage, governance, ws)
+
+    def _create(i):
+        scheduler.create_job({"title": f"job-{i}"})
+
+    threads = [threading.Thread(target=_create, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=5)
+
+    titles = {job["title"] for job in scheduler.list_jobs()}
+    assert titles == {f"job-{i}" for i in range(20)}  # none lost

@@ -6,9 +6,12 @@ from fastapi import APIRouter, HTTPException
 from app.api.routes import (
     worker_registry_service,
     kaggle_worker_service,
+    gpu_worker_service,
 )
 from app.models.request_models import (
+    GPUDryRunRequest,
     KaggleJobSubmitRequest,
+    LocalGPUWorkerRegisterRequest,
     WorkerHeartbeatRequest,
     WorkerRegisterRequest,
 )
@@ -52,6 +55,29 @@ def deregister_worker(worker_id: str) -> dict:
         return worker_registry_service.deregister_worker(worker_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Worker not found") from error
+
+
+# ----------------------------------------------------------------------
+# v240 GPU worker expansion -- readiness + dry-run only
+# ----------------------------------------------------------------------
+@router.get("/worker-registry/gpu/dashboard")
+def get_gpu_worker_dashboard() -> dict:
+    return gpu_worker_service.dashboard()
+
+
+@router.get("/worker-registry/gpu/providers")
+def get_gpu_worker_providers() -> dict:
+    return gpu_worker_service.providers()
+
+
+@router.post("/worker-registry/gpu/dry-run")
+def dry_run_gpu_worker(request: GPUDryRunRequest) -> dict:
+    return gpu_worker_service.dry_run(request.model_dump())
+
+
+@router.post("/worker-registry/gpu/local-workers")
+def register_local_gpu_worker(request: LocalGPUWorkerRegisterRequest) -> dict:
+    return gpu_worker_service.register_local_worker(request.model_dump())
 
 
 # ----------------------------------------------------------------------

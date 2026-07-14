@@ -76,6 +76,55 @@ def test_parity_with_json_backend(pg, tmp_path):
         assert js.read_list(cj) == pg.read_list(cp)
 
 
+def test_update_list_mutates_and_persists(pg):
+    c = _coll()
+    pg.write_list(c, [{"id": 1}, {"id": 2}])
+
+    def _bump(items):
+        target = next(i for i in items if i["id"] == 1)
+        target["bumped"] = True
+        return dict(target)
+
+    result = pg.update_list(c, _bump)
+    assert result == {"id": 1, "bumped": True}
+    assert pg.read_list(c) == [{"id": 1, "bumped": True}, {"id": 2}]
+
+
+def test_update_list_does_not_lose_a_concurrent_append(pg):
+    """Postgres parity of the JsonBackend race test -- the per-collection
+    advisory lock (pg_advisory_xact_lock) must serialize update_list against
+    a concurrent append() on the same collection, same as JsonBackend's
+    process-wide Lock does."""
+    import threading
+    import time
+
+    c = _coll()
+    pg.write_list(c, [{"job_id": "A", "status": "running"}])
+    entered = threading.Event()
+
+    def _slow_mutate(items):
+        entered.set()
+        time.sleep(0.5)
+        target = next(i for i in items if i["job_id"] == "A")
+        target["status"] = "complete"
+        return dict(target)
+
+    def _poll():
+        pg.update_list(c, _slow_mutate)
+
+    t = threading.Thread(target=_poll)
+    t.start()
+    entered.wait(timeout=3)
+    pg.append(c, {"job_id": "B", "status": "submitted"})
+    t.join(timeout=3)
+
+    final = pg.read_list(c)
+    ids = {item["job_id"] for item in final}
+    assert ids == {"A", "B"}
+    job_a = next(i for i in final if i["job_id"] == "A")
+    assert job_a["status"] == "complete"
+
+
 def test_to_sync_url_normalizes_driver():
     from app.storage.postgres_backend import to_sync_url
     assert to_sync_url("postgresql+asyncpg://u:p@h/db") == "postgresql+psycopg://u:p@h/db"

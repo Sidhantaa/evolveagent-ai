@@ -104,69 +104,116 @@ class AdaptiveLearningService:
     def _fingerprint(kind: str, text: str) -> str:
         return sha1(f"{kind}:{text.strip().lower()}".encode()).hexdigest()[:16]
 
-    def _upsert(self, items: list[dict], kind: str, text: str, source: str) -> bool:
-        """Add or reinforce an item. Returns True if newly added."""
+    def _upsert(self, items: list[dict], kind: str, text: str, source: str) -> str | None:
+        """Add or reinforce an item in place. Returns the new item's fingerprint
+        if genuinely NEW (the caller must mirror it into Memory v2 itself, via
+        _mirror() -- this only mutates the in-memory `items` list, so it's safe
+        to call from inside an update_list() mutator; _mirror() touches a
+        separate service that shares this same storage lock, so it must run
+        AFTER the atomic update completes, not from inside the mutator)."""
         text = str(text or "").strip()[:500]
         if not text or kind not in KINDS:
-            return False
+            return None
         fp = self._fingerprint(kind, text)
         for it in items:
             if it.get("fingerprint") == fp:
                 it["weight"] = it.get("weight", 1) + 1  # reinforcement
                 it["updated_at"] = self._now()
-                return False
+                return None
         items.append({
             "id": str(uuid4()), "fingerprint": fp, "kind": kind, "text": text,
             "source": str(source or "manual")[:60], "weight": 1,
             "created_at": self._now(), "updated_at": self._now(),
         })
-        self._mirror(kind, text, source, fp)
-        return True
+        return fp
 
     # -- learning ------------------------------------------------------------
     def learn(self) -> dict:
-        items = self._all()
-        added = 0
+        # Round 28: previously read_list(items_file) -> mutate across 3 other
+        # collections -> write_list(items_file) as one wide, unlocked window --
+        # a concurrent ingest()/forget() (from a manual POST, or the round-11
+        # Kaggle-completion mirror) landing in that window got silently
+        # overwritten by this call's stale write-back. The 3 source collections
+        # are read up front (read-only inputs, not written by anyone in a way
+        # that races THIS write), so only the items_file mutation itself needs
+        # to be atomic.
+        repo_searches = self.storage.read_list(self._repo_searches)
+        agents = self.storage.read_list(self._agents)
+        effects = self.storage.read_list(self._effects)
+        to_mirror: list[tuple[str, str, str, str]] = []
 
-        # 1) Repo searches -> topics + references.
-        for row in self.storage.read_list(self._repo_searches):
-            q = row.get("query", "")
-            if q:
-                added += self._upsert(items, "topic", q, "repo_finder")
-            top = row.get("top", "")
-            if top:
-                added += self._upsert(items, "reference", f"GitHub repo {top} (for: {q})", "repo_finder")
+        def _apply(items: list[dict]) -> int:
+            added = 0
+            # 1) Repo searches -> topics + references.
+            for row in repo_searches:
+                q = row.get("query", "")
+                if q:
+                    fp = self._upsert(items, "topic", q, "repo_finder")
+                    if fp:
+                        added += 1
+                        to_mirror.append(("topic", q, "repo_finder", fp))
+                top = row.get("top", "")
+                if top:
+                    text = f"GitHub repo {top} (for: {q})"
+                    fp = self._upsert(items, "reference", text, "repo_finder")
+                    if fp:
+                        added += 1
+                        to_mirror.append(("reference", text, "repo_finder", fp))
 
-        # 2) High-grade agent examples -> few-shot memory.
-        for a in self.storage.read_list(self._agents):
-            grade = (a.get("evaluation") or {}).get("grade")
-            if grade in ("A", "B"):
-                for e in (a.get("examples") or [])[:5]:
-                    out = str(e.get("output", "")).strip()
-                    if out:
-                        added += self._upsert(items, "example", f"{e.get('input','')} -> {out}", f"agent:{a.get('name','')}")
+            # 2) High-grade agent examples -> few-shot memory.
+            for a in agents:
+                grade = (a.get("evaluation") or {}).get("grade")
+                if grade in ("A", "B"):
+                    for e in (a.get("examples") or [])[:5]:
+                        out = str(e.get("output", "")).strip()
+                        if out:
+                            text = f"{e.get('input','')} -> {out}"
+                            source = f"agent:{a.get('name','')}"
+                            fp = self._upsert(items, "example", text, source)
+                            if fp:
+                                added += 1
+                                to_mirror.append(("example", text, source, fp))
 
-        # 3) Workflow effects -> action patterns.
-        for e in self.storage.read_list(self._effects):
-            at = e.get("action_type", "")
-            label = (e.get("params") or {}).get("title") or (e.get("params") or {}).get("message") or ""
-            if at:
-                added += self._upsert(items, "action", f"{at}: {label}".strip(": "), "durable_workflow")
+            # 3) Workflow effects -> action patterns.
+            for e in effects:
+                at = e.get("action_type", "")
+                label = (e.get("params") or {}).get("title") or (e.get("params") or {}).get("message") or ""
+                if at:
+                    text = f"{at}: {label}".strip(": ")
+                    fp = self._upsert(items, "action", text, "durable_workflow")
+                    if fp:
+                        added += 1
+                        to_mirror.append(("action", text, "durable_workflow", fp))
+            return added
 
-        self.storage.write_list(self.items_file, items)
-        self._log("adaptive_learned", f"Auto-learned from history: +{added} new items ({len(items)} total)")
-        return {"ingested": added, "total": len(items), "by_kind": self._by_kind(items),
+        added = self.storage.update_list(self.items_file, _apply)
+        # _mirror() touches MemoryService, which shares this same storage
+        # lock -- must run after update_list() releases it, never inside the
+        # mutator (would self-deadlock on the JsonBackend's single lock).
+        for kind, text, source, fp in to_mirror:
+            self._mirror(kind, text, source, fp)
+
+        total = self._all()
+        self._log("adaptive_learned", f"Auto-learned from history: +{added} new items ({len(total)} total)")
+        return {"ingested": added, "total": len(total), "by_kind": self._by_kind(total),
                 "note": "Retrieval memory updated — no model was trained."}
 
     def ingest(self, text: str, kind: str = "topic", source: str = "manual") -> dict:
-        items = self._all()
-        if not self._upsert(items, kind, text, source):
-            # either invalid or reinforced an existing item
-            if kind not in KINDS or not str(text or "").strip():
-                raise ValueError(f"invalid item (kind must be one of {KINDS} and text non-empty)")
-        self.storage.write_list(self.items_file, items)
+        if kind not in KINDS or not str(text or "").strip():
+            raise ValueError(f"invalid item (kind must be one of {KINDS} and text non-empty)")
+
+        mirror_fp: str | None = None
+
+        def _apply(items: list[dict]) -> None:
+            nonlocal mirror_fp
+            mirror_fp = self._upsert(items, kind, text, source)
+
+        self.storage.update_list(self.items_file, _apply)
+        if mirror_fp:
+            self._mirror(kind, text, source, mirror_fp)
+        total = self._all()
         self._log("adaptive_ingested", f"Ingested a {kind} item into learning memory")
-        return {"total": len(items), "by_kind": self._by_kind(items)}
+        return {"total": len(total), "by_kind": self._by_kind(total)}
 
     def _recommend_semantic(self, query: str, limit: int) -> list[dict] | None:
         """Semantic recall via Memory v2 (pgvector). Returns None to signal fallback."""
@@ -231,13 +278,17 @@ class AdaptiveLearningService:
         return {"items": rows[:limit], "count": len(rows), "by_kind": self._by_kind(self._all())}
 
     def forget(self, item_id: str) -> dict:
-        rows = self._all()
-        kept = [r for r in rows if r.get("id") != item_id]
-        if len(kept) == len(rows):
-            raise ValueError("item not found")
-        self.storage.write_list(self.items_file, kept)
+        def _apply(rows: list[dict]) -> int:
+            original_len = len(rows)
+            kept = [r for r in rows if r.get("id") != item_id]
+            if len(kept) == original_len:
+                raise ValueError("item not found")
+            rows[:] = kept  # mutate in place -- update_list() writes back this same object
+            return len(kept)
+
+        kept_count = self.storage.update_list(self.items_file, _apply)
         self._log("adaptive_forgot", "Removed an item from learning memory")
-        return {"removed": item_id, "total": len(kept)}
+        return {"removed": item_id, "total": kept_count}
 
     @staticmethod
     def _by_kind(items: list[dict]) -> dict:

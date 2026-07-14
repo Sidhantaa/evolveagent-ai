@@ -8,6 +8,23 @@ from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
 
 WORKER_STATUSES = ["online", "offline", "busy"]
+GPU_METADATA_FIELDS = {
+    "provider",
+    "gpu_model",
+    "gpu_memory_gb",
+    "region",
+    "runtime",
+    "supports_jobs",
+    "supports_model_serving",
+    "estimated_cost_per_hour",
+    "quota_state",
+    "requires_approval",
+    "last_provider_check",
+}
+PROVIDER_BY_WORKER_TYPE = {
+    "kaggle_gpu": "kaggle",
+    "local_gpu": "local",
+}
 
 
 class WorkerRegistryService:
@@ -46,12 +63,50 @@ class WorkerRegistryService:
             )
         )
 
+    @staticmethod
+    def _sanitize_metadata(metadata: dict | None) -> dict:
+        safe: dict = {}
+        for key, value in list((metadata or {}).items())[:20]:
+            safe_key = str(key).strip()[:60]
+            if not safe_key:
+                continue
+            if isinstance(value, bool) or value is None:
+                safe[safe_key] = value
+            elif isinstance(value, (int, float)):
+                safe[safe_key] = value
+            elif isinstance(value, list):
+                safe[safe_key] = [str(item).strip()[:120] for item in value[:10]]
+            else:
+                safe[safe_key] = str(value).strip()[:300]
+        return safe
+
+    def _normalize_gpu_metadata(self, worker_type: str, metadata: dict) -> dict:
+        provider = str(metadata.get("provider") or PROVIDER_BY_WORKER_TYPE.get(worker_type, "other")).strip()[:40]
+        runtime = str(metadata.get("runtime") or ("notebook" if provider == "kaggle" else "unknown")).strip()[:60]
+        return {
+            "provider": provider,
+            "gpu_model": metadata.get("gpu_model"),
+            "gpu_memory_gb": metadata.get("gpu_memory_gb"),
+            "region": metadata.get("region"),
+            "runtime": runtime,
+            "supports_jobs": bool(metadata.get("supports_jobs", "gpu" in str(worker_type).lower())),
+            "supports_model_serving": bool(metadata.get("supports_model_serving", False)),
+            "estimated_cost_per_hour": metadata.get("estimated_cost_per_hour"),
+            "quota_state": metadata.get("quota_state") or "unknown",
+            "requires_approval": bool(metadata.get("requires_approval", True)),
+            "last_provider_check": metadata.get("last_provider_check"),
+        }
+
     def register_worker(self, worker_type: str, capabilities: list[str] | None = None, metadata: dict | None = None) -> dict:
+        resolved_type = str(worker_type or "unknown").strip()[:60]
+        safe_metadata = self._sanitize_metadata(metadata)
+        gpu_metadata = self._normalize_gpu_metadata(resolved_type, safe_metadata)
         worker = {
             "worker_id": str(uuid4()),
-            "worker_type": str(worker_type or "unknown").strip()[:60],
+            "worker_type": resolved_type,
             "capabilities": [str(c).strip()[:60] for c in (capabilities or [])][:20],
-            "metadata": {str(k)[:40]: str(v)[:200] for k, v in list((metadata or {}).items())[:10]},
+            "metadata": safe_metadata,
+            **gpu_metadata,
             "status": "online",
             "registered_at": self._now(),
             "last_heartbeat": self._now(),
@@ -61,25 +116,45 @@ class WorkerRegistryService:
         return worker
 
     def heartbeat(self, worker_id: str, status: str = "online") -> dict:
-        workers = self.storage.read_list(self.workers_file)
-        worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
-        if worker is None:
+        # Round 26: was a plain read_list() + write_list() pair (the exact
+        # lost-update shape round 25 fixed for Kaggle jobs) -- a concurrent
+        # register_worker()/heartbeat()/deregister_worker() for a DIFFERENT
+        # worker landing between this read and write would be silently
+        # overwritten by this call's stale snapshot. update_list() closes it
+        # by holding one lock for the whole find-mutate-persist sequence.
+        resolved_status = status if status in WORKER_STATUSES else "online"
+        last_heartbeat = self._now()
+
+        def _apply(workers: list[dict]) -> dict | None:
+            worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
+            if worker is None:
+                return None
+            worker["status"] = resolved_status
+            worker["last_heartbeat"] = last_heartbeat
+            return dict(worker)
+
+        updated = self.storage.update_list(self.workers_file, _apply)
+        if updated is None:
             raise ValueError("Worker not found")
-        worker["status"] = status if status in WORKER_STATUSES else "online"
-        worker["last_heartbeat"] = self._now()
-        self.storage.write_list(self.workers_file, workers)
-        return worker
+        return updated
 
     def deregister_worker(self, worker_id: str) -> dict:
-        workers = self.storage.read_list(self.workers_file)
-        worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
-        if worker is None:
+        # Same fix as heartbeat() above.
+        last_heartbeat = self._now()
+
+        def _apply(workers: list[dict]) -> dict | None:
+            worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
+            if worker is None:
+                return None
+            worker["status"] = "offline"
+            worker["last_heartbeat"] = last_heartbeat
+            return dict(worker)
+
+        updated = self.storage.update_list(self.workers_file, _apply)
+        if updated is None:
             raise ValueError("Worker not found")
-        worker["status"] = "offline"
-        worker["last_heartbeat"] = self._now()
-        self.storage.write_list(self.workers_file, workers)
         self._log("worker_deregistered", f"Deregistered worker {worker_id}.")
-        return worker
+        return updated
 
     def get_worker(self, worker_id: str) -> dict | None:
         return next((w for w in self.storage.read_list(self.workers_file) if w.get("worker_id") == worker_id), None)

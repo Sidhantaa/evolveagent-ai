@@ -105,25 +105,34 @@ class GoalService:
         return self.with_progress(goal), graph
 
     def update_goal(self, goal_id: str, updates: dict) -> dict | None:
-        goals = self.storage.read_list("goals.json")
-        goal = next((item for item in goals if item.get("goal_id") == goal_id), None)
-        if goal is None:
+        # Round 30: was read_list() -> mutate -> write_list(), the same
+        # lost-update shape rounds 25-29 fixed elsewhere -- two concurrent
+        # writers to goals.json (e.g. this PATCH racing add_task()'s
+        # touch_goal() for the SAME goal) could silently drop one's change.
+        def _apply(goals: list[dict]) -> dict | None:
+            goal = next((item for item in goals if item.get("goal_id") == goal_id), None)
+            if goal is None:
+                return None
+            for key in ("title", "description", "status", "tags"):
+                if key in updates and updates[key] is not None:
+                    goal[key] = updates[key]
+            goal["updated_at"] = datetime.now(UTC).isoformat()
+            return dict(goal)
+
+        updated = self.storage.update_list("goals.json", _apply)
+        if updated is None:
             return None
-        for key in ("title", "description", "status", "tags"):
-            if key in updates and updates[key] is not None:
-                goal[key] = updates[key]
-        goal["updated_at"] = datetime.now(UTC).isoformat()
-        self.storage.write_list("goals.json", goals)
-        return self.with_progress(goal)
+        # with_progress() reads task_graphs.json -- runs AFTER update_list()
+        # releases the goals.json lock, never inside the mutator (JsonBackend
+        # uses one process-wide lock for every collection, so any storage
+        # call from inside a mutator would self-deadlock, not just same-file
+        # calls -- same caveat as rounds 28/29's mirror/workflow-trigger).
+        return self.with_progress(updated)
 
     def archive_goal(self, goal_id: str) -> dict | None:
         return self.update_goal(goal_id, {"status": "archived"})
 
     def add_task(self, goal_id: str, task_data: dict) -> GoalTask | None:
-        graphs = self.storage.read_list("task_graphs.json")
-        graph = next((item for item in graphs if item.get("goal_id") == goal_id), None)
-        if graph is None:
-            return None
         now = datetime.now(UTC).isoformat()
         task = GoalTask(
             task_id=str(uuid4()),
@@ -140,19 +149,27 @@ class GoalService:
             created_at=now,
             updated_at=now,
         )
-        graph.setdefault("tasks", []).append(task.model_dump())
-        self.storage.write_list("task_graphs.json", graphs)
+
+        # Round 30: was read_list() -> mutate -> write_list() on task_graphs.json
+        # -- two concurrent task mutations for the SAME goal (e.g. two
+        # add_task()/update_task() calls) could silently drop one.
+        def _apply(graphs: list[dict]) -> bool:
+            graph = next((item for item in graphs if item.get("goal_id") == goal_id), None)
+            if graph is None:
+                return False
+            graph.setdefault("tasks", []).append(task.model_dump())
+            return True
+
+        found = self.storage.update_list("task_graphs.json", _apply)
+        if not found:
+            return None
+        # touch_goal() writes goals.json (a DIFFERENT collection) -- runs
+        # AFTER task_graphs.json's lock releases, never inside the mutator
+        # above (one process-wide lock covers every collection).
         self.touch_goal(goal_id)
         return task
 
     def update_task(self, goal_id: str, task_id: str, updates: dict) -> GoalTask | None:
-        graphs = self.storage.read_list("task_graphs.json")
-        graph = next((item for item in graphs if item.get("goal_id") == goal_id), None)
-        if graph is None:
-            return None
-        task = next((item for item in graph.get("tasks", []) if item.get("task_id") == task_id), None)
-        if task is None:
-            return None
         allowed = {
             "title",
             "description",
@@ -167,13 +184,26 @@ class GoalService:
             "last_run_id",
             "last_result_summary",
         }
-        for key in allowed:
-            if key in updates and updates[key] is not None:
-                task[key] = updates[key]
-        task["updated_at"] = datetime.now(UTC).isoformat()
-        self.storage.write_list("task_graphs.json", graphs)
-        self.touch_goal(goal_id)
-        return GoalTask(**task)
+
+        # Round 30: same lost-update shape as add_task() above.
+        def _apply(graphs: list[dict]) -> dict | None:
+            graph = next((item for item in graphs if item.get("goal_id") == goal_id), None)
+            if graph is None:
+                return None
+            task = next((item for item in graph.get("tasks", []) if item.get("task_id") == task_id), None)
+            if task is None:
+                return None
+            for key in allowed:
+                if key in updates and updates[key] is not None:
+                    task[key] = updates[key]
+            task["updated_at"] = datetime.now(UTC).isoformat()
+            return dict(task)
+
+        updated_task = self.storage.update_list("task_graphs.json", _apply)
+        if updated_task is None:
+            return None
+        self.touch_goal(goal_id)  # outside the lock -- see add_task()
+        return GoalTask(**updated_task)
 
     def get_task(self, goal_id: str, task_id: str) -> dict | None:
         result = self.get_goal(goal_id)
@@ -183,13 +213,23 @@ class GoalService:
         return next((item for item in graph.get("tasks", []) if item.get("task_id") == task_id), None)
 
     def touch_goal(self, goal_id: str) -> None:
-        goals = self.storage.read_list("goals.json")
-        goal = next((item for item in goals if item.get("goal_id") == goal_id), None)
-        if goal is not None:
-            goal["updated_at"] = datetime.now(UTC).isoformat()
-            progress = self.calculate_progress(goal_id)
-            goal["progress_percent"] = progress
-            self.storage.write_list("goals.json", goals)
+        # calculate_progress() reads task_graphs.json -- must happen BEFORE
+        # entering update_list()'s mutator below: JsonBackend uses ONE
+        # process-wide lock for every collection, so a storage call to a
+        # DIFFERENT file from inside a mutator would still self-deadlock,
+        # not just same-file calls.
+        progress = self.calculate_progress(goal_id)
+        now = datetime.now(UTC).isoformat()
+
+        def _apply(goals: list[dict]) -> None:
+            goal = next((item for item in goals if item.get("goal_id") == goal_id), None)
+            if goal is not None:
+                goal["updated_at"] = now
+                goal["progress_percent"] = progress
+
+        # Round 30: was read_list() -> mutate -> write_list(), the same
+        # lost-update shape rounds 25-29 fixed elsewhere.
+        self.storage.update_list("goals.json", _apply)
 
     def calculate_progress(self, goal_id: str) -> int:
         graph = next((item for item in self.storage.read_list("task_graphs.json") if item.get("goal_id") == goal_id), None)

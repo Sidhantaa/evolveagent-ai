@@ -47,9 +47,14 @@ class AgentSchedulerService:
             "result_summary": None,
             "lifecycle_events": [{"status": "queued", "created_at": now, "reason": "Job created."}],
         }
-        jobs = self.storage.read_list(self.filename)
-        jobs.append(job)
-        self.storage.write_list(self.filename, jobs)
+        # Round 27: was a hand-rolled read_list() -> append in memory ->
+        # write_list() -- the same lost-update shape rounds 25/26 fixed
+        # elsewhere, except here the WHOLE list gets written back instead of
+        # using the already-atomic storage.append(). Two concurrent
+        # create_job() calls (e.g. a Kaggle submit + a durable workflow start)
+        # could both read the same snapshot and each write back a list
+        # missing the other's new job -- one job silently never gets tracked.
+        self.storage.append(self.filename, job)
         self._log(job, "agent_job_created", "Agent job was queued.")
         return job
 
@@ -66,20 +71,31 @@ class AgentSchedulerService:
         return next((job for job in self.storage.read_list(self.filename) if job.get("job_id") == job_id), None)
 
     def start_next(self) -> dict[str, Any] | None:
-        jobs = self.storage.read_list(self.filename)
-        running = [job for job in jobs if job.get("status") == "running"]
-        if len(running) >= self.concurrency_limit:
-            return None
-        job = next((item for item in jobs if item.get("status") == "queued"), None)
+        now = datetime.now(UTC).isoformat()
+
+        def _apply(jobs: list[dict[str, Any]]) -> dict[str, Any] | None:
+            running = [item for item in jobs if item.get("status") == "running"]
+            if len(running) >= self.concurrency_limit:
+                return None
+            job = next((item for item in jobs if item.get("status") == "queued"), None)
+            if job is None:
+                return None
+            job["status"] = "running"
+            job["started_at"] = now
+            job["heartbeat_at"] = now
+            job["updated_at"] = now
+            job.setdefault("lifecycle_events", []).append({"status": "running", "created_at": now, "reason": "Scheduler started job."})
+            return dict(job)
+
+        # Round 27: was read_list() -> mutate -> write_list(), the same
+        # lost-update shape as everywhere else in this file. Also closes a
+        # second-order bug: without one atomic read-decide-write, two
+        # concurrent start_next() calls could each separately see "under
+        # concurrency_limit" and both dequeue+start a job, exceeding the
+        # limit this method exists to enforce.
+        job = self.storage.update_list(self.filename, _apply)
         if job is None:
             return None
-        now = datetime.now(UTC).isoformat()
-        job["status"] = "running"
-        job["started_at"] = now
-        job["heartbeat_at"] = now
-        job["updated_at"] = now
-        job.setdefault("lifecycle_events", []).append({"status": "running", "created_at": now, "reason": "Scheduler started job."})
-        self.storage.write_list(self.filename, jobs)
         self._log(job, "agent_job_started", "Agent job started.")
         return job
 
@@ -156,27 +172,36 @@ class AgentSchedulerService:
         error: str | None = None,
         result_summary: str | None = None,
     ) -> dict[str, Any]:
-        jobs = self.storage.read_list(self.filename)
-        job = next((item for item in jobs if item.get("job_id") == job_id), None)
-        if job is None:
-            raise ValueError("Agent job not found.")
-        if job.get("status") in self.terminal_states and status not in self.terminal_states:
-            raise ValueError("Terminal jobs cannot be resumed or modified.")
         now = datetime.now(UTC).isoformat()
-        job["status"] = status
-        job["updated_at"] = now
-        if status == "running":
-            job["heartbeat_at"] = now
-            if not job.get("started_at"):
-                job["started_at"] = now
-        if status in self.terminal_states:
-            job["completed_at"] = now
-        if error is not None:
-            job["error"] = error
-        if result_summary is not None:
-            job["result_summary"] = result_summary
-        job.setdefault("lifecycle_events", []).append({"status": status, "created_at": now, "reason": reason})
-        self.storage.write_list(self.filename, jobs)
+
+        def _apply(jobs: list[dict[str, Any]]) -> dict[str, Any]:
+            job = next((item for item in jobs if item.get("job_id") == job_id), None)
+            if job is None:
+                raise ValueError("Agent job not found.")
+            if job.get("status") in self.terminal_states and status not in self.terminal_states:
+                raise ValueError("Terminal jobs cannot be resumed or modified.")
+            job["status"] = status
+            job["updated_at"] = now
+            if status == "running":
+                job["heartbeat_at"] = now
+                if not job.get("started_at"):
+                    job["started_at"] = now
+            if status in self.terminal_states:
+                job["completed_at"] = now
+            if error is not None:
+                job["error"] = error
+            if result_summary is not None:
+                job["result_summary"] = result_summary
+            job.setdefault("lifecycle_events", []).append({"status": status, "created_at": now, "reason": reason})
+            return dict(job)
+
+        # Round 27: was read_list() -> mutate -> write_list() -- the classic
+        # lost-update shape. Concretely, a job's heartbeat() racing another
+        # job's complete()/fail() (both real, independent transitions on the
+        # SAME agent_jobs.json) could silently drop the heartbeat, letting
+        # the round-5 stale-job watchdog wrongly kill a genuinely healthy,
+        # actively-heartbeating job.
+        job = self.storage.update_list(self.filename, _apply)
         self._log(job, f"agent_job_{status}", reason, blocked=status in {"failed", "canceled"})
         return job
 
