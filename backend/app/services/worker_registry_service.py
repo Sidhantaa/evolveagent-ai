@@ -61,25 +61,45 @@ class WorkerRegistryService:
         return worker
 
     def heartbeat(self, worker_id: str, status: str = "online") -> dict:
-        workers = self.storage.read_list(self.workers_file)
-        worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
-        if worker is None:
+        # Round 26: was a plain read_list() + write_list() pair (the exact
+        # lost-update shape round 25 fixed for Kaggle jobs) -- a concurrent
+        # register_worker()/heartbeat()/deregister_worker() for a DIFFERENT
+        # worker landing between this read and write would be silently
+        # overwritten by this call's stale snapshot. update_list() closes it
+        # by holding one lock for the whole find-mutate-persist sequence.
+        resolved_status = status if status in WORKER_STATUSES else "online"
+        last_heartbeat = self._now()
+
+        def _apply(workers: list[dict]) -> dict | None:
+            worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
+            if worker is None:
+                return None
+            worker["status"] = resolved_status
+            worker["last_heartbeat"] = last_heartbeat
+            return dict(worker)
+
+        updated = self.storage.update_list(self.workers_file, _apply)
+        if updated is None:
             raise ValueError("Worker not found")
-        worker["status"] = status if status in WORKER_STATUSES else "online"
-        worker["last_heartbeat"] = self._now()
-        self.storage.write_list(self.workers_file, workers)
-        return worker
+        return updated
 
     def deregister_worker(self, worker_id: str) -> dict:
-        workers = self.storage.read_list(self.workers_file)
-        worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
-        if worker is None:
+        # Same fix as heartbeat() above.
+        last_heartbeat = self._now()
+
+        def _apply(workers: list[dict]) -> dict | None:
+            worker = next((w for w in workers if w.get("worker_id") == worker_id), None)
+            if worker is None:
+                return None
+            worker["status"] = "offline"
+            worker["last_heartbeat"] = last_heartbeat
+            return dict(worker)
+
+        updated = self.storage.update_list(self.workers_file, _apply)
+        if updated is None:
             raise ValueError("Worker not found")
-        worker["status"] = "offline"
-        worker["last_heartbeat"] = self._now()
-        self.storage.write_list(self.workers_file, workers)
         self._log("worker_deregistered", f"Deregistered worker {worker_id}.")
-        return worker
+        return updated
 
     def get_worker(self, worker_id: str) -> dict | None:
         return next((w for w in self.storage.read_list(self.workers_file) if w.get("worker_id") == worker_id), None)
