@@ -107,6 +107,12 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("memory-v2", "GET", "/api/memory-v2/summary", None, 200),
     # System / storage
     ("system", "GET", "/api/system/storage-status", None, 200),
+    # v240 GPU worker expansion (readiness + dry-run only)
+    ("gpu-workers", "GET", "/api/worker-registry/gpu/dashboard", None, 200),
+    ("gpu-workers", "GET", "/api/worker-registry/gpu/providers", None, 200),
+    ("gpu-workers", "POST", "/api/worker-registry/gpu/dry-run", {"provider": "runpod", "title": "smoke gpu"}, 200),
+    ("gpu-workers", "POST", "/api/worker-registry/gpu/local-workers",
+     {"name": "Smoke Local GPU", "gpu_model": "M-series", "gpu_memory_gb": 16}, 200),
     # Master Agent
     ("master-agent", "GET", "/api/master-agent/summary", None, 200),
     ("master-agent", "GET", "/api/master-agent/capabilities", None, 200),
