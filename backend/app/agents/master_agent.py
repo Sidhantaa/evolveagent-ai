@@ -395,8 +395,32 @@ class MasterOrchestratorAgent:
             # execution loop recorded against "default" -- meaning
             # AgentDepartmentService's real department budget gate (round 6)
             # could never see real usage no matter how much was actually spent.
-            agent_output = agent.run_with_metadata(request.user_input, context=shared_context, workspace_id=workspace_id)
+            try:
+                agent_output = agent.run_with_metadata(request.user_input, context=shared_context, workspace_id=workspace_id)
+            except Exception as exc:  # noqa: BLE001 - keep one specialist failure from losing the whole run
+                error = f"{type(exc).__name__}: {exc}"
+                agent_output = AgentOutput(
+                    agent_name=agent.name,
+                    provider="unavailable",
+                    model="unavailable",
+                    success=False,
+                    fallback_used=True,
+                    error=error,
+                    output=f"{agent.name} could not complete because {error}. The workflow continued with the remaining agents.",
+                )
             agent_outputs.append(agent_output)
+            if not agent_output.success:
+                workflow_trace.append(
+                    WorkflowStep(
+                        step=len(workflow_trace) + 1,
+                        stage="Specialist execution",
+                        agent_name=agent.name,
+                        status="warning",
+                        summary=f"{agent.name} failed but workflow continued: {agent_output.error or 'unknown error'}",
+                    )
+                )
+                shared_context += f"\n\n{agent.name} output:\n{agent_output.output}"
+                continue
             workflow_trace.append(
                 WorkflowStep(
                     step=len(workflow_trace) + 1,
