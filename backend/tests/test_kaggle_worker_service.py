@@ -85,6 +85,83 @@ def test_worker_registry_dashboard(tmp_path):
 
 
 # ------------------------------------------------------------------
+# Round 26: deregister_worker()/heartbeat() were the same read_list() +
+# write_list() lost-update shape round 25 fixed for Kaggle jobs -- a
+# concurrent register/heartbeat/deregister for a DIFFERENT worker landing in
+# the gap gets silently overwritten. Fixed via the same update_list()
+# primitive; these tests fail against the old pattern, pass against the fix.
+# ------------------------------------------------------------------
+def test_deregister_does_not_lose_a_concurrent_register(tmp_path):
+    import threading
+    import time
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    registry = WorkerRegistryService(storage, GovernanceService(storage))
+    w1 = registry.register_worker("kaggle_gpu")
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)  # simulates the real work between read and the concurrent write below
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _deregister():
+        registry.deregister_worker(w1["worker_id"])
+
+    t = threading.Thread(target=_deregister)
+    t.start()
+    entered.wait(timeout=2)
+    w2 = registry.register_worker("kaggle_gpu")  # concurrent register while deregister is "thinking"
+    t.join(timeout=2)
+
+    workers = registry.list_workers()
+    ids = {w["worker_id"] for w in workers}
+    assert ids == {w1["worker_id"], w2["worker_id"]}  # w2 must survive -- this failed before the fix
+    assert registry.get_worker(w1["worker_id"])["status"] == "offline"
+    assert registry.get_worker(w2["worker_id"])["status"] == "online"
+
+
+def test_heartbeat_does_not_lose_a_concurrent_deregister_of_a_different_worker(tmp_path):
+    import threading
+    import time
+
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    registry = WorkerRegistryService(storage, GovernanceService(storage))
+    w1 = registry.register_worker("kaggle_gpu")
+    w2 = registry.register_worker("kaggle_gpu")
+
+    entered = threading.Event()
+    original_update_list = storage.update_list
+
+    def _slow_update_list(filename, mutator):
+        def _slow_mutator(items):
+            entered.set()
+            time.sleep(0.2)
+            return mutator(items)
+        return original_update_list(filename, _slow_mutator)
+
+    storage.update_list = _slow_update_list
+
+    def _heartbeat():
+        registry.heartbeat(w1["worker_id"], status="busy")
+
+    t = threading.Thread(target=_heartbeat)
+    t.start()
+    entered.wait(timeout=2)
+    registry.deregister_worker(w2["worker_id"])  # concurrent deregister of a DIFFERENT worker
+    t.join(timeout=2)
+
+    assert registry.get_worker(w1["worker_id"])["status"] == "busy"
+    assert registry.get_worker(w2["worker_id"])["status"] == "offline"  # must not be lost -- failed before the fix
+
+
+# ------------------------------------------------------------------
 # KaggleWorkerService -- real command construction, stubbed subprocess
 # (NEVER invokes the real `kaggle` CLI in tests).
 # ------------------------------------------------------------------
