@@ -74,23 +74,23 @@ export const HomeDashboard: React.FC = () => {
             <span>AI Command Center & Multi-Agent OS</span>
           </div>
           
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
             What mission shall we delegate today?
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-gray-300">
+          <p className="mt-3 text-base sm:text-lg text-gray-300">
             EvolveAgent AI routes high-level intents across specialized agents, maintains deep knowledge in Project Brain, and sandboxes every action under strict Governance safety rules.
           </p>
 
           {/* Quick Prompt Input Bar */}
           <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col gap-2.5">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
               <input
                 type="text"
                 value={quickPrompt}
                 onChange={(e) => setQuickPrompt(e.target.value)}
                 placeholder="Ask anything or command agents (e.g. 'Redesign our dashboard cards', 'Scan GitHub repo')..."
-                className="w-full text-left bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
+                className="w-full text-left bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-11 pr-4 py-3.5 text-base text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
               />
               <kbd 
                 onClick={() => setIsCommandModalOpen(true)}
@@ -101,7 +101,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
+              className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-base shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
             >
               <span>Launch Mission</span>
               <ArrowRight className="w-4 h-4" />
