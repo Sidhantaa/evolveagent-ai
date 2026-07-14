@@ -151,7 +151,32 @@ class MCPReadOnlyAdapter:
     # ------------------------------------------------------------------
     def _git_dir(self) -> Path | None:
         git_dir = self.root / ".git"
-        return git_dir if git_dir.is_dir() else None
+        if git_dir.is_dir():
+            return git_dir
+        if git_dir.is_file():
+            try:
+                text = git_dir.read_text(encoding="utf-8", errors="replace").strip()
+            except OSError:
+                return None
+            if text.startswith("gitdir:"):
+                target = text.split("gitdir:", 1)[1].strip()
+                resolved = Path(target) if Path(target).is_absolute() else (self.root / target)
+                resolved = resolved.resolve()
+                return resolved if resolved.is_dir() else None
+        return None
+
+    @staticmethod
+    def _git_common_dir(git_dir: Path) -> Path:
+        common_file = git_dir / "commondir"
+        if not common_file.is_file():
+            return git_dir
+        try:
+            text = common_file.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            return git_dir
+        resolved = Path(text) if Path(text).is_absolute() else (git_dir / text)
+        resolved = resolved.resolve()
+        return resolved if resolved.is_dir() else git_dir
 
     def _git_current_branch(self, payload: dict):
         git_dir = self._git_dir()
@@ -170,7 +195,7 @@ class MCPReadOnlyAdapter:
         git_dir = self._git_dir()
         if git_dir is None:
             return {}, False, "No .git directory found in the sandbox root."
-        heads = git_dir / "refs" / "heads"
+        heads = self._git_common_dir(git_dir) / "refs" / "heads"
         branches: list[str] = []
         if heads.is_dir():
             for path in sorted(heads.rglob("*")):

@@ -300,6 +300,7 @@ from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
 from app.services.worker_registry_service import WorkerRegistryService
 from app.services.kaggle_worker_service import KaggleWorkerService
+from app.services.gpu_worker_service import GPUWorkerService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
 from app.services.training_lab_service import TrainingLabService
@@ -451,6 +452,7 @@ agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
 worker_registry_service = WorkerRegistryService(storage, governance_service)
 kaggle_worker_service = KaggleWorkerService(storage, governance_service, worker_registry=worker_registry_service, agent_scheduler=agent_scheduler)
+gpu_worker_service = GPUWorkerService(worker_registry_service, kaggle_worker_service, governance_service)
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
@@ -1470,6 +1472,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **product_launch_service.analytics_summary(),
         **worker_registry_service.analytics_summary(),
         **kaggle_worker_service.analytics_summary(),
+        **gpu_worker_service.analytics_summary(),
         **self_healing_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }

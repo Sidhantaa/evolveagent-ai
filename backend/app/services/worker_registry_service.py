@@ -8,6 +8,23 @@ from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
 
 WORKER_STATUSES = ["online", "offline", "busy"]
+GPU_METADATA_FIELDS = {
+    "provider",
+    "gpu_model",
+    "gpu_memory_gb",
+    "region",
+    "runtime",
+    "supports_jobs",
+    "supports_model_serving",
+    "estimated_cost_per_hour",
+    "quota_state",
+    "requires_approval",
+    "last_provider_check",
+}
+PROVIDER_BY_WORKER_TYPE = {
+    "kaggle_gpu": "kaggle",
+    "local_gpu": "local",
+}
 
 
 class WorkerRegistryService:
@@ -46,12 +63,50 @@ class WorkerRegistryService:
             )
         )
 
+    @staticmethod
+    def _sanitize_metadata(metadata: dict | None) -> dict:
+        safe: dict = {}
+        for key, value in list((metadata or {}).items())[:20]:
+            safe_key = str(key).strip()[:60]
+            if not safe_key:
+                continue
+            if isinstance(value, bool) or value is None:
+                safe[safe_key] = value
+            elif isinstance(value, (int, float)):
+                safe[safe_key] = value
+            elif isinstance(value, list):
+                safe[safe_key] = [str(item).strip()[:120] for item in value[:10]]
+            else:
+                safe[safe_key] = str(value).strip()[:300]
+        return safe
+
+    def _normalize_gpu_metadata(self, worker_type: str, metadata: dict) -> dict:
+        provider = str(metadata.get("provider") or PROVIDER_BY_WORKER_TYPE.get(worker_type, "other")).strip()[:40]
+        runtime = str(metadata.get("runtime") or ("notebook" if provider == "kaggle" else "unknown")).strip()[:60]
+        return {
+            "provider": provider,
+            "gpu_model": metadata.get("gpu_model"),
+            "gpu_memory_gb": metadata.get("gpu_memory_gb"),
+            "region": metadata.get("region"),
+            "runtime": runtime,
+            "supports_jobs": bool(metadata.get("supports_jobs", "gpu" in str(worker_type).lower())),
+            "supports_model_serving": bool(metadata.get("supports_model_serving", False)),
+            "estimated_cost_per_hour": metadata.get("estimated_cost_per_hour"),
+            "quota_state": metadata.get("quota_state") or "unknown",
+            "requires_approval": bool(metadata.get("requires_approval", True)),
+            "last_provider_check": metadata.get("last_provider_check"),
+        }
+
     def register_worker(self, worker_type: str, capabilities: list[str] | None = None, metadata: dict | None = None) -> dict:
+        resolved_type = str(worker_type or "unknown").strip()[:60]
+        safe_metadata = self._sanitize_metadata(metadata)
+        gpu_metadata = self._normalize_gpu_metadata(resolved_type, safe_metadata)
         worker = {
             "worker_id": str(uuid4()),
-            "worker_type": str(worker_type or "unknown").strip()[:60],
+            "worker_type": resolved_type,
             "capabilities": [str(c).strip()[:60] for c in (capabilities or [])][:20],
-            "metadata": {str(k)[:40]: str(v)[:200] for k, v in list((metadata or {}).items())[:10]},
+            "metadata": safe_metadata,
+            **gpu_metadata,
             "status": "online",
             "registered_at": self._now(),
             "last_heartbeat": self._now(),

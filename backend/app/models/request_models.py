@@ -547,6 +547,30 @@ class KaggleJobSubmitRequest(BaseModel):
     workspace_id: str | None = Field(default=None, max_length=120)
 
 
+class GPUDryRunRequest(BaseModel):
+    provider: str = Field(default="kaggle", min_length=1, max_length=40)
+    title: str = Field(default="GPU job", max_length=160)
+    workspace_id: str | None = Field(default=None, max_length=120)
+    estimated_duration_minutes: int | None = Field(default=None, ge=1, le=24 * 60)
+    runtime: str = Field(default="python", max_length=60)
+    requires_gpu: bool = True
+    metadata: dict = Field(default_factory=dict)
+
+
+class LocalGPUWorkerRegisterRequest(BaseModel):
+    name: str = Field(default="Local GPU Worker", max_length=80)
+    gpu_model: str = Field(default="unknown", max_length=120)
+    gpu_memory_gb: float | None = Field(default=None, ge=0)
+    region: str = Field(default="local", max_length=80)
+    runtime: str = Field(default="unknown", max_length=60)
+    supports_jobs: bool = True
+    supports_model_serving: bool = False
+    estimated_cost_per_hour: float | None = Field(default=0, ge=0)
+    quota_state: str = Field(default="user_controlled", max_length=80)
+    capabilities: list[str] = Field(default_factory=lambda: ["gpu", "local"])
+    metadata: dict = Field(default_factory=dict)
+
+
 # ----------------------------------------------------------------------
 # v18.0 Real Business Automation Layer
 # ----------------------------------------------------------------------
