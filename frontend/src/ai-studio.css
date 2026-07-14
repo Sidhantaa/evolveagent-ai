@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @layer base {
   body {
     @apply bg-[#0a0a0a] text-[#e5e5e5] font-sans antialiased selection:bg-purple-500/30 selection:text-purple-200 overflow-x-hidden;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   }
 
   code, pre, .font-mono {
@@ -52,4 +52,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f3f;
 }
-

@@ -63,7 +63,7 @@ export const HomeDashboard: React.FC = () => {
   return (
     <div className={`animate-fadeIn ${!expanded ? 'min-h-[calc(100vh-180px)] flex flex-col items-center justify-center space-y-6' : 'space-y-6 pb-12'}`}>
       {/* 1. AI Command Center Hero Card */}
-      <div className={`relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden ${!expanded ? 'max-w-3xl w-full' : ''}`}>
+      <div className={`relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden ${!expanded ? 'max-w-5xl w-full' : ''}`}>
         {/* Glow backdrop */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -135,7 +135,7 @@ export const HomeDashboard: React.FC = () => {
 
       {/* Collapsed summary bar — shown by default; one glance tells you if anything needs you */}
       {!expanded && (
-        <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 max-w-3xl w-full">
+        <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 max-w-5xl w-full">
           <div className="flex items-center gap-2 text-xs text-amber-200">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             {pendingApprovals.length > 0 ? (
