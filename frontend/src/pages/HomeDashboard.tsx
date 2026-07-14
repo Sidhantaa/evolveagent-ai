@@ -24,7 +24,9 @@ import {
   Github, 
   FolderGit2, 
   CheckSquare, 
-  Layers 
+  Layers,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export const HomeDashboard: React.FC = () => {
@@ -45,6 +47,7 @@ export const HomeDashboard: React.FC = () => {
   } = useApp();
 
   const [quickPrompt, setQuickPrompt] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   const pendingApprovals = approvals.filter(a => a.status === 'pending');
   const activeAgents = agents.filter(a => a.status === 'active' || a.status === 'running');
@@ -130,6 +133,34 @@ export const HomeDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Collapsed summary bar — shown by default; one glance tells you if anything needs you */}
+      {!expanded && (
+        <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3">
+          <div className="flex items-center gap-2 text-xs text-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            {pendingApprovals.length > 0 ? (
+              <span>
+                {pendingApprovals.length} approval{pendingApprovals.length !== 1 ? 's' : ''} pending
+                {pendingApprovals.some(a => a.riskLevel === 'high') && (
+                  <> &middot; {pendingApprovals.filter(a => a.riskLevel === 'high').length} high risk</>
+                )}
+              </span>
+            ) : (
+              <span>All clear — nothing needs your attention right now</span>
+            )}
+          </div>
+          <button
+            onClick={() => setExpanded(true)}
+            className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+          >
+            <span>Show details</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {expanded && (
+      <>
       {/* 2. System Metrics — active ones get full cards, idle/zero ones collapse into one quiet line */}
       {(() => {
         const parseMetricValue = (val: string | number) => {
@@ -409,6 +440,16 @@ export const HomeDashboard: React.FC = () => {
           </div>
         </GlassCard>
       </div>
+
+      <button
+        onClick={() => setExpanded(false)}
+        className="flex items-center gap-1 text-xs text-gray-400 hover:text-cyan-400 font-medium mx-auto"
+      >
+        <ChevronUp className="w-3.5 h-3.5" />
+        <span>Collapse view</span>
+      </button>
+      </>
+      )}
     </div>
   );
 };
