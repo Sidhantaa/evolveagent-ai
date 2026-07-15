@@ -300,6 +300,7 @@ from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
 from app.services.worker_registry_service import WorkerRegistryService
 from app.services.kaggle_worker_service import KaggleWorkerService
+from app.services.runpod_worker_service import RunPodWorkerService
 from app.services.gpu_worker_service import GPUWorkerService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
@@ -452,7 +453,8 @@ agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
 worker_registry_service = WorkerRegistryService(storage, governance_service)
 kaggle_worker_service = KaggleWorkerService(storage, governance_service, worker_registry=worker_registry_service, agent_scheduler=agent_scheduler)
-gpu_worker_service = GPUWorkerService(worker_registry_service, kaggle_worker_service, governance_service)
+runpod_worker_service = RunPodWorkerService(storage, governance_service, worker_registry=worker_registry_service, agent_scheduler=agent_scheduler)
+gpu_worker_service = GPUWorkerService(worker_registry_service, kaggle_worker_service, governance_service, runpod_worker=runpod_worker_service)
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
@@ -493,7 +495,7 @@ master_agent_service = MasterAgentService(storage, governance_service, mcp_sugge
 git_discovery_service = GitDiscoveryService(storage, governance_service)
 agent_profile_service = AgentProfileService(storage, governance_service)
 voice_console_service = VoiceConsoleService(storage, governance_service)
-durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service, self_healing=self_healing_service, eval_harness=eval_harness_service, kaggle_worker=kaggle_worker_service)
+durable_workflow_service = DurableWorkflowService(storage, governance_service, agent_scheduler=agent_scheduler, approvals=approval_service, test_quality=test_quality_service, self_healing=self_healing_service, eval_harness=eval_harness_service, kaggle_worker=kaggle_worker_service, runpod_worker=runpod_worker_service)
 # v120: scheduled tasks can start a REAL (still approval-gated) durable workflow run.
 scheduled_tasks_service = ScheduledTasksService(storage, governance_service, workflows=durable_workflow_service)
 from app.services.scheduler_tick_worker import SchedulerTickWorker  # noqa: E402
@@ -756,6 +758,9 @@ CAPABILITY_REGISTRY: list[dict] = [
     {"name": "Kaggle GPU Worker (real kernel submission)", "category": "MCP & Automation", "route": "/api/worker-registry",
      "safety_level": "approval_gated_write", "tool_used": "KaggleWorkerService",
      "classify": lambda: classify_optin_global(kaggle_worker_service.status(), "enabled")},
+    {"name": "RunPod GPU Worker (real serverless submission)", "category": "MCP & Automation", "route": "/api/worker-registry",
+     "safety_level": "approval_gated_write", "tool_used": "RunPodWorkerService",
+     "classify": lambda: classify_optin_global(runpod_worker_service.status(), "enabled", "configured")},
     {"name": "Chief of Staff (real GitHub signal)", "category": "Personal & Org", "route": "/api/chief-of-staff",
      "safety_level": "read_only", "tool_used": None, "classify": _classify_chief_of_staff_github},
 ]
@@ -1472,6 +1477,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **product_launch_service.analytics_summary(),
         **worker_registry_service.analytics_summary(),
         **kaggle_worker_service.analytics_summary(),
+        **runpod_worker_service.analytics_summary(),
         **gpu_worker_service.analytics_summary(),
         **self_healing_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),

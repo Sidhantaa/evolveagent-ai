@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -10,14 +9,6 @@ from app.services.worker_registry_service import WorkerRegistryService
 
 
 FUTURE_CLOUD_PROVIDERS = [
-    {
-        "provider": "runpod",
-        "name": "RunPod",
-        "enabled_env": "RUNPOD_WORKER_ENABLED",
-        "execution_env": "RUNPOD_EXECUTION_ENABLED",
-        "required_env_vars": ["RUNPOD_API_KEY"],
-        "cost_warning": "RunPod can create real paid GPU pods. v240 exposes readiness/dry-run only.",
-    },
     {
         "provider": "lambda_labs",
         "name": "Lambda Labs",
@@ -62,9 +53,11 @@ class GPUWorkerService:
         worker_registry: WorkerRegistryService,
         kaggle_worker,
         governance_service: GovernanceService,
+        runpod_worker=None,
     ):
         self.worker_registry = worker_registry
         self.kaggle_worker = kaggle_worker
+        self.runpod_worker = runpod_worker
         self.governance = governance_service
 
     @staticmethod
@@ -73,10 +66,12 @@ class GPUWorkerService:
 
     @staticmethod
     def _env_enabled(name: str) -> bool:
+        import os
         return str(os.environ.get(name, "")).strip().lower() in ("1", "true", "yes", "on")
 
     @staticmethod
     def _env_configured(names: list[str]) -> bool:
+        import os
         return all(bool(os.environ.get(name, "").strip()) for name in names)
 
     def _log(self, action_type: str, reason: str, blocked: bool = False) -> None:
@@ -163,10 +158,43 @@ class GPUWorkerService:
             "note": "Kaggle is the only real v240-capable adapter; it remains opt-in and approval-gated.",
         }
 
+    def _runpod_provider(self, workers: list[dict]) -> dict:
+        status = self.runpod_worker.status() if self.runpod_worker is not None else {
+            "enabled": False, "configured": False, "default_endpoint_set": False, "total_jobs": 0,
+        }
+        enabled = bool(status.get("enabled"))
+        configured = bool(status.get("configured"))
+        endpoint_set = bool(status.get("default_endpoint_set"))
+        execution_enabled = enabled and configured and endpoint_set
+        missing = []
+        if not configured:
+            missing.append("RUNPOD_API_KEY")
+        if not endpoint_set:
+            missing.append("RUNPOD_DEFAULT_ENDPOINT_ID or endpoint_id in approved workflow params")
+        return {
+            "provider": "runpod",
+            "name": "RunPod GPU Worker",
+            "enabled": enabled,
+            "configured": configured,
+            "execution_enabled": execution_enabled,
+            "supports_gpu_jobs": execution_enabled,
+            "supports_cancellation": False,
+            "risk_level": "high",
+            "worker_count": self._count(workers, "runpod"),
+            "active_workers": self._active_count(workers, "runpod"),
+            "total_jobs": status.get("total_jobs", 0),
+            "required_env_vars": ["RUNPOD_WORKER_ENABLED", "RUNPOD_API_KEY", "RUNPOD_DEFAULT_ENDPOINT_ID"],
+            "missing_configuration": missing,
+            "cost_warning": "RunPod can consume paid cloud GPU resources. Submission is approval-gated through DurableWorkflowService.",
+            "note": "Real RunPod adapter is wired but disabled by default; API key values are never exposed.",
+        }
+
     def _future_provider(self, spec: dict, workers: list[dict]) -> dict:
         enabled = self._env_enabled(spec["enabled_env"])
         execution_enabled = self._env_enabled(spec["execution_env"])
         configured = self._env_configured(spec["required_env_vars"])
+        import os
+        missing = [name for name in spec["required_env_vars"] if not os.environ.get(name)]
         return {
             "provider": spec["provider"],
             "name": spec["name"],
@@ -174,6 +202,7 @@ class GPUWorkerService:
             "configured": configured,
             "execution_enabled": False,
             "requested_execution_enabled": execution_enabled,
+            "missing_configuration": missing,
             "supports_gpu_jobs": False,
             "supports_cancellation": False,
             "risk_level": "high",
@@ -186,7 +215,7 @@ class GPUWorkerService:
 
     def providers(self) -> dict:
         workers = [self._normalize_worker(worker) for worker in self.worker_registry.list_workers()]
-        providers = [self._local_provider(workers), self._kaggle_provider(workers)]
+        providers = [self._local_provider(workers), self._kaggle_provider(workers), self._runpod_provider(workers)]
         providers.extend(self._future_provider(spec, workers) for spec in FUTURE_CLOUD_PROVIDERS)
         providers = sorted(providers, key=lambda row: PROVIDER_ORDER.index(row["provider"]) if row["provider"] in PROVIDER_ORDER else 99)
         return {
@@ -230,11 +259,23 @@ class GPUWorkerService:
             self._log("gpu_worker_dry_run", f"Dry-run declined for unknown GPU provider {provider}.", blocked=True)
             return result
 
-        missing = [name for name in row.get("required_env_vars", []) if name.isupper() and not os.environ.get(name)]
+        missing = list(row.get("missing_configuration") or [])
         if provider == "kaggle":
             accepted = bool(row.get("execution_enabled"))
             declined_reason = "" if accepted else "Kaggle worker is disabled. Set KAGGLE_WORKER_ENABLED=true before approval can submit a real kernel."
             next_action = "Create an approval-gated durable workflow step for run_kaggle_job." if accepted else "Enable Kaggle intentionally, then rerun dry-run."
+        elif provider == "runpod":
+            endpoint_from_payload = bool(str(payload.get("endpoint_id") or payload.get("metadata", {}).get("endpoint_id") or "").strip())
+            configured = bool(row.get("configured"))
+            enabled = bool(row.get("enabled"))
+            accepted = enabled and configured and (bool(row.get("execution_enabled")) or endpoint_from_payload)
+            if accepted:
+                declined_reason = ""
+                next_action = "Create an approval-gated durable workflow step for run_runpod_job."
+                missing = []
+            else:
+                declined_reason = "RunPod worker is disabled or missing configuration. Set RUNPOD_WORKER_ENABLED=true, RUNPOD_API_KEY, and a default endpoint or workflow endpoint_id."
+                next_action = "Configure RunPod intentionally, then rerun dry-run before approval."
         elif provider == "local":
             accepted = False
             declined_reason = "Local GPU workers are registration/status-only in v240; no local executor is wired."
@@ -254,7 +295,11 @@ class GPUWorkerService:
             "estimated_cost_note": row.get("cost_warning", "Cost estimate unavailable; human approval required before execution."),
             "missing_configuration": [] if provider in ("local", "kaggle") else missing,
             "next_human_action": next_action,
-            "execution_path": "durable_workflow.run_kaggle_job" if provider == "kaggle" and accepted else None,
+            "execution_path": (
+                "durable_workflow.run_kaggle_job" if provider == "kaggle" and accepted
+                else "durable_workflow.run_runpod_job" if provider == "runpod" and accepted
+                else None
+            ),
         }
         self._log(
             "gpu_worker_dry_run",

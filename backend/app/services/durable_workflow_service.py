@@ -21,9 +21,13 @@ RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post",
 # a safe refusal recorded as the step's output, never a silent no-op. Anything
 # not in this set is simulated, not executed. run_eval_suite (v250) mirrors
 # run_quality_checks: a real regression signal can also fail the run.
-# run_kaggle_job (v220) submits a real, quota-consuming Kaggle GPU kernel --
-# async by nature (submits only, does not block on completion).
-WHITELISTED_ACTIONS = {"create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request", "run_quality_checks", "run_eval_suite", "run_kaggle_job"}
+# run_kaggle_job (v220) and run_runpod_job (v240+) submit real, quota/cost-
+# consuming GPU work -- async by nature (submit only, never block on
+# completion), and only reachable after an explicit human approval.
+WHITELISTED_ACTIONS = {
+    "create_task", "create_note", "notify", "create_github_issue", "write_code_change", "open_pull_request",
+    "run_quality_checks", "run_eval_suite", "run_kaggle_job", "run_runpod_job",
+}
 
 TERMINAL = {"completed", "cancelled", "failed"}
 
@@ -94,7 +98,7 @@ class DurableWorkflowService:
     runs_file = "durable_workflow_runs.json"
     effects_file = "durable_workflow_effects.json"
 
-    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None, test_quality=None, self_healing=None, eval_harness=None, kaggle_worker=None):
+    def __init__(self, storage: StorageService, governance_service: GovernanceService, event_bus=None, agent_scheduler=None, approvals=None, github=None, code_writer=None, test_quality=None, self_healing=None, eval_harness=None, kaggle_worker=None, runpod_worker=None):
         self.storage = storage
         self.governance = governance_service
         # Verification layer: optional TestQualityService collaborator backing the
@@ -121,6 +125,10 @@ class DurableWorkflowService:
         # never blocks the run waiting for completion. Without it, degrades to
         # a safe simulated decline, same as every other collaborator-less path.
         self.kaggle_worker = kaggle_worker
+        # v240+ Compute Fabric: optional RunPodWorkerService collaborator --
+        # same approval-gated pattern as Kaggle, but for paid RunPod Serverless
+        # jobs. Without it, degrades to a safe simulated decline.
+        self.runpod_worker = runpod_worker
         # v120: optional EventBusService — lets a run's completion/approval-halt/
         # cancellation chain into another action. Emitting is best-effort and must
         # never break the workflow engine itself.
@@ -410,6 +418,31 @@ class DurableWorkflowService:
             else:
                 result = {"executed": False, "job": None,
                            "note": "No Kaggle worker wired or code missing; simulated only."}
+        elif action_type == "run_runpod_job":
+            input_payload = None
+            input_raw = params.get("input") or params.get("payload") or "{}"
+            if isinstance(input_raw, str):
+                try:
+                    parsed = json.loads(input_raw)
+                    if isinstance(parsed, dict):
+                        input_payload = parsed
+                except (TypeError, ValueError):
+                    input_payload = None
+            elif isinstance(input_raw, dict):
+                input_payload = input_raw
+            if self.runpod_worker is not None and input_payload:
+                try:
+                    job = self.runpod_worker.submit_job(
+                        input_payload=input_payload,
+                        endpoint_id=params.get("endpoint_id") or None,
+                        title=params.get("title", ""),
+                    )
+                    result = {"executed": True, "job": job}
+                except Exception as exc:
+                    result = {"executed": False, "job": None, "note": str(exc)}
+            else:
+                result = {"executed": False, "job": None,
+                           "note": "No RunPod worker wired or input payload missing; simulated only."}
         effect = {
             "effect_id": str(uuid4()),
             "run_id": run["run_id"],
@@ -464,6 +497,13 @@ class DurableWorkflowService:
             if job.get("submitted"):
                 return f"[executed] run_kaggle_job: submitted {job.get('kernel_ref')} (job_id={job.get('job_id')}, poll for completion)."
             return f"[declined] run_kaggle_job: submission failed -- {job.get('stderr_tail', 'unknown error')}"
+        if action_type == "run_runpod_job":
+            if not result or not result.get("executed"):
+                return f"[declined] run_runpod_job: {(result or {}).get('note', 'unavailable')}"
+            job = result.get("job") or {}
+            if job.get("submitted"):
+                return f"[executed] run_runpod_job: submitted {job.get('runpod_job_id')} (job_id={job.get('job_id')}, poll for completion)."
+            return f"[declined] run_runpod_job: submission failed -- {job.get('error', 'unknown error')}"
         label = params.get("title") or params.get("message") or action_type
         return f"[executed] {action_type}: {label}"
 

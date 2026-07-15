@@ -209,6 +209,7 @@ class StorageService:
             "workspace_templates.json",
             "scheduled_tasks.json",
             "scheduled_task_runs.json",
+            "runpod_worker_jobs.json",
             "data_export_log.json",
             "os2_snapshots.json",
             "master_agent_runs.json",

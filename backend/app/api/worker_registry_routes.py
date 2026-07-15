@@ -6,12 +6,14 @@ from fastapi import APIRouter, HTTPException
 from app.api.routes import (
     worker_registry_service,
     kaggle_worker_service,
+    runpod_worker_service,
     gpu_worker_service,
 )
 from app.models.request_models import (
     GPUDryRunRequest,
     KaggleJobSubmitRequest,
     LocalGPUWorkerRegisterRequest,
+    RunPodJobSubmitRequest,
     WorkerHeartbeatRequest,
     WorkerRegisterRequest,
 )
@@ -119,3 +121,50 @@ def get_kaggle_job_output(job_id: str) -> dict:
         return kaggle_worker_service.get_job_output(job_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Job not found") from error
+
+
+# ----------------------------------------------------------------------
+# v240+ Compute Fabric -- real RunPod worker status/poll/output.
+# Submission is intentionally routed through DurableWorkflowService's
+# approval-gated run_runpod_job action, not this direct API route.
+# ----------------------------------------------------------------------
+@router.get("/worker-registry/runpod/jobs")
+def list_runpod_jobs() -> dict:
+    jobs = runpod_worker_service.list_jobs()
+    return {"jobs": jobs, "count": len(jobs)}
+
+
+@router.post("/worker-registry/runpod/jobs")
+def submit_runpod_job(_: RunPodJobSubmitRequest) -> dict:
+    raise HTTPException(
+        status_code=400,
+        detail="Direct RunPod submission is disabled. Use an approved durable workflow run_runpod_job step.",
+    )
+
+
+@router.get("/worker-registry/runpod/jobs/{job_id}")
+def get_runpod_job(job_id: str) -> dict:
+    job = runpod_worker_service.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
+@router.post("/worker-registry/runpod/jobs/{job_id}/poll")
+def poll_runpod_job(job_id: str) -> dict:
+    try:
+        return runpod_worker_service.poll_job(job_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Job not found") from error
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/worker-registry/runpod/jobs/{job_id}/output")
+def get_runpod_job_output(job_id: str) -> dict:
+    try:
+        return runpod_worker_service.get_job_output(job_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Job not found") from error
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error

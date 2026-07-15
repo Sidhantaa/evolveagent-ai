@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     # configured Kaggle account, so it must be explicitly turned on.
     kaggle_worker_enabled: bool = Field(default=False, alias="KAGGLE_WORKER_ENABLED")
     kaggle_worker_private: bool = Field(default=True, alias="KAGGLE_WORKER_PRIVATE")
+    # v240+ Compute Fabric: real (opt-in) RunPod GPU worker. Off by default --
+    # RunPod jobs can consume paid cloud GPU resources, so live submission is
+    # only reachable through the approval-gated durable workflow action.
+    runpod_worker_enabled: bool = Field(default=False, alias="RUNPOD_WORKER_ENABLED")
+    runpod_api_key: str | None = Field(default=None, alias="RUNPOD_API_KEY")
+    runpod_default_endpoint_id: str | None = Field(default=None, alias="RUNPOD_DEFAULT_ENDPOINT_ID")
+    runpod_api_base_url: str = Field(default="https://api.runpod.ai", alias="RUNPOD_API_BASE_URL")
     codex_worker_mode: str = Field(default="manual_trigger", alias="CODEX_WORKER_MODE")
     codex_max_files_changed: int = Field(default=8, alias="CODEX_MAX_FILES_CHANGED")
     auto_git_push: bool = Field(default=False, alias="AUTO_GIT_PUSH")
