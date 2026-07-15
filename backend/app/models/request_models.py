@@ -547,6 +547,13 @@ class KaggleJobSubmitRequest(BaseModel):
     workspace_id: str | None = Field(default=None, max_length=120)
 
 
+class RunPodJobSubmitRequest(BaseModel):
+    endpoint_id: str | None = Field(default=None, max_length=160)
+    input: dict = Field(default_factory=dict)
+    title: str = Field(default="", max_length=200)
+    workspace_id: str | None = Field(default=None, max_length=120)
+
+
 class GPUDryRunRequest(BaseModel):
     provider: str = Field(default="kaggle", min_length=1, max_length=40)
     title: str = Field(default="GPU job", max_length=160)

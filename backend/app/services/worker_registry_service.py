@@ -23,6 +23,7 @@ GPU_METADATA_FIELDS = {
 }
 PROVIDER_BY_WORKER_TYPE = {
     "kaggle_gpu": "kaggle",
+    "runpod_gpu": "runpod",
     "local_gpu": "local",
 }
 

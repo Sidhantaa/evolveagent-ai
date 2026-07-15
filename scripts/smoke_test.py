@@ -111,6 +111,8 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("gpu-workers", "GET", "/api/worker-registry/gpu/dashboard", None, 200),
     ("gpu-workers", "GET", "/api/worker-registry/gpu/providers", None, 200),
     ("gpu-workers", "POST", "/api/worker-registry/gpu/dry-run", {"provider": "runpod", "title": "smoke gpu"}, 200),
+    ("gpu-workers", "GET", "/api/worker-registry/runpod/jobs", None, 200),
+    ("gpu-workers", "POST", "/api/worker-registry/runpod/jobs", {"input": {"prompt": "smoke"}, "title": "smoke"}, 400),
     ("gpu-workers", "POST", "/api/worker-registry/gpu/local-workers",
      {"name": "Smoke Local GPU", "gpu_model": "M-series", "gpu_memory_gb": 16}, 200),
     # Master Agent

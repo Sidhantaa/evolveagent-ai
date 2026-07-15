@@ -6,6 +6,7 @@ from app.main import app
 from app.services.governance_service import GovernanceService
 from app.services.gpu_worker_service import GPUWorkerService
 from app.services.kaggle_worker_service import KaggleWorkerService
+from app.services.runpod_worker_service import RunPodWorkerService
 from app.services.storage_service import StorageService
 from app.services.worker_registry_service import WorkerRegistryService
 
@@ -17,7 +18,8 @@ def _service(tmp_path):
     governance = GovernanceService(storage)
     registry = WorkerRegistryService(storage, governance)
     kaggle = KaggleWorkerService(storage, governance, worker_registry=registry, kaggle_runner=lambda *_: None)
-    return GPUWorkerService(registry, kaggle, governance), registry, storage
+    runpod = RunPodWorkerService(storage, governance, worker_registry=registry)
+    return GPUWorkerService(registry, kaggle, governance, runpod_worker=runpod), registry, storage
 
 
 def test_dashboard_normalizes_legacy_and_gpu_workers(tmp_path):
@@ -40,35 +42,54 @@ def test_dashboard_normalizes_legacy_and_gpu_workers(tmp_path):
 
 
 def test_provider_readiness_reports_booleans_and_env_names_only(tmp_path, monkeypatch):
-    monkeypatch.setenv("RUNPOD_WORKER_ENABLED", "true")
-    monkeypatch.setenv("RUNPOD_EXECUTION_ENABLED", "true")
-    monkeypatch.setenv("RUNPOD_API_KEY", "secret-runpod-token")
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "runpod_worker_enabled", True)
+    monkeypatch.setattr(settings, "runpod_api_key", "secret-runpod-token")
+    monkeypatch.setattr(settings, "runpod_default_endpoint_id", "rp-endpoint")
     service, _, _ = _service(tmp_path)
 
     runpod = next(provider for provider in service.providers()["providers"] if provider["provider"] == "runpod")
 
     assert runpod["enabled"] is True
     assert runpod["configured"] is True
-    assert runpod["requested_execution_enabled"] is True
-    assert runpod["execution_enabled"] is False
-    assert runpod["required_env_vars"] == ["RUNPOD_API_KEY"]
+    assert runpod["execution_enabled"] is True
+    assert runpod["required_env_vars"] == ["RUNPOD_WORKER_ENABLED", "RUNPOD_API_KEY", "RUNPOD_DEFAULT_ENDPOINT_ID"]
     assert "secret-runpod-token" not in str(runpod)
 
 
-def test_dry_run_declines_future_cloud_execution_even_when_configured(tmp_path, monkeypatch):
-    monkeypatch.setenv("RUNPOD_WORKER_ENABLED", "true")
-    monkeypatch.setenv("RUNPOD_EXECUTION_ENABLED", "true")
-    monkeypatch.setenv("RUNPOD_API_KEY", "secret-runpod-token")
+def test_dry_run_accepts_runpod_only_when_configured_for_approval(tmp_path, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "runpod_worker_enabled", True)
+    monkeypatch.setattr(settings, "runpod_api_key", "secret-runpod-token")
+    monkeypatch.setattr(settings, "runpod_default_endpoint_id", "rp-endpoint")
     service, _, storage = _service(tmp_path)
+
+    result = service.dry_run({"provider": "runpod", "title": "paid gpu job"})
+
+    assert result["accepted"] is True
+    assert result["requires_approval"] is True
+    assert result["execution_path"] == "durable_workflow.run_runpod_job"
+    assert "secret-runpod-token" not in str(result)
+    events = storage.read_list("governance_log.json")
+    assert any(event.get("action_type") == "gpu_worker_dry_run" and event.get("blocked") is False for event in events)
+
+
+def test_dry_run_declines_runpod_when_disabled(tmp_path, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "runpod_worker_enabled", False)
+    monkeypatch.setattr(settings, "runpod_api_key", "secret-runpod-token")
+    monkeypatch.setattr(settings, "runpod_default_endpoint_id", "rp-endpoint")
+    service, _, _ = _service(tmp_path)
 
     result = service.dry_run({"provider": "runpod", "title": "paid gpu job"})
 
     assert result["accepted"] is False
     assert result["requires_approval"] is False
-    assert "readiness/dry-run only" in result["declined_reason"]
+    assert "RUNPOD_WORKER_ENABLED" in result["declined_reason"]
     assert "secret-runpod-token" not in str(result)
-    events = storage.read_list("governance_log.json")
-    assert any(event.get("action_type") == "gpu_worker_dry_run" and event.get("blocked") is True for event in events)
 
 
 def test_dry_run_declines_kaggle_when_disabled(tmp_path):
@@ -107,6 +128,11 @@ def test_gpu_worker_api_endpoints_registered_and_safe(monkeypatch):
     dry_run = client.post("/api/worker-registry/gpu/dry-run", json={"provider": "runpod", "title": "smoke"})
     assert dry_run.status_code == 200
     assert dry_run.json()["accepted"] is False
+
+    assert client.get("/api/worker-registry/runpod/jobs").status_code == 200
+    direct_submit = client.post("/api/worker-registry/runpod/jobs", json={"input": {"prompt": "x"}, "title": "x"})
+    assert direct_submit.status_code == 400
+    assert "durable workflow" in direct_submit.json()["detail"].lower()
 
     created = client.post(
         "/api/worker-registry/gpu/local-workers",
