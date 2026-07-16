@@ -163,6 +163,39 @@ def test_update_job_does_not_lose_a_concurrent_update_of_a_different_job(tmp_pat
     assert service.get_job(job_y["job_id"])["commit_hash"] == "abc123"  # must not be lost -- failed before the fix
 
 
+# ------------------------------------------------------------------
+# Round 34 (error-path lens): run_for_issue()'s try block only caught
+# (CodexWorkerError, LinearServiceError) -- any OTHER real exception (e.g.
+# subprocess.TimeoutExpired from the Codex CLI overrunning its 600s timeout)
+# escaped uncaught, leaving the job stuck "running" forever. Worse: the
+# "already running" guard then permanently blocked every future
+# run_for_issue() call for that issue (background poll AND manual route)
+# until a human hand-edited codex_jobs.json. Independently confirmed via a
+# standalone repro against the true unmodified code before writing any fix.
+# ------------------------------------------------------------------
+def test_unexpected_exception_terminates_the_job_instead_of_wedging_it(codex_env, monkeypatch):
+    monkeypatch.setattr("shutil.which", lambda _: "/usr/bin/codex")
+
+    def _timeout_codex_runner(cli_command, project_root, prompt):
+        raise subprocess.TimeoutExpired(cmd="codex", timeout=600)
+
+    codex_env["worker"]._codex_runner = _timeout_codex_runner
+
+    result = codex_env["worker"].run_for_issue("issue-170")
+    job = result["job"]
+    assert job["status"] == "failed"  # terminal, not stuck "running"
+    assert job["manual_review_required"] is True
+    assert "TimeoutExpired" in job["error"]
+    assert job["failure_stage"] == "codex_execution"
+
+    # The issue must not be permanently wedged -- a second attempt is allowed
+    # (it will hit the same timeout again in this test, but it must be able
+    # to TRY, not be blocked by "already running" against a job that will
+    # never terminate on its own).
+    second = codex_env["worker"].run_for_issue("issue-170")
+    assert second["job"]["status"] == "failed"
+
+
 def test_worker_disabled_returns_safe_error(monkeypatch):
     monkeypatch.setattr(settings, "codex_worker_enabled", False)
     worker = CodexWorkerService(

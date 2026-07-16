@@ -214,8 +214,19 @@ class CodexWorkerService:
             )
             return {"job": job, "verify_result": verify_result}
 
-        except (CodexWorkerError, LinearServiceError) as error:
-            error_message = str(error)
+        except Exception as error:  # noqa: BLE001 - any real failure must still leave the job terminal
+            # Round 34 (error-path lens): this used to only catch
+            # (CodexWorkerError, LinearServiceError) -- a real exception of
+            # any OTHER type (subprocess.TimeoutExpired from a Codex CLI run
+            # overrunning its 600s timeout, FileNotFoundError from a handoff
+            # file removed after validation, etc.) escaped uncaught, leaving
+            # the job stuck "running" forever. Worse: the "already running"
+            # guard above then permanently blocked every future run_for_issue
+            # call for that issue (background poll AND manual route) until a
+            # human hand-edited codex_jobs.json. Broadened to catch any
+            # exception so a real failure always degrades to a terminal,
+            # inspectable job state instead of wedging the issue.
+            error_message = f"{type(error).__name__}: {error}" if not isinstance(error, (CodexWorkerError, LinearServiceError)) else str(error)
             status = self._failure_status(stage, error_message)
             job = self.jobs.update_job(
                 job_id,
