@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+import subprocess
+from unittest.mock import MagicMock, patch
 
 from app.config import settings
 from app.services.git_service import GitService
@@ -29,6 +30,38 @@ def test_git_push_skips_when_auto_push_disabled(monkeypatch):
     assert result["skipped"] is True
     assert "AUTO_GIT_PUSH=false" in result["message"]
     service._run.assert_not_called()
+
+
+# ------------------------------------------------------------------
+# Round 35 (error-path lens): _run() previously called subprocess.run()
+# with NO timeout at all -- meaning it could never even raise
+# TimeoutExpired, it would just block the calling thread forever on any
+# real hang (a stale .git/index.lock, `push` stalling on a credential
+# prompt or an unreachable remote). Every caller (including
+# CodexWorkerService.run_for_issue(), which drives real git commands per
+# Linear issue) only checks result.returncode == 0, so a real hang now
+# degrades to a synthetic failed CompletedProcess instead of hanging the
+# request/thread indefinitely.
+# ------------------------------------------------------------------
+def test_run_passes_a_real_timeout_to_subprocess():
+    service = GitService(project_root="/tmp")
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = subprocess.CompletedProcess(["git", "status"], 0, "", "")
+        service._run("status")
+    assert mock_run.call_args.kwargs.get("timeout") == 60
+
+
+def test_run_degrades_gracefully_on_a_real_timeout():
+    service = GitService(project_root="/tmp")
+
+    def _hang(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs.get("timeout", 60))
+
+    with patch("subprocess.run", side_effect=_hang):
+        result = service.commit("test commit")
+
+    assert result["success"] is False  # must not raise or hang -- failed before the fix
+    assert "timed out" in result["message"]
 
 
 def test_git_create_branch_normalizes_name():
