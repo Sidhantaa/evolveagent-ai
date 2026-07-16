@@ -373,6 +373,19 @@ def test_capability_directory_lists_kaggle_gpu_worker():
     assert entry["route"] == "/api/worker-registry"
 
 
+def test_kaggle_capability_directory_label_matches_real_enforcement():
+    """Authorization lens finding: unlike RunPod (whose direct POST route
+    unconditionally declines), POST /worker-registry/kaggle/jobs calls
+    submit_job() directly with no approval check -- gated only by
+    KAGGLE_WORKER_ENABLED. "approval_gated_write" would overclaim protection
+    that doesn't exist on this reachable path; the label must be
+    "opt_in_call" to match the weakest real gate, same convention as
+    Slack/Notion/Linear."""
+    data = client.get("/api/capability-directory").json()
+    entry = next(c for c in data["capabilities"] if c["name"] == "Kaggle GPU Worker (real kernel submission)")
+    assert entry["safety_level"] == "opt_in_call"
+
+
 # ------------------------------------------------------------------
 # DurableWorkflowService: run_kaggle_job whitelisted action wiring.
 # ------------------------------------------------------------------

@@ -756,7 +756,15 @@ CAPABILITY_REGISTRY: list[dict] = [
      "safety_level": "local_write", "tool_used": None,
      "classify": lambda: classify_optin_global(scheduler_tick_worker.status(), "enabled")},
     {"name": "Kaggle GPU Worker (real kernel submission)", "category": "MCP & Automation", "route": "/api/worker-registry",
-     "safety_level": "approval_gated_write", "tool_used": "KaggleWorkerService",
+     # "opt_in_call", not "approval_gated_write" -- unlike RunPod (whose
+     # direct POST route unconditionally declines, forcing every real
+     # submission through the approval-gated durable-workflow action),
+     # Kaggle's own POST /worker-registry/kaggle/jobs calls submit_job()
+     # directly with no approval check, gated only by KAGGLE_WORKER_ENABLED.
+     # A durable-workflow run_kaggle_job action ALSO exists and IS
+     # approval-gated, but its existence doesn't make the direct route any
+     # less real -- the label must reflect the weakest reachable gate.
+     "safety_level": "opt_in_call", "tool_used": "KaggleWorkerService",
      "classify": lambda: classify_optin_global(kaggle_worker_service.status(), "enabled")},
     {"name": "RunPod GPU Worker (real serverless submission)", "category": "MCP & Automation", "route": "/api/worker-registry",
      "safety_level": "approval_gated_write", "tool_used": "RunPodWorkerService",
