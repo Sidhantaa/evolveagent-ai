@@ -41,14 +41,33 @@ class GitService:
             raise ValueError("Unsafe branch name")
         return safe_name
 
-    def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["git", *args],
-            cwd=self.project_root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    def _run(self, *args: str, timeout: int = 60) -> subprocess.CompletedProcess[str]:
+        # Round 35 (error-path lens): this call previously had NO timeout at
+        # all, so subprocess.run() could never even raise TimeoutExpired --
+        # it would simply block the calling thread forever on any real hang
+        # (a stale .git/index.lock, a `push` stalling on a credential prompt
+        # or a slow/unreachable remote). Every caller in this file (and
+        # CodexWorkerService.run_for_issue(), which drives real git commands
+        # per Linear issue) only ever checks `result.returncode == 0`, so
+        # degrading a real timeout to a synthetic failed CompletedProcess
+        # here means every existing call site handles it correctly with no
+        # changes of its own.
+        try:
+            return subprocess.run(
+                ["git", *args],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess(
+                args=["git", *args],
+                returncode=124,
+                stdout="",
+                stderr=f"git {' '.join(args)} timed out after {timeout}s",
+            )
 
     def git_status(self) -> dict[str, str | bool]:
         result = self._run("status", "--porcelain")
