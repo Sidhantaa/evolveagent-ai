@@ -278,4 +278,9 @@ class StorageService:
             "postgres_ready": bool(settings.database_url),
             "redis_ready": bool(settings.redis_url),
             "cache": stats.get("cache", "none"),
+            # Resource-exhaustion lens: real on-disk size per collection
+            # (largest first), so any file growing unboundedly is visible in
+            # one place -- empty on backends without a meaningful file size
+            # (e.g. Postgres), never fails this endpoint.
+            "largest_collections": stats.get("largest_collections", []),
         }

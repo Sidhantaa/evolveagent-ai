@@ -86,4 +86,23 @@ class JsonBackend:
     def stats(self) -> dict[str, Any]:
         files = [f for f in os.listdir(self.data_dir) if f.endswith(".json")] if os.path.isdir(self.data_dir) else []
         total = sum(len(self.read_list(f)) for f in files)
-        return {"kind": "json", "collections": len(files), "total_documents": total}
+        # Resource-exhaustion lens: rather than adding a bespoke size field
+        # to each individual service (as done for governance_log.json and
+        # compute_workers.json), surface every collection's real on-disk
+        # size in ONE place -- this makes ANY future unbounded-growth
+        # problem visible via /api/system/storage-status without needing a
+        # dedicated fix per file. Sorted largest-first, capped to the top 10
+        # so the payload stays useful rather than dumping all 70+ files.
+        sizes: list[dict[str, Any]] = []
+        for name in files:
+            try:
+                sizes.append({"filename": name, "size_bytes": os.path.getsize(self._path(name))})
+            except OSError:
+                continue
+        sizes.sort(key=lambda item: item["size_bytes"], reverse=True)
+        return {
+            "kind": "json",
+            "collections": len(files),
+            "total_documents": total,
+            "largest_collections": sizes[:10],
+        }
