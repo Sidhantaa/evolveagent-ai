@@ -80,6 +80,47 @@ def test_non_whitelisted_action_type_is_not_executed():
     assert client.get("/api/durable-workflows/effects", params={"run_id": run["run_id"]}).json()["count"] == 0
 
 
+def test_write_code_change_content_is_not_truncated_below_the_writers_own_limit():
+    """Data-integrity lens (round 40): _build_steps used to cap EVERY action_param
+    value at 20,000 chars, including write_code_change's "content" -- but
+    CodeWriterService itself allows content up to 200,000 bytes. A normal ~50KB
+    source file would silently lose its last ~60% at step-creation, then commit
+    the truncated content to real git with no error anywhere. "content" (and the
+    multi-file "files" JSON blob) must survive intact up to the writer's own cap."""
+    big_content = "x" * 30_000  # comfortably above the old 20,000 cap, below the 200,000 writer limit
+    steps = DurableWorkflowService._build_steps([
+        {"name": "write it", "action_type": "write_code_change",
+         "action_params": {"content": big_content, "file_path": "a.py", "commit_message": "msg", "repo_path": "/tmp/repo"}},
+    ])
+    assert len(steps[0]["action_params"]["content"]) == 30_000  # previously truncated to 20,000
+
+
+def test_write_code_change_files_json_blob_is_not_truncated_mid_json():
+    """The multi-file variant of the same bug: "files" is a JSON-encoded array
+    that, once truncated mid-string, fails json.loads and is silently swallowed
+    (durable_workflow_service's except clause falls back to a single-file write
+    with empty content) -- so the files blob must also survive intact."""
+    import json as _json
+    files = [{"file_path": f"f{i}.py", "content": "y" * 3000} for i in range(8)]  # ~26KB combined JSON
+    files_json = _json.dumps(files)
+    assert len(files_json) > 20_000  # would have been truncated (and corrupted) under the old cap
+    steps = DurableWorkflowService._build_steps([
+        {"name": "write many", "action_type": "write_code_change",
+         "action_params": {"files": files_json, "commit_message": "msg", "repo_path": "/tmp/repo"}},
+    ])
+    parsed = _json.loads(steps[0]["action_params"]["files"])  # must still be valid, complete JSON
+    assert len(parsed) == 8
+
+
+def test_non_large_action_params_still_capped_at_the_general_limit():
+    # Only "content"/"files" get the wider cap -- everything else keeps the
+    # original, tighter 20,000-char sanity limit.
+    steps = DurableWorkflowService._build_steps([
+        {"name": "make task", "action_type": "create_task", "action_params": {"title": "x" * 25_000}},
+    ])
+    assert len(steps[0]["action_params"]["title"]) == 20_000
+
+
 def test_daily_capture_template_halts_at_action():
     d = client.post("/api/durable-workflows/definitions", json={"template": "daily_capture"}).json()
     run = client.post("/api/durable-workflows/runs", json={"definition_id": d["definition_id"]}).json()

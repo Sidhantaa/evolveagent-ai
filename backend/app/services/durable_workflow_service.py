@@ -5,8 +5,19 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.models.response_models import GovernanceEvent
+from app.services.code_writer_service import _MAX_CONTENT_BYTES as _WRITER_MAX_CONTENT_BYTES
 from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
+
+# write_code_change's "content"/"files" action_params carry real file bytes
+# that CodeWriterService itself allows up to _WRITER_MAX_CONTENT_BYTES; every
+# other param (title, body, repo, ...) keeps the tighter general cap. Sourced
+# from CodeWriterService instead of a second hardcoded number so the two
+# limits can never drift apart again (data-integrity lens, round 40): a
+# lower cap here than the writer's own limit silently truncates an approved
+# commit's content below what the writer would have accepted whole.
+_LARGE_VALUE_PARAMS = {"content", "files"}
+_DEFAULT_PARAM_VALUE_CAP = 20_000
 
 # Words that mark a step as risky — it can never auto-run; the workflow halts for approval.
 RISKY_ACTIONS = ["send", "email", "pay", "purchase", "delete", "deploy", "post", "publish", "transfer", "charge", "refund"]
@@ -260,7 +271,10 @@ class DurableWorkflowService:
                 "name": name,
                 "action": action,
                 "action_type": action_type if real else "",
-                "action_params": {str(k)[:40]: str(v)[:20000] for k, v in list(params.items())[:10]} if real else {},
+                "action_params": {
+                    str(k)[:40]: str(v)[:(_WRITER_MAX_CONTENT_BYTES if str(k)[:40] in _LARGE_VALUE_PARAMS else _DEFAULT_PARAM_VALUE_CAP)]
+                    for k, v in list(params.items())[:10]
+                } if real else {},
                 "requires_approval": _is_risky(step) or real or bool(approvers),
                 "approvers": approvers,
                 "approval_chain_id": None,
