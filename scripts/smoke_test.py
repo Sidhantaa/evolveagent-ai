@@ -115,6 +115,9 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("gpu-workers", "POST", "/api/worker-registry/runpod/jobs", {"input": {"prompt": "smoke"}, "title": "smoke"}, 400),
     ("gpu-workers", "POST", "/api/worker-registry/gpu/local-workers",
      {"name": "Smoke Local GPU", "gpu_model": "M-series", "gpu_memory_gb": 16}, 200),
+    # v260 model serving (readiness + dry-run only; never starts a server)
+    ("model-serving", "GET", "/api/model-serving/dashboard", None, 200),
+    ("model-serving", "POST", "/api/model-serving/dry-run", {"backend": "ollama", "model": "smoke"}, 200),
     # Master Agent
     ("master-agent", "GET", "/api/master-agent/summary", None, 200),
     ("master-agent", "GET", "/api/master-agent/capabilities", None, 200),

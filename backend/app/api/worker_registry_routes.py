@@ -8,11 +8,13 @@ from app.api.routes import (
     kaggle_worker_service,
     runpod_worker_service,
     gpu_worker_service,
+    model_serving_service,
 )
 from app.models.request_models import (
     GPUDryRunRequest,
     KaggleJobSubmitRequest,
     LocalGPUWorkerRegisterRequest,
+    ModelServingDryRunRequest,
     RunPodJobSubmitRequest,
     WorkerHeartbeatRequest,
     WorkerRegisterRequest,
@@ -80,6 +82,21 @@ def dry_run_gpu_worker(request: GPUDryRunRequest) -> dict:
 @router.post("/worker-registry/gpu/local-workers")
 def register_local_gpu_worker(request: LocalGPUWorkerRegisterRequest) -> dict:
     return gpu_worker_service.register_local_worker(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v260 Distributed model serving -- readiness/dry-run only. Never starts,
+# installs, or supervises a model-server process; detect() only GETs an
+# operator-configured, already-running local endpoint.
+# ----------------------------------------------------------------------
+@router.get("/model-serving/dashboard")
+def get_model_serving_dashboard() -> dict:
+    return model_serving_service.dashboard()
+
+
+@router.post("/model-serving/dry-run")
+def dry_run_model_serving(request: ModelServingDryRunRequest) -> dict:
+    return model_serving_service.dry_run(request.model_dump())
 
 
 # ----------------------------------------------------------------------
