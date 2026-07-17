@@ -120,6 +120,12 @@ class UsageLedgerService:
         budget = next((b for b in self.storage.read_list(self.budgets_file) if b.get("workspace_id") == workspace_id), None)
         return float(budget.get("monthly_limit", 0)) if budget else 0.0
 
+    def _current_month_entries(self, entries: list[dict]) -> list[dict]:
+        # created_at is an ISO timestamp (self._now()); the first 7 chars are
+        # always "YYYY-MM" for a UTC calendar month, no datetime parsing needed.
+        current_period = datetime.now(UTC).strftime("%Y-%m")
+        return [e for e in entries if str(e.get("created_at") or "")[:7] == current_period]
+
     # ------------------------------------------------------------------
     # Summary + analytics
     # ------------------------------------------------------------------
@@ -131,20 +137,30 @@ class UsageLedgerService:
         by_capability: dict[str, float] = {}
         for e in entries:
             by_capability[e["capability"]] = round(by_capability.get(e["capability"], 0) + e.get("estimated_cost", 0), 6)
+        # Data-integrity/numeric-correctness lens (round 41): monthly_limit is a
+        # per-CALENDAR-MONTH cap, but budget_status used to compare it against
+        # `total` -- the all-time cumulative sum. Once lifetime spend crossed
+        # the limit once, budget_status stayed "over" forever, even in a brand
+        # new month with $0 spent (and permanently blocked department runs via
+        # AgentDepartmentService.plan_run()'s budget_exceeded gate). Scope the
+        # budget comparison to current_month_cost instead; total_estimated_cost
+        # keeps its existing all-time meaning for callers that rely on it.
+        current_month_cost = round(sum(e.get("estimated_cost", 0) for e in self._current_month_entries(entries)), 6)
         budget = self._budget_for(workspace_id) if workspace_id else 0.0
         status = "no_budget"
         if budget > 0:
-            pct = total / budget
+            pct = current_month_cost / budget
             status = "over" if pct >= 1.0 else "near" if pct >= 0.8 else "under"
         return {
             "workspace_id": workspace_id,
             "entry_count": len(entries),
             "total_estimated_cost": total,
+            "current_month_cost": current_month_cost,
             "by_capability": by_capability,
             "monthly_limit": budget,
             "budget_status": status,
-            "warning": "Estimated usage has reached or exceeded the budget." if status == "over" else "Approaching budget." if status == "near" else None,
-            "note": "Estimates only — extends v11 cost visibility. No billing, charging, or payment is performed.",
+            "warning": "Estimated usage has reached or exceeded the monthly budget." if status == "over" else "Approaching the monthly budget." if status == "near" else None,
+            "note": "Estimates only — extends v11 cost visibility. No billing, charging, or payment is performed. budget_status compares current_month_cost (this calendar month) against monthly_limit; total_estimated_cost remains the all-time running total.",
         }
 
     def analytics_summary(self) -> dict:
