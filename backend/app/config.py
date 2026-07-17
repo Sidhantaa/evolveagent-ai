@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     runpod_api_key: str | None = Field(default=None, alias="RUNPOD_API_KEY")
     runpod_default_endpoint_id: str | None = Field(default=None, alias="RUNPOD_DEFAULT_ENDPOINT_ID")
     runpod_api_base_url: str = Field(default="https://api.runpod.ai", alias="RUNPOD_API_BASE_URL")
+    # v260: read-only local model-serving detection. Each URL, if set, points
+    # at a backend the operator already runs themselves (e.g. Ollama on
+    # localhost). Unset -> that backend is simply reported as not configured;
+    # this app never starts, installs, or supervises any of these processes.
+    ollama_base_url: str | None = Field(default=None, alias="OLLAMA_BASE_URL")
+    vllm_base_url: str | None = Field(default=None, alias="VLLM_BASE_URL")
+    local_openai_compatible_base_url: str | None = Field(default=None, alias="LOCAL_OPENAI_COMPATIBLE_BASE_URL")
     codex_worker_mode: str = Field(default="manual_trigger", alias="CODEX_WORKER_MODE")
     codex_max_files_changed: int = Field(default=8, alias="CODEX_MAX_FILES_CHANGED")
     auto_git_push: bool = Field(default=False, alias="AUTO_GIT_PUSH")

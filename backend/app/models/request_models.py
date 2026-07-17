@@ -578,6 +578,11 @@ class LocalGPUWorkerRegisterRequest(BaseModel):
     metadata: dict = Field(default_factory=dict)
 
 
+class ModelServingDryRunRequest(BaseModel):
+    backend: str = Field(default="ollama", min_length=1, max_length=60)
+    model: str = Field(default="", max_length=160)
+
+
 # ----------------------------------------------------------------------
 # v18.0 Real Business Automation Layer
 # ----------------------------------------------------------------------
