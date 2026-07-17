@@ -254,6 +254,21 @@ def test_governance_endpoint_returns_summary():
     assert "recent_events" in body
 
 
+def test_governance_summary_surfaces_unbounded_log_growth():
+    """Resource-exhaustion lens: governance_log.json is append-only with no
+    cap/rotation and is the single most-written file in the app (~477 real
+    call sites), driven every scheduler tick with zero user activity.
+    Deliberately not capped/pruned here (a real retention-policy decision,
+    not a safe autonomous fix) -- only made visible, same precedent as
+    round 14's concurrency_limit observability-only fix."""
+    before = client.get("/api/governance").json()["log_file_size_bytes"]
+    client.get("/api/capability-directory/summary")  # confirmed to log a real governance event
+    after = client.get("/api/governance").json()
+    assert after["log_retention_policy"] == "unbounded -- no automatic pruning or rotation"
+    assert isinstance(after["log_file_size_bytes"], int)
+    assert after["log_file_size_bytes"] >= before  # never shrinks on its own
+
+
 def test_compliance_endpoints_return_report_and_redact_pii():
     scan_response = client.post("/api/compliance/pii-scan", json={"text": "Email person@example.com", "redact": True})
     scan = scan_response.json()
