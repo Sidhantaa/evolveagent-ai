@@ -67,6 +67,7 @@ def test_default_backend_is_json_and_status(tmp_path):
     assert st["backend"] == "json"
     assert st["collections"] >= 1 and st["total_documents"] >= 1
     assert st["postgres_ready"] is False and st["redis_ready"] is False  # secret-safe booleans
+    assert any(item["filename"] == "a.json" for item in st["largest_collections"])
 
 
 def test_json_backend_stats(tmp_path):
@@ -74,7 +75,27 @@ def test_json_backend_stats(tmp_path):
     b.write_list("c1.json", [{"a": 1}, {"a": 2}])
     b.write_list("c2.json", [{"b": 1}])
     stats = b.stats()
-    assert stats == {"kind": "json", "collections": 2, "total_documents": 3}
+    assert stats["kind"] == "json"
+    assert stats["collections"] == 2
+    assert stats["total_documents"] == 3
+    assert stats["largest_collections"][0]["filename"] == "c1.json"  # more data -> larger file
+    assert stats["largest_collections"][0]["size_bytes"] > stats["largest_collections"][1]["size_bytes"]
+
+
+def test_json_backend_stats_surfaces_largest_collections_for_unbounded_growth(tmp_path):
+    """Resource-exhaustion lens: instead of a bespoke size field per
+    service (governance_log.json, compute_workers.json), every collection's
+    real on-disk size is now surfaced in one place via stats() ->
+    StorageService.status() -> /api/system/storage-status, sorted
+    largest-first and capped to 10 entries."""
+    b = JsonBackend(str(tmp_path))
+    for i in range(15):
+        b.write_list(f"c{i}.json", [{"n": i}] * (i + 1))  # varying real sizes
+    stats = b.stats()
+    assert len(stats["largest_collections"]) == 10  # capped, not all 15
+    sizes = [item["size_bytes"] for item in stats["largest_collections"]]
+    assert sizes == sorted(sizes, reverse=True)  # largest first
+    assert stats["largest_collections"][0]["filename"] == "c14.json"  # most items -> largest file
 
 
 # ------------------------------------------------------------------
