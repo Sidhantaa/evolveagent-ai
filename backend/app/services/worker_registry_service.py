@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 from app.models.response_models import GovernanceEvent
@@ -166,6 +167,21 @@ class WorkerRegistryService:
             workers = [w for w in workers if w.get("status") == status]
         return workers
 
+    def _workers_file_size_bytes(self) -> int | None:
+        # Resource-exhaustion lens: deregister_worker() flips a worker to
+        # status="offline" but never removes the record -- every Kaggle/
+        # RunPod submission ever made leaves one permanent "offline" row
+        # forever, same append-only-no-removal shape as governance_log.json
+        # (round 37), just at a far lower rate (opt-in GPU submissions, not
+        # a background loop). Not capping/pruning here for the same reason:
+        # this is a real-vs-mock activity history, and deciding what to
+        # discard is a retention-policy call, not a safe autonomous fix.
+        try:
+            path = Path(self.storage.data_dir) / self.workers_file
+            return path.stat().st_size if path.exists() else 0
+        except Exception:
+            return None
+
     def dashboard(self) -> dict:
         workers = self.storage.read_list(self.workers_file)
         return {
@@ -175,6 +191,8 @@ class WorkerRegistryService:
             "busy": sum(1 for w in workers if w.get("status") == "busy"),
             "by_type": {t: sum(1 for w in workers if w.get("worker_type") == t) for t in {w.get("worker_type") for w in workers}},
             "workers": workers,
+            "workers_file_size_bytes": self._workers_file_size_bytes(),
+            "retention_policy": "unbounded -- deregistered/offline workers are never removed",
         }
 
     def analytics_summary(self) -> dict:

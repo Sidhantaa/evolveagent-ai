@@ -84,6 +84,23 @@ def test_worker_registry_dashboard(tmp_path):
     assert dashboard["by_type"]["kaggle_gpu"] == 2
 
 
+def test_worker_registry_dashboard_surfaces_unbounded_growth(tmp_path):
+    """Resource-exhaustion lens: deregister_worker() flips status to
+    "offline" but never removes the record -- every worker ever registered
+    accumulates forever. Deliberately not pruned (a retention-policy
+    decision), only made visible, same precedent as round 37's
+    governance_log fix."""
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    registry = WorkerRegistryService(storage, GovernanceService(storage))
+    worker = registry.register_worker("kaggle_gpu")
+    registry.deregister_worker(worker["worker_id"])
+
+    dashboard = registry.dashboard()
+    assert dashboard["retention_policy"] == "unbounded -- deregistered/offline workers are never removed"
+    assert isinstance(dashboard["workers_file_size_bytes"], int)
+    assert dashboard["offline"] == 1  # the "removed" worker is still a real, permanent row
+
+
 # ------------------------------------------------------------------
 # Round 26: deregister_worker()/heartbeat() were the same read_list() +
 # write_list() lost-update shape round 25 fixed for Kaggle jobs -- a
