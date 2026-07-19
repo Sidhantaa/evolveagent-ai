@@ -583,6 +583,12 @@ class ModelServingDryRunRequest(BaseModel):
     model: str = Field(default="", max_length=160)
 
 
+class StoragePruneRequest(BaseModel):
+    collection: str = Field(min_length=1, max_length=120)
+    older_than_days: int = Field(ge=1, le=3650)
+    dry_run: bool = True
+
+
 # ----------------------------------------------------------------------
 # v18.0 Real Business Automation Layer
 # ----------------------------------------------------------------------

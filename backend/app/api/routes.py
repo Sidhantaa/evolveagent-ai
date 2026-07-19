@@ -303,6 +303,7 @@ from app.services.kaggle_worker_service import KaggleWorkerService
 from app.services.runpod_worker_service import RunPodWorkerService
 from app.services.gpu_worker_service import GPUWorkerService
 from app.services.model_serving_service import ModelServingService
+from app.services.storage_retention_service import StorageRetentionService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
 from app.services.training_lab_service import TrainingLabService
@@ -457,6 +458,7 @@ kaggle_worker_service = KaggleWorkerService(storage, governance_service, worker_
 runpod_worker_service = RunPodWorkerService(storage, governance_service, worker_registry=worker_registry_service, agent_scheduler=agent_scheduler)
 gpu_worker_service = GPUWorkerService(worker_registry_service, kaggle_worker_service, governance_service, runpod_worker=runpod_worker_service)
 model_serving_service = ModelServingService(governance_service)
+storage_retention_service = StorageRetentionService(storage, governance_service)
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())

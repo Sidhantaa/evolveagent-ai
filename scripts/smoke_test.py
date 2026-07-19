@@ -113,6 +113,9 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("memory-v2", "GET", "/api/memory-v2/summary", None, 200),
     # System / storage
     ("system", "GET", "/api/system/storage-status", None, 200),
+    # Storage retention (manual, archive-then-delete; dry_run defaults true)
+    ("system", "GET", "/api/system/storage-prune/collections", None, 200),
+    ("system", "POST", "/api/system/storage-prune", {"collection": "governance_log.json", "older_than_days": 90}, 200),
     # v240 GPU worker expansion (readiness + dry-run only)
     ("gpu-workers", "GET", "/api/worker-registry/gpu/dashboard", None, 200),
     ("gpu-workers", "GET", "/api/worker-registry/gpu/providers", None, 200),
