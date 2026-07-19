@@ -142,12 +142,12 @@ export const MarketplaceHubPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
                 v160 Agent Marketplace
               </span>
             </div>
@@ -159,7 +159,7 @@ export const MarketplaceHubPage: React.FC = () => {
           <div className="flex gap-2 self-start lg:self-auto">
             <button
               onClick={() => setShowPublish(true)}
-              className="px-4 py-2.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-2 transition-colors"
+              className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center gap-2 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Publish
@@ -201,7 +201,7 @@ export const MarketplaceHubPage: React.FC = () => {
           <GlassCard className="space-y-0" padding="none">
             <div className="flex flex-wrap items-center gap-2 p-4 border-b border-white/[0.06]">
               <div className="flex items-center gap-1.5 mr-2">
-                <TrendingUp className="w-4 h-4 text-purple-400" />
+                <TrendingUp className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-bold text-white">Sort</span>
               </div>
               {(['featured', 'popular', 'top_rated'] as SortMode[]).map((s) => (
@@ -209,7 +209,7 @@ export const MarketplaceHubPage: React.FC = () => {
                   key={s}
                   onClick={() => setSort(s)}
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-mono transition-colors ${
-                    sort === s ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-white/[0.03] text-gray-400 border border-white/[0.06] hover:border-white/20'
+                    sort === s ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-white/[0.03] text-gray-400 border border-white/[0.06] hover:border-white/20'
                   }`}
                 >
                   {s.replace('_', ' ')}
@@ -234,7 +234,7 @@ export const MarketplaceHubPage: React.FC = () => {
                 <button
                   key={l.listingId}
                   onClick={() => setSelectedId(l.listingId)}
-                  className={`w-full text-left p-4 transition-colors ${l.listingId === selectedId ? 'bg-purple-500/10' : 'hover:bg-white/[0.02]'}`}
+                  className={`w-full text-left p-4 transition-colors ${l.listingId === selectedId ? 'bg-cyan-500/10' : 'hover:bg-white/[0.02]'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -261,7 +261,7 @@ export const MarketplaceHubPage: React.FC = () => {
             <>
               <GlassCard className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-purple-400" />
+                  <Package className="w-4 h-4 text-cyan-400" />
                   <h2 className="text-sm font-bold text-white truncate">{selected.name}</h2>
                 </div>
                 <p className="text-xs text-gray-400">{selected.summary}</p>
@@ -304,7 +304,7 @@ export const MarketplaceHubPage: React.FC = () => {
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
                   placeholder="Optional review..."
-                  className="w-full min-h-[60px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                  className="w-full min-h-[60px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
                 />
                 <button
                   onClick={handleRate}
@@ -362,7 +362,7 @@ export const MarketplaceHubPage: React.FC = () => {
             <button
               onClick={handlePublish}
               disabled={busy || !publishName.trim()}
-              className="w-full px-4 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs transition-colors disabled:opacity-50"
             >
               Publish
             </button>

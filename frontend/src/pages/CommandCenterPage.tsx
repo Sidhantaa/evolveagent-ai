@@ -87,12 +87,12 @@ export const CommandCenterPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
                 {dashboard?.version || 'v200.0'} Capstone
               </span>
             </div>
@@ -177,7 +177,7 @@ export const CommandCenterPage: React.FC = () => {
         <div className="space-y-6">
           <GlassCard className="space-y-3">
             <div className="flex items-center gap-2">
-              <Gauge className="w-4 h-4 text-purple-400" />
+              <Gauge className="w-4 h-4 text-cyan-400" />
               <h3 className="text-sm font-bold text-white">Scorecard dimensions</h3>
             </div>
             <div className="space-y-2">
@@ -188,7 +188,7 @@ export const CommandCenterPage: React.FC = () => {
                     <span className={`px-1.5 rounded ${gradeTone(dim.grade)}`}>{dim.grade} · {dim.score}</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full bg-purple-400" style={{ width: `${dim.score}%` }} />
+                    <div className="h-full bg-cyan-400" style={{ width: `${dim.score}%` }} />
                   </div>
                 </div>
               ))}
@@ -219,7 +219,7 @@ export const CommandCenterPage: React.FC = () => {
               <button
                 onClick={handleSnapshot}
                 disabled={busy}
-                className="flex-1 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="flex-1 px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
                 Create snapshot
               </button>

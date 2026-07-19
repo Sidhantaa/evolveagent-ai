@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { PageId } from '../types';
 import { GlassCard } from '../components/shared/GlassCard';
 import { MetricCard } from '../components/shared/MetricCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
@@ -23,7 +24,9 @@ import {
   Github, 
   FolderGit2, 
   CheckSquare, 
-  Layers 
+  Layers,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export const HomeDashboard: React.FC = () => {
@@ -44,6 +47,7 @@ export const HomeDashboard: React.FC = () => {
   } = useApp();
 
   const [quickPrompt, setQuickPrompt] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   const pendingApprovals = approvals.filter(a => a.status === 'pending');
   const activeAgents = agents.filter(a => a.status === 'active' || a.status === 'running');
@@ -57,36 +61,36 @@ export const HomeDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className={`animate-fadeIn ${!expanded ? 'min-h-[calc(100vh-180px)] flex flex-col items-center justify-center space-y-6' : 'space-y-6 pb-12'}`}>
       {/* 1. AI Command Center Hero Card */}
-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className={`relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden ${!expanded ? 'max-w-5xl w-full' : ''}`}>
         {/* Glow backdrop */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
+        <div className="relative z-10 w-full text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
             <span>AI Command Center & Multi-Agent OS</span>
           </div>
           
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white sm:whitespace-nowrap">
             What mission shall we delegate today?
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-gray-300">
+          <p className="mt-4 text-base sm:text-lg text-gray-300">
             EvolveAgent AI routes high-level intents across specialized agents, maintains deep knowledge in Project Brain, and sandboxes every action under strict Governance safety rules.
           </p>
 
           {/* Quick Prompt Input Bar */}
-          <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col sm:flex-row gap-2.5">
+          <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col gap-2.5">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
               <input
                 type="text"
                 value={quickPrompt}
                 onChange={(e) => setQuickPrompt(e.target.value)}
                 placeholder="Ask anything or command agents (e.g. 'Redesign our dashboard cards', 'Scan GitHub repo')..."
-                className="w-full bg-black/60 border border-white/15 focus:border-purple-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
+                className="w-full text-left bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-11 pr-4 py-3.5 text-base sm:text-lg text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
               />
               <kbd 
                 onClick={() => setIsCommandModalOpen(true)}
@@ -97,7 +101,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2"
+              className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-base sm:text-lg shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
             >
               <span>Launch Mission</span>
               <ArrowRight className="w-4 h-4" />
@@ -105,7 +109,7 @@ export const HomeDashboard: React.FC = () => {
           </form>
 
           {/* Quick Action Chips */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
             <span className="text-xs text-gray-400 font-mono">Quick Actions:</span>
             {[
               { label: 'Review my repo', page: 'chat' as const, icon: Github },
@@ -118,9 +122,9 @@ export const HomeDashboard: React.FC = () => {
                 <button
                   key={i}
                   onClick={() => { setActivePage(action.page); showToast(`Navigated to ${action.label}`, 'info'); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
                 >
-                  <Icon className="w-3.5 h-3.5 text-purple-400" />
+                  <Icon className="w-3.5 h-3.5 text-cyan-400" />
                   <span>{action.label}</span>
                 </button>
               );
@@ -129,33 +133,80 @@ export const HomeDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. System Metrics Cards (5 cards) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {systemMetrics.map((m, idx) => (
-          <MetricCard
-            key={idx}
-            label={m.label}
-            value={m.value}
-            trend={m.trend}
-            isPositive={m.isPositive}
-            subtitle={m.subtitle}
-            icon={
-              idx === 0 ? <Users className="w-4 h-4" /> :
-              idx === 1 ? <Activity className="w-4 h-4" /> :
-              idx === 2 ? <ShieldAlert className="w-4 h-4" /> :
-              idx === 3 ? <Wrench className="w-4 h-4" /> :
-              <ShieldCheck className="w-4 h-4" />
-            }
-            onClick={() => {
-              if (idx === 0) setActivePage('agents');
-              if (idx === 1) setActivePage('mission-control');
-              if (idx === 2) setActivePage('approvals');
-              if (idx === 3) setActivePage('tools');
-              if (idx === 4) setActivePage('governance');
-            }}
-          />
-        ))}
-      </div>
+      {/* Collapsed summary bar — shown by default; one glance tells you if anything needs you */}
+      {!expanded && (
+        <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 max-w-5xl w-full">
+          <div className="flex items-center gap-2 text-xs text-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            {pendingApprovals.length > 0 ? (
+              <span>
+                {pendingApprovals.length} approval{pendingApprovals.length !== 1 ? 's' : ''} pending
+                {pendingApprovals.some(a => a.riskLevel === 'high') && (
+                  <> &middot; {pendingApprovals.filter(a => a.riskLevel === 'high').length} high risk</>
+                )}
+              </span>
+            ) : (
+              <span>All clear — nothing needs your attention right now</span>
+            )}
+          </div>
+          <button
+            onClick={() => setExpanded(true)}
+            className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+          >
+            <span>Show details</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {expanded && (
+      <>
+      {/* 2. System Metrics — active ones get full cards, idle/zero ones collapse into one quiet line */}
+      {(() => {
+        const parseMetricValue = (val: string | number) => {
+          const num = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
+          return Number.isNaN(num) ? 0 : num;
+        };
+        const activeMetrics = systemMetrics.filter(m => parseMetricValue(m.value) > 0);
+        const idleMetrics = systemMetrics.filter(m => parseMetricValue(m.value) === 0);
+        const metricIcons = [
+          <Users className="w-4 h-4" />,
+          <Activity className="w-4 h-4" />,
+          <ShieldAlert className="w-4 h-4" />,
+          <Wrench className="w-4 h-4" />,
+          <ShieldCheck className="w-4 h-4" />,
+        ];
+        const metricPages: PageId[] = ['agents', 'mission-control', 'approvals', 'tools', 'governance'];
+
+        return (
+          <>
+            {activeMetrics.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                {activeMetrics.map((m) => {
+                  const originalIdx = systemMetrics.indexOf(m);
+                  return (
+                    <MetricCard
+                      key={originalIdx}
+                      label={m.label}
+                      value={m.value}
+                      trend={m.trend}
+                      isPositive={m.isPositive}
+                      subtitle={m.subtitle}
+                      icon={metricIcons[originalIdx] ?? <Activity className="w-4 h-4" />}
+                      onClick={() => setActivePage(metricPages[originalIdx] ?? 'home')}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            {idleMetrics.length > 0 && (
+              <div className="text-[11px] text-gray-500 leading-relaxed">
+                {idleMetrics.map(m => m.label).join(' · ')} — idle, nothing active
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* 3. Main Split Section: Live Activity Log (Left) & Approval Queue (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -165,15 +216,15 @@ export const HomeDashboard: React.FC = () => {
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-purple-400 animate-pulse" />
+                  <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
                   <h3 className="text-sm font-semibold text-white">Live Agent Activity Log</h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">
                     Real-Time Stream
                   </span>
                 </div>
                 <button
                   onClick={() => { setActivePage('dev-console'); showToast('Viewing full trace inspector', 'info'); }}
-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1"
                 >
                   <span>View Full Trace</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -239,7 +290,7 @@ export const HomeDashboard: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setActivePage('approvals')}
-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
                 >
                   View All
                 </button>
@@ -292,7 +343,7 @@ export const HomeDashboard: React.FC = () => {
             {pendingApprovals.some(a => a.riskLevel === 'low') && (
               <button
                 onClick={approveBatchLowRisk}
-                className="mt-4 w-full py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-medium text-xs transition-colors"
+                className="mt-4 w-full py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium text-xs transition-colors"
               >
                 Approve Low-Risk Batch
               </button>
@@ -312,7 +363,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => setActivePage('tools')}
-              className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
             >
               Manage Hub ({connectors.length})
             </button>
@@ -347,7 +398,7 @@ export const HomeDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => setActivePage('governance')}
-              className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
             >
               Policy Matrix
             </button>
@@ -389,6 +440,16 @@ export const HomeDashboard: React.FC = () => {
           </div>
         </GlassCard>
       </div>
+
+      <button
+        onClick={() => setExpanded(false)}
+        className="flex items-center gap-1 text-xs text-gray-400 hover:text-cyan-400 font-medium mx-auto"
+      >
+        <ChevronUp className="w-3.5 h-3.5" />
+        <span>Collapse view</span>
+      </button>
+      </>
+      )}
     </div>
   );
 };

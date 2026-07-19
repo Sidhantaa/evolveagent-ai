@@ -13,6 +13,7 @@ export type PageId =
   | 'design-system'
   | 'command-center'
   | 'chief-of-staff'
+  | 'instructions'
   | 'marketplace-hub'
   | 'compliance';
 

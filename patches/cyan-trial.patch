@@ -1,0 +1,2273 @@
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index df8866c..7d5a6fa 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -34,7 +34,7 @@ const MainContent: React.FC = () => {
+   const [mobileOpen, setMobileOpen] = useState(false);
+ 
+   return (
+-    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-purple-500/30 font-sans">
++    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-cyan-500/30 font-sans">
+       {/* Sidebar navigation */}
+       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+ 
+diff --git a/frontend/src/components/layout/Sidebar.tsx b/frontend/src/components/layout/Sidebar.tsx
+index 81722ef..bf39024 100644
+--- a/frontend/src/components/layout/Sidebar.tsx
++++ b/frontend/src/components/layout/Sidebar.tsx
+@@ -110,7 +110,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
+   };
+ 
+   const badgeClass = (color?: 'purple' | 'amber' | 'emerald') => {
+-    if (color === 'purple') return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
++    if (color === 'purple') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+     if (color === 'amber') return 'bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse';
+     if (color === 'emerald') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+     return 'bg-white/10 text-gray-300 border-white/10';
+@@ -125,12 +125,12 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
+         onClick={() => handleNav(item.id)}
+         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 group ${
+           isActive
+-            ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/10 text-white border border-purple-500/30 shadow-[0_0_15px_-3px_rgba(160,120,255,0.15)] font-semibold'
++            ? 'bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-white border border-cyan-500/30 shadow-[0_0_15px_-3px_rgba(34,211,238,0.15)] font-semibold'
+             : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+         }`}
+       >
+         <div className="flex items-center gap-3">
+-          <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-purple-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
++          <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+           <span>{item.label}</span>
+         </div>
+         {item.badge !== undefined && (
+@@ -161,12 +161,12 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
+         <div className="p-4 border-b border-white/[0.08]">
+           <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2.5">
+-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
++              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                 <Sparkles className="w-4 h-4 text-white" />
+               </div>
+               <div>
+                 <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+-                  EvolveAgent <span className="text-purple-400 font-mono text-xs">AI</span>
++                  EvolveAgent <span className="text-cyan-400 font-mono text-xs">AI</span>
+                 </h1>
+                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
+                   <span>vNext 2.4.0</span>
+@@ -218,12 +218,12 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
+             </div>
+             
+             <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden p-0.5">
+-              <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-emerald-500 to-purple-500" />
++              <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
+             </div>
+ 
+             <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-1 border-t border-white/5">
+               <span>Mode: {safetySettings.planningFirst ? 'Planning-First' : 'Direct'}</span>
+-              <span className="text-purple-400">Mock-Safe</span>
++              <span className="text-cyan-400">Mock-Safe</span>
+             </div>
+           </div>
+         </div>
+diff --git a/frontend/src/components/layout/TopBar.tsx b/frontend/src/components/layout/TopBar.tsx
+index 71949d3..0f87b77 100644
+--- a/frontend/src/components/layout/TopBar.tsx
++++ b/frontend/src/components/layout/TopBar.tsx
+@@ -72,7 +72,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
+           className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-gray-400 hover:text-gray-200 text-xs transition-all w-36 sm:w-56"
+         >
+           <div className="flex items-center gap-2 truncate">
+-            <Search className="w-3.5 h-3.5 text-purple-400 shrink-0" />
++            <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+             <span className="truncate">Search or ⌘ K</span>
+           </div>
+           <kbd className="hidden sm:inline-block font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-400 border border-white/10">
+@@ -85,7 +85,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
+           <button
+             onClick={() => { setActivePage('chat'); showToast('Switched to Simple Chat Mode', 'info'); }}
+             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+-              activePage === 'chat' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
++              activePage === 'chat' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+             }`}
+           >
+             <MessageSquare className="w-3.5 h-3.5" />
+@@ -94,7 +94,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
+           <button
+             onClick={() => { setActivePage('dev-console'); showToast('Switched to Developer Console', 'info'); }}
+             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+-              activePage === 'dev-console' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
++              activePage === 'dev-console' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+             }`}
+           >
+             <Terminal className="w-3.5 h-3.5" />
+@@ -103,7 +103,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
+           <button
+             onClick={() => { setActivePage('mission-control'); showToast('Switched to Mission Control', 'info'); }}
+             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+-              activePage === 'mission-control' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
++              activePage === 'mission-control' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+             }`}
+           >
+             <Compass className="w-3.5 h-3.5" />
+diff --git a/frontend/src/components/shared/CommandModal.tsx b/frontend/src/components/shared/CommandModal.tsx
+index ed94608..995207b 100644
+--- a/frontend/src/components/shared/CommandModal.tsx
++++ b/frontend/src/components/shared/CommandModal.tsx
+@@ -72,7 +72,7 @@ export const CommandModal: React.FC = () => {
+       <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-[#141418] shadow-2xl overflow-hidden relative">
+         {/* Top Search bar */}
+         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/10 bg-[#1a1a20]/60">
+-          <Search className="w-5 h-5 text-purple-400" />
++          <Search className="w-5 h-5 text-cyan-400" />
+           <input
+             type="text"
+             value={query}
+@@ -104,11 +104,11 @@ export const CommandModal: React.FC = () => {
+                     className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.06] text-left transition-colors group"
+                   >
+                     <div className="flex items-center gap-3">
+-                      <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 group-hover:text-purple-300 transition-colors">
++                      <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 transition-colors">
+                         <Icon className="w-4 h-4" />
+                       </div>
+                       <div>
+-                        <div className="text-xs font-medium text-white group-hover:text-purple-200 transition-colors">{item.title}</div>
++                        <div className="text-xs font-medium text-white group-hover:text-cyan-200 transition-colors">{item.title}</div>
+                         <div className="text-[11px] text-gray-500">{item.tag}</div>
+                       </div>
+                     </div>
+@@ -130,7 +130,7 @@ export const CommandModal: React.FC = () => {
+                     onClick={() => navigateTo(page)}
+                     className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 text-xs text-gray-300 capitalize transition-colors"
+                   >
+-                    <Layers className="w-3.5 h-3.5 text-purple-400" />
++                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                     <span>{page.replace('-', ' ')}</span>
+                   </button>
+                 ))}
+@@ -177,10 +177,10 @@ export const CommandModal: React.FC = () => {
+                     className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors"
+                   >
+                     <div className="flex items-center gap-2">
+-                      <Brain className="w-3.5 h-3.5 text-indigo-400" />
++                      <Brain className="w-3.5 h-3.5 text-sky-400" />
+                       <span className="text-xs text-gray-300 truncate max-w-md">{mem.title}</span>
+                     </div>
+-                    <span className="text-[10px] font-mono text-purple-400">{mem.relevance}% Match</span>
++                    <span className="text-[10px] font-mono text-cyan-400">{mem.relevance}% Match</span>
+                   </button>
+                 ))}
+               </div>
+diff --git a/frontend/src/components/shared/LiveWorkingCard.tsx b/frontend/src/components/shared/LiveWorkingCard.tsx
+index 93b6c71..b0770a3 100644
+--- a/frontend/src/components/shared/LiveWorkingCard.tsx
++++ b/frontend/src/components/shared/LiveWorkingCard.tsx
+@@ -48,7 +48,7 @@ export const LiveWorkingCard: React.FC = () => {
+         </span>
+         <button 
+           onClick={() => setIsStopped(false)} 
+-          className="text-xs text-purple-400 hover:text-purple-300 underline"
++          className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+         >
+           Restart Pipeline
+         </button>
+@@ -57,21 +57,21 @@ export const LiveWorkingCard: React.FC = () => {
+   }
+ 
+   return (
+-    <div className="mt-3 rounded-2xl border border-purple-500/30 bg-[#141418] p-5 shadow-2xl relative overflow-hidden">
++    <div className="mt-3 rounded-2xl border border-cyan-500/30 bg-[#141418] p-5 shadow-2xl relative overflow-hidden">
+       {/* Background ambient glow */}
+-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+       <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+ 
+       {/* Header */}
+       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 relative z-10">
+         <div className="flex items-center gap-2.5">
+-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
++          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+             <Sparkles className={`w-4 h-4 text-white ${isPaused ? '' : 'animate-spin'}`} style={{ animationDuration: '4s' }} />
+           </div>
+           <div>
+             <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+               EvolveAgent is working…
+-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
++              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                 {isPaused ? 'PAUSED' : 'LIVE ORCHESTRATION'}
+               </span>
+             </h4>
+@@ -91,7 +91,7 @@ export const LiveWorkingCard: React.FC = () => {
+             onClick={() => setIsEditing(prev => !prev)}
+             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition-colors"
+           >
+-            <Edit3 className="w-3.5 h-3.5 text-purple-400" />
++            <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+             <span>Edit</span>
+           </button>
+           <button
+@@ -106,18 +106,18 @@ export const LiveWorkingCard: React.FC = () => {
+ 
+       {/* Edit Instructions Drawer */}
+       {isEditing && (
+-        <form onSubmit={handleEditSubmit} className="mt-4 p-3 rounded-xl bg-[#1d1d23] border border-purple-500/30 flex gap-2 animate-fadeIn">
++        <form onSubmit={handleEditSubmit} className="mt-4 p-3 rounded-xl bg-[#1d1d23] border border-cyan-500/30 flex gap-2 animate-fadeIn">
+           <input
+             type="text"
+             value={customInstruction}
+             onChange={(e) => setCustomInstruction(e.target.value)}
+             placeholder="E.g., Prioritize dark theme contrast over animation speed..."
+-            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
++            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+             autoFocus
+           />
+           <button
+             type="submit"
+-            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors"
++            className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-colors"
+           >
+             Send
+           </button>
+@@ -144,16 +144,16 @@ export const LiveWorkingCard: React.FC = () => {
+           </div>
+ 
+           {/* UI Design Agent */}
+-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-500/5 border border-purple-500/20">
++          <div className="flex items-center justify-between p-2.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+             <div className="flex items-center gap-2.5">
+               <span className="text-base">🎨</span>
+               <div>
+-                <div className="text-xs font-medium text-purple-200">UI Design Agent</div>
+-                <div className="text-[11px] text-purple-300/80">Synthesizing responsive glassmorphism cards</div>
++                <div className="text-xs font-medium text-cyan-200">UI Design Agent</div>
++                <div className="text-[11px] text-cyan-300/80">Synthesizing responsive glassmorphism cards</div>
+               </div>
+             </div>
+-            <span className="flex items-center gap-1 text-[11px] font-mono text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">
+-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" /> Running
++            <span className="flex items-center gap-1 text-[11px] font-mono text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30">
++              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" /> Running
+             </span>
+           </div>
+ 
+@@ -207,11 +207,11 @@ export const LiveWorkingCard: React.FC = () => {
+       <div className="mt-4 pt-3 border-t border-white/10 relative z-10">
+         <div className="flex items-center justify-between text-xs mb-1.5">
+           <span className="text-gray-400 font-mono">Pipeline Progress</span>
+-          <span className="text-purple-300 font-mono font-semibold">{mission.progress}%</span>
++          <span className="text-cyan-300 font-mono font-semibold">{mission.progress}%</span>
+         </div>
+         <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
+           <div 
+-            className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 transition-all duration-500"
++            className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 transition-all duration-500"
+             style={{ width: `${mission.progress}%` }}
+           />
+         </div>
+@@ -244,7 +244,7 @@ export const LiveWorkingCard: React.FC = () => {
+           </span>
+           <button
+             onClick={() => showToast('Advancing orchestration to next checkpoint...', 'info')}
+-            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium"
++            className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium"
+           >
+             <span>Next Phase</span>
+             <ArrowRight className="w-3.5 h-3.5" />
+diff --git a/frontend/src/components/shared/MetricCard.tsx b/frontend/src/components/shared/MetricCard.tsx
+index 25695da..625c706 100644
+--- a/frontend/src/components/shared/MetricCard.tsx
++++ b/frontend/src/components/shared/MetricCard.tsx
+@@ -26,7 +26,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
+       <div className="flex items-start justify-between gap-2">
+         <span className="text-xs font-medium text-gray-400">{label}</span>
+         {icon && (
+-          <div className="p-1.5 rounded-lg bg-white/[0.04] text-purple-400 border border-white/5">
++          <div className="p-1.5 rounded-lg bg-white/[0.04] text-cyan-400 border border-white/5">
+             {icon}
+           </div>
+         )}
+diff --git a/frontend/src/components/shared/StatusBadge.tsx b/frontend/src/components/shared/StatusBadge.tsx
+index 5ec9bb8..6978f1a 100644
+--- a/frontend/src/components/shared/StatusBadge.tsx
++++ b/frontend/src/components/shared/StatusBadge.tsx
+@@ -40,8 +40,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
+     dotClass = 'bg-emerald-400 animate-pulse';
+     Icon = CheckCircle2;
+   } else if (['running', 'in progress'].includes(normalized)) {
+-    bgClass = 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+-    dotClass = 'bg-purple-400 animate-pulse';
++    bgClass = 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
++    dotClass = 'bg-cyan-400 animate-pulse';
+     Icon = PlayCircle;
+   } else if (['waiting approval', 'waiting', 'pending', 'approval-gated', 'pending review'].includes(normalized)) {
+     bgClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+diff --git a/frontend/src/components/shared/Toast.tsx b/frontend/src/components/shared/Toast.tsx
+index 9bc1977..07008a4 100644
+--- a/frontend/src/components/shared/Toast.tsx
++++ b/frontend/src/components/shared/Toast.tsx
+@@ -14,13 +14,13 @@ export const Toast: React.FC = () => {
+     bgClass = 'bg-[#261d1d] border-rose-500/40 text-rose-300';
+     Icon = AlertTriangle;
+   } else if (toast.type === 'info') {
+-    bgClass = 'bg-[#1c1d26] border-purple-500/40 text-purple-300';
++    bgClass = 'bg-[#1c1d26] border-cyan-500/40 text-cyan-300';
+     Icon = Info;
+   }
+ 
+   return (
+     <div className="fixed bottom-6 right-6 z-50 animate-bounce sm:animate-none flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-xl font-sans text-xs font-medium max-w-sm" style={{ backgroundColor: 'rgba(23, 23, 23, 0.95)' }}>
+-      <Icon className={`w-4 h-4 shrink-0 ${toast.type === 'success' ? 'text-emerald-400' : toast.type === 'warning' ? 'text-rose-400' : 'text-purple-400'}`} />
++      <Icon className={`w-4 h-4 shrink-0 ${toast.type === 'success' ? 'text-emerald-400' : toast.type === 'warning' ? 'text-rose-400' : 'text-cyan-400'}`} />
+       <span className="text-white flex-1">{toast.message}</span>
+     </div>
+   );
+diff --git a/frontend/src/pages/AgentsPage.tsx b/frontend/src/pages/AgentsPage.tsx
+index 054eaf4..2c4add3 100644
+--- a/frontend/src/pages/AgentsPage.tsx
++++ b/frontend/src/pages/AgentsPage.tsx
+@@ -37,7 +37,7 @@ export const AgentsPage: React.FC = () => {
+ 
+   const permissionProfiles: { level: PermissionLevel; label: string; desc: string; color: string }[] = [
+     { level: 'read-only', label: 'Read-Only', desc: 'Can only query Project Brain & read workspace files. No side effects.', color: 'border-blue-500/30 bg-blue-500/5 text-blue-300' },
+-    { level: 'planning-only', label: 'Planning-Only', desc: 'Can formulate code modifications and dry-run AST checks without writing.', color: 'border-purple-500/30 bg-purple-500/5 text-purple-300' },
++    { level: 'planning-only', label: 'Planning-Only', desc: 'Can formulate code modifications and dry-run AST checks without writing.', color: 'border-cyan-500/30 bg-cyan-500/5 text-cyan-300' },
+     { level: 'approval-gated', label: 'Approval-Gated', desc: 'High-risk operations (filesystem writes, shell CLI, API calls) enter Approvals queue.', color: 'border-amber-500/30 bg-amber-500/5 text-amber-300' },
+     { level: 'high-trust', label: 'High-Trust', desc: 'Reserved for Master Orchestrator to delegate tasks across worker sandboxes.', color: 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' },
+   ];
+@@ -50,8 +50,8 @@ export const AgentsPage: React.FC = () => {
+           { label: 'Total Agents', value: `${agents.length}`, sub: '7 system + 3 custom', color: 'text-white' },
+           { label: 'Active Now', value: `${agents.filter(a => a.status === 'active' || a.status === 'running').length}`, sub: 'Executing tasks', color: 'text-emerald-400' },
+           { label: 'Waiting Approval', value: `${agents.filter(a => a.status === 'waiting').length}`, sub: 'Gating writes', color: 'text-amber-400' },
+-          { label: 'Custom Agents', value: '03', sub: 'Workspace templates', color: 'text-purple-400' },
+-          { label: 'Avg Quality Score', value: '96%', sub: 'A+ Compliance', color: 'text-indigo-400' },
++          { label: 'Custom Agents', value: '03', sub: 'Workspace templates', color: 'text-cyan-400' },
++          { label: 'Avg Quality Score', value: '96%', sub: 'A+ Compliance', color: 'text-sky-400' },
+           { label: 'Blocked / Error', value: '00', sub: 'Zero failures', color: 'text-emerald-400' },
+         ].map((item, idx) => (
+           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
+@@ -63,24 +63,24 @@ export const AgentsPage: React.FC = () => {
+       </div>
+ 
+       {/* 2. Featured Active Agent Spotlight Card */}
+-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1b1928] via-[#15151c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+-        <div className="absolute top-0 right-0 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1b1928] via-[#15151c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
++        <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
+         
+         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+           <div className="flex items-start gap-4 max-w-2xl">
+-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-3xl shrink-0 shadow-lg shadow-purple-500/30">
++            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-3xl shrink-0 shadow-lg shadow-cyan-500/30">
+               {featuredAgent.avatar}
+             </div>
+             <div className="space-y-1.5">
+               <div className="flex items-center gap-2">
+-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 uppercase font-semibold">
++                <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 uppercase font-semibold">
+                   Featured Spotlight
+                 </span>
+                 <StatusBadge status={featuredAgent.status} size="sm" />
+                 <RiskBadge level={featuredAgent.riskLevel} size="sm" />
+               </div>
+               <h2 className="text-2xl font-extrabold text-white tracking-tight">{featuredAgent.name}</h2>
+-              <p className="text-xs sm:text-sm text-purple-300 font-mono">{featuredAgent.role}</p>
++              <p className="text-xs sm:text-sm text-cyan-300 font-mono">{featuredAgent.role}</p>
+               <p className="text-xs text-gray-300 leading-relaxed pt-1">{featuredAgent.description}</p>
+             </div>
+           </div>
+@@ -98,14 +98,14 @@ export const AgentsPage: React.FC = () => {
+               </div>
+               <div className="flex items-center justify-between gap-4">
+                 <span className="text-gray-400">Permission:</span>
+-                <span className="text-purple-300 font-semibold capitalize">{featuredAgent.permissionLevel}</span>
++                <span className="text-cyan-300 font-semibold capitalize">{featuredAgent.permissionLevel}</span>
+               </div>
+             </div>
+ 
+             <div className="flex flex-col gap-2">
+               <button
+                 onClick={() => toggleAgentStatus(featuredAgent.id)}
+-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-md"
++                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-md"
+               >
+                 {featuredAgent.status === 'idle' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                 <span>{featuredAgent.status === 'idle' ? 'Start Agent' : 'Pause Execution'}</span>
+@@ -125,10 +125,10 @@ export const AgentsPage: React.FC = () => {
+         {featuredAgent.currentTask && (
+           <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono text-gray-400">
+             <span className="flex items-center gap-2">
+-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
++              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+               <span>Current Task: <strong className="text-white">{featuredAgent.currentTask}</strong></span>
+             </span>
+-            <span className="text-purple-300">Tokens: {featuredAgent.tokensUsed} today</span>
++            <span className="text-cyan-300">Tokens: {featuredAgent.tokensUsed} today</span>
+           </div>
+         )}
+       </div>
+@@ -137,7 +137,7 @@ export const AgentsPage: React.FC = () => {
+       <div className="space-y-4">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/10">
+           <div className="flex items-center gap-2">
+-            <Users className="w-4 h-4 text-purple-400" />
++            <Users className="w-4 h-4 text-cyan-400" />
+             <h3 className="text-sm font-semibold text-white">Specialized Agent Squad ({filteredAgents.length})</h3>
+           </div>
+           
+@@ -149,7 +149,7 @@ export const AgentsPage: React.FC = () => {
+                 onClick={() => setFilterLevel(lvl)}
+                 className={`px-3 py-1 rounded-lg text-xs font-mono capitalize transition-all ${
+                   filterLevel === lvl
+-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
++                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
+                     : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
+                 }`}
+               >
+@@ -168,7 +168,7 @@ export const AgentsPage: React.FC = () => {
+                 onClick={() => setSelectedAgentId(agent.id)}
+                 className={`cursor-pointer rounded-2xl border transition-all duration-200 p-5 flex flex-col justify-between ${
+                   isSelected
+-                    ? 'bg-[#1e1e28]/90 border-purple-500/50 shadow-[0_4px_25px_-5px_rgba(160,120,255,0.2)]'
++                    ? 'bg-[#1e1e28]/90 border-cyan-500/50 shadow-[0_4px_25px_-5px_rgba(34,211,238,0.2)]'
+                     : 'bg-[#171717]/80 border-white/[0.07] hover:bg-[#1a1a20]/90 hover:border-white/15'
+                 }`}
+               >
+@@ -180,7 +180,7 @@ export const AgentsPage: React.FC = () => {
+                       </div>
+                       <div>
+                         <h4 className="text-sm font-bold text-white">{agent.name}</h4>
+-                        <p className="text-xs text-purple-300 font-mono">{agent.role}</p>
++                        <p className="text-xs text-cyan-300 font-mono">{agent.role}</p>
+                       </div>
+                     </div>
+                     <StatusBadge status={agent.status} size="sm" />
+@@ -195,7 +195,7 @@ export const AgentsPage: React.FC = () => {
+                     </div>
+                     <div className="flex items-center justify-between text-gray-400">
+                       <span>Permission Level:</span>
+-                      <span className="text-purple-300 font-semibold capitalize">{agent.permissionLevel}</span>
++                      <span className="text-cyan-300 font-semibold capitalize">{agent.permissionLevel}</span>
+                     </div>
+                     <div className="flex items-center justify-between text-gray-400">
+                       <span>Quality Score:</span>
+@@ -230,7 +230,7 @@ export const AgentsPage: React.FC = () => {
+       {/* 4. Permission Profiles & Safety Rules Grid */}
+       <GlassCard>
+         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+-          <Shield className="w-4 h-4 text-purple-400" />
++          <Shield className="w-4 h-4 text-cyan-400" />
+           <span>Global Permission Profiles & Sandboxing Rules</span>
+         </h3>
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+diff --git a/frontend/src/pages/ApprovalsPage.tsx b/frontend/src/pages/ApprovalsPage.tsx
+index 660b807..755aa2e 100644
+--- a/frontend/src/pages/ApprovalsPage.tsx
++++ b/frontend/src/pages/ApprovalsPage.tsx
+@@ -54,7 +54,7 @@ export const ApprovalsPage: React.FC = () => {
+             { label: 'Approved Today', value: `${approvedToday}`, sub: 'Mock sandbox', color: 'text-emerald-400' },
+             { label: 'Rejected Today', value: `${rejectedToday}`, sub: 'Safety blocks', color: 'text-rose-400' },
+             { label: 'Blocked Actions', value: '02', sub: 'Destructive shell', color: 'text-rose-400' },
+-            { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-purple-400' },
++            { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-cyan-400' },
+             { label: 'High-Risk Tools', value: '01', sub: 'Filesystem write', color: 'text-amber-400' },
+           ].map((m, idx) => (
+             <div key={idx} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
+@@ -68,7 +68,7 @@ export const ApprovalsPage: React.FC = () => {
+         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+           <button
+             onClick={approveBatchLowRisk}
+-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
++            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-500 hover:to-sky-500 text-white font-semibold text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
+           >
+             <Sparkles className="w-4 h-4" />
+             <span>Approve Low-Risk Batch</span>
+@@ -166,7 +166,7 @@ export const ApprovalsPage: React.FC = () => {
+                       key={s}
+                       onClick={() => setStatusFilter(s)}
+                       className={`px-2.5 py-1 rounded-lg capitalize transition-colors ${
+-                        statusFilter === s ? 'bg-purple-600 text-white font-semibold' : 'text-gray-400 hover:text-white'
++                        statusFilter === s ? 'bg-cyan-600 text-white font-semibold' : 'text-gray-400 hover:text-white'
+                       }`}
+                     >
+                       {s}
+@@ -184,7 +184,7 @@ export const ApprovalsPage: React.FC = () => {
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 placeholder="Search by action title, agent name, or MCP tool..."
+-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
++                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+               />
+             </div>
+ 
+@@ -209,7 +209,7 @@ export const ApprovalsPage: React.FC = () => {
+                         key={item.id}
+                         onClick={() => setSelectedId(item.id)}
+                         className={`cursor-pointer transition-colors ${
+-                          isSel ? 'bg-purple-900/20 font-medium' : 'hover:bg-white/[0.03]'
++                          isSel ? 'bg-cyan-900/20 font-medium' : 'hover:bg-white/[0.03]'
+                         }`}
+                       >
+                         <td className="py-3 px-3 font-sans text-white font-semibold truncate max-w-[200px]">{item.title}</td>
+@@ -253,7 +253,7 @@ export const ApprovalsPage: React.FC = () => {
+             <div className="space-y-4">
+               <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                 <span className="text-xs font-sans font-semibold text-white">Governance Risk Explanation</span>
+-                <span className="text-[10px] text-purple-400">{selectedItem.id}</span>
++                <span className="text-[10px] text-cyan-400">{selectedItem.id}</span>
+               </div>
+ 
+               {/* Title & Tool info */}
+@@ -262,7 +262,7 @@ export const ApprovalsPage: React.FC = () => {
+                 <div className="p-2.5 rounded-xl bg-black/50 border border-white/10 space-y-1.5 text-xs">
+                   <div className="flex items-center justify-between text-gray-400">
+                     <span>MCP Tool Name:</span>
+-                    <strong className="text-purple-300">{selectedItem.toolName}</strong>
++                    <strong className="text-cyan-300">{selectedItem.toolName}</strong>
+                   </div>
+                   <div className="flex items-center justify-between text-gray-400">
+                     <span>Workspace Scope:</span>
+diff --git a/frontend/src/pages/ChiefOfStaffPage.tsx b/frontend/src/pages/ChiefOfStaffPage.tsx
+index 24ea56d..539c7ee 100644
+--- a/frontend/src/pages/ChiefOfStaffPage.tsx
++++ b/frontend/src/pages/ChiefOfStaffPage.tsx
+@@ -126,12 +126,12 @@ export const ChiefOfStaffPage: React.FC = () => {
+ 
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
++        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+           <div className="space-y-2 max-w-3xl">
+             <div className="flex flex-wrap items-center gap-2">
+-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
++              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+                 v180 Personal Chief of Staff
+               </span>
+             </div>
+@@ -198,13 +198,13 @@ export const ChiefOfStaffPage: React.FC = () => {
+           <GlassCard className="space-y-4">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-2">
+-                <Target className="w-4 h-4 text-purple-400" />
++                <Target className="w-4 h-4 text-cyan-400" />
+                 <h2 className="text-sm font-bold text-white">Today's plan</h2>
+               </div>
+               <button
+                 onClick={handleDailyPlan}
+                 disabled={busy}
+-                className="px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
++                className="px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+               >
+                 <Sparkles className="w-3.5 h-3.5" />
+                 Generate daily plan
+@@ -222,7 +222,7 @@ export const ChiefOfStaffPage: React.FC = () => {
+                           <span className="text-xs font-bold text-white truncate">{item.title}</span>
+                         </div>
+                         <p className="text-[11px] text-gray-500">{item.reason}</p>
+-                        <p className="text-[11px] text-purple-300 mt-0.5">{item.recommendedAction}</p>
++                        <p className="text-[11px] text-cyan-300 mt-0.5">{item.recommendedAction}</p>
+                       </div>
+                       <span className="text-xs font-mono text-gray-400 shrink-0">{item.priorityScore}</span>
+                     </div>
+@@ -276,7 +276,7 @@ export const ChiefOfStaffPage: React.FC = () => {
+                 value={newTitle}
+                 onChange={(e) => setNewTitle(e.target.value)}
+                 placeholder="New follow-up..."
+-                className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
++                className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+               />
+               <button
+                 onClick={handleAddFollowup}
+diff --git a/frontend/src/pages/CodeChangesPage.tsx b/frontend/src/pages/CodeChangesPage.tsx
+index 39dcd9d..ac39bd5 100644
+--- a/frontend/src/pages/CodeChangesPage.tsx
++++ b/frontend/src/pages/CodeChangesPage.tsx
+@@ -165,12 +165,12 @@ export const CodeChangesPage: React.FC = () => {
+ 
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
++        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+           <div className="space-y-2 max-w-3xl">
+             <div className="flex flex-wrap items-center gap-2">
+-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
++              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+                 v150 Autonomous Software Team
+               </span>
+               <RiskBadge level="high" size="sm" />
+@@ -248,7 +248,7 @@ export const CodeChangesPage: React.FC = () => {
+         <GlassCard className="lg:col-span-1 space-y-4">
+           <div className="flex items-center justify-between">
+             <h2 className="text-sm font-bold text-white flex items-center gap-2">
+-              <GitBranch className="w-4 h-4 text-purple-400" />
++              <GitBranch className="w-4 h-4 text-cyan-400" />
+               Runs
+             </h2>
+             <span className="text-[11px] font-mono text-gray-500">{runs?.length ?? 0} code workflow(s)</span>
+@@ -268,7 +268,7 @@ export const CodeChangesPage: React.FC = () => {
+                   key={run.id}
+                   onClick={() => setSelectedRunId(run.id)}
+                   className={`w-full text-left p-3 rounded-2xl border transition-all ${
+-                    active ? 'bg-purple-500/10 border-purple-500/40' : 'bg-white/[0.02] border-white/[0.06] hover:border-white/20'
++                    active ? 'bg-cyan-500/10 border-cyan-500/40' : 'bg-white/[0.02] border-white/[0.06] hover:border-white/20'
+                   }`}
+                 >
+                   <div className="flex items-start justify-between gap-2">
+@@ -279,7 +279,7 @@ export const CodeChangesPage: React.FC = () => {
+                     <StatusBadge status={run.status} size="sm" />
+                   </div>
+                   <div className="mt-2 flex items-center justify-between gap-2">
+-                    <span className="text-[11px] font-mono text-purple-300">{step?.actionType || 'code step'}</span>
++                    <span className="text-[11px] font-mono text-cyan-300">{step?.actionType || 'code step'}</span>
+                     {step && <RiskBadge level={stepTone(step)} size="sm" />}
+                   </div>
+                 </button>
+@@ -372,7 +372,7 @@ export const CodeChangesPage: React.FC = () => {
+                 {selectedEffect?.result && Object.keys(selectedEffect.result).length > 0 && (
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                     <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+-                      <GitBranch className="w-4 h-4 text-purple-300 mb-2" />
++                      <GitBranch className="w-4 h-4 text-cyan-300 mb-2" />
+                       <div className="text-[10px] text-gray-500 uppercase font-mono">Branch</div>
+                       <div className="text-xs text-white font-mono break-all">{selectedEffect.result.branch || selectedStep.actionParams.branch_name || '—'}</div>
+                     </div>
+@@ -398,7 +398,7 @@ export const CodeChangesPage: React.FC = () => {
+                 {selectedStep.actionType === 'write_code_change' && (
+                   <div className="space-y-3">
+                     <div className="flex items-center gap-2">
+-                      <FileCode2 className="w-4 h-4 text-purple-400" />
++                      <FileCode2 className="w-4 h-4 text-cyan-400" />
+                       <h3 className="text-sm font-bold text-white">Proposed file content</h3>
+                     </div>
+                     {proposedFiles.map((file, index) => (
+@@ -445,7 +445,7 @@ export const CodeChangesPage: React.FC = () => {
+                       value={note}
+                       onChange={(event) => setNote(event.target.value)}
+                       placeholder="Optional approval note"
+-                      className="w-full min-h-[72px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
++                      className="w-full min-h-[72px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                     />
+                     <div className="flex flex-col sm:flex-row gap-2">
+                       <button
+diff --git a/frontend/src/pages/CommandCenterPage.tsx b/frontend/src/pages/CommandCenterPage.tsx
+index 543bec1..dee4c89 100644
+--- a/frontend/src/pages/CommandCenterPage.tsx
++++ b/frontend/src/pages/CommandCenterPage.tsx
+@@ -87,12 +87,12 @@ export const CommandCenterPage: React.FC = () => {
+ 
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
++        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+           <div className="space-y-2 max-w-3xl">
+             <div className="flex flex-wrap items-center gap-2">
+-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
++              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+                 {dashboard?.version || 'v200.0'} Capstone
+               </span>
+             </div>
+@@ -177,7 +177,7 @@ export const CommandCenterPage: React.FC = () => {
+         <div className="space-y-6">
+           <GlassCard className="space-y-3">
+             <div className="flex items-center gap-2">
+-              <Gauge className="w-4 h-4 text-purple-400" />
++              <Gauge className="w-4 h-4 text-cyan-400" />
+               <h3 className="text-sm font-bold text-white">Scorecard dimensions</h3>
+             </div>
+             <div className="space-y-2">
+@@ -188,7 +188,7 @@ export const CommandCenterPage: React.FC = () => {
+                     <span className={`px-1.5 rounded ${gradeTone(dim.grade)}`}>{dim.grade} · {dim.score}</span>
+                   </div>
+                   <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+-                    <div className="h-full bg-purple-400" style={{ width: `${dim.score}%` }} />
++                    <div className="h-full bg-cyan-400" style={{ width: `${dim.score}%` }} />
+                   </div>
+                 </div>
+               ))}
+@@ -219,7 +219,7 @@ export const CommandCenterPage: React.FC = () => {
+               <button
+                 onClick={handleSnapshot}
+                 disabled={busy}
+-                className="flex-1 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
++                className="flex-1 px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+               >
+                 Create snapshot
+               </button>
+diff --git a/frontend/src/pages/CompliancePage.tsx b/frontend/src/pages/CompliancePage.tsx
+index 5e0eb2d..b0fabc4 100644
+--- a/frontend/src/pages/CompliancePage.tsx
++++ b/frontend/src/pages/CompliancePage.tsx
+@@ -71,12 +71,12 @@ export const CompliancePage: React.FC = () => {
+ 
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
++        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+           <div className="space-y-2 max-w-3xl">
+             <div className="flex flex-wrap items-center gap-2">
+-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
++              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+                 v190 Enterprise AI OS
+               </span>
+             </div>
+@@ -97,7 +97,7 @@ export const CompliancePage: React.FC = () => {
+ 
+       <GlassCard className="space-y-3">
+         <div className="flex items-center gap-2">
+-          <FileText className="w-4 h-4 text-purple-400" />
++          <FileText className="w-4 h-4 text-cyan-400" />
+           <h2 className="text-sm font-bold text-white">Generate audit package</h2>
+         </div>
+         <div className="flex gap-2">
+@@ -105,12 +105,12 @@ export const CompliancePage: React.FC = () => {
+             value={newTitle}
+             onChange={(e) => setNewTitle(e.target.value)}
+             placeholder="Package title (e.g. Q3 SOC 2 review)"
+-            className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
++            className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+           />
+           <button
+             onClick={handleCreate}
+             disabled={busy}
+-            className="px-4 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
++            className="px-4 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+           >
+             <Plus className="w-3.5 h-3.5" />
+             Generate
+@@ -133,7 +133,7 @@ export const CompliancePage: React.FC = () => {
+               <button
+                 key={p.packageId}
+                 onClick={() => setSelectedId(p.packageId)}
+-                className={`w-full text-left p-4 transition-colors ${p.packageId === selectedId ? 'bg-purple-500/10' : 'hover:bg-white/[0.02]'}`}
++                className={`w-full text-left p-4 transition-colors ${p.packageId === selectedId ? 'bg-cyan-500/10' : 'hover:bg-white/[0.02]'}`}
+               >
+                 <div className="text-xs font-bold text-white truncate">{p.title}</div>
+                 <div className="text-[10px] text-gray-500 font-mono mt-0.5">{p.generatedAt ? p.generatedAt.slice(0, 16).replace('T', ' ') : '—'}</div>
+@@ -214,7 +214,7 @@ export const CompliancePage: React.FC = () => {
+                           <span key={t} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">pii:{t}</span>
+                         ))}
+                         {f.hipaaWarning && (
+-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1">
++                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 flex items-center gap-1">
+                             <AlertTriangle className="w-2.5 h-2.5" />HIPAA
+                           </span>
+                         )}
+diff --git a/frontend/src/pages/DesignSystemPage.tsx b/frontend/src/pages/DesignSystemPage.tsx
+index ede5bc2..79d39f5 100644
+--- a/frontend/src/pages/DesignSystemPage.tsx
++++ b/frontend/src/pages/DesignSystemPage.tsx
+@@ -36,15 +36,15 @@ export const DesignSystemPage: React.FC = () => {
+     { name: 'Professional Slate (Background)', hex: '#0a0a0b', tailwind: 'bg-[#0a0a0b]', border: 'border-white/10' },
+     { name: 'Graphite Surface (Sidebar/Cards)', hex: '#0d0d0f / #141416', tailwind: 'bg-[#141416]/90 backdrop-blur-xl', border: 'border-white/[0.08]' },
+     { name: 'Elevated Glass (Hover State)', hex: '#1a1a1d (90% opacity)', tailwind: 'bg-[#1a1a1d]/90 backdrop-blur-lg', border: 'border-white/15' },
+-    { name: 'Indigo Purple Polish (Primary)', hex: '#6366f1 / #9333ea', tailwind: 'bg-gradient-to-r from-indigo-600 to-purple-600', border: 'border-indigo-500/50' },
+-    { name: 'Professional Accent (Active State)', hex: '#4f46e5 / #3b82f6', tailwind: 'bg-gradient-to-r from-indigo-500 to-blue-600', border: 'border-blue-500/50' },
+-    { name: 'Indigo Soft Chip (Text/Badges)', hex: '#818cf8 / #c4b5fd', tailwind: 'bg-indigo-500/15 text-indigo-300', border: 'border-indigo-500/30' },
++    { name: 'Sky Cyan Polish (Primary)', hex: '#0284c7 / #0891b2', tailwind: 'bg-gradient-to-r from-sky-600 to-cyan-600', border: 'border-sky-500/50' },
++    { name: 'Professional Accent (Active State)', hex: '#4f46e5 / #3b82f6', tailwind: 'bg-gradient-to-r from-sky-500 to-blue-600', border: 'border-blue-500/50' },
++    { name: 'Indigo Soft Chip (Text/Badges)', hex: '#818cf8 / #c4b5fd', tailwind: 'bg-sky-500/15 text-sky-300', border: 'border-sky-500/30' },
+   ];
+ 
+   const typographyTokens = [
+     { name: 'Display Headings', font: 'Inter Display', style: 'text-xl sm:text-2xl font-extrabold tracking-tight text-white', sample: 'What mission shall we delegate today?' },
+     { name: 'UI Base Text', font: 'Inter UI Base', style: 'text-xs sm:text-sm text-slate-300 leading-relaxed', sample: 'EvolveAgent AI routes high-level intents across specialized agents with deep knowledge.' },
+-    { name: 'Technical / Monospace', font: 'Geist Mono', style: 'text-xs font-mono text-indigo-300', sample: 'component_generator --target=AgentsGrid --tokens=ADR12' },
++    { name: 'Technical / Monospace', font: 'Geist Mono', style: 'text-xs font-mono text-sky-300', sample: 'component_generator --target=AgentsGrid --tokens=ADR12' },
+   ];
+ 
+   const radiusTokens = [
+@@ -77,11 +77,11 @@ export const DesignSystemPage: React.FC = () => {
+   return (
+     <div className="space-y-8 animate-fadeIn pb-16">
+       {/* Header Banner */}
+-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
++        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
+         
+         <div className="relative z-10 max-w-3xl">
+-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-3">
++          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-3">
+             <Palette className="w-3.5 h-3.5" />
+             <span>ADR #12 Design System Manifest</span>
+           </div>
+@@ -97,7 +97,7 @@ export const DesignSystemPage: React.FC = () => {
+       {/* 1. Brand Tokens: Color Palette Swatches */}
+       <GlassCard>
+         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <Palette className="w-4 h-4 text-purple-400" />
++          <Palette className="w-4 h-4 text-cyan-400" />
+           <span>1. Brand Color Palette Swatches</span>
+         </h3>
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
+@@ -108,7 +108,7 @@ export const DesignSystemPage: React.FC = () => {
+               </div>
+               <div>
+                 <div className="font-bold text-white">{col.name}</div>
+-                <div className="text-gray-400 text-[11px] mt-0.5">Hex / Rule: <span className="text-purple-300">{col.hex}</span></div>
++                <div className="text-gray-400 text-[11px] mt-0.5">Hex / Rule: <span className="text-cyan-300">{col.hex}</span></div>
+                 <div className="text-gray-500 text-[10px] mt-0.5 truncate">Class: <code>{col.tailwind}</code></div>
+               </div>
+             </div>
+@@ -120,7 +120,7 @@ export const DesignSystemPage: React.FC = () => {
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         <GlassCard>
+           <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-            <Code2 className="w-4 h-4 text-purple-400" />
++            <Code2 className="w-4 h-4 text-cyan-400" />
+             <span>2. Typography Scale & Fonts</span>
+           </h3>
+           <div className="space-y-4">
+@@ -128,7 +128,7 @@ export const DesignSystemPage: React.FC = () => {
+               <div key={idx} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                 <div className="flex items-center justify-between text-xs font-mono text-gray-400">
+                   <span className="font-bold text-white">{typ.name}</span>
+-                  <span className="text-purple-300">{typ.font}</span>
++                  <span className="text-cyan-300">{typ.font}</span>
+                 </div>
+                 <div className={`${typ.style} pt-1`}>{typ.sample}</div>
+               </div>
+@@ -157,7 +157,7 @@ export const DesignSystemPage: React.FC = () => {
+       {/* 3. Core Component Library Previews */}
+       <GlassCard>
+         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <Sparkles className="w-4 h-4 text-purple-400" />
++          <Sparkles className="w-4 h-4 text-cyan-400" />
+           <span>4. Core Component Library Previews</span>
+         </h3>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+@@ -181,9 +181,9 @@ export const DesignSystemPage: React.FC = () => {
+           {/* Component 2: Nav Items & Command Input */}
+           <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
+             <span className="text-xs font-mono uppercase text-gray-400 block border-b border-white/10 pb-2">Command & Nav Elements</span>
+-            <div className="p-2 rounded-xl bg-gradient-to-r from-purple-600/20 to-blue-600/10 border border-purple-500/30 flex items-center justify-between text-xs text-white font-semibold">
+-              <span className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4 text-purple-400" /> Active Nav Item</span>
+-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">Live</span>
++            <div className="p-2 rounded-xl bg-gradient-to-r from-cyan-600/20 to-blue-600/10 border border-cyan-500/30 flex items-center justify-between text-xs text-white font-semibold">
++              <span className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4 text-cyan-400" /> Active Nav Item</span>
++              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">Live</span>
+             </div>
+             <div className="p-2 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between text-xs text-gray-400">
+               <span className="flex items-center gap-2"><Search className="w-4 h-4 text-gray-500" /> Search input trigger</span>
+@@ -192,16 +192,16 @@ export const DesignSystemPage: React.FC = () => {
+           </div>
+ 
+           {/* Component 3: Mini Agent Card */}
+-          <div className="p-4 rounded-2xl bg-[#1e1e28]/90 border border-purple-500/40 space-y-2">
++          <div className="p-4 rounded-2xl bg-[#1e1e28]/90 border border-cyan-500/40 space-y-2">
+             <div className="flex items-center justify-between">
+-              <span className="text-xs font-mono uppercase text-purple-300">Agent Spotlight Preview</span>
++              <span className="text-xs font-mono uppercase text-cyan-300">Agent Spotlight Preview</span>
+               <StatusBadge status="running" size="sm" />
+             </div>
+             <div className="flex items-center gap-2 pt-1">
+               <span className="text-2xl">🎨</span>
+               <div>
+                 <div className="text-xs font-bold text-white">UI Design Agent</div>
+-                <div className="text-[10px] font-mono text-purple-300">Frontend Architect</div>
++                <div className="text-[10px] font-mono text-cyan-300">Frontend Architect</div>
+               </div>
+             </div>
+             <div className="text-[11px] text-gray-300 font-mono bg-black/30 p-2 rounded-lg border border-white/5">
+@@ -214,7 +214,7 @@ export const DesignSystemPage: React.FC = () => {
+       {/* 4. Live Orchestration Pattern Preview */}
+       <GlassCard glow="purple">
+         <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+-          <Bot className="w-4 h-4 text-purple-400" />
++          <Bot className="w-4 h-4 text-cyan-400" />
+           <span>5. Live Orchestration Card Pattern ("EvolveAgent is working...")</span>
+         </h3>
+         <p className="text-xs text-gray-400 mb-4">
+@@ -226,7 +226,7 @@ export const DesignSystemPage: React.FC = () => {
+       {/* 5. Page Layout Patterns (10 Wireframe Thumbnails) */}
+       <GlassCard>
+         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <LayoutDashboard className="w-4 h-4 text-purple-400" />
++          <LayoutDashboard className="w-4 h-4 text-cyan-400" />
+           <span>6. Page Layout Patterns & Navigation Blueprints (Click to Jump)</span>
+         </h3>
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+@@ -236,17 +236,17 @@ export const DesignSystemPage: React.FC = () => {
+               <div
+                 key={thm.id}
+                 onClick={() => { setActivePage(thm.id); showToast(`Jumped to ${thm.label}`, 'info'); }}
+-                className="cursor-pointer p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-purple-500/40 transition-all group flex flex-col justify-between space-y-3"
++                className="cursor-pointer p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-cyan-500/40 transition-all group flex flex-col justify-between space-y-3"
+               >
+                 <div>
+                   <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
+-                    <Icon className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+-                    <span className="text-[10px] font-mono text-gray-500 group-hover:text-purple-300 uppercase">Screen</span>
++                    <Icon className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
++                    <span className="text-[10px] font-mono text-gray-500 group-hover:text-cyan-300 uppercase">Screen</span>
+                   </div>
+-                  <h4 className="text-xs font-bold text-white group-hover:text-purple-200 transition-colors">{thm.label}</h4>
++                  <h4 className="text-xs font-bold text-white group-hover:text-cyan-200 transition-colors">{thm.label}</h4>
+                   <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{thm.desc}</p>
+                 </div>
+-                <div className="flex items-center justify-between text-[10px] font-mono text-purple-400 pt-2 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
++                <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400 pt-2 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <span>Open Screen</span>
+                   <ArrowRight className="w-3 h-3" />
+                 </div>
+diff --git a/frontend/src/pages/DevModeConsole.tsx b/frontend/src/pages/DevModeConsole.tsx
+index a62d165..55d685c 100644
+--- a/frontend/src/pages/DevModeConsole.tsx
++++ b/frontend/src/pages/DevModeConsole.tsx
+@@ -63,10 +63,10 @@ export const DevModeConsole: React.FC = () => {
+       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+         {[
+           { label: 'Backend', value: health ? (health.online ? 'Online' : 'Down') : '—', sub: health ? 'health :8000' : 'checking…', color: health?.online ? 'text-emerald-400' : 'text-gray-400' },
+-          { label: 'Gov Events', value: health ? `${health.totalEvents}` : `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-indigo-400' },
++          { label: 'Gov Events', value: health ? `${health.totalEvents}` : `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-sky-400' },
+           { label: 'Blocked', value: health ? `${health.blocked}` : '0', sub: 'Safety blocks', color: 'text-rose-400' },
+           { label: 'Approvals', value: health ? `${health.approvals}` : '0', sub: 'Granted', color: 'text-emerald-400' },
+-          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-purple-400' },
++          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-cyan-400' },
+           { label: 'Workflow Runs', value: health ? `${health.workflowRuns}` : '0', sub: 'Durable', color: 'text-amber-400' },
+         ].map((item, idx) => (
+           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
+@@ -121,7 +121,7 @@ export const DevModeConsole: React.FC = () => {
+               label: 'Collections',
+               value: storageStatus ? storageStatus.collections.toLocaleString() : '—',
+               sub: 'Storage collections',
+-              color: 'text-purple-300',
++              color: 'text-cyan-300',
+             },
+             {
+               label: 'Documents',
+@@ -169,13 +169,13 @@ export const DevModeConsole: React.FC = () => {
+       {/* 2. Header & Control Buttons */}
+       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#141418] border border-white/10">
+         <div className="flex items-center gap-3">
+-          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
++          <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+             <Terminal className="w-5 h-5" />
+           </div>
+           <div>
+             <div className="flex items-center gap-2">
+               <h2 className="text-sm font-bold text-white">Current Workflow Trace</h2>
+-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
++              <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
+                 Trace ID: TR-9942-AX
+               </span>
+             </div>
+@@ -196,7 +196,7 @@ export const DevModeConsole: React.FC = () => {
+           </button>
+           <button
+             onClick={runMockWorkflowStep}
+-            className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg shadow-purple-500/20"
++            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg shadow-cyan-500/20"
+           >
+             <Play className="w-3.5 h-3.5 fill-current" />
+             <span>Step Into Next</span>
+@@ -226,11 +226,11 @@ export const DevModeConsole: React.FC = () => {
+                 onClick={() => setActiveTab(tab.id)}
+                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                   activeTab === tab.id
+-                    ? 'bg-purple-600/20 text-white border border-purple-500/40 shadow-md'
++                    ? 'bg-cyan-600/20 text-white border border-cyan-500/40 shadow-md'
+                     : 'text-gray-400 hover:text-white hover:bg-white/5'
+                 }`}
+               >
+-                <Icon className="w-3.5 h-3.5 text-purple-400" />
++                <Icon className="w-3.5 h-3.5 text-cyan-400" />
+                 <span>{tab.label}</span>
+                 {tab.count !== undefined && (
+                   <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
+@@ -255,21 +255,21 @@ export const DevModeConsole: React.FC = () => {
+                     onClick={() => setSelectedStep(s.step)}
+                     className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+                       isSelected
+-                        ? 'bg-purple-900/20 border-purple-500/50 shadow-[0_0_20px_-5px_rgba(160,120,255,0.2)]'
++                        ? 'bg-cyan-900/20 border-cyan-500/50 shadow-[0_0_20px_-5px_rgba(34,211,238,0.2)]'
+                         : 'bg-[#171717]/60 border-white/5 hover:bg-[#1a1a20]/80 hover:border-white/15'
+                     }`}
+                   >
+                     <div className="flex items-start justify-between gap-3">
+                       <div className="flex items-start gap-3">
+                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold ${
+-                          isSelected ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300'
++                          isSelected ? 'bg-cyan-600 text-white' : 'bg-white/10 text-gray-300'
+                         }`}>
+                           #{s.step}
+                         </div>
+                         <div>
+                           <div className="flex items-center gap-2">
+                             <span className="text-xs font-semibold text-white">{s.action}</span>
+-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-purple-300 border border-white/10">
++                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-cyan-300 border border-white/10">
+                               {s.agent}
+                             </span>
+                           </div>
+@@ -297,7 +297,7 @@ export const DevModeConsole: React.FC = () => {
+             <GlassCard className="h-fit sticky top-20 space-y-4 font-mono">
+               <div className="flex items-center justify-between pb-3 border-b border-white/10 text-xs font-sans font-semibold text-white">
+                 <span>Step #{currentStepData?.step} Inspector</span>
+-                <span className="text-purple-400 font-mono">{currentStepData?.id}</span>
++                <span className="text-cyan-400 font-mono">{currentStepData?.id}</span>
+               </div>
+ 
+               <div className="space-y-3 text-xs">
+@@ -308,7 +308,7 @@ export const DevModeConsole: React.FC = () => {
+ 
+                 <div>
+                   <span className="text-gray-500 text-[10px] uppercase">Action Name</span>
+-                  <div className="text-purple-300 mt-0.5">{currentStepData?.action}</div>
++                  <div className="text-cyan-300 mt-0.5">{currentStepData?.action}</div>
+                 </div>
+ 
+                 {currentStepData?.toolUsed && (
+@@ -369,7 +369,7 @@ export const DevModeConsole: React.FC = () => {
+                     <tr key={log.id} className="hover:bg-white/[0.02]">
+                       <td className="py-3 px-3 text-gray-400">{log.timestamp}</td>
+                       <td className="py-3 px-3 font-semibold text-white">{log.agentName}</td>
+-                      <td className="py-3 px-3 text-purple-300 font-semibold">{log.action}</td>
++                      <td className="py-3 px-3 text-cyan-300 font-semibold">{log.action}</td>
+                       <td className="py-3 px-3"><RiskBadge level={log.risk} size="sm" /></td>
+                       <td className="py-3 px-3"><StatusBadge status={log.status} size="sm" /></td>
+                     </tr>
+@@ -385,7 +385,7 @@ export const DevModeConsole: React.FC = () => {
+           <GlassCard>
+             <div className="flex items-center justify-between pb-3 border-b border-white/10 font-mono text-xs">
+               <span className="text-white font-semibold flex items-center gap-2">
+-                <Code2 className="w-4 h-4 text-purple-400" /> Real-time Operating System State Dump
++                <Code2 className="w-4 h-4 text-cyan-400" /> Real-time Operating System State Dump
+               </span>
+               <span className="text-gray-400">Updated automatically</span>
+             </div>
+@@ -406,7 +406,7 @@ export const DevModeConsole: React.FC = () => {
+       {/* 4. Live Agent Execution Progress Bars */}
+       <GlassCard>
+         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+-          <Cpu className="w-4 h-4 text-purple-400" />
++          <Cpu className="w-4 h-4 text-cyan-400" />
+           <span>Active Agent Resource Consumption & Pipeline Health</span>
+         </h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+@@ -417,10 +417,10 @@ export const DevModeConsole: React.FC = () => {
+                   <span>{agent.avatar}</span>
+                   <span className="truncate">{agent.name}</span>
+                 </span>
+-                <span className="text-[10px] font-mono text-purple-400">{agent.qualityScore}% Q-Score</span>
++                <span className="text-[10px] font-mono text-cyan-400">{agent.qualityScore}% Q-Score</span>
+               </div>
+               <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden">
+-                <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${agent.qualityScore}%` }} />
++                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${agent.qualityScore}%` }} />
+               </div>
+               <div className="flex items-center justify-between text-[10px] font-mono text-gray-500">
+                 <span>Tokens: {agent.tokensUsed}</span>
+diff --git a/frontend/src/pages/GovernancePage.tsx b/frontend/src/pages/GovernancePage.tsx
+index fefc8b9..6bca2f2 100644
+--- a/frontend/src/pages/GovernancePage.tsx
++++ b/frontend/src/pages/GovernancePage.tsx
+@@ -53,7 +53,7 @@ export const GovernancePage: React.FC = () => {
+           { label: 'Actions Logged', value: '1,284', sub: 'Tamper-proof audit', color: 'text-white' },
+           { label: 'Pending Reviews', value: `${approvals.filter(a => a.status === 'pending').length}`, sub: 'In Approvals queue', color: 'text-amber-400' },
+           { label: 'Blocked Actions', value: '12', sub: 'Destructive shell', color: 'text-rose-400' },
+-          { label: 'Approval Rate', value: '86%', sub: 'Safe execution', color: 'text-purple-400' },
++          { label: 'Approval Rate', value: '86%', sub: 'Safe execution', color: 'text-cyan-400' },
+           { label: 'Safety Incidents', value: '00', sub: 'Zero leaks', color: 'text-emerald-400' },
+         ].map((item, idx) => (
+           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
+@@ -92,8 +92,8 @@ export const GovernancePage: React.FC = () => {
+                 <div className="text-gray-400 text-[10px]">Zero unapproved filesystem writes</div>
+               </div>
+             </div>
+-            <div className="p-3 rounded-2xl bg-black/40 border border-purple-500/30 flex items-center gap-3">
+-              <Shield className="w-5 h-5 text-purple-400" />
++            <div className="p-3 rounded-2xl bg-black/40 border border-cyan-500/30 flex items-center gap-3">
++              <Shield className="w-5 h-5 text-cyan-400" />
+               <div className="text-xs font-mono">
+                 <div className="font-bold text-white">Audit Logged</div>
+                 <div className="text-gray-400 text-[10px]">100% telemetry coverage</div>
+@@ -110,7 +110,7 @@ export const GovernancePage: React.FC = () => {
+           <GlassCard>
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+               <div className="flex items-center gap-2">
+-                <Shield className="w-4 h-4 text-purple-400" />
++                <Shield className="w-4 h-4 text-cyan-400" />
+                 <h3 className="text-sm font-semibold text-white">Global Permission Policy Matrix</h3>
+               </div>
+               <div className="relative w-full sm:w-64">
+@@ -140,7 +140,7 @@ export const GovernancePage: React.FC = () => {
+                   {filteredMatrix.map((item, idx) => (
+                     <tr key={idx} className="hover:bg-white/[0.02]">
+                       <td className="py-3 px-3 font-sans text-white font-semibold">{item.action}</td>
+-                      <td className="py-3 px-3 text-purple-300">{item.scope}</td>
++                      <td className="py-3 px-3 text-cyan-300">{item.scope}</td>
+                       <td className="py-3 px-3"><RiskBadge level={item.risk} size="sm" /></td>
+                       <td className="py-3 px-3"><StatusBadge status={item.status} size="sm" /></td>
+                       <td className="py-3 px-3 text-right">
+@@ -162,7 +162,7 @@ export const GovernancePage: React.FC = () => {
+         <div className="space-y-4">
+           <GlassCard glow="purple">
+             <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+-              <Sliders className="w-4 h-4 text-purple-400" />
++              <Sliders className="w-4 h-4 text-cyan-400" />
+               <span>Real-Time Governance Controls</span>
+             </h3>
+ 
+@@ -187,7 +187,7 @@ export const GovernancePage: React.FC = () => {
+                     </div>
+                     <div className="shrink-0">
+                       {isChecked ? (
+-                        <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner transition-all">
++                        <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner transition-all">
+                           <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
+                         </div>
+                       ) : (
+@@ -224,7 +224,7 @@ export const GovernancePage: React.FC = () => {
+       <GlassCard>
+         <div className="flex items-center justify-between pb-3 border-b border-white/10">
+           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+-            <Activity className="w-4 h-4 text-purple-400" />
++            <Activity className="w-4 h-4 text-cyan-400" />
+             <span>Recent Audit Log Events ({governanceLogs.length})</span>
+           </h3>
+           <span className="text-xs font-mono text-gray-400">100% compliance recorded</span>
+@@ -239,7 +239,7 @@ export const GovernancePage: React.FC = () => {
+               </div>
+               <div className="text-white font-bold truncate">{log.action}</div>
+               <div className="text-[11px] text-gray-400 font-sans line-clamp-2">{log.details}</div>
+-              <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-purple-300">
++              <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-cyan-300">
+                 <span>Agent: {log.agentName}</span>
+                 <RiskBadge level={log.risk} size="sm" />
+               </div>
+diff --git a/frontend/src/pages/HomeDashboard.tsx b/frontend/src/pages/HomeDashboard.tsx
+index 903f850..055f63e 100644
+--- a/frontend/src/pages/HomeDashboard.tsx
++++ b/frontend/src/pages/HomeDashboard.tsx
+@@ -60,13 +60,13 @@ export const HomeDashboard: React.FC = () => {
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+       {/* 1. AI Command Center Hero Card */}
+-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden">
++      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1c1a29]/90 via-[#15151b]/95 to-[#121217]/90 p-6 sm:p-8 shadow-2xl overflow-hidden">
+         {/* Glow backdrop */}
+-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
++        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
+         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+ 
+         <div className="relative z-10 max-w-3xl">
+-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
++          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
+             <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
+             <span>AI Command Center & Multi-Agent OS</span>
+           </div>
+@@ -81,13 +81,13 @@ export const HomeDashboard: React.FC = () => {
+           {/* Quick Prompt Input Bar */}
+           <form onSubmit={handlePromptSubmit} className="mt-6 flex flex-col sm:flex-row gap-2.5">
+             <div className="relative flex-1">
+-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
++              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+               <input
+                 type="text"
+                 value={quickPrompt}
+                 onChange={(e) => setQuickPrompt(e.target.value)}
+                 placeholder="Ask anything or command agents (e.g. 'Redesign our dashboard cards', 'Scan GitHub repo')..."
+-                className="w-full bg-black/60 border border-white/15 focus:border-purple-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
++                className="w-full bg-black/60 border border-white/15 focus:border-cyan-500/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner transition-all"
+               />
+               <kbd 
+                 onClick={() => setIsCommandModalOpen(true)}
+@@ -98,7 +98,7 @@ export const HomeDashboard: React.FC = () => {
+             </div>
+             <button
+               type="submit"
+-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2"
++              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
+             >
+               <span>Launch Mission</span>
+               <ArrowRight className="w-4 h-4" />
+@@ -121,7 +121,7 @@ export const HomeDashboard: React.FC = () => {
+                   onClick={() => { setActivePage(action.page); showToast(`Navigated to ${action.label}`, 'info'); }}
+                   className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
+                 >
+-                  <Icon className="w-3.5 h-3.5 text-purple-400" />
++                  <Icon className="w-3.5 h-3.5 text-cyan-400" />
+                   <span>{action.label}</span>
+                 </button>
+               );
+@@ -185,15 +185,15 @@ export const HomeDashboard: React.FC = () => {
+             <div>
+               <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                 <div className="flex items-center gap-2">
+-                  <Activity className="w-4 h-4 text-purple-400 animate-pulse" />
++                  <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
+                   <h3 className="text-sm font-semibold text-white">Live Agent Activity Log</h3>
+-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
++                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">
+                     Real-Time Stream
+                   </span>
+                 </div>
+                 <button
+                   onClick={() => { setActivePage('dev-console'); showToast('Viewing full trace inspector', 'info'); }}
+-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1"
++                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1"
+                 >
+                   <span>View Full Trace</span>
+                   <ArrowRight className="w-3.5 h-3.5" />
+@@ -259,7 +259,7 @@ export const HomeDashboard: React.FC = () => {
+                 </div>
+                 <button
+                   onClick={() => setActivePage('approvals')}
+-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium"
++                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+                 >
+                   View All
+                 </button>
+@@ -312,7 +312,7 @@ export const HomeDashboard: React.FC = () => {
+             {pendingApprovals.some(a => a.riskLevel === 'low') && (
+               <button
+                 onClick={approveBatchLowRisk}
+-                className="mt-4 w-full py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-medium text-xs transition-colors"
++                className="mt-4 w-full py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-medium text-xs transition-colors"
+               >
+                 Approve Low-Risk Batch
+               </button>
+@@ -332,7 +332,7 @@ export const HomeDashboard: React.FC = () => {
+             </div>
+             <button
+               onClick={() => setActivePage('tools')}
+-              className="text-xs text-purple-400 hover:text-purple-300 font-medium"
++              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+             >
+               Manage Hub ({connectors.length})
+             </button>
+@@ -367,7 +367,7 @@ export const HomeDashboard: React.FC = () => {
+             </div>
+             <button
+               onClick={() => setActivePage('governance')}
+-              className="text-xs text-purple-400 hover:text-purple-300 font-medium"
++              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+             >
+               Policy Matrix
+             </button>
+diff --git a/frontend/src/pages/InstructionsPage.tsx b/frontend/src/pages/InstructionsPage.tsx
+index 2749efb..2b7fe7a 100644
+--- a/frontend/src/pages/InstructionsPage.tsx
++++ b/frontend/src/pages/InstructionsPage.tsx
+@@ -62,10 +62,10 @@ export const InstructionsPage: React.FC = () => {
+   return (
+     <div className="space-y-8 animate-fadeIn pb-16">
+       {/* Header Banner */}
+-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl" />
++      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
++        <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-600/20 rounded-full blur-3xl" />
+         <div className="relative">
+-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
++          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
+             <BookOpen className="w-3.5 h-3.5" />
+             Start Here
+           </div>
+@@ -83,7 +83,7 @@ export const InstructionsPage: React.FC = () => {
+       {/* Quick Start Steps */}
+       <div>
+         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <Zap className="w-4 h-4 text-purple-400" /> Quick Start
++          <Zap className="w-4 h-4 text-cyan-400" /> Quick Start
+         </h2>
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+           {[
+@@ -93,13 +93,13 @@ export const InstructionsPage: React.FC = () => {
+           ].map((s) => (
+             <GlassCard key={s.step} hover onClick={() => setActivePage(s.page)} className="group">
+               <div className="flex items-center gap-2 mb-3">
+-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
++                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                   {s.step}
+                 </div>
+                 <h3 className="text-sm font-semibold text-white">{s.title}</h3>
+               </div>
+               <p className="text-xs text-gray-400 leading-relaxed mb-3">{s.desc}</p>
+-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-purple-400 group-hover:gap-2 transition-all">
++              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-400 group-hover:gap-2 transition-all">
+                 Go there <ArrowRight className="w-3 h-3" />
+               </span>
+             </GlassCard>
+@@ -110,14 +110,14 @@ export const InstructionsPage: React.FC = () => {
+       {/* Simple Mode vs Dev Mode */}
+       <div>
+         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <Sparkles className="w-4 h-4 text-purple-400" /> Two Ways to Work
++          <Sparkles className="w-4 h-4 text-cyan-400" /> Two Ways to Work
+         </h2>
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+           <GlassCard glow="purple">
+             <div className="flex items-center gap-2 mb-2">
+-              <MessageSquare className="w-4 h-4 text-purple-400" />
++              <MessageSquare className="w-4 h-4 text-cyan-400" />
+               <h3 className="text-sm font-semibold text-white">Simple Mode</h3>
+-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
++              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                 Everyday use
+               </span>
+             </div>
+@@ -145,12 +145,12 @@ export const InstructionsPage: React.FC = () => {
+       {/* Trust & Safety */}
+       <div>
+         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <Lock className="w-4 h-4 text-purple-400" /> How Safety Works Here
++          <Lock className="w-4 h-4 text-cyan-400" /> How Safety Works Here
+         </h2>
+         <GlassCard>
+           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+             <div className="flex gap-3">
+-              <Eye className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
++              <Eye className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+               <div>
+                 <h4 className="text-xs font-semibold text-white mb-1">Everything is visible</h4>
+                 <p className="text-[11px] text-gray-400 leading-relaxed">
+@@ -184,7 +184,7 @@ export const InstructionsPage: React.FC = () => {
+       {/* Sidebar Guide */}
+       <div>
+         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <Compass className="w-4 h-4 text-purple-400" /> What's in the Sidebar
++          <Compass className="w-4 h-4 text-cyan-400" /> What's in the Sidebar
+         </h2>
+         <GlassCard padding="none">
+           <div className="divide-y divide-white/[0.06]">
+@@ -196,14 +196,14 @@ export const InstructionsPage: React.FC = () => {
+                   onClick={() => setActivePage(item.id)}
+                   className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.03] transition-colors group"
+                 >
+-                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-purple-500/30">
+-                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-purple-400" />
++                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-cyan-500/30">
++                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-cyan-400" />
+                   </div>
+                   <div className="min-w-0 flex-1">
+                     <h4 className="text-xs font-semibold text-white mb-0.5">{item.label}</h4>
+                     <p className="text-[11px] text-gray-400 leading-relaxed">{item.desc}</p>
+                   </div>
+-                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-purple-400 shrink-0 mt-1 transition-colors" />
++                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-cyan-400 shrink-0 mt-1 transition-colors" />
+                 </button>
+               );
+             })}
+@@ -214,7 +214,7 @@ export const InstructionsPage: React.FC = () => {
+       {/* FAQ */}
+       <div>
+         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+-          <BookOpen className="w-4 h-4 text-purple-400" /> Common Questions
++          <BookOpen className="w-4 h-4 text-cyan-400" /> Common Questions
+         </h2>
+         <div className="space-y-2">
+           {faqs.map((f, i) => (
+diff --git a/frontend/src/pages/MarketplaceHubPage.tsx b/frontend/src/pages/MarketplaceHubPage.tsx
+index 15f205f..bd661ff 100644
+--- a/frontend/src/pages/MarketplaceHubPage.tsx
++++ b/frontend/src/pages/MarketplaceHubPage.tsx
+@@ -142,12 +142,12 @@ export const MarketplaceHubPage: React.FC = () => {
+ 
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
++        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+           <div className="space-y-2 max-w-3xl">
+             <div className="flex flex-wrap items-center gap-2">
+-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
++              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+                 v160 Agent Marketplace
+               </span>
+             </div>
+@@ -159,7 +159,7 @@ export const MarketplaceHubPage: React.FC = () => {
+           <div className="flex gap-2 self-start lg:self-auto">
+             <button
+               onClick={() => setShowPublish(true)}
+-              className="px-4 py-2.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-2 transition-colors"
++              className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center gap-2 transition-colors"
+             >
+               <Plus className="w-4 h-4" />
+               Publish
+@@ -201,7 +201,7 @@ export const MarketplaceHubPage: React.FC = () => {
+           <GlassCard className="space-y-0" padding="none">
+             <div className="flex flex-wrap items-center gap-2 p-4 border-b border-white/[0.06]">
+               <div className="flex items-center gap-1.5 mr-2">
+-                <TrendingUp className="w-4 h-4 text-purple-400" />
++                <TrendingUp className="w-4 h-4 text-cyan-400" />
+                 <span className="text-xs font-bold text-white">Sort</span>
+               </div>
+               {(['featured', 'popular', 'top_rated'] as SortMode[]).map((s) => (
+@@ -209,7 +209,7 @@ export const MarketplaceHubPage: React.FC = () => {
+                   key={s}
+                   onClick={() => setSort(s)}
+                   className={`px-3 py-1.5 rounded-lg text-[11px] font-mono transition-colors ${
+-                    sort === s ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-white/[0.03] text-gray-400 border border-white/[0.06] hover:border-white/20'
++                    sort === s ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-white/[0.03] text-gray-400 border border-white/[0.06] hover:border-white/20'
+                   }`}
+                 >
+                   {s.replace('_', ' ')}
+@@ -234,7 +234,7 @@ export const MarketplaceHubPage: React.FC = () => {
+                 <button
+                   key={l.listingId}
+                   onClick={() => setSelectedId(l.listingId)}
+-                  className={`w-full text-left p-4 transition-colors ${l.listingId === selectedId ? 'bg-purple-500/10' : 'hover:bg-white/[0.02]'}`}
++                  className={`w-full text-left p-4 transition-colors ${l.listingId === selectedId ? 'bg-cyan-500/10' : 'hover:bg-white/[0.02]'}`}
+                 >
+                   <div className="flex items-start justify-between gap-3">
+                     <div className="min-w-0">
+@@ -261,7 +261,7 @@ export const MarketplaceHubPage: React.FC = () => {
+             <>
+               <GlassCard className="space-y-3">
+                 <div className="flex items-center gap-2">
+-                  <Package className="w-4 h-4 text-purple-400" />
++                  <Package className="w-4 h-4 text-cyan-400" />
+                   <h2 className="text-sm font-bold text-white truncate">{selected.name}</h2>
+                 </div>
+                 <p className="text-xs text-gray-400">{selected.summary}</p>
+@@ -304,7 +304,7 @@ export const MarketplaceHubPage: React.FC = () => {
+                   value={reviewText}
+                   onChange={(e) => setReviewText(e.target.value)}
+                   placeholder="Optional review..."
+-                  className="w-full min-h-[60px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
++                  className="w-full min-h-[60px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                 />
+                 <button
+                   onClick={handleRate}
+@@ -362,7 +362,7 @@ export const MarketplaceHubPage: React.FC = () => {
+             <button
+               onClick={handlePublish}
+               disabled={busy || !publishName.trim()}
+-              className="w-full px-4 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs transition-colors disabled:opacity-50"
++              className="w-full px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs transition-colors disabled:opacity-50"
+             >
+               Publish
+             </button>
+diff --git a/frontend/src/pages/MissionControl.tsx b/frontend/src/pages/MissionControl.tsx
+index 9b45e4c..69a7bf9 100644
+--- a/frontend/src/pages/MissionControl.tsx
++++ b/frontend/src/pages/MissionControl.tsx
+@@ -51,7 +51,7 @@ export const MissionControl: React.FC = () => {
+ 
+   const columns: { id: TaskStatus; label: string; color: string }[] = [
+     { id: 'planned', label: 'Planned / Backlog', color: 'border-blue-500/30' },
+-    { id: 'running', label: 'In Progress / Running', color: 'border-purple-500/40' },
++    { id: 'running', label: 'In Progress / Running', color: 'border-cyan-500/40' },
+     { id: 'waiting_approval', label: 'Waiting Approval', color: 'border-amber-500/40' },
+     { id: 'completed', label: 'Completed', color: 'border-emerald-500/40' }
+   ];
+@@ -59,13 +59,13 @@ export const MissionControl: React.FC = () => {
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+       {/* 1. Active Mission Overview Header Card */}
+-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
+-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
++      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
++        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+         
+         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+           <div className="space-y-2 max-w-2xl">
+             <div className="flex items-center gap-2">
+-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
++              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+                 Active Mission #01
+               </span>
+               <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
+@@ -99,10 +99,10 @@ export const MissionControl: React.FC = () => {
+             <div className="w-full sm:w-44 space-y-1.5">
+               <div className="flex items-center justify-between text-xs font-mono">
+                 <span className="text-gray-400">Total Progress</span>
+-                <span className="text-purple-300 font-bold">{mission.progress}%</span>
++                <span className="text-cyan-300 font-bold">{mission.progress}%</span>
+               </div>
+               <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
+-                <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
++                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
+               </div>
+             </div>
+           </div>
+@@ -119,7 +119,7 @@ export const MissionControl: React.FC = () => {
+             <button
+               onClick={handleStartRun}
+               disabled={starting}
+-              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 transition-colors disabled:opacity-50"
++              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-200 transition-colors disabled:opacity-50"
+             >
+               {starting ? 'Starting…' : '▶ Start real run'}
+             </button>
+@@ -127,7 +127,7 @@ export const MissionControl: React.FC = () => {
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
+             {liveRuns.map(run => {
+               const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
+-              const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-purple-300';
++              const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-cyan-300';
+               return (
+                 <div key={run.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                   <div className="flex items-center justify-between gap-2">
+@@ -135,7 +135,7 @@ export const MissionControl: React.FC = () => {
+                     <span className={`text-[10px] font-mono ${tone}`}>{run.status.replace('_', ' ')}</span>
+                   </div>
+                   <div className="mt-2 w-full h-1.5 rounded-full bg-black/50 overflow-hidden">
+-                    <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${pct}%` }} />
++                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${pct}%` }} />
+                   </div>
+                   <div className="text-[10px] text-gray-500 font-mono mt-1">{run.done}/{run.total} steps</div>
+                 </div>
+@@ -146,21 +146,21 @@ export const MissionControl: React.FC = () => {
+       )}
+ 
+       {/* 2. Next Best Action Recommendation Banner */}
+-      <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-blue-900/30 border border-purple-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
++      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-900/30 via-sky-900/20 to-blue-900/30 border border-cyan-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+         <div className="flex items-start gap-3">
+-          <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 shrink-0">
++          <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 shrink-0">
+             <Sparkles className="w-5 h-5 animate-spin" style={{ animationDuration: '8s' }} />
+           </div>
+           <div>
+-            <div className="text-xs font-semibold text-purple-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
++            <div className="text-xs font-semibold text-cyan-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
+             <p className="text-xs sm:text-sm text-white font-medium mt-0.5">
+-              UI Design Agent recommends synthesizing the <span className="text-purple-300 font-bold">Agents Overview grid</span> and verifying Mock-Safe permission profiles next.
++              UI Design Agent recommends synthesizing the <span className="text-cyan-300 font-bold">Agents Overview grid</span> and verifying Mock-Safe permission profiles next.
+             </p>
+           </div>
+         </div>
+         <button
+           onClick={handleApproveNext}
+-          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
++          className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
+         >
+           <Check className="w-4 h-4 stroke-[3]" />
+           <span>Approve Next Task</span>
+@@ -170,7 +170,7 @@ export const MissionControl: React.FC = () => {
+       {/* 3. Mission Phase Tracker (5 Phases Step Bar) */}
+       <GlassCard>
+         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+-          <Layers className="w-4 h-4 text-purple-400" />
++          <Layers className="w-4 h-4 text-cyan-400" />
+           <span>Mission Phase Tracker</span>
+         </h3>
+         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+@@ -182,7 +182,7 @@ export const MissionControl: React.FC = () => {
+                 key={phase.id}
+                 className={`p-3 rounded-xl border transition-all ${
+                   isDone ? 'bg-emerald-500/[0.04] border-emerald-500/20 text-emerald-300' :
+-                  isCurr ? 'bg-purple-500/[0.08] border-purple-500/40 text-purple-200 shadow-md' :
++                  isCurr ? 'bg-cyan-500/[0.08] border-cyan-500/40 text-cyan-200 shadow-md' :
+                   'bg-white/[0.01] border-white/5 text-gray-500'
+                 }`}
+               >
+@@ -205,7 +205,7 @@ export const MissionControl: React.FC = () => {
+       <div className="space-y-3">
+         <div className="flex items-center justify-between">
+           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+-            <CheckSquare className="w-4 h-4 text-purple-400" />
++            <CheckSquare className="w-4 h-4 text-cyan-400" />
+             <span>Task Graph & Execution Pipeline</span>
+           </h3>
+           <span className="text-xs text-gray-400 font-mono">Showing {tasks.length} atomic operations</span>
+@@ -236,7 +236,7 @@ export const MissionControl: React.FC = () => {
+                         </div>
+                         <p className="text-[11px] text-gray-400 line-clamp-2">{t.description}</p>
+                         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-500">
+-                          <span className="text-purple-300">{t.assignedAgentName}</span>
++                          <span className="text-cyan-300">{t.assignedAgentName}</span>
+                           <span>{t.timestamp}</span>
+                         </div>
+                       </div>
+@@ -252,13 +252,13 @@ export const MissionControl: React.FC = () => {
+       {/* 5. Mission Intelligence & Health Panel */}
+       <GlassCard glow="purple">
+         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+-          <Activity className="w-4 h-4 text-purple-400" />
++          <Activity className="w-4 h-4 text-cyan-400" />
+           <span>Mission Intelligence & Agent Confidence Scores</span>
+         </h3>
+         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+             <div className="text-xs font-mono text-gray-400">Agent Confidence</div>
+-            <div className="text-2xl font-bold font-mono text-purple-300 mt-1">94%</div>
++            <div className="text-2xl font-bold font-mono text-cyan-300 mt-1">94%</div>
+             <div className="text-[10px] text-emerald-400 mt-1">High predictability</div>
+           </div>
+           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+diff --git a/frontend/src/pages/ProjectBrain.tsx b/frontend/src/pages/ProjectBrain.tsx
+index e90e0d8..ed54096 100644
+--- a/frontend/src/pages/ProjectBrain.tsx
++++ b/frontend/src/pages/ProjectBrain.tsx
+@@ -127,11 +127,11 @@ export const ProjectBrain: React.FC = () => {
+   return (
+     <div className="space-y-6 animate-fadeIn pb-12">
+       {/* 1. Workspace Search Hero Card */}
+-      <div className="relative rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#1b1928] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
+-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
++      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-[#1b1928] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
++        <div className="absolute -top-20 -right-20 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
+         
+         <div className="relative z-10 max-w-3xl">
+-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono mb-4">
++          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
+             <Brain className="w-3.5 h-3.5" />
+             <span>Workspace Vector Memory & Knowledge Graph</span>
+           </div>
+@@ -145,17 +145,17 @@ export const ProjectBrain: React.FC = () => {
+ 
+           {/* Search bar */}
+           <div className="mt-6 relative">
+-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
++            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+             <input
+               type="text"
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+               placeholder="Search memories, ADRs, hex tokens, or goals (e.g. 'Dark graphite', 'ADR-12')..."
+-              className="w-full bg-black/60 border border-white/15 focus:border-purple-500 rounded-xl pl-10 pr-28 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner"
++              className="w-full bg-black/60 border border-white/15 focus:border-cyan-500 rounded-xl pl-10 pr-28 py-3 text-sm text-white placeholder-gray-500 focus:outline-none shadow-inner"
+             />
+             <button
+               onClick={() => setIsAddingModalOpen(true)}
+-              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center gap-1 transition-all"
++              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1 transition-all"
+             >
+               <Plus className="w-3.5 h-3.5" />
+               <span className="hidden sm:inline">Add Memory</span>
+@@ -169,7 +169,7 @@ export const ProjectBrain: React.FC = () => {
+             }`}>
+               {semanticResults?.length ? `Memory v2: ${semanticMode}` : 'Mock fallback ready'}
+             </span>
+-            {semanticBusy && <span className="text-purple-300">Searching semantic memory…</span>}
++            {semanticBusy && <span className="text-cyan-300">Searching semantic memory…</span>}
+           </div>
+ 
+           {/* Filter Chips */}
+@@ -181,7 +181,7 @@ export const ProjectBrain: React.FC = () => {
+                 onClick={() => setActiveChip(chip)}
+                 className={`px-3 py-1 rounded-lg text-xs font-mono capitalize transition-all ${
+                   activeChip === chip
+-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
++                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
+                     : 'bg-white/[0.04] hover:bg-white/[0.09] text-gray-400'
+                 }`}
+               >
+@@ -196,7 +196,7 @@ export const ProjectBrain: React.FC = () => {
+       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+         {[
+           { label: 'Index Quality', value: '98%', sub: 'High relevance', color: 'text-emerald-400' },
+-          { label: 'Indexed Sources', value: '128', sub: 'ADRs & docs', color: 'text-purple-400' },
++          { label: 'Indexed Sources', value: '128', sub: 'ADRs & docs', color: 'text-cyan-400' },
+           { label: 'Active Memories', value: `${memories.length}`, sub: 'Vector store', color: 'text-white' },
+           { label: 'Files Indexed', value: '19', sub: 'in /src tree', color: 'text-blue-400' },
+           { label: 'Decisions Saved', value: '31', sub: 'ADR records', color: 'text-amber-400' },
+@@ -216,7 +216,7 @@ export const ProjectBrain: React.FC = () => {
+         <div className="lg:col-span-2 space-y-4">
+           <div className="flex items-center justify-between">
+             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+-              <Sparkles className="w-4 h-4 text-purple-400" />
++              <Sparkles className="w-4 h-4 text-cyan-400" />
+               <span>Relevant Findings ({displayMemories.length})</span>
+             </h3>
+             <span className="text-xs text-gray-400 font-mono">
+@@ -232,7 +232,7 @@ export const ProjectBrain: React.FC = () => {
+                     <button
+                       onClick={(e) => { e.stopPropagation(); togglePinMemory(mem.id); }}
+                       className={`p-2 rounded-xl transition-colors ${
+-                        mem.pinned ? 'bg-purple-500/20 text-purple-300' : 'bg-white/5 text-gray-500 hover:text-white'
++                        mem.pinned ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/5 text-gray-500 hover:text-white'
+                       }`}
+                       title={mem.pinned ? 'Unpin' : 'Pin to top'}
+                     >
+@@ -266,10 +266,10 @@ export const ProjectBrain: React.FC = () => {
+ 
+                   {/* Relevance Score Bar */}
+                   <div className="text-right shrink-0">
+-                    <div className="text-sm font-bold font-mono text-purple-300">{mem.relevance}%</div>
++                    <div className="text-sm font-bold font-mono text-cyan-300">{mem.relevance}%</div>
+                     <div className="text-[10px] font-mono text-gray-500">Relevance Match</div>
+                     <div className="mt-1 w-16 h-1 rounded-full bg-black/60 overflow-hidden ml-auto">
+-                      <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${mem.relevance}%` }} />
++                      <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mem.relevance}%` }} />
+                     </div>
+                   </div>
+                 </div>
+@@ -294,7 +294,7 @@ export const ProjectBrain: React.FC = () => {
+                     ))}
+                     <button
+                       onClick={() => showToast(`Loaded "${mem.title}" directly into active agent context!`, 'success')}
+-                      className="ml-2 px-2.5 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-semibold text-xs border border-purple-500/30 transition-colors flex items-center gap-1"
++                      className="ml-2 px-2.5 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-semibold text-xs border border-cyan-500/30 transition-colors flex items-center gap-1"
+                     >
+                       <span>Use in Chat</span>
+                       <ExternalLink className="w-3 h-3" />
+@@ -325,11 +325,11 @@ export const ProjectBrain: React.FC = () => {
+             {/* Interactive Graph Simulation Area */}
+             <div className="mt-4 h-64 rounded-2xl bg-[#0e0e12] border border-white/10 relative overflow-hidden flex items-center justify-center p-4">
+               {/* Connecting grid lines */}
+-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#8b5cf6_1px,transparent_1px)] [background-size:16px_16px]" />
++              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#22d3ee_1px,transparent_1px)] [background-size:16px_16px]" />
+               
+               {/* Central Hub Node */}
+               <div className="relative z-10 flex flex-col items-center">
+-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-purple-500/30 border-2 border-white/20 animate-pulse">
++                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-cyan-500/30 border-2 border-white/20 animate-pulse">
+                   <Brain className="w-7 h-7" />
+                 </div>
+                 <span className="mt-2 text-xs font-mono font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10">
+@@ -338,7 +338,7 @@ export const ProjectBrain: React.FC = () => {
+ 
+                 {/* Satellite nodes */}
+                 <div className="absolute -top-16 -left-20 flex flex-col items-center">
+-                  <div className="w-8 h-8 rounded-full bg-purple-900/80 border border-purple-400/50 flex items-center justify-center text-xs">🎨</div>
++                  <div className="w-8 h-8 rounded-full bg-cyan-900/80 border border-cyan-400/50 flex items-center justify-center text-xs">🎨</div>
+                   <span className="text-[9px] font-mono text-gray-400 mt-1">Tokens</span>
+                 </div>
+ 
+@@ -359,7 +359,7 @@ export const ProjectBrain: React.FC = () => {
+ 
+                 {/* SVG connecting lines */}
+                 <svg className="absolute inset-0 w-full h-full pointer-events-none -z-10 overflow-visible" style={{ width: '200px', height: '200px', top: '-70px', left: '-70px' }}>
+-                  <line x1="100" y1="100" x2="30" y2="30" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="4" />
++                  <line x1="100" y1="100" x2="30" y2="30" stroke="#22d3ee" strokeWidth="1.5" strokeDasharray="4" />
+                   <line x1="100" y1="100" x2="170" y2="30" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4" />
+                   <line x1="100" y1="100" x2="30" y2="170" stroke="#10b981" strokeWidth="1.5" strokeDasharray="4" />
+                   <line x1="100" y1="100" x2="170" y2="170" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4" />
+@@ -405,7 +405,7 @@ export const ProjectBrain: React.FC = () => {
+       {/* Add Memory Modal */}
+       {isAddingModalOpen && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+-          <div className="w-full max-w-lg rounded-3xl border border-purple-500/40 bg-[#17171d] p-6 shadow-2xl relative">
++          <div className="w-full max-w-lg rounded-3xl border border-cyan-500/40 bg-[#17171d] p-6 shadow-2xl relative">
+             <button
+               onClick={() => setIsAddingModalOpen(false)}
+               className="absolute top-5 right-5 p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+@@ -414,7 +414,7 @@ export const ProjectBrain: React.FC = () => {
+             </button>
+ 
+             <h3 className="text-base font-bold text-white flex items-center gap-2">
+-              <Plus className="w-5 h-5 text-purple-400" />
++              <Plus className="w-5 h-5 text-cyan-400" />
+               <span>Add Manual Memory to Project Brain</span>
+             </h3>
+             <p className="text-xs text-gray-400 mt-1">Inject custom architectural guidelines or user decisions directly into the vector index.</p>
+@@ -427,7 +427,7 @@ export const ProjectBrain: React.FC = () => {
+                   value={newTitle}
+                   onChange={(e) => setNewTitle(e.target.value)}
+                   placeholder="E.g., ADR #13: Tailwind v4 Color Palettes"
+-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-sans"
++                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans"
+                   required
+                 />
+               </div>
+@@ -437,7 +437,7 @@ export const ProjectBrain: React.FC = () => {
+                 <select
+                   value={newType}
+                   onChange={(e) => setNewType(e.target.value as any)}
+-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
++                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                 >
+                   <option value="Decision">Decision (ADR)</option>
+                   <option value="Memory">General Memory</option>
+@@ -454,7 +454,7 @@ export const ProjectBrain: React.FC = () => {
+                   value={newSnippet}
+                   onChange={(e) => setNewSnippet(e.target.value)}
+                   placeholder="E.g., Always use #171717 for glass card backgrounds with border-white/[0.07]..."
+-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 font-sans"
++                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans"
+                   required
+                 />
+               </div>
+@@ -465,7 +465,7 @@ export const ProjectBrain: React.FC = () => {
+                   type="text"
+                   value={newTags}
+                   onChange={(e) => setNewTags(e.target.value)}
+-                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
++                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                 />
+               </div>
+ 
+@@ -480,7 +480,7 @@ export const ProjectBrain: React.FC = () => {
+                 <button
+                   type="submit"
+                   disabled={addBusy}
+-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors shadow-lg"
++                  className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors shadow-lg"
+                 >
+                   {addBusy ? 'Saving…' : 'Save & Index'}
+                 </button>
+diff --git a/frontend/src/pages/SettingsPage.tsx b/frontend/src/pages/SettingsPage.tsx
+index 66727d4..c782e97 100644
+--- a/frontend/src/pages/SettingsPage.tsx
++++ b/frontend/src/pages/SettingsPage.tsx
+@@ -61,11 +61,11 @@ export const SettingsPage: React.FC = () => {
+                 onClick={() => setActiveTab(tab.id)}
+                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium shrink-0 transition-all ${
+                   activeTab === tab.id
+-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
++                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
+                     : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
+                 }`}
+               >
+-                <Icon className="w-3.5 h-3.5 text-purple-400" />
++                <Icon className="w-3.5 h-3.5 text-cyan-400" />
+                 <span>{tab.label}</span>
+               </button>
+             );
+@@ -88,7 +88,7 @@ export const SettingsPage: React.FC = () => {
+                   {cap}: {mode}
+                 </span>
+               ))}
+-              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">fallback on</span>}
++              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">fallback on</span>}
+             </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
+               {providers.providers.map(p => (
+@@ -109,7 +109,7 @@ export const SettingsPage: React.FC = () => {
+           <GlassCard>
+             <div className="flex items-center justify-between pb-4 border-b border-white/10">
+               <span className="text-sm font-bold text-white flex items-center gap-2">
+-                <Settings className="w-4 h-4 text-purple-400" /> Workspace Profile & Storage
++                <Settings className="w-4 h-4 text-cyan-400" /> Workspace Profile & Storage
+               </span>
+               <div className="flex items-center gap-2">
+                 <button
+@@ -120,7 +120,7 @@ export const SettingsPage: React.FC = () => {
+                 </button>
+                 <button
+                   onClick={() => handleAction('Workspace settings saved')}
+-                  className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold"
++                  className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold"
+                 >
+                   Save Changes
+                 </button>
+@@ -133,7 +133,7 @@ export const SettingsPage: React.FC = () => {
+                 <input
+                   type="text"
+                   defaultValue="EvolveAgent AI Core Workspace"
+-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-purple-500"
++                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
+                 />
+               </div>
+               <div>
+@@ -141,12 +141,12 @@ export const SettingsPage: React.FC = () => {
+                 <input
+                   type="text"
+                   defaultValue="EvolveAgent Systems Inc."
+-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-purple-500"
++                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
+                 />
+               </div>
+               <div>
+                 <label className="text-gray-400 block mb-1">Default Operating Mode</label>
+-                <select className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-purple-300 focus:outline-none">
++                <select className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-cyan-300 focus:outline-none">
+                   <option>Planning-First & Mock-Safe</option>
+                   <option>High-Trust Autonomous</option>
+                   <option>Read-Only Inspector</option>
+@@ -170,7 +170,7 @@ export const SettingsPage: React.FC = () => {
+           <GlassCard glow="purple">
+             <div className="flex items-center justify-between pb-4 border-b border-white/10">
+               <span className="text-sm font-bold text-white flex items-center gap-2">
+-                <Cpu className="w-4 h-4 text-purple-400" /> AI Model Routing & Fallback Engines
++                <Cpu className="w-4 h-4 text-cyan-400" /> AI Model Routing & Fallback Engines
+               </span>
+               <span className="text-xs font-mono text-emerald-400 font-semibold">● ACTIVE ROUTER</span>
+             </div>
+@@ -179,7 +179,7 @@ export const SettingsPage: React.FC = () => {
+               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+                 <div className="text-gray-400 text-[10px] uppercase">Primary Reasoning Engine</div>
+                 <div className="text-sm font-bold text-white">Gemini 2.5 Pro / GPT-4o</div>
+-                <div className="text-[11px] text-purple-300">Used for Master Orchestration & Code Synthesis</div>
++                <div className="text-[11px] text-cyan-300">Used for Master Orchestration & Code Synthesis</div>
+               </div>
+               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+                 <div className="text-gray-400 text-[10px] uppercase">Secondary Backup Engine</div>
+@@ -201,7 +201,7 @@ export const SettingsPage: React.FC = () => {
+                   </div>
+                   <div className="shrink-0">
+                     {item.state ? (
+-                      <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner">
++                      <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
+                         <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
+                       </div>
+                     ) : (
+@@ -242,7 +242,7 @@ export const SettingsPage: React.FC = () => {
+                     </div>
+                     <div className="shrink-0">
+                       {isChecked ? (
+-                        <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner">
++                        <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
+                           <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
+                         </div>
+                       ) : (
+@@ -263,10 +263,10 @@ export const SettingsPage: React.FC = () => {
+           <GlassCard>
+             <div className="flex items-center justify-between pb-4 border-b border-white/10">
+               <span className="text-sm font-bold text-white flex items-center gap-2">
+-                <Brain className="w-4 h-4 text-indigo-400" /> Project Brain & Vector Indexing
++                <Brain className="w-4 h-4 text-sky-400" /> Project Brain & Vector Indexing
+               </span>
+               <div className="flex items-center gap-2 font-mono text-xs">
+-                <button onClick={() => handleAction('Rebuilding vector index from /src files...')} className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-purple-300">
++                <button onClick={() => handleAction('Rebuilding vector index from /src files...')} className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-cyan-300">
+                   Rebuild Index
+                 </button>
+                 <button onClick={() => handleAction('Cleared cached transient memories')} className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300">
+@@ -283,7 +283,7 @@ export const SettingsPage: React.FC = () => {
+                 </div>
+                 <div className="shrink-0">
+                   {autoSaveDecisions ? (
+-                    <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner">
++                    <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
+                       <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
+                     </div>
+                   ) : (
+@@ -296,7 +296,7 @@ export const SettingsPage: React.FC = () => {
+ 
+               <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs font-mono">
+                 <span className="text-gray-400">Vector Index Sync Frequency:</span>
+-                <select className="bg-black/50 border border-white/10 rounded px-2 py-1 text-purple-300">
++                <select className="bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-300">
+                   <option>Every 2 minutes (Real-Time)</option>
+                   <option>Every 15 minutes</option>
+                   <option>Manual Trigger Only</option>
+@@ -311,16 +311,16 @@ export const SettingsPage: React.FC = () => {
+           <GlassCard>
+             <div className="flex items-center justify-between pb-4 border-b border-white/10">
+               <span className="text-sm font-bold text-white flex items-center gap-2">
+-                <Palette className="w-4 h-4 text-purple-400" /> Appearance & Theme Tokens
++                <Palette className="w-4 h-4 text-cyan-400" /> Appearance & Theme Tokens
+               </span>
+               <span className="text-xs font-mono text-gray-400">Dark Graphite Default</span>
+             </div>
+ 
+             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+               {[
+-                { id: 'dark-graphite' as const, title: 'Dark Graphite (Default)', desc: '#0a0a0a background + #171717 charcoal glass cards.', color: 'border-purple-500 bg-purple-500/10' },
++                { id: 'dark-graphite' as const, title: 'Dark Graphite (Default)', desc: '#0a0a0a background + #171717 charcoal glass cards.', color: 'border-cyan-500 bg-cyan-500/10' },
+                 { id: 'charcoal-blue' as const, title: 'Charcoal Royal Blue', desc: '#0d0f17 background + electric blue glow accents.', color: 'border-blue-500/30 bg-blue-500/5' },
+-                { id: 'cosmic-purple' as const, title: 'Cosmic Violet Slate', desc: '#120f1c background + deep violet gradients.', color: 'border-indigo-500/30 bg-indigo-500/5' },
++                { id: 'cosmic-purple' as const, title: 'Cosmic Violet Slate', desc: '#120f1c background + deep violet gradients.', color: 'border-sky-500/30 bg-sky-500/5' },
+               ].map(th => (
+                 <div
+                   key={th.id}
+@@ -331,7 +331,7 @@ export const SettingsPage: React.FC = () => {
+                 >
+                   <div className="flex items-center justify-between">
+                     <span className="text-xs font-bold text-white">{th.title}</span>
+-                    {selectedTheme === th.id && <CheckCircle2 className="w-4 h-4 text-purple-400" />}
++                    {selectedTheme === th.id && <CheckCircle2 className="w-4 h-4 text-cyan-400" />}
+                   </div>
+                   <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{th.desc}</p>
+                 </div>
+@@ -346,7 +346,7 @@ export const SettingsPage: React.FC = () => {
+         <GlassCard className="sticky top-20 space-y-4 font-mono text-xs">
+           <div className="flex items-center justify-between pb-3 border-b border-white/10 font-sans">
+             <span className="font-bold text-white flex items-center gap-2">
+-              <Terminal className="w-4 h-4 text-purple-400" /> System Summary
++              <Terminal className="w-4 h-4 text-cyan-400" /> System Summary
+             </span>
+             <span className="text-emerald-400 font-mono">● LIVE</span>
+           </div>
+@@ -358,7 +358,7 @@ export const SettingsPage: React.FC = () => {
+             </div>
+             <div className="flex items-center justify-between">
+               <span className="text-gray-400">Frontend Stack:</span>
+-              <strong className="text-purple-300">React 19 + Vite + Tailwind v4</strong>
++              <strong className="text-cyan-300">React 19 + Vite + Tailwind v4</strong>
+             </div>
+             <div className="flex items-center justify-between">
+               <span className="text-gray-400">Backend Engine:</span>
+@@ -398,7 +398,7 @@ export const SettingsPage: React.FC = () => {
+           <div className="pt-3 border-t border-white/10">
+             <button
+               onClick={() => handleAction('System diagnostics check passed!')}
+-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
++              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
+             >
+               Run Full Diagnostic Suite
+             </button>
+diff --git a/frontend/src/pages/SimpleModeChat.tsx b/frontend/src/pages/SimpleModeChat.tsx
+index 0bbb775..167c361 100644
+--- a/frontend/src/pages/SimpleModeChat.tsx
++++ b/frontend/src/pages/SimpleModeChat.tsx
+@@ -76,7 +76,7 @@ export const SimpleModeChat: React.FC = () => {
+         {/* Chat Header */}
+         <div className="p-4 border-b border-white/10 bg-[#16161c]/80 flex items-center justify-between">
+           <div className="flex items-center gap-3">
+-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
++            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+               <Bot className="w-5 h-5" />
+             </div>
+             <div>
+@@ -110,7 +110,7 @@ export const SimpleModeChat: React.FC = () => {
+                 <div
+                   className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0 ${
+                     isUser
+-                      ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg'
++                      ? 'bg-gradient-to-tr from-blue-600 to-sky-600 text-white shadow-lg'
+                       : 'bg-[#1e1e26] border border-white/10 text-white shadow-md'
+                   }`}
+                 >
+@@ -127,7 +127,7 @@ export const SimpleModeChat: React.FC = () => {
+                   <div
+                     className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                       isUser
+-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-tr-none shadow-lg'
++                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-tr-none shadow-lg'
+                         : 'bg-[#1a1a22] border border-white/10 text-gray-200 rounded-tl-none shadow-md'
+                     }`}
+                   >
+@@ -138,7 +138,7 @@ export const SimpleModeChat: React.FC = () => {
+                       <div className="mt-3 pt-3 border-t border-white/15 flex flex-wrap gap-2">
+                         {msg.attachments.map((file, idx) => (
+                           <div key={idx} className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/30 border border-white/10 text-xs text-gray-300 font-mono">
+-                            <FileCode className="w-3.5 h-3.5 text-purple-400" />
++                            <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                             <span>{file.name}</span>
+                             <span className="text-gray-500">({file.size})</span>
+                           </div>
+@@ -163,7 +163,7 @@ export const SimpleModeChat: React.FC = () => {
+             <div className="flex flex-wrap items-center gap-2 px-2">
+               <span className="text-[11px] font-mono text-gray-400">Attached:</span>
+               {attachments.map((file, i) => (
+-                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono animate-fadeIn">
++                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono animate-fadeIn">
+                   <FileCode className="w-3.5 h-3.5" />
+                   <span>{file.name}</span>
+                   <button
+@@ -179,7 +179,7 @@ export const SimpleModeChat: React.FC = () => {
+ 
+           {/* Main Input Form */}
+           <form onSubmit={handleSend} className="relative flex items-center gap-2">
+-            <div className="relative flex-1 flex items-center bg-black/60 rounded-2xl border border-white/15 focus-within:border-purple-500 transition-all shadow-inner px-3 py-2">
++            <div className="relative flex-1 flex items-center bg-black/60 rounded-2xl border border-white/15 focus-within:border-cyan-500 transition-all shadow-inner px-3 py-2">
+               {/* Attachment Button */}
+               <button
+                 type="button"
+@@ -195,7 +195,7 @@ export const SimpleModeChat: React.FC = () => {
+                 <select
+                   value={selectedDb}
+                   onChange={(e) => setSelectedDb(e.target.value)}
+-                  className="bg-transparent text-xs text-purple-300 font-mono focus:outline-none cursor-pointer pr-1"
++                  className="bg-transparent text-xs text-cyan-300 font-mono focus:outline-none cursor-pointer pr-1"
+                 >
+                   <option className="bg-[#171717]">Workspace Memory + Postgres</option>
+                   <option className="bg-[#171717]">Project Brain (Vector Index)</option>
+@@ -232,7 +232,7 @@ export const SimpleModeChat: React.FC = () => {
+             <button
+               type="submit"
+               disabled={!inputText.trim() && attachments.length === 0}
+-              className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center shrink-0"
++              className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center shrink-0"
+             >
+               <Send className="w-5 h-5" />
+             </button>
+@@ -264,10 +264,10 @@ export const SimpleModeChat: React.FC = () => {
+         <GlassCard>
+           <div className="flex items-center justify-between pb-3 border-b border-white/10">
+             <div className="flex items-center gap-2">
+-              <CheckSquare className="w-4 h-4 text-purple-400" />
++              <CheckSquare className="w-4 h-4 text-cyan-400" />
+               <h4 className="text-xs font-semibold text-white">Active Mission</h4>
+             </div>
+-            <button onClick={() => setActivePage('mission-control')} className="text-[11px] text-purple-400 hover:underline">
++            <button onClick={() => setActivePage('mission-control')} className="text-[11px] text-cyan-400 hover:underline">
+               View
+             </button>
+           </div>
+@@ -275,10 +275,10 @@ export const SimpleModeChat: React.FC = () => {
+             <div className="text-xs font-semibold text-white">{mission.title}</div>
+             <div className="flex items-center justify-between text-[11px] font-mono text-gray-400">
+               <span>Progress</span>
+-              <span className="text-purple-300 font-semibold">{mission.progress}%</span>
++              <span className="text-cyan-300 font-semibold">{mission.progress}%</span>
+             </div>
+             <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden">
+-              <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
++              <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
+             </div>
+             <div className="flex items-center justify-between text-[10px] text-gray-500 font-mono pt-1">
+               <span>5 phases</span>
+@@ -291,10 +291,10 @@ export const SimpleModeChat: React.FC = () => {
+         <GlassCard>
+           <div className="flex items-center justify-between pb-3 border-b border-white/10">
+             <div className="flex items-center gap-2">
+-              <Brain className="w-4 h-4 text-indigo-400" />
++              <Brain className="w-4 h-4 text-sky-400" />
+               <h4 className="text-xs font-semibold text-white">Brain Context</h4>
+             </div>
+-            <button onClick={() => setActivePage('project-brain')} className="text-[11px] text-purple-400 hover:underline">
++            <button onClick={() => setActivePage('project-brain')} className="text-[11px] text-cyan-400 hover:underline">
+               {memories.length} matches
+             </button>
+           </div>
+@@ -303,7 +303,7 @@ export const SimpleModeChat: React.FC = () => {
+               <div key={mem.id} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                 <div className="flex items-center justify-between">
+                   <span className="text-[11px] font-semibold text-gray-200 truncate max-w-[150px]">{mem.title}</span>
+-                  <span className="text-[10px] font-mono text-purple-400">{mem.relevance}%</span>
++                  <span className="text-[10px] font-mono text-cyan-400">{mem.relevance}%</span>
+                 </div>
+                 <p className="text-[10px] text-gray-400 line-clamp-2">{mem.snippet}</p>
+               </div>
+diff --git a/frontend/src/pages/ToolsMcpHub.tsx b/frontend/src/pages/ToolsMcpHub.tsx
+index a3ebf5a..73a4dd7 100644
+--- a/frontend/src/pages/ToolsMcpHub.tsx
++++ b/frontend/src/pages/ToolsMcpHub.tsx
+@@ -144,7 +144,7 @@ export const ToolsMcpHub: React.FC = () => {
+           { label: 'Approval-Gated', value: `0${gatedCount}`, sub: 'Requires user sign-off', color: 'text-amber-400' },
+           { label: 'Read-Only Mode', value: '04', sub: 'Zero side effects', color: 'text-blue-400' },
+           { label: 'High-Risk Tools', value: `0${highRiskCount}`, sub: 'Filesystem / CLI', color: 'text-rose-400' },
+-          { label: 'Calls Today', value: '32', sub: 'Mock sandbox verified', color: 'text-purple-400' },
++          { label: 'Calls Today', value: '32', sub: 'Mock sandbox verified', color: 'text-cyan-400' },
+           { label: 'Failed Checks', value: '00', sub: '100% compliant', color: 'text-emerald-400' },
+         ].map((item, idx) => (
+           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
+@@ -156,12 +156,12 @@ export const ToolsMcpHub: React.FC = () => {
+       </div>
+ 
+       {/* 2. Featured Connector Card (GitHub / Selected Tool Spotlight) */}
+-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1a1c29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
++      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1a1c29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+         
+         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+           <div className="flex items-start gap-4 max-w-2xl">
+-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-purple-500/30">
++            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-cyan-500/30">
+               {featuredTool.icon === 'Github' ? <Github className="w-8 h-8" /> :
+                featuredTool.icon === 'FolderGit2' ? <FolderGit2 className="w-8 h-8" /> :
+                featuredTool.icon === 'Database' ? <Database className="w-8 h-8" /> :
+@@ -172,7 +172,7 @@ export const ToolsMcpHub: React.FC = () => {
+ 
+             <div className="space-y-1.5">
+               <div className="flex items-center gap-2">
+-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 uppercase font-semibold">
++                <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 uppercase font-semibold">
+                   {featuredTool.category} Connector Spotlight
+                 </span>
+                 <StatusBadge status={featuredTool.status} size="sm" />
+@@ -209,7 +209,7 @@ export const ToolsMcpHub: React.FC = () => {
+               </div>
+               <div className="flex items-center justify-between gap-4">
+                 <span className="text-gray-400">Calls Today:</span>
+-                <span className="text-purple-300 font-semibold">{featuredTool.callsToday} executions</span>
++                <span className="text-cyan-300 font-semibold">{featuredTool.callsToday} executions</span>
+               </div>
+             </div>
+ 
+@@ -228,9 +228,9 @@ export const ToolsMcpHub: React.FC = () => {
+               <button
+                 onClick={() => handlePreviewAction(featuredTool.id, featuredTool.permissions)}
+                 disabled={planBusy}
+-                className="px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
++                className="px-4 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-200 text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+               >
+-                <Settings className="w-3.5 h-3.5 text-purple-300" />
++                <Settings className="w-3.5 h-3.5 text-cyan-300" />
+                 <span>{planBusy ? 'Planning…' : `Preview action: ${featuredTool.permissions[0] || 'status'}`}</span>
+               </button>
+               <button
+@@ -254,9 +254,9 @@ export const ToolsMcpHub: React.FC = () => {
+ 
+         {/* Real dry-run plan preview (mock-safe — nothing is executed) */}
+         {planResult && (
+-          <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-purple-500/20">
++          <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-cyan-500/20">
+             <div className="flex items-center justify-between mb-2">
+-              <span className="text-xs font-bold text-white">Dry-run plan · <span className="font-mono text-purple-300">{planResult.actionName}</span></span>
++              <span className="text-xs font-bold text-white">Dry-run plan · <span className="font-mono text-cyan-300">{planResult.actionName}</span></span>
+               <div className="flex items-center gap-2">
+                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${planResult.riskLevel === 'high' ? 'bg-rose-500/15 text-rose-300' : planResult.riskLevel === 'medium' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>risk: {planResult.riskLevel}</span>
+                 {planResult.requiresApproval && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">needs approval</span>}
+@@ -327,7 +327,7 @@ export const ToolsMcpHub: React.FC = () => {
+             {execResult && (
+               <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                 <div className="flex flex-wrap items-center gap-2">
+-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.executionMode === 'real_read_only' ? 'bg-blue-500/15 text-blue-300' : 'bg-purple-500/15 text-purple-300'}`}>
++                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.executionMode === 'real_read_only' ? 'bg-blue-500/15 text-blue-300' : 'bg-cyan-500/15 text-cyan-300'}`}>
+                     mode: {execResult.executionMode}
+                   </span>
+                   <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
+@@ -358,7 +358,7 @@ export const ToolsMcpHub: React.FC = () => {
+       <div className="space-y-4">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/10">
+           <div className="flex items-center gap-2">
+-            <Wrench className="w-4 h-4 text-purple-400" />
++            <Wrench className="w-4 h-4 text-cyan-400" />
+             <h3 className="text-sm font-semibold text-white">Installed Tool Connectors ({filteredConnectors.length})</h3>
+           </div>
+           
+@@ -370,7 +370,7 @@ export const ToolsMcpHub: React.FC = () => {
+                 onClick={() => setSelectedCategory(cat)}
+                 className={`px-3 py-1 rounded-lg text-xs font-mono transition-all ${
+                   selectedCategory === cat
+-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
++                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
+                     : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
+                 }`}
+               >
+@@ -390,14 +390,14 @@ export const ToolsMcpHub: React.FC = () => {
+                 onClick={() => { setSelectedConnectorId(tool.id); setPlanResult(null); resetExecFlow(); }}
+                 className={`cursor-pointer rounded-2xl border transition-all p-5 flex flex-col justify-between ${
+                   isSel
+-                    ? 'bg-[#1e1e28]/90 border-purple-500/50 shadow-[0_4px_25px_-5px_rgba(160,120,255,0.2)]'
++                    ? 'bg-[#1e1e28]/90 border-cyan-500/50 shadow-[0_4px_25px_-5px_rgba(34,211,238,0.2)]'
+                     : 'bg-[#171717]/80 border-white/[0.07] hover:bg-[#1a1a20]/90 hover:border-white/15'
+                 }`}
+               >
+                 <div>
+                   <div className="flex items-start justify-between gap-3">
+                     <div className="flex items-center gap-3">
+-                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-purple-400">
++                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-cyan-400">
+                         {tool.icon === 'Github' ? <Github className="w-5 h-5" /> :
+                          tool.icon === 'FolderGit2' ? <FolderGit2 className="w-5 h-5" /> :
+                          tool.icon === 'Database' ? <Database className="w-5 h-5" /> :
+@@ -407,7 +407,7 @@ export const ToolsMcpHub: React.FC = () => {
+                       </div>
+                       <div>
+                         <h4 className="text-sm font-bold text-white">{tool.name}</h4>
+-                        <span className="text-[10px] font-mono text-purple-300 uppercase">{tool.category}</span>
++                        <span className="text-[10px] font-mono text-cyan-300 uppercase">{tool.category}</span>
+                       </div>
+                     </div>
+                     <StatusBadge status={tool.status} size="sm" />
+@@ -444,7 +444,7 @@ export const ToolsMcpHub: React.FC = () => {
+         <GlassCard>
+           <div className="flex items-center justify-between pb-3 border-b border-white/10">
+             <span className="text-xs font-semibold text-white flex items-center gap-2">
+-              <Activity className="w-4 h-4 text-purple-400" /> Recent Tool Call Logs
++              <Activity className="w-4 h-4 text-cyan-400" /> Recent Tool Call Logs
+             </span>
+             <span className="text-[10px] font-mono text-gray-400">Mock-Safe Sandbox</span>
+           </div>
+@@ -455,8 +455,8 @@ export const ToolsMcpHub: React.FC = () => {
+                 <div>
+                   <div className="flex items-center gap-2">
+                     <span className="text-white font-bold">{log.agentName}</span>
+-                    <span className="text-purple-300">→</span>
+-                    <span className="text-purple-200 font-semibold truncate max-w-[180px]">{log.action}</span>
++                    <span className="text-cyan-300">→</span>
++                    <span className="text-cyan-200 font-semibold truncate max-w-[180px]">{log.action}</span>
+                   </div>
+                   <p className="text-[11px] text-gray-400 mt-1 font-sans">{log.details}</p>
+                 </div>
+@@ -478,7 +478,7 @@ export const ToolsMcpHub: React.FC = () => {
+           <div className="mt-3 space-y-3 text-xs">
+             {[
+               { mode: 'Read-only Default', desc: 'All tools initialize with read-only scopes. No external writes can occur without explicit elevation.', color: 'text-blue-300 bg-blue-500/10 border-blue-500/20' },
+-              { mode: 'Draft-only Mode', desc: 'External tools (Slack, Linear, GitHub PRs) formulate drafts and save to queue instead of publishing.', color: 'text-purple-300 bg-purple-500/10 border-purple-500/20' },
++              { mode: 'Draft-only Mode', desc: 'External tools (Slack, Linear, GitHub PRs) formulate drafts and save to queue instead of publishing.', color: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20' },
+               { mode: 'Approval-gated Actions', desc: 'Any tool call marked Medium or High risk triggers an automated interception to the Approvals screen.', color: 'text-amber-300 bg-amber-500/10 border-amber-500/20' },
+               { mode: 'Destructive Shell Block', desc: 'Commands like `rm -rf`, `drop table`, or `git reset --hard` are permanently blocked at the AST level.', color: 'text-rose-300 bg-rose-500/10 border-rose-500/20' }
+             ].map((rule, idx) => (

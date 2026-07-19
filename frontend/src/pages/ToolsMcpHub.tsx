@@ -144,7 +144,7 @@ export const ToolsMcpHub: React.FC = () => {
           { label: 'Approval-Gated', value: `0${gatedCount}`, sub: 'Requires user sign-off', color: 'text-amber-400' },
           { label: 'Read-Only Mode', value: '04', sub: 'Zero side effects', color: 'text-blue-400' },
           { label: 'High-Risk Tools', value: `0${highRiskCount}`, sub: 'Filesystem / CLI', color: 'text-rose-400' },
-          { label: 'Calls Today', value: '32', sub: 'Mock sandbox verified', color: 'text-purple-400' },
+          { label: 'Calls Today', value: '32', sub: 'Mock sandbox verified', color: 'text-cyan-400' },
           { label: 'Failed Checks', value: '00', sub: '100% compliant', color: 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
@@ -156,12 +156,12 @@ export const ToolsMcpHub: React.FC = () => {
       </div>
 
       {/* 2. Featured Connector Card (GitHub / Selected Tool Spotlight) */}
-      <div className="rounded-3xl border border-purple-500/40 bg-gradient-to-br from-[#1a1c29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1a1c29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="flex items-start gap-4 max-w-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-purple-500/30">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-cyan-500/30">
               {featuredTool.icon === 'Github' ? <Github className="w-8 h-8" /> :
                featuredTool.icon === 'FolderGit2' ? <FolderGit2 className="w-8 h-8" /> :
                featuredTool.icon === 'Database' ? <Database className="w-8 h-8" /> :
@@ -172,7 +172,7 @@ export const ToolsMcpHub: React.FC = () => {
 
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 uppercase font-semibold">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 uppercase font-semibold">
                   {featuredTool.category} Connector Spotlight
                 </span>
                 <StatusBadge status={featuredTool.status} size="sm" />
@@ -209,7 +209,7 @@ export const ToolsMcpHub: React.FC = () => {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-gray-400">Calls Today:</span>
-                <span className="text-purple-300 font-semibold">{featuredTool.callsToday} executions</span>
+                <span className="text-cyan-300 font-semibold">{featuredTool.callsToday} executions</span>
               </div>
             </div>
 
@@ -228,9 +228,9 @@ export const ToolsMcpHub: React.FC = () => {
               <button
                 onClick={() => handlePreviewAction(featuredTool.id, featuredTool.permissions)}
                 disabled={planBusy}
-                className="px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-200 text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Settings className="w-3.5 h-3.5 text-purple-300" />
+                <Settings className="w-3.5 h-3.5 text-cyan-300" />
                 <span>{planBusy ? 'Planning…' : `Preview action: ${featuredTool.permissions[0] || 'status'}`}</span>
               </button>
               <button
@@ -254,9 +254,9 @@ export const ToolsMcpHub: React.FC = () => {
 
         {/* Real dry-run plan preview (mock-safe — nothing is executed) */}
         {planResult && (
-          <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-purple-500/20">
+          <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-cyan-500/20">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-white">Dry-run plan · <span className="font-mono text-purple-300">{planResult.actionName}</span></span>
+              <span className="text-xs font-bold text-white">Dry-run plan · <span className="font-mono text-cyan-300">{planResult.actionName}</span></span>
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${planResult.riskLevel === 'high' ? 'bg-rose-500/15 text-rose-300' : planResult.riskLevel === 'medium' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>risk: {planResult.riskLevel}</span>
                 {planResult.requiresApproval && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">needs approval</span>}
@@ -327,7 +327,7 @@ export const ToolsMcpHub: React.FC = () => {
             {execResult && (
               <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.executionMode === 'real_read_only' ? 'bg-blue-500/15 text-blue-300' : 'bg-purple-500/15 text-purple-300'}`}>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.executionMode === 'real_read_only' ? 'bg-blue-500/15 text-blue-300' : 'bg-cyan-500/15 text-cyan-300'}`}>
                     mode: {execResult.executionMode}
                   </span>
                   <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${execResult.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
@@ -358,7 +358,7 @@ export const ToolsMcpHub: React.FC = () => {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Wrench className="w-4 h-4 text-purple-400" />
+            <Wrench className="w-4 h-4 text-cyan-400" />
             <h3 className="text-sm font-semibold text-white">Installed Tool Connectors ({filteredConnectors.length})</h3>
           </div>
           
@@ -370,7 +370,7 @@ export const ToolsMcpHub: React.FC = () => {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1 rounded-lg text-xs font-mono transition-all ${
                   selectedCategory === cat
-                    ? 'bg-purple-600 text-white font-semibold shadow-md'
+                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
                     : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
                 }`}
               >
@@ -390,14 +390,14 @@ export const ToolsMcpHub: React.FC = () => {
                 onClick={() => { setSelectedConnectorId(tool.id); setPlanResult(null); resetExecFlow(); }}
                 className={`cursor-pointer rounded-2xl border transition-all p-5 flex flex-col justify-between ${
                   isSel
-                    ? 'bg-[#1e1e28]/90 border-purple-500/50 shadow-[0_4px_25px_-5px_rgba(160,120,255,0.2)]'
+                    ? 'bg-[#1e1e28]/90 border-cyan-500/50 shadow-[0_4px_25px_-5px_rgba(34,211,238,0.2)]'
                     : 'bg-[#171717]/80 border-white/[0.07] hover:bg-[#1a1a20]/90 hover:border-white/15'
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-purple-400">
+                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-cyan-400">
                         {tool.icon === 'Github' ? <Github className="w-5 h-5" /> :
                          tool.icon === 'FolderGit2' ? <FolderGit2 className="w-5 h-5" /> :
                          tool.icon === 'Database' ? <Database className="w-5 h-5" /> :
@@ -407,7 +407,7 @@ export const ToolsMcpHub: React.FC = () => {
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-white">{tool.name}</h4>
-                        <span className="text-[10px] font-mono text-purple-300 uppercase">{tool.category}</span>
+                        <span className="text-[10px] font-mono text-cyan-300 uppercase">{tool.category}</span>
                       </div>
                     </div>
                     <StatusBadge status={tool.status} size="sm" />
@@ -444,7 +444,7 @@ export const ToolsMcpHub: React.FC = () => {
         <GlassCard>
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <span className="text-xs font-semibold text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-purple-400" /> Recent Tool Call Logs
+              <Activity className="w-4 h-4 text-cyan-400" /> Recent Tool Call Logs
             </span>
             <span className="text-[10px] font-mono text-gray-400">Mock-Safe Sandbox</span>
           </div>
@@ -455,8 +455,8 @@ export const ToolsMcpHub: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-bold">{log.agentName}</span>
-                    <span className="text-purple-300">→</span>
-                    <span className="text-purple-200 font-semibold truncate max-w-[180px]">{log.action}</span>
+                    <span className="text-cyan-300">→</span>
+                    <span className="text-cyan-200 font-semibold truncate max-w-[180px]">{log.action}</span>
                   </div>
                   <p className="text-[11px] text-gray-400 mt-1 font-sans">{log.details}</p>
                 </div>
@@ -478,7 +478,7 @@ export const ToolsMcpHub: React.FC = () => {
           <div className="mt-3 space-y-3 text-xs">
             {[
               { mode: 'Read-only Default', desc: 'All tools initialize with read-only scopes. No external writes can occur without explicit elevation.', color: 'text-blue-300 bg-blue-500/10 border-blue-500/20' },
-              { mode: 'Draft-only Mode', desc: 'External tools (Slack, Linear, GitHub PRs) formulate drafts and save to queue instead of publishing.', color: 'text-purple-300 bg-purple-500/10 border-purple-500/20' },
+              { mode: 'Draft-only Mode', desc: 'External tools (Slack, Linear, GitHub PRs) formulate drafts and save to queue instead of publishing.', color: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20' },
               { mode: 'Approval-gated Actions', desc: 'Any tool call marked Medium or High risk triggers an automated interception to the Approvals screen.', color: 'text-amber-300 bg-amber-500/10 border-amber-500/20' },
               { mode: 'Destructive Shell Block', desc: 'Commands like `rm -rf`, `drop table`, or `git reset --hard` are permanently blocked at the AST level.', color: 'text-rose-300 bg-rose-500/10 border-rose-500/20' }
             ].map((rule, idx) => (

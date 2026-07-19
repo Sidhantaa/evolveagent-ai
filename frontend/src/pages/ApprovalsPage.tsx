@@ -54,7 +54,7 @@ export const ApprovalsPage: React.FC = () => {
             { label: 'Approved Today', value: `${approvedToday}`, sub: 'Mock sandbox', color: 'text-emerald-400' },
             { label: 'Rejected Today', value: `${rejectedToday}`, sub: 'Safety blocks', color: 'text-rose-400' },
             { label: 'Blocked Actions', value: '02', sub: 'Destructive shell', color: 'text-rose-400' },
-            { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-purple-400' },
+            { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-cyan-400' },
             { label: 'High-Risk Tools', value: '01', sub: 'Filesystem write', color: 'text-amber-400' },
           ].map((m, idx) => (
             <div key={idx} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
@@ -68,7 +68,7 @@ export const ApprovalsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
           <button
             onClick={approveBatchLowRisk}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-500 hover:to-sky-500 text-white font-semibold text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4" />
             <span>Approve Low-Risk Batch</span>
@@ -166,7 +166,7 @@ export const ApprovalsPage: React.FC = () => {
                       key={s}
                       onClick={() => setStatusFilter(s)}
                       className={`px-2.5 py-1 rounded-lg capitalize transition-colors ${
-                        statusFilter === s ? 'bg-purple-600 text-white font-semibold' : 'text-gray-400 hover:text-white'
+                        statusFilter === s ? 'bg-cyan-600 text-white font-semibold' : 'text-gray-400 hover:text-white'
                       }`}
                     >
                       {s}
@@ -184,7 +184,7 @@ export const ApprovalsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by action title, agent name, or MCP tool..."
-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -209,7 +209,7 @@ export const ApprovalsPage: React.FC = () => {
                         key={item.id}
                         onClick={() => setSelectedId(item.id)}
                         className={`cursor-pointer transition-colors ${
-                          isSel ? 'bg-purple-900/20 font-medium' : 'hover:bg-white/[0.03]'
+                          isSel ? 'bg-cyan-900/20 font-medium' : 'hover:bg-white/[0.03]'
                         }`}
                       >
                         <td className="py-3 px-3 font-sans text-white font-semibold truncate max-w-[200px]">{item.title}</td>
@@ -253,7 +253,7 @@ export const ApprovalsPage: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <span className="text-xs font-sans font-semibold text-white">Governance Risk Explanation</span>
-                <span className="text-[10px] text-purple-400">{selectedItem.id}</span>
+                <span className="text-[10px] text-cyan-400">{selectedItem.id}</span>
               </div>
 
               {/* Title & Tool info */}
@@ -262,7 +262,7 @@ export const ApprovalsPage: React.FC = () => {
                 <div className="p-2.5 rounded-xl bg-black/50 border border-white/10 space-y-1.5 text-xs">
                   <div className="flex items-center justify-between text-gray-400">
                     <span>MCP Tool Name:</span>
-                    <strong className="text-purple-300">{selectedItem.toolName}</strong>
+                    <strong className="text-cyan-300">{selectedItem.toolName}</strong>
                   </div>
                   <div className="flex items-center justify-between text-gray-400">
                     <span>Workspace Scope:</span>

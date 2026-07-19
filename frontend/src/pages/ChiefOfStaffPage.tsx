@@ -126,12 +126,12 @@ export const ChiefOfStaffPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
                 v180 Personal Chief of Staff
               </span>
             </div>
@@ -198,13 +198,13 @@ export const ChiefOfStaffPage: React.FC = () => {
           <GlassCard className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-purple-400" />
+                <Target className="w-4 h-4 text-cyan-400" />
                 <h2 className="text-sm font-bold text-white">Today's plan</h2>
               </div>
               <button
                 onClick={handleDailyPlan}
                 disabled={busy}
-                className="px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+                className="px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Generate daily plan
@@ -222,7 +222,7 @@ export const ChiefOfStaffPage: React.FC = () => {
                           <span className="text-xs font-bold text-white truncate">{item.title}</span>
                         </div>
                         <p className="text-[11px] text-gray-500">{item.reason}</p>
-                        <p className="text-[11px] text-purple-300 mt-0.5">{item.recommendedAction}</p>
+                        <p className="text-[11px] text-cyan-300 mt-0.5">{item.recommendedAction}</p>
                       </div>
                       <span className="text-xs font-mono text-gray-400 shrink-0">{item.priorityScore}</span>
                     </div>
@@ -276,7 +276,7 @@ export const ChiefOfStaffPage: React.FC = () => {
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="New follow-up..."
-                className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
               />
               <button
                 onClick={handleAddFollowup}

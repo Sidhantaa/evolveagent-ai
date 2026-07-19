@@ -165,12 +165,12 @@ export const CodeChangesPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
                 v150 Autonomous Software Team
               </span>
               <RiskBadge level="high" size="sm" />
@@ -248,7 +248,7 @@ export const CodeChangesPage: React.FC = () => {
         <GlassCard className="lg:col-span-1 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <GitBranch className="w-4 h-4 text-purple-400" />
+              <GitBranch className="w-4 h-4 text-cyan-400" />
               Runs
             </h2>
             <span className="text-[11px] font-mono text-gray-500">{runs?.length ?? 0} code workflow(s)</span>
@@ -268,7 +268,7 @@ export const CodeChangesPage: React.FC = () => {
                   key={run.id}
                   onClick={() => setSelectedRunId(run.id)}
                   className={`w-full text-left p-3 rounded-2xl border transition-all ${
-                    active ? 'bg-purple-500/10 border-purple-500/40' : 'bg-white/[0.02] border-white/[0.06] hover:border-white/20'
+                    active ? 'bg-cyan-500/10 border-cyan-500/40' : 'bg-white/[0.02] border-white/[0.06] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -279,7 +279,7 @@ export const CodeChangesPage: React.FC = () => {
                     <StatusBadge status={run.status} size="sm" />
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono text-purple-300">{step?.actionType || 'code step'}</span>
+                    <span className="text-[11px] font-mono text-cyan-300">{step?.actionType || 'code step'}</span>
                     {step && <RiskBadge level={stepTone(step)} size="sm" />}
                   </div>
                 </button>
@@ -372,7 +372,7 @@ export const CodeChangesPage: React.FC = () => {
                 {selectedEffect?.result && Object.keys(selectedEffect.result).length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
-                      <GitBranch className="w-4 h-4 text-purple-300 mb-2" />
+                      <GitBranch className="w-4 h-4 text-cyan-300 mb-2" />
                       <div className="text-[10px] text-gray-500 uppercase font-mono">Branch</div>
                       <div className="text-xs text-white font-mono break-all">{selectedEffect.result.branch || selectedStep.actionParams.branch_name || '—'}</div>
                     </div>
@@ -398,7 +398,7 @@ export const CodeChangesPage: React.FC = () => {
                 {selectedStep.actionType === 'write_code_change' && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <FileCode2 className="w-4 h-4 text-purple-400" />
+                      <FileCode2 className="w-4 h-4 text-cyan-400" />
                       <h3 className="text-sm font-bold text-white">Proposed file content</h3>
                     </div>
                     {proposedFiles.map((file, index) => (
@@ -445,7 +445,7 @@ export const CodeChangesPage: React.FC = () => {
                       value={note}
                       onChange={(event) => setNote(event.target.value)}
                       placeholder="Optional approval note"
-                      className="w-full min-h-[72px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                      className="w-full min-h-[72px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
                     />
                     <div className="flex flex-col sm:flex-row gap-2">
                       <button

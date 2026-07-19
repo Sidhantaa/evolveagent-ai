@@ -25,6 +25,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { CommandCenterPage } from './pages/CommandCenterPage';
 import { ChiefOfStaffPage } from './pages/ChiefOfStaffPage';
+import { InstructionsPage } from './pages/InstructionsPage';
 import { MarketplaceHubPage } from './pages/MarketplaceHubPage';
 import { CompliancePage } from './pages/CompliancePage';
 
@@ -33,7 +34,7 @@ const MainContent: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-purple-500/30 font-sans">
+    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-cyan-500/30 font-sans">
       {/* Sidebar navigation */}
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
@@ -43,6 +44,7 @@ const MainContent: React.FC = () => {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {activePage === 'home' && <HomeDashboard />}
+          {activePage === 'instructions' && <InstructionsPage />}
           {activePage === 'chat' && <SimpleModeChat />}
           {activePage === 'dev-console' && <DevModeConsole />}
           {activePage === 'code-changes' && <CodeChangesPage />}

@@ -40,8 +40,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     dotClass = 'bg-emerald-400 animate-pulse';
     Icon = CheckCircle2;
   } else if (['running', 'in progress'].includes(normalized)) {
-    bgClass = 'bg-purple-500/15 text-purple-300 border-purple-500/30';
-    dotClass = 'bg-purple-400 animate-pulse';
+    bgClass = 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+    dotClass = 'bg-cyan-400 animate-pulse';
     Icon = PlayCircle;
   } else if (['waiting approval', 'waiting', 'pending', 'approval-gated', 'pending review'].includes(normalized)) {
     bgClass = 'bg-amber-500/15 text-amber-300 border-amber-500/30';

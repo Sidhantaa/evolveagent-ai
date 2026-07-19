@@ -1,0 +1,141 @@
+name: Update Architecture Diagram
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render-diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Inject classDef colors into README
+        run: |
+          python3 - <<'EOF'
+          import re
+
+          classdefs = """
+              classDef core fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.5px
+              classDef agent fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.5px
+              classDef storage fill:#E6F1FB,stroke:#185FA5,color:#042C53,stroke-width:1.5px
+              classDef eval fill:#FAEEDA,stroke:#854F0B,color:#412402,stroke-width:1.5px
+              classDef govern fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.5px
+              classDef record fill:#FBEAF0,stroke:#993556,color:#4B1528,stroke-width:1.5px
+              classDef goal fill:#EAF3DE,stroke:#3B6D11,color:#173404,stroke-width:1.5px
+              classDef external fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.5px
+
+              class U,UI,API,Workspace,WorkspaceMemory,Session,Master,Kernel external
+              class Detect eval
+              class TextFlow,Router,Consensus,Research,Logic,Risk,Strategy,Writing agent
+              class FileFlow,Extract,FileAgent agent
+              class RecordingFlow,RecUpload,Transcribe,RecAgent record
+              class GoalFlow,GoalPlanner,GoalStore,MissionUI goal
+              class ToolFlow,ToolRegistry,ToolTrace external
+              class ImageFlow,Prompt,Safety,MockImage eval
+              class AutoFlow,Scanner,Planner,Approval,SafeTools govern
+              class Judge,AgentEval,Evolution eval
+              class Analytics,Memory,WorkspaceStore,Learning,PromptVersions,PromptRegistry,AgentJobs storage
+              class Response,Feedback external"""
+
+          with open('README.md', 'r') as f:
+              content = f.read()
+
+          # Remove any existing classDef blocks first
+          content = re.sub(r'\n\s+classDef.*?(?=\n```)', '', content, flags=re.DOTALL)
+          content = re.sub(r'\n\s+class .*?(?=\n```)', '', content, flags=re.DOTALL)
+
+          # Inject fresh classDefs before closing ```
+          content = re.sub(r'(```mermaid.*?)(```)', lambda m: m.group(1) + classdefs + '\n```', content, flags=re.DOTALL)
+
+          with open('README.md', 'w') as f:
+              f.write(content)
+
+          print("Colors injected successfully")
+          EOF
+
+      - name: Extract Mermaid diagram from README
+        run: |
+          python3 - <<'EOF'
+          import re
+          with open('README.md', 'r') as f:
+              content = f.read()
+          match = re.search(r'```mermaid\n(.*?)```', content, re.DOTALL)
+          if match:
+              with open('diagram.mmd', 'w') as f:
+                  f.write(match.group(1))
+              print("Extracted successfully")
+          else:
+              print("No diagram found")
+              exit(1)
+          EOF
+
+      - name: Write mermaid config
+        run: |
+          cat > config.json << 'EOF'
+          {
+            "theme": "base",
+            "themeVariables": {
+              "primaryColor": "#EEEDFE",
+              "primaryBorderColor": "#534AB7",
+              "primaryTextColor": "#26215C",
+              "secondaryColor": "#E1F5EE",
+              "secondaryBorderColor": "#0F6E56",
+              "secondaryTextColor": "#04342C",
+              "tertiaryColor": "#FAEEDA",
+              "tertiaryBorderColor": "#854F0B",
+              "tertiaryTextColor": "#412402",
+              "lineColor": "#5F5E5A",
+              "fontSize": "14px",
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif",
+              "edgeLabelBackground": "#F1EFE8",
+              "clusterBkg": "#F8F7FF",
+              "clusterBorder": "#AFA9EC"
+            },
+            "flowchart": {
+              "padding": 20,
+              "nodeSpacing": 50,
+              "rankSpacing": 70,
+              "curve": "basis"
+            }
+          }
+          EOF
+
+      - name: Write puppeteer config
+        run: |
+          cat > puppeteer-config.json << 'EOF'
+          {
+            "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+          }
+          EOF
+
+      - name: Create docs folder
+        run: mkdir -p docs
+
+      - name: Render diagram
+        run: |
+          mmdc -i diagram.mmd -o docs/architecture.png -c config.json -b white --width 2400 --puppeteerConfigFile puppeteer-config.json
+
+      - name: Commit updated diagram and README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture.png README.md
+          git diff --staged --quiet || git commit -m "Auto-update architecture diagram with colors"
+          git push

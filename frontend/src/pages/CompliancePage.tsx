@@ -71,12 +71,12 @@ export const CompliancePage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
                 v190 Enterprise AI OS
               </span>
             </div>
@@ -97,7 +97,7 @@ export const CompliancePage: React.FC = () => {
 
       <GlassCard className="space-y-3">
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-purple-400" />
+          <FileText className="w-4 h-4 text-cyan-400" />
           <h2 className="text-sm font-bold text-white">Generate audit package</h2>
         </div>
         <div className="flex gap-2">
@@ -105,12 +105,12 @@ export const CompliancePage: React.FC = () => {
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             placeholder="Package title (e.g. Q3 SOC 2 review)"
-            className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            className="flex-1 min-w-0 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
           />
           <button
             onClick={handleCreate}
             disabled={busy}
-            className="px-4 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50"
           >
             <Plus className="w-3.5 h-3.5" />
             Generate
@@ -133,7 +133,7 @@ export const CompliancePage: React.FC = () => {
               <button
                 key={p.packageId}
                 onClick={() => setSelectedId(p.packageId)}
-                className={`w-full text-left p-4 transition-colors ${p.packageId === selectedId ? 'bg-purple-500/10' : 'hover:bg-white/[0.02]'}`}
+                className={`w-full text-left p-4 transition-colors ${p.packageId === selectedId ? 'bg-cyan-500/10' : 'hover:bg-white/[0.02]'}`}
               >
                 <div className="text-xs font-bold text-white truncate">{p.title}</div>
                 <div className="text-[10px] text-gray-500 font-mono mt-0.5">{p.generatedAt ? p.generatedAt.slice(0, 16).replace('T', ' ') : '—'}</div>
@@ -214,7 +214,7 @@ export const CompliancePage: React.FC = () => {
                           <span key={t} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">pii:{t}</span>
                         ))}
                         {f.hipaaWarning && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 flex items-center gap-1">
                             <AlertTriangle className="w-2.5 h-2.5" />HIPAA
                           </span>
                         )}

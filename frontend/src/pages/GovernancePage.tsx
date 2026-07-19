@@ -53,7 +53,7 @@ export const GovernancePage: React.FC = () => {
           { label: 'Actions Logged', value: '1,284', sub: 'Tamper-proof audit', color: 'text-white' },
           { label: 'Pending Reviews', value: `${approvals.filter(a => a.status === 'pending').length}`, sub: 'In Approvals queue', color: 'text-amber-400' },
           { label: 'Blocked Actions', value: '12', sub: 'Destructive shell', color: 'text-rose-400' },
-          { label: 'Approval Rate', value: '86%', sub: 'Safe execution', color: 'text-purple-400' },
+          { label: 'Approval Rate', value: '86%', sub: 'Safe execution', color: 'text-cyan-400' },
           { label: 'Safety Incidents', value: '00', sub: 'Zero leaks', color: 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
@@ -92,8 +92,8 @@ export const GovernancePage: React.FC = () => {
                 <div className="text-gray-400 text-[10px]">Zero unapproved filesystem writes</div>
               </div>
             </div>
-            <div className="p-3 rounded-2xl bg-black/40 border border-purple-500/30 flex items-center gap-3">
-              <Shield className="w-5 h-5 text-purple-400" />
+            <div className="p-3 rounded-2xl bg-black/40 border border-cyan-500/30 flex items-center gap-3">
+              <Shield className="w-5 h-5 text-cyan-400" />
               <div className="text-xs font-mono">
                 <div className="font-bold text-white">Audit Logged</div>
                 <div className="text-gray-400 text-[10px]">100% telemetry coverage</div>
@@ -110,7 +110,7 @@ export const GovernancePage: React.FC = () => {
           <GlassCard>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-purple-400" />
+                <Shield className="w-4 h-4 text-cyan-400" />
                 <h3 className="text-sm font-semibold text-white">Global Permission Policy Matrix</h3>
               </div>
               <div className="relative w-full sm:w-64">
@@ -140,7 +140,7 @@ export const GovernancePage: React.FC = () => {
                   {filteredMatrix.map((item, idx) => (
                     <tr key={idx} className="hover:bg-white/[0.02]">
                       <td className="py-3 px-3 font-sans text-white font-semibold">{item.action}</td>
-                      <td className="py-3 px-3 text-purple-300">{item.scope}</td>
+                      <td className="py-3 px-3 text-cyan-300">{item.scope}</td>
                       <td className="py-3 px-3"><RiskBadge level={item.risk} size="sm" /></td>
                       <td className="py-3 px-3"><StatusBadge status={item.status} size="sm" /></td>
                       <td className="py-3 px-3 text-right">
@@ -162,7 +162,7 @@ export const GovernancePage: React.FC = () => {
         <div className="space-y-4">
           <GlassCard glow="purple">
             <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-purple-400" />
+              <Sliders className="w-4 h-4 text-cyan-400" />
               <span>Real-Time Governance Controls</span>
             </h3>
 
@@ -187,7 +187,7 @@ export const GovernancePage: React.FC = () => {
                     </div>
                     <div className="shrink-0">
                       {isChecked ? (
-                        <div className="w-9 h-5 rounded-full bg-purple-600 flex items-center justify-end px-1 shadow-inner transition-all">
+                        <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner transition-all">
                           <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                         </div>
                       ) : (
@@ -224,7 +224,7 @@ export const GovernancePage: React.FC = () => {
       <GlassCard>
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Activity className="w-4 h-4 text-purple-400" />
+            <Activity className="w-4 h-4 text-cyan-400" />
             <span>Recent Audit Log Events ({governanceLogs.length})</span>
           </h3>
           <span className="text-xs font-mono text-gray-400">100% compliance recorded</span>
@@ -239,7 +239,7 @@ export const GovernancePage: React.FC = () => {
               </div>
               <div className="text-white font-bold truncate">{log.action}</div>
               <div className="text-[11px] text-gray-400 font-sans line-clamp-2">{log.details}</div>
-              <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-purple-300">
+              <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-cyan-300">
                 <span>Agent: {log.agentName}</span>
                 <RiskBadge level={log.risk} size="sm" />
               </div>
