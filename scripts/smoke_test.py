@@ -93,6 +93,12 @@ CHECKS: list[tuple[str, str, str, dict | None, int]] = [
     ("events", "GET", "/api/event-subscriptions/summary", None, 200),
     # v120 Scheduler tick (opt-in, off by default)
     ("scheduler", "GET", "/api/scheduled-tasks/tick-status", None, 200),
+    # v300 Digital Departments (no prior smoke coverage before this)
+    ("departments", "GET", "/api/departments", None, 200),
+    ("departments", "GET", "/api/departments/templates", None, 200),
+    ("departments", "GET", "/api/departments/overview", None, 200),
+    ("departments", "GET", "/api/departments/runs", None, 200),
+    ("departments", "GET", "/api/departments/collaborations", None, 200),
     # Agent Governance (risk + policies)
     ("governance", "GET", "/api/governance/risk/agents", None, 200),
     ("governance", "GET", "/api/governance/agent-policies/summary", None, 200),
