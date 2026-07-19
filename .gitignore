@@ -217,6 +217,24 @@ evolveagent-ai/
 backend/.claude-flow/
 backend/app/data/chief_of_staff_items.json
 backend/app/data/tool_executions.json
+backend/app/data/runpod_worker_jobs.json
+backend/app/data/voice_console_settings.json
+backend/app/data/voice_console_events.json
+backend/app/data/durable_workflow_defs.json
+backend/app/data/durable_workflow_runs.json
+backend/app/data/durable_workflow_effects.json
+backend/app/data/marketplace_hub_listings.json
+backend/app/data/marketplace_hub_installs.json
+backend/app/data/design_agent_analyses.json
+backend/app/data/repo_finder_searches.json
+backend/app/data/adaptive_learning_items.json
+backend/app/data/agent_governance_policies.json
+backend/app/data/system_events.json
+backend/app/data/event_subscriptions.json
+backend/app/data/compute_workers.json
+backend/app/data/kaggle_worker_jobs.json
+backend/app/data/llm_router_calls.json
+backend/app/data/marketplace_hub_ratings.json
 # Added by code-review-graph
 .code-review-graph/
 
