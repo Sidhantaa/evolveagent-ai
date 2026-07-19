@@ -1,4 +1,5 @@
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -1880,29 +1881,42 @@ class MasterOrchestratorAgent:
 
     @staticmethod
     def run_consensus_candidates(user_input: str, shared_context: str, workspace_id: str | None = None) -> list[AgentOutput]:
+        # v280 target 1: each candidate is an independent, real outbound LLM call
+        # to a different provider -- unlike the main specialist loop, no candidate
+        # ever reads another candidate's output (system_prompt/user_prompt are
+        # built once, above, before any call runs), so running them concurrently
+        # changes nothing about the result content, only the wall-clock time.
+        # Candidates are submitted in route order and collected in that same
+        # order (not completion order) so callers see byte-identical output to
+        # the old sequential version. A raised exception from any one call still
+        # propagates out of this method exactly as before (future.result()
+        # re-raises), so error-handling semantics are unchanged too.
         system_prompt = (
             "You are a consensus candidate model. Answer the task independently, focusing on completeness, "
             "clear reasoning, safety, and useful next steps. Do not judge other models."
         )
         user_prompt = f"User task:\n{user_input}\n\nShared context:\n{shared_context}"
         candidates = llm_router.consensus_routes()
-        outputs: list[AgentOutput] = []
-        for route in candidates:
+
+        def _run_one(route) -> AgentOutput:
             result = llm_router.generate_for_provider(route.provider, route.model, system_prompt, user_prompt, workspace_id=workspace_id)
             label = route.label or llm_router.provider_label(route.provider)
-            outputs.append(
-                AgentOutput(
-                    agent_name=f"{label} Consensus Candidate",
-                    provider=result.provider,
-                    model=result.model,
-                    latency_ms=result.latency_ms,
-                    success=result.success,
-                    fallback_used=result.fallback_used,
-                    error=result.error,
-                    output=result.output,
-                )
+            return AgentOutput(
+                agent_name=f"{label} Consensus Candidate",
+                provider=result.provider,
+                model=result.model,
+                latency_ms=result.latency_ms,
+                success=result.success,
+                fallback_used=result.fallback_used,
+                error=result.error,
+                output=result.output,
             )
-        return outputs
+
+        if len(candidates) <= 1:
+            return [_run_one(route) for route in candidates]
+        with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
+            futures = [executor.submit(_run_one, route) for route in candidates]
+            return [future.result() for future in futures]
 
     @staticmethod
     def _content_agreement(a: str, b: str) -> float:

@@ -218,18 +218,26 @@ class LLMRouter:
         if self.storage is None:
             return
         try:
-            rows = self.storage.read_list(self._calls_file)
-            rows.append({
-                "provider": provider,
-                "model": model,
-                "success": bool(success),
-                "latency_ms": int(latency_ms),
-                "task_type": task_type,
-                "created_at": datetime.now(UTC).isoformat(),
-            })
-            if len(rows) > self._MAX_CALL_RECORDS:
-                rows = rows[-self._MAX_CALL_RECORDS:]
-            self.storage.write_list(self._calls_file, rows)
+            # v280 target 1: consensus candidates now call generate_with_route()
+            # concurrently (one call per provider, from a thread pool), so this
+            # is no longer guaranteed to be the only in-flight call -- a plain
+            # read_list() + write_list() pair would lose a concurrent sibling
+            # call's record (the same lost-update shape fixed elsewhere this
+            # session). update_list() holds one lock for the whole
+            # read-mutate-write sequence.
+            def _append_and_cap(rows: list[dict]) -> None:
+                rows.append({
+                    "provider": provider,
+                    "model": model,
+                    "success": bool(success),
+                    "latency_ms": int(latency_ms),
+                    "task_type": task_type,
+                    "created_at": datetime.now(UTC).isoformat(),
+                })
+                if len(rows) > self._MAX_CALL_RECORDS:
+                    del rows[: len(rows) - self._MAX_CALL_RECORDS]
+
+            self.storage.update_list(self._calls_file, _append_and_cap)
         except Exception:
             pass  # observability must never break a real call
 
