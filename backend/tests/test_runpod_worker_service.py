@@ -69,6 +69,33 @@ def test_submit_job_disabled_by_default_raises(tmp_path, monkeypatch):
         service.submit_job(input_payload={"prompt": "hi"}, title="Disabled")
 
 
+def test_submit_job_rejects_an_endpoint_id_with_invalid_characters(runpod_env):
+    """endpoint_id is interpolated directly into a URL path
+    (f"/v2/{endpoint_id}/run") -- previously only length-capped, no character
+    validation. Reject anything outside [a-zA-Z0-9_-] rather than silently
+    stripping it, since an endpoint_id must match a real RunPod resource
+    exactly. Matches the same "raise before any job record or HTTP call"
+    pattern as the disabled-flag and missing-payload checks above it."""
+    storage, governance = runpod_env
+    http = _FakeRunPodHTTP()
+    service = RunPodWorkerService(storage, governance, http_client=http)
+
+    with pytest.raises(RunPodWorkerError, match="invalid characters"):
+        service.submit_job(input_payload={"prompt": "hi"}, title="bad endpoint", endpoint_id="../../etc/passwd")
+    assert http.calls == []  # rejected before any real HTTP call was ever attempted
+
+
+def test_submit_job_accepts_a_normal_endpoint_id(runpod_env):
+    storage, governance = runpod_env
+    http = _FakeRunPodHTTP()
+    service = RunPodWorkerService(storage, governance, http_client=http)
+
+    job = service.submit_job(input_payload={"prompt": "hi"}, title="ok endpoint", endpoint_id="my-endpoint_123")
+
+    assert job["submitted"] is True
+    assert job["endpoint_id"] == "my-endpoint_123"
+
+
 def test_submit_job_uses_authorization_header_and_sanitizes_records(runpod_env):
     storage, governance = runpod_env
     registry = WorkerRegistryService(storage, governance)
