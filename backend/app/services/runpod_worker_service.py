@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -11,6 +12,19 @@ from app.models.response_models import GovernanceEvent
 from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
 
+
+# endpoint_id is interpolated directly into a URL path (f"/v2/{endpoint_id}/run"),
+# and was previously only length-capped -- no character validation. The fixed
+# api_base_url prevents a genuine host-takeover (concatenation onto an
+# already-complete scheme://host, so nothing in endpoint_id can introduce a
+# new authority), but an ID this permissive is still inconsistent with every
+# comparable case elsewhere in this codebase (KaggleWorkerService._sanitize_slug,
+# CodeWriterService._safe_branch_name both apply a character allow-list to
+# similar caller-suppliable values that get interpolated into a constructed
+# string). Reject rather than silently strip, since an endpoint_id must match
+# a real RunPod resource exactly -- silently mangling it could produce a
+# different, still-syntactically-valid-but-wrong ID instead of a clear error.
+_ENDPOINT_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{1,160}$")
 
 TERMINAL_STATUSES = {"complete", "error"}
 RUNPOD_STATUS_MAP = {
@@ -78,10 +92,12 @@ class RunPodWorkerService:
         return bool(settings.runpod_api_key)
 
     def _endpoint_id(self, endpoint_id: str | None = None) -> str:
-        resolved = (endpoint_id or settings.runpod_default_endpoint_id or "").strip()
+        resolved = (endpoint_id or settings.runpod_default_endpoint_id or "").strip()[:160]
         if not resolved:
             raise RunPodWorkerError("RunPod endpoint_id is required. Set RUNPOD_DEFAULT_ENDPOINT_ID or pass endpoint_id.")
-        return resolved[:160]
+        if not _ENDPOINT_ID_RE.match(resolved):
+            raise RunPodWorkerError("RunPod endpoint_id contains invalid characters (expected letters, digits, underscore, or hyphen only).")
+        return resolved
 
     def _headers(self) -> dict[str, str]:
         api_key = settings.runpod_api_key
