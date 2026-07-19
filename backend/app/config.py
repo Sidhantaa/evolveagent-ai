@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     # scheduled tasks stay purely on-demand unless explicitly enabled.
     scheduler_tick_enabled: bool = Field(default=False, alias="SCHEDULER_TICK_ENABLED")
     scheduler_tick_interval_seconds: int = Field(default=60, alias="SCHEDULER_TICK_INTERVAL_SECONDS")
+    # v280 target 2: AgentSchedulerService.start_next() already atomically
+    # enforces concurrency_limit, but nothing automated ever calls it -- only
+    # a manual API route does, so a queued job waits forever for a human to
+    # dequeue it one at a time. Off by default: turning this on changes what
+    # create_job() effectively means (queued-until-a-human-starts-it ->
+    # starts automatically, up to concurrency_limit at a time), so it's an
+    # explicit opt-in, not a bug fix.
+    agent_scheduler_auto_dispatch_enabled: bool = Field(default=False, alias="AGENT_SCHEDULER_AUTO_DISPATCH_ENABLED")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

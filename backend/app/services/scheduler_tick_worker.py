@@ -78,6 +78,7 @@ class SchedulerTickWorker:
         self.last_stale_jobs_failed: list[dict[str, Any]] = []
         self.last_kaggle_jobs_polled: list[dict[str, Any]] = []
         self.last_learn_result: dict[str, Any] | None = None
+        self.last_auto_dispatched: list[dict[str, Any]] = []
 
     async def start(self) -> None:
         if self.running or not settings.scheduler_tick_enabled:
@@ -127,7 +128,33 @@ class SchedulerTickWorker:
         self.last_kaggle_jobs_polled = self._poll_kaggle_jobs()
         self.last_stale_jobs_failed = self._fail_stale_jobs()
         self.last_learn_result = self._learn_from_history()
+        self.last_auto_dispatched = self._auto_dispatch_jobs()
         return fired
+
+    def _auto_dispatch_jobs(self) -> list[dict[str, Any]]:
+        """v280 target 2: AgentSchedulerService.start_next() already atomically
+        enforces concurrency_limit, but nothing automated ever called it --
+        only a manual API route did, so a queued job waited forever for a
+        human to dequeue it one at a time. Gated on its OWN flag
+        (AGENT_SCHEDULER_AUTO_DISPATCH_ENABLED, default off) rather than
+        inheriting the other sweeps' "always runs on an explicit tick_once()
+        call" behavior, because auto-starting previously-manual jobs is a
+        genuine behavior change, not cleanup of already-dead state like the
+        stale-job sweep. Isolated from everything else -- a broken dispatch
+        can never affect due-task firing or either sweep above, and one bad
+        start_next() call can never lose jobs already dispatched this tick."""
+        if self.agent_scheduler is None or not settings.agent_scheduler_auto_dispatch_enabled:
+            return []
+        started: list[dict[str, Any]] = []
+        for _ in range(50):  # hard safety cap -- never an unbounded loop, even if a future bug broke concurrency_limit
+            try:
+                job = self.agent_scheduler.start_next()
+            except Exception:  # noqa: BLE001
+                break
+            if job is None:
+                break
+            started.append({"job_id": job.get("job_id"), "title": job.get("title")})
+        return started
 
     def _learn_from_history(self) -> dict[str, Any] | None:
         """Isolated from everything else -- a broken learn() call can never
@@ -220,4 +247,6 @@ class SchedulerTickWorker:
             "last_stale_jobs_failed": self.last_stale_jobs_failed,
             "last_kaggle_jobs_polled": self.last_kaggle_jobs_polled,
             "last_learn_result": self.last_learn_result,
+            "auto_dispatch_enabled": settings.agent_scheduler_auto_dispatch_enabled,
+            "last_auto_dispatched": self.last_auto_dispatched,
         }
