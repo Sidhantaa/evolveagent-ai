@@ -367,6 +367,83 @@ def test_tick_once_isolates_a_broken_learn_call_from_everything_else(tmp_path, m
     assert worker.last_learn_result is None
 
 
+# ------------------------------------------------------------------
+# v280 target 2: AgentSchedulerService.start_next() already atomically
+# enforces concurrency_limit, but nothing automated called it before this --
+# only a manual API route did. Gated behind its own opt-in flag
+# (agent_scheduler_auto_dispatch_enabled, default off) since auto-starting
+# previously-manual jobs is a real behavior change, not cleanup.
+# ------------------------------------------------------------------
+def test_tick_once_never_auto_dispatches_when_flag_is_off_by_default(tmp_path):
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s))
+    scheduler.create_job({"job_type": "test", "title": "Queued job"})
+
+    _, _, _, scheduled = _services(tmp_path)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler)
+    worker.tick_once()
+
+    assert worker.last_auto_dispatched == []
+    job = scheduler.list_jobs()[0]
+    assert job["status"] == "queued"  # unchanged -- still waits for a human, exactly as before this PR
+
+
+def test_tick_once_auto_dispatches_queued_jobs_when_flag_is_enabled(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "agent_scheduler_auto_dispatch_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s), concurrency_limit=2)
+    job_a = scheduler.create_job({"job_type": "test", "title": "Job A"})
+    job_b = scheduler.create_job({"job_type": "test", "title": "Job B"})
+    job_c = scheduler.create_job({"job_type": "test", "title": "Job C"})
+
+    _, _, _, scheduled = _services(tmp_path)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler)
+    worker.tick_once()
+
+    dispatched_ids = {item["job_id"] for item in worker.last_auto_dispatched}
+    assert dispatched_ids == {job_a["job_id"], job_b["job_id"]}  # only 2, respecting concurrency_limit
+    statuses = {job["job_id"]: job["status"] for job in scheduler.list_jobs()}
+    assert statuses[job_a["job_id"]] == "running"
+    assert statuses[job_b["job_id"]] == "running"
+    assert statuses[job_c["job_id"]] == "queued"  # still waits -- concurrency_limit reached
+
+
+def test_tick_once_without_agent_scheduler_never_auto_dispatches(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "agent_scheduler_auto_dispatch_enabled", True)
+    _, _, _, scheduled = _services(tmp_path)
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=None)
+    worker.tick_once()
+    assert worker.last_auto_dispatched == []
+
+
+def test_tick_once_isolates_a_broken_dispatch_from_everything_else(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "agent_scheduler_auto_dispatch_enabled", True)
+    s = StorageService(data_dir=str(tmp_path))
+    g = GovernanceService(s)
+    scheduler = AgentSchedulerService(s, g, WorkspaceService(s))
+    monkeypatch.setattr(scheduler, "start_next", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    workflows = DurableWorkflowService(s, g)
+    scheduled = ScheduledTasksService(s, g, workflows=workflows)
+    scheduled.create_task({"name": "due-anyway", "schedule": "hourly"})
+    worker = SchedulerTickWorker(scheduled, agent_scheduler=scheduler)
+    fired = worker.tick_once()
+
+    assert len(fired) == 1  # due-task firing unaffected by the broken dispatch
+    assert worker.last_auto_dispatched == []
+
+
+def test_tick_status_endpoint_includes_auto_dispatch_fields():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    r = TestClient(app).get("/api/scheduled-tasks/tick-status").json()
+    assert "auto_dispatch_enabled" in r
+    assert "last_auto_dispatched" in r
+    assert r["auto_dispatch_enabled"] is False  # off by default
+
+
 def test_tick_status_endpoint_includes_learn_result_field():
     from fastapi.testclient import TestClient
     from app.main import app
