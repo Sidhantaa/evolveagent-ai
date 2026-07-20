@@ -24,12 +24,17 @@ def test_export_then_import_roundtrip_is_nondestructive():
 
 
 def test_import_new_items_merges():
-    # A synthetic bundle with a brand-new connector id should import 1.
+    # Unique per run (not a hardcoded literal id) -- this test asserts the
+    # id is brand-new on the FIRST import against real, persistent local
+    # storage, so a fixed literal only works once ever locally, then fails
+    # every subsequent local run (the id already exists from before).
+    from uuid import uuid4
+    playbook_id = f"v59-import-test-{uuid4().hex[:8]}"
     fake_bundle = {
         "bundle_version": "1.0",
         "collections": {
             "playbooks.json": [
-                {"playbook_id": "v59-import-test-id", "name": "Imported playbook", "steps": [], "step_count": 0}
+                {"playbook_id": playbook_id, "name": "Imported playbook", "steps": [], "step_count": 0}
             ]
         },
     }
