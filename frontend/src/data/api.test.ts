@@ -32,6 +32,7 @@ import {
   createDepartmentGoal,
   setDepartmentBudget,
   planDepartmentRun,
+  fetchSchedulerTickStatus,
 } from './api';
 
 // Helper: stub global fetch to return a given JSON body per-URL.
@@ -427,6 +428,37 @@ describe('v260 model serving + v240 GPU workers + storage retention (Compute Fab
 
     const real = await runStoragePrune('governance_log.json', 90, false);
     expect(real).toMatchObject({ dryRun: false, prunedCount: 3, remainingCount: 7, archivePath: '/data/archives/x.json' });
+  });
+});
+
+describe('v120 scheduler tick + v280 target 2 auto-dispatch status', () => {
+  it('maps tick status with array fields collapsed to counts', async () => {
+    stubFetch({
+      '/api/scheduled-tasks/tick-status': {
+        enabled: true, running: true, interval_seconds: 60,
+        last_tick_at: '2026-07-20T00:00:00Z', last_error: null,
+        last_fired: [{ task_id: 't1' }, { task_id: 't2' }],
+        last_stale_jobs_failed: [],
+        last_kaggle_jobs_polled: [{ job_id: 'k1' }],
+        auto_dispatch_enabled: true,
+        last_auto_dispatched: [{ job_id: 'j1' }, { job_id: 'j2' }, { job_id: 'j3' }],
+      },
+    });
+    const status = await fetchSchedulerTickStatus();
+    expect(status).toMatchObject({
+      enabled: true, running: true, intervalSeconds: 60,
+      lastFiredCount: 2, lastStaleJobsFailedCount: 0, lastKaggleJobsPolledCount: 1,
+      autoDispatchEnabled: true, lastAutoDispatchedCount: 3,
+    });
+  });
+
+  it('defaults auto-dispatch to off when the field is absent', async () => {
+    stubFetch({
+      '/api/scheduled-tasks/tick-status': { enabled: false, running: false, interval_seconds: 60, last_fired: [] },
+    });
+    const status = await fetchSchedulerTickStatus();
+    expect(status!.autoDispatchEnabled).toBe(false);
+    expect(status!.lastAutoDispatchedCount).toBe(0);
   });
 });
 

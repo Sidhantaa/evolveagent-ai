@@ -1409,6 +1409,40 @@ export async function runStoragePrune(
 }
 
 // ---------------------------------------------------------------------------
+// v120 Scheduler tick + v280 target 2 auto-dispatch status (opt-in, off by default)
+// ---------------------------------------------------------------------------
+
+export interface SchedulerTickStatus {
+  enabled: boolean;
+  running: boolean;
+  intervalSeconds: number;
+  lastTickAt: string | null;
+  lastError: string | null;
+  lastFiredCount: number;
+  lastStaleJobsFailedCount: number;
+  lastKaggleJobsPolledCount: number;
+  autoDispatchEnabled: boolean;
+  lastAutoDispatchedCount: number;
+}
+
+export async function fetchSchedulerTickStatus(): Promise<SchedulerTickStatus | null> {
+  const data = await getJson<any>('/api/scheduled-tasks/tick-status');
+  if (!data) return null;
+  return {
+    enabled: Boolean(data.enabled),
+    running: Boolean(data.running),
+    intervalSeconds: Number(data.interval_seconds ?? 60),
+    lastTickAt: data.last_tick_at ?? null,
+    lastError: data.last_error ?? null,
+    lastFiredCount: Array.isArray(data.last_fired) ? data.last_fired.length : 0,
+    lastStaleJobsFailedCount: Array.isArray(data.last_stale_jobs_failed) ? data.last_stale_jobs_failed.length : 0,
+    lastKaggleJobsPolledCount: Array.isArray(data.last_kaggle_jobs_polled) ? data.last_kaggle_jobs_polled.length : 0,
+    autoDispatchEnabled: Boolean(data.auto_dispatch_enabled),
+    lastAutoDispatchedCount: Array.isArray(data.last_auto_dispatched) ? data.last_auto_dispatched.length : 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // v300 Digital Departments
 // ---------------------------------------------------------------------------
 

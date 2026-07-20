@@ -5,6 +5,7 @@ import {
   fetchModelServingDashboard, runModelServingDryRun, ModelServingDashboard,
   fetchGpuWorkerDashboard, GpuWorkerDashboard,
   fetchPrunableCollections, runStoragePrune, PrunableCollections, StoragePruneResult,
+  fetchSchedulerTickStatus, SchedulerTickStatus,
 } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
@@ -29,7 +30,8 @@ import {
   ChevronRight,
   Server,
   Trash2,
-  Archive
+  Archive,
+  Zap
 } from 'lucide-react';
 
 export const DevModeConsole: React.FC = () => {
@@ -71,6 +73,17 @@ export const DevModeConsole: React.FC = () => {
     setModelServing(ms);
     setGpuDashboard(gpu);
     showToast(ms || gpu ? 'Compute Fabric status refreshed' : 'Compute Fabric endpoints unavailable', ms || gpu ? 'success' : 'info');
+  };
+
+  // v120 scheduler tick + v280 target 2 auto-dispatch (opt-in, off by default)
+  const [tickStatus, setTickStatus] = useState<SchedulerTickStatus | null>(null);
+  useEffect(() => {
+    fetchSchedulerTickStatus().then(setTickStatus);
+  }, []);
+  const refreshTickStatus = async () => {
+    const status = await fetchSchedulerTickStatus();
+    setTickStatus(status);
+    showToast(status ? 'Scheduler tick status refreshed' : 'Scheduler tick status unavailable', status ? 'success' : 'info');
   };
 
   // Storage retention (manual, archive-then-delete; dry_run defaults true)
@@ -384,6 +397,78 @@ export const DevModeConsole: React.FC = () => {
             </p>
           </div>
         )}
+      </GlassCard>
+
+      {/* v120 Scheduler tick + v280 target 2 auto-dispatch (opt-in, off by default) */}
+      <GlassCard className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Scheduler Tick</h3>
+                <StatusBadge status={tickStatus?.enabled ? 'connected' : 'disconnected'} size="sm" />
+                <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                  tickStatus?.autoDispatchEnabled
+                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    : 'bg-white/5 text-gray-400 border-white/10'
+                }`}>
+                  <Zap className="w-3 h-3" />
+                  Auto-dispatch {tickStatus?.autoDispatchEnabled ? 'ON' : 'off (default)'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 font-mono mt-1">
+                v120 background tick + v280 concurrent job dispatch. Both off by default; nothing runs automatically
+                unless explicitly enabled via env flags.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={refreshTickStatus}
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Refresh Tick Status</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Interval</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{tickStatus ? `${tickStatus.intervalSeconds}s` : '—'}</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Tasks Fired</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-emerald-300">{tickStatus ? tickStatus.lastFiredCount : '—'}</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Stale Jobs Failed</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-rose-300">{tickStatus ? tickStatus.lastStaleJobsFailedCount : '—'}</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Kaggle Polled</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{tickStatus ? tickStatus.lastKaggleJobsPolledCount : '—'}</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Auto-Dispatched</div>
+            <div className={`text-xl font-bold font-mono tracking-tight ${tickStatus?.autoDispatchEnabled ? 'text-amber-300' : 'text-gray-500'}`}>
+              {tickStatus ? tickStatus.lastAutoDispatchedCount : '—'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono text-gray-300">
+          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+            <span className={`w-2 h-2 rounded-full ${tickStatus?.lastTickAt ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+            <span>Last tick: {tickStatus?.lastTickAt || 'never (tick disabled or not yet run)'}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+            <span className={`w-2 h-2 rounded-full ${tickStatus?.lastError ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+            <span>{tickStatus?.lastError ? `Last error: ${tickStatus.lastError}` : 'No errors on the last tick'}</span>
+          </div>
+        </div>
       </GlassCard>
 
       {/* 2. Header & Control Buttons */}
