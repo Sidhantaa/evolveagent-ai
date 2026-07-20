@@ -1249,3 +1249,161 @@ export async function createAuditPackage(title: string): Promise<AuditPackageSum
   if (!data) return null;
   return mapAuditPackageSummary(data);
 }
+
+// ---------------------------------------------------------------------------
+// v260 Model Serving + v240 GPU Workers + storage retention (Compute Fabric)
+// ---------------------------------------------------------------------------
+
+export interface ModelServingBackend {
+  backend: string;
+  name: string;
+  configured: boolean;
+  reachable: boolean;
+  models: string[];
+  note: string;
+}
+
+export interface ModelServingDashboard {
+  backends: ModelServingBackend[];
+  count: number;
+  reachableCount: number;
+  realExecutionDefault: string;
+}
+
+export interface ModelServingDryRunResult {
+  accepted: boolean;
+  backend: string;
+  model: string;
+  declinedReason: string;
+  nextHumanAction: string;
+  availableModels: string[];
+}
+
+export async function fetchModelServingDashboard(): Promise<ModelServingDashboard | null> {
+  const data = await getJson<any>('/api/model-serving/dashboard');
+  if (!data) return null;
+  return {
+    backends: Array.isArray(data.backends)
+      ? data.backends.map((b: any) => ({
+          backend: b.backend || '',
+          name: b.name || b.backend || '',
+          configured: Boolean(b.configured),
+          reachable: Boolean(b.reachable),
+          models: Array.isArray(b.models) ? b.models.map(String) : [],
+          note: b.note || '',
+        }))
+      : [],
+    count: Number(data.count ?? 0),
+    reachableCount: Number(data.reachable_count ?? 0),
+    realExecutionDefault: data.real_execution_default || 'disabled',
+  };
+}
+
+export async function runModelServingDryRun(backend: string, model: string): Promise<ModelServingDryRunResult | null> {
+  const data = await postJson<any>('/api/model-serving/dry-run', { backend, model });
+  if (!data) return null;
+  return {
+    accepted: Boolean(data.accepted),
+    backend: data.backend || backend,
+    model: data.model || model,
+    declinedReason: data.declined_reason || '',
+    nextHumanAction: data.next_human_action || '',
+    availableModels: Array.isArray(data.available_models) ? data.available_models.map(String) : [],
+  };
+}
+
+export interface GpuProvider {
+  provider: string;
+  name: string;
+  enabled: boolean;
+  configured: boolean;
+  executionEnabled: boolean;
+  riskLevel: RiskLevel;
+  workerCount: number;
+  activeWorkers: number;
+  costWarning: string;
+  note: string;
+}
+
+export interface GpuWorkerDashboard {
+  totalGpuWorkers: number;
+  activeGpuWorkers: number;
+  providers: GpuProvider[];
+  approvalRequiredForRealExecution: boolean;
+}
+
+export async function fetchGpuWorkerDashboard(): Promise<GpuWorkerDashboard | null> {
+  const data = await getJson<any>('/api/worker-registry/gpu/dashboard');
+  if (!data) return null;
+  return {
+    totalGpuWorkers: Number(data.total_gpu_workers ?? 0),
+    activeGpuWorkers: Number(data.active_gpu_workers ?? 0),
+    providers: Array.isArray(data.providers)
+      ? data.providers.map((p: any) => ({
+          provider: p.provider || '',
+          name: p.name || p.provider || '',
+          enabled: Boolean(p.enabled),
+          configured: Boolean(p.configured),
+          executionEnabled: Boolean(p.execution_enabled),
+          riskLevel: (['low', 'medium', 'high'].includes(p.risk_level) ? p.risk_level : 'low') as RiskLevel,
+          workerCount: Number(p.worker_count ?? 0),
+          activeWorkers: Number(p.active_workers ?? 0),
+          costWarning: p.cost_warning || '',
+          note: p.note || '',
+        }))
+      : [],
+    approvalRequiredForRealExecution: Boolean(data.approval_required_for_real_execution),
+  };
+}
+
+export interface PrunableCollections {
+  collections: string[];
+  minOlderThanDays: number;
+  note: string;
+}
+
+export interface StoragePruneResult {
+  collection: string;
+  olderThanDays: number;
+  totalRecords?: number;
+  recordsToPrune?: number;
+  recordsToKeep?: number;
+  prunedCount?: number;
+  remainingCount?: number;
+  archivePath: string | null;
+  dryRun: boolean;
+}
+
+export async function fetchPrunableCollections(): Promise<PrunableCollections | null> {
+  const data = await getJson<any>('/api/system/storage-prune/collections');
+  if (!data) return null;
+  return {
+    collections: Array.isArray(data.collections) ? data.collections.map(String) : [],
+    minOlderThanDays: Number(data.min_older_than_days ?? 1),
+    note: data.note || '',
+  };
+}
+
+export async function runStoragePrune(
+  collection: string,
+  olderThanDays: number,
+  dryRun: boolean
+): Promise<StoragePruneResult | null> {
+  const data = await postJson<any>('/api/system/storage-prune', {
+    collection,
+    older_than_days: olderThanDays,
+    dry_run: dryRun,
+  });
+  if (!data) return null;
+  return {
+    collection: data.collection || collection,
+    olderThanDays: Number(data.older_than_days ?? olderThanDays),
+    totalRecords: data.total_records != null ? Number(data.total_records) : undefined,
+    recordsToPrune: data.records_to_prune != null ? Number(data.records_to_prune) : undefined,
+    recordsToKeep: data.records_to_keep != null ? Number(data.records_to_keep) : undefined,
+    prunedCount: data.pruned_count != null ? Number(data.pruned_count) : undefined,
+    remainingCount: data.remaining_count != null ? Number(data.remaining_count) : undefined,
+    archivePath: data.archive_path ?? null,
+    dryRun: Boolean(data.dry_run),
+  };
+}

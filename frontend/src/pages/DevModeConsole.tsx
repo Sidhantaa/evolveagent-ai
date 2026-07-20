@@ -1,27 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchStorageStatus, fetchSystemHealth, StorageStatus, SystemHealth } from '../data/api';
+import {
+  fetchStorageStatus, fetchSystemHealth, StorageStatus, SystemHealth,
+  fetchModelServingDashboard, runModelServingDryRun, ModelServingDashboard,
+  fetchGpuWorkerDashboard, GpuWorkerDashboard,
+  fetchPrunableCollections, runStoragePrune, PrunableCollections, StoragePruneResult,
+} from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
-import { 
-  Terminal, 
-  Play, 
-  Pause, 
-  Download, 
-  Search, 
-  Filter, 
-  Code2, 
-  ShieldCheck, 
-  Cpu, 
-  Database, 
-  Activity, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Terminal,
+  Play,
+  Pause,
+  Download,
+  Search,
+  Filter,
+  Code2,
+  ShieldCheck,
+  Cpu,
+  Database,
+  Activity,
+  CheckCircle2,
+  Clock,
   ArrowRight,
   Layers,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Server,
+  Trash2,
+  Archive
 } from 'lucide-react';
 
 export const DevModeConsole: React.FC = () => {
@@ -50,6 +58,53 @@ export const DevModeConsole: React.FC = () => {
     fetchSystemHealth().then(setHealth);
     fetchStorageStatus().then(setStorageStatus);
   }, []);
+
+  // v260 model serving + v240 GPU workers (Compute Fabric)
+  const [modelServing, setModelServing] = useState<ModelServingDashboard | null>(null);
+  const [gpuDashboard, setGpuDashboard] = useState<GpuWorkerDashboard | null>(null);
+  useEffect(() => {
+    fetchModelServingDashboard().then(setModelServing);
+    fetchGpuWorkerDashboard().then(setGpuDashboard);
+  }, []);
+  const refreshComputeFabric = async () => {
+    const [ms, gpu] = await Promise.all([fetchModelServingDashboard(), fetchGpuWorkerDashboard()]);
+    setModelServing(ms);
+    setGpuDashboard(gpu);
+    showToast(ms || gpu ? 'Compute Fabric status refreshed' : 'Compute Fabric endpoints unavailable', ms || gpu ? 'success' : 'info');
+  };
+
+  // Storage retention (manual, archive-then-delete; dry_run defaults true)
+  const [prunable, setPrunable] = useState<PrunableCollections | null>(null);
+  const [pruneCollection, setPruneCollection] = useState<string>('');
+  const [pruneOlderThanDays, setPruneOlderThanDays] = useState<number>(90);
+  const [prunePreview, setPrunePreview] = useState<StoragePruneResult | null>(null);
+  const [pruneBusy, setPruneBusy] = useState(false);
+  useEffect(() => {
+    fetchPrunableCollections().then(data => {
+      setPrunable(data);
+      if (data && data.collections.length > 0) setPruneCollection(data.collections[0]);
+    });
+  }, []);
+  const handlePreviewPrune = async () => {
+    if (!pruneCollection) return;
+    setPruneBusy(true);
+    const result = await runStoragePrune(pruneCollection, pruneOlderThanDays, true);
+    setPruneBusy(false);
+    setPrunePreview(result);
+    showToast(result ? `Preview: ${result.recordsToPrune ?? 0} record(s) would be pruned` : 'Preview failed', result ? 'info' : 'warning');
+  };
+  const handleRealPrune = async () => {
+    if (!pruneCollection || !prunePreview) return;
+    const confirmed = window.confirm(
+      `Permanently prune ${prunePreview.recordsToPrune ?? 0} record(s) older than ${pruneOlderThanDays} day(s) from ${pruneCollection}? They will be archived first, then removed from the live collection.`
+    );
+    if (!confirmed) return;
+    setPruneBusy(true);
+    const result = await runStoragePrune(pruneCollection, pruneOlderThanDays, false);
+    setPruneBusy(false);
+    setPrunePreview(result);
+    showToast(result ? `Pruned ${result.prunedCount ?? 0} record(s)` : 'Prune failed', result ? 'success' : 'warning');
+  };
 
   const filteredLogs = governanceLogs.filter(l =>
     l.agentName.toLowerCase().includes(logFilter.toLowerCase()) || 
@@ -164,6 +219,171 @@ export const DevModeConsole: React.FC = () => {
             <span>Redis cache is {storageStatus?.redisReady ? 'reachable' : 'optional'}</span>
           </div>
         </div>
+
+        {/* Storage retention -- manual, archive-then-delete; dry_run defaults true */}
+        <div className="pt-4 mt-2 border-t border-white/10 space-y-3">
+          <div className="flex items-center gap-2">
+            <Archive className="w-3.5 h-3.5 text-amber-400" />
+            <h4 className="text-xs font-bold text-white">Storage Retention</h4>
+            <span className="text-[10px] font-mono text-gray-500">Manual only — nothing runs automatically</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={pruneCollection}
+              onChange={(e) => { setPruneCollection(e.target.value); setPrunePreview(null); }}
+              className="bg-black/50 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none"
+            >
+              {(prunable?.collections || []).map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={prunable?.minOlderThanDays ?? 1}
+              value={pruneOlderThanDays}
+              onChange={(e) => { setPruneOlderThanDays(Number(e.target.value)); setPrunePreview(null); }}
+              className="w-24 bg-black/50 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none"
+            />
+            <span className="text-[11px] text-gray-400">days or older</span>
+            <button
+              onClick={handlePreviewPrune}
+              disabled={pruneBusy || !pruneCollection}
+              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span>Preview</span>
+            </button>
+            <button
+              onClick={handleRealPrune}
+              disabled={pruneBusy || !prunePreview || (prunePreview.recordsToPrune ?? 0) === 0}
+              className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Prune for real</span>
+            </button>
+          </div>
+          {prunePreview && (
+            <div className="text-[11px] font-mono text-gray-300 bg-black/30 border border-white/[0.07] rounded-xl px-3 py-2">
+              {prunePreview.dryRun ? (
+                <span>Preview: {prunePreview.recordsToPrune ?? 0} of {prunePreview.totalRecords ?? 0} record(s) would be pruned ({prunePreview.recordsToKeep ?? 0} kept).</span>
+              ) : (
+                <span className="text-emerald-300">
+                  Pruned {prunePreview.prunedCount ?? 0} record(s), {prunePreview.remainingCount ?? 0} remaining.
+                  {prunePreview.archivePath ? ` Archived to ${prunePreview.archivePath}.` : ''}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </GlassCard>
+
+      {/* v240 GPU Workers + v260 Model Serving (Compute Fabric) */}
+      <GlassCard className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/20">
+              <Server className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Compute Fabric</h3>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border bg-amber-500/15 text-amber-300 border-amber-500/30">
+                  {gpuDashboard ? 'Real execution disabled by default' : 'Loading'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 font-mono mt-1">
+                v240 GPU workers + v260 local model-serving readiness. Every real execution path stays approval-gated.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={refreshComputeFabric}
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Refresh Compute Fabric</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">GPU Workers</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{gpuDashboard ? gpuDashboard.totalGpuWorkers : '—'}</div>
+            <div className="text-[10px] text-gray-500 font-mono truncate">{gpuDashboard ? `${gpuDashboard.activeGpuWorkers} active` : 'checking…'}</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">GPU Providers</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-emerald-300">{gpuDashboard ? gpuDashboard.providers.length : '—'}</div>
+            <div className="text-[10px] text-gray-500 font-mono truncate">local, kaggle, runpod, …</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Model Backends</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{modelServing ? modelServing.count : '—'}</div>
+            <div className="text-[10px] text-gray-500 font-mono truncate">ollama, vllm, openai-compat</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Reachable</div>
+            <div className={`text-xl font-bold font-mono tracking-tight ${modelServing && modelServing.reachableCount > 0 ? 'text-emerald-300' : 'text-gray-400'}`}>
+              {modelServing ? modelServing.reachableCount : '—'}
+            </div>
+            <div className="text-[10px] text-gray-500 font-mono truncate">local model servers</div>
+          </div>
+        </div>
+
+        {gpuDashboard && gpuDashboard.providers.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-white">GPU Providers</h4>
+            <div className="overflow-x-auto font-mono text-xs">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/10 text-gray-400 text-[11px] uppercase">
+                    <th className="py-2 px-3">Provider</th>
+                    <th className="py-2 px-3">Enabled</th>
+                    <th className="py-2 px-3">Configured</th>
+                    <th className="py-2 px-3">Execution</th>
+                    <th className="py-2 px-3">Risk</th>
+                    <th className="py-2 px-3">Workers</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {gpuDashboard.providers.map(p => (
+                    <tr key={p.provider} className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-3 font-semibold text-white">{p.name}</td>
+                      <td className="py-2 px-3"><StatusBadge status={p.enabled ? 'connected' : 'disconnected'} size="sm" showIcon={false} /></td>
+                      <td className="py-2 px-3">{p.configured ? 'Yes' : 'No'}</td>
+                      <td className="py-2 px-3">{p.executionEnabled ? <span className="text-amber-300">Enabled</span> : <span className="text-gray-500">Disabled</span>}</td>
+                      <td className="py-2 px-3"><RiskBadge level={p.riskLevel} size="sm" /></td>
+                      <td className="py-2 px-3">{p.activeWorkers}/{p.workerCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {modelServing && modelServing.backends.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-white">Local Model-Serving Backends</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {modelServing.backends.map(b => (
+                <div key={b.backend} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-white">{b.name}</span>
+                    <span className={`w-2 h-2 rounded-full ${b.reachable ? 'bg-emerald-400' : b.configured ? 'bg-amber-400' : 'bg-gray-500'}`} />
+                  </div>
+                  <div className="text-[10px] font-mono text-gray-500">
+                    {b.reachable ? `${b.models.length} model(s) loaded` : b.configured ? 'Configured, not reachable' : 'Not configured'}
+                  </div>
+                  {b.note && <div className="text-[10px] font-mono text-gray-600 truncate">{b.note}</div>}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] font-mono text-gray-500">
+              Read-only readiness. No model server is ever started by this app.
+            </p>
+          </div>
+        )}
       </GlassCard>
 
       {/* 2. Header & Control Buttons */}

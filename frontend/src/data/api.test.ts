@@ -18,6 +18,11 @@ import {
   searchMemoryV2,
   routeMessage,
   startDurableRun,
+  fetchModelServingDashboard,
+  runModelServingDryRun,
+  fetchGpuWorkerDashboard,
+  fetchPrunableCollections,
+  runStoragePrune,
 } from './api';
 
 // Helper: stub global fetch to return a given JSON body per-URL.
@@ -326,6 +331,93 @@ describe('startDurableRun', () => {
   it('returns false when the backend is offline', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }) as any);
     expect(await startDurableRun('x', [])).toBe(false);
+  });
+});
+
+describe('v260 model serving + v240 GPU workers + storage retention (Compute Fabric)', () => {
+  it('maps the model-serving dashboard', async () => {
+    stubFetch({
+      '/api/model-serving/dashboard': {
+        backends: [
+          { backend: 'ollama', name: 'Ollama', configured: true, reachable: true, models: ['llama3'], note: '' },
+          { backend: 'vllm', name: 'vLLM', configured: false, reachable: false, models: [], note: 'not configured' },
+        ],
+        count: 2,
+        reachable_count: 1,
+        real_execution_default: 'disabled',
+      },
+    });
+    const dash = await fetchModelServingDashboard();
+    expect(dash).toMatchObject({ count: 2, reachableCount: 1, realExecutionDefault: 'disabled' });
+    expect(dash!.backends[0]).toMatchObject({ backend: 'ollama', configured: true, reachable: true, models: ['llama3'] });
+  });
+
+  it('runs a model-serving dry-run', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ accepted: false, backend: 'ollama', model: 'llama3', declined_reason: 'not reachable', next_human_action: 'start it yourself', available_models: [] }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const result = await runModelServingDryRun('ollama', 'llama3');
+    expect(result).toMatchObject({ accepted: false, backend: 'ollama', declinedReason: 'not reachable' });
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/model-serving/dry-run');
+  });
+
+  it('maps the GPU worker dashboard with risk levels', async () => {
+    stubFetch({
+      '/api/worker-registry/gpu/dashboard': {
+        total_gpu_workers: 3,
+        active_gpu_workers: 1,
+        approval_required_for_real_execution: true,
+        providers: [
+          { provider: 'kaggle', name: 'Kaggle GPU Worker', enabled: true, configured: true, execution_enabled: true, risk_level: 'high', worker_count: 2, active_workers: 1, cost_warning: 'uses account quota', note: '' },
+          { provider: 'local', name: 'Local GPU Workers', enabled: true, configured: false, execution_enabled: false, risk_level: 'low', worker_count: 0, active_workers: 0, cost_warning: '', note: '' },
+        ],
+      },
+    });
+    const dash = await fetchGpuWorkerDashboard();
+    expect(dash).toMatchObject({ totalGpuWorkers: 3, activeGpuWorkers: 1, approvalRequiredForRealExecution: true });
+    expect(dash!.providers[0]).toMatchObject({ provider: 'kaggle', riskLevel: 'high', executionEnabled: true });
+  });
+
+  it('falls back to low risk for an unrecognized risk_level value', async () => {
+    stubFetch({
+      '/api/worker-registry/gpu/dashboard': {
+        total_gpu_workers: 0, active_gpu_workers: 0,
+        providers: [{ provider: 'x', name: 'X', enabled: false, configured: false, execution_enabled: false, risk_level: 'not-a-real-level', worker_count: 0, active_workers: 0 }],
+      },
+    });
+    const dash = await fetchGpuWorkerDashboard();
+    expect(dash!.providers[0].riskLevel).toBe('low');
+  });
+
+  it('fetches prunable collections', async () => {
+    stubFetch({
+      '/api/system/storage-prune/collections': {
+        collections: ['governance_log.json', 'chat_sessions.json'],
+        min_older_than_days: 1,
+        note: 'archive-then-delete',
+      },
+    });
+    const result = await fetchPrunableCollections();
+    expect(result).toMatchObject({ collections: ['governance_log.json', 'chat_sessions.json'], minOlderThanDays: 1 });
+  });
+
+  it('runs a storage-prune preview (dry_run) and a real prune', async () => {
+    const fetchMock = vi.fn(async (url: string, opts: any) => {
+      const body = JSON.parse(opts.body);
+      if (body.dry_run) {
+        return { ok: true, status: 200, json: async () => ({ collection: body.collection, older_than_days: body.older_than_days, total_records: 10, records_to_prune: 3, records_to_keep: 7, dry_run: true }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ collection: body.collection, older_than_days: body.older_than_days, pruned_count: 3, remaining_count: 7, archive_path: '/data/archives/x.json', dry_run: false }) };
+    });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const preview = await runStoragePrune('governance_log.json', 90, true);
+    expect(preview).toMatchObject({ dryRun: true, recordsToPrune: 3, recordsToKeep: 7 });
+
+    const real = await runStoragePrune('governance_log.json', 90, false);
+    expect(real).toMatchObject({ dryRun: false, prunedCount: 3, remainingCount: 7, archivePath: '/data/archives/x.json' });
   });
 });
 
