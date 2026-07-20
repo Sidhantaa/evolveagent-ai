@@ -15,7 +15,8 @@ export type PageId =
   | 'chief-of-staff'
   | 'instructions'
   | 'marketplace-hub'
-  | 'compliance';
+  | 'compliance'
+  | 'departments';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 

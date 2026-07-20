@@ -23,6 +23,15 @@ import {
   fetchGpuWorkerDashboard,
   fetchPrunableCollections,
   runStoragePrune,
+  fetchDepartments,
+  fetchDepartmentTemplates,
+  seedDepartmentTemplates,
+  createDepartment,
+  fetchDepartmentsOverview,
+  fetchDepartmentScorecard,
+  createDepartmentGoal,
+  setDepartmentBudget,
+  planDepartmentRun,
 } from './api';
 
 // Helper: stub global fetch to return a given JSON body per-URL.
@@ -418,6 +427,118 @@ describe('v260 model serving + v240 GPU workers + storage retention (Compute Fab
 
     const real = await runStoragePrune('governance_log.json', 90, false);
     expect(real).toMatchObject({ dryRun: false, prunedCount: 3, remainingCount: 7, archivePath: '/data/archives/x.json' });
+  });
+});
+
+describe('v300 Digital Departments', () => {
+  it('maps the departments list', async () => {
+    stubFetch({
+      '/api/departments': {
+        departments: [
+          { department_id: 'd1', name: 'Engineering', description: 'Builds things', manager_agent: 'Eng Mgr', worker_agents: ['Coder'], permission_level: 'approve_to_run', active: true, created_at: '2026-07-20T00:00:00Z' },
+        ],
+        total_departments: 1,
+      },
+    });
+    const depts = await fetchDepartments();
+    expect(depts).toHaveLength(1);
+    expect(depts![0]).toMatchObject({ departmentId: 'd1', name: 'Engineering', managerAgent: 'Eng Mgr', permissionLevel: 'approve_to_run', active: true });
+  });
+
+  it('maps department templates', async () => {
+    stubFetch({
+      '/api/departments/templates': {
+        templates: [{ name: 'Research', description: 'Gathers evidence', manager_agent: 'Research Mgr', worker_agents: [], permission_level: 'read_only' }],
+        count: 1,
+      },
+    });
+    const templates = await fetchDepartmentTemplates();
+    expect(templates![0]).toMatchObject({ name: 'Research', managerAgent: 'Research Mgr', permissionLevel: 'read_only' });
+  });
+
+  it('seeds department templates', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ seeded_count: 6, skipped_existing: 0, departments: [] }) }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const result = await seedDepartmentTemplates();
+    expect(result).toMatchObject({ seededCount: 6, skippedExisting: 0 });
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/departments/templates/seed');
+  });
+
+  it('creates a department', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ department_id: 'd2', name: 'Finance', manager_agent: 'Finance Mgr', permission_level: 'read_only', active: true }) }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const dept = await createDepartment('Finance', 'Estimates costs', 'Finance Mgr', 'read_only');
+    expect(dept).toMatchObject({ departmentId: 'd2', name: 'Finance' });
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(body).toMatchObject({ name: 'Finance', manager_agent: 'Finance Mgr', permission_level: 'read_only' });
+  });
+
+  it('maps the departments overview', async () => {
+    stubFetch({
+      '/api/departments/overview': {
+        total_departments: 3, active_departments: 3, department_runs: 5, collaboration_count: 1,
+        recent_runs: [{ department_run_id: 'r1', department_id: 'd1', department_name: 'Engineering', task: 'ship it', requires_approval: true, risk_level: 'medium', status: 'planned', created_at: '2026-07-20T00:00:00Z' }],
+      },
+    });
+    const overview = await fetchDepartmentsOverview();
+    expect(overview).toMatchObject({ totalDepartments: 3, activeDepartments: 3, departmentRuns: 5, collaborationCount: 1 });
+    expect(overview!.recentRuns[0]).toMatchObject({ departmentRunId: 'r1', task: 'ship it', riskLevel: 'medium' });
+  });
+
+  it('maps the department scorecard, including a null budget when none is set', async () => {
+    stubFetch({
+      '/api/departments/d1/scorecard': {
+        department: { department_id: 'd1', name: 'Engineering', active: true },
+        goals: [{ goal_id: 'g1', title: 'Ship v1', status: 'active', progress_percent: 40 }],
+        budget: null,
+        measurable_outcomes: { total_runs: 2, planned: 1, blocked: 1 },
+      },
+    });
+    const scorecard = await fetchDepartmentScorecard('d1');
+    expect(scorecard!.department).toMatchObject({ departmentId: 'd1', name: 'Engineering' });
+    expect(scorecard!.goals[0]).toMatchObject({ goalId: 'g1', title: 'Ship v1', progressPercent: 40 });
+    expect(scorecard!.budget).toBeNull();
+    expect(scorecard!.measurableOutcomes).toMatchObject({ totalRuns: 2, planned: 1, blocked: 1 });
+  });
+
+  it('maps a scorecard with a real budget', async () => {
+    stubFetch({
+      '/api/departments/d1/scorecard': {
+        department: { department_id: 'd1', name: 'Engineering', active: true },
+        goals: [],
+        budget: { monthly_limit: 100, current_month_cost: 42.5, total_estimated_cost: 200, budget_status: 'near', warning: 'Approaching the monthly budget.' },
+        measurable_outcomes: { total_runs: 0, planned: 0, blocked: 0 },
+      },
+    });
+    const scorecard = await fetchDepartmentScorecard('d1');
+    expect(scorecard!.budget).toMatchObject({ monthlyLimit: 100, currentMonthCost: 42.5, budgetStatus: 'near' });
+  });
+
+  it('creates a department goal', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ goal_id: 'g2', goal_title: 'New goal', goal_summary: '', status: 'active' }) }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const goal = await createDepartmentGoal('d1', 'New goal', '');
+    expect(goal).toMatchObject({ goalId: 'g2', title: 'New goal' });
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/departments/d1/goals');
+  });
+
+  it('sets a department budget', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ budget_id: 'b1', monthly_limit: 50 }) }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const ok = await setDepartmentBudget('d1', 50);
+    expect(ok).toBe(true);
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(body).toMatchObject({ monthly_limit: 50 });
+  });
+
+  it('plans a department run and reports a blocked status', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ department_run_id: 'r2', department_id: 'd1', department_name: 'Engineering', task: 'x', requires_approval: true, risk_level: 'high', status: 'blocked', block_reason: 'budget_exceeded' }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+    const run = await planDepartmentRun('d1', 'x');
+    expect(run).toMatchObject({ departmentRunId: 'r2', status: 'blocked', blockReason: 'budget_exceeded' });
   });
 });
 

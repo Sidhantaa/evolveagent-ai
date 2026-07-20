@@ -23,7 +23,8 @@ import {
   Target,
   BookOpen,
   Store,
-  Scale
+  Scale,
+  Building2
 } from 'lucide-react';
 
 interface NavItem {
@@ -72,6 +73,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
         { id: 'command-center', label: 'Command Center', icon: Gauge, badge: 'v200', badgeColor: 'purple' },
         { id: 'chief-of-staff', label: 'Chief of Staff', icon: Target, badge: 'v180', badgeColor: 'amber' },
         { id: 'marketplace-hub', label: 'Marketplace Hub', icon: Store, badge: 'v160', badgeColor: 'purple' },
+        { id: 'departments', label: 'Departments', icon: Building2, badge: 'v300', badgeColor: 'purple' },
       ]
     },
     {

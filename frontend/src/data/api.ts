@@ -1407,3 +1407,215 @@ export async function runStoragePrune(
     dryRun: Boolean(data.dry_run),
   };
 }
+
+// ---------------------------------------------------------------------------
+// v300 Digital Departments
+// ---------------------------------------------------------------------------
+
+export interface Department {
+  departmentId: string;
+  name: string;
+  description: string;
+  managerAgent: string;
+  workerAgents: string[];
+  reviewerAgents: string[];
+  auditorAgents: string[];
+  permissionLevel: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface DepartmentTemplate {
+  name: string;
+  description: string;
+  managerAgent: string;
+  workerAgents: string[];
+  reviewerAgents: string[];
+  auditorAgents: string[];
+  permissionLevel: string;
+}
+
+export interface DepartmentGoal {
+  goalId: string;
+  title: string;
+  description: string;
+  status: string;
+  progressPercent: number;
+}
+
+export interface DepartmentBudget {
+  monthlyLimit: number;
+  currentMonthCost: number;
+  totalEstimatedCost: number;
+  budgetStatus: string;
+  warning: string | null;
+}
+
+export interface DepartmentScorecard {
+  department: Department;
+  goals: DepartmentGoal[];
+  budget: DepartmentBudget | null;
+  measurableOutcomes: {
+    totalRuns: number;
+    planned: number;
+    blocked: number;
+  };
+}
+
+export interface DepartmentRun {
+  departmentRunId: string;
+  departmentId: string;
+  departmentName: string;
+  task: string;
+  requiresApproval: boolean;
+  riskLevel: string;
+  status: string;
+  blockReason: string | null;
+  createdAt: string;
+}
+
+export interface DepartmentsOverview {
+  totalDepartments: number;
+  activeDepartments: number;
+  departmentRuns: number;
+  collaborationCount: number;
+  recentRuns: DepartmentRun[];
+}
+
+function mapDepartment(d: any): Department {
+  return {
+    departmentId: d.department_id || '',
+    name: d.name || '',
+    description: d.description || '',
+    managerAgent: d.manager_agent || '',
+    workerAgents: Array.isArray(d.worker_agents) ? d.worker_agents.map(String) : [],
+    reviewerAgents: Array.isArray(d.reviewer_agents) ? d.reviewer_agents.map(String) : [],
+    auditorAgents: Array.isArray(d.auditor_agents) ? d.auditor_agents.map(String) : [],
+    permissionLevel: d.permission_level || 'read_only',
+    active: d.active !== false,
+    createdAt: d.created_at || '',
+  };
+}
+
+export async function fetchDepartments(includeArchived = false): Promise<Department[] | null> {
+  const data = await getJson<any>(`/api/departments${includeArchived ? '?include_archived=true' : ''}`);
+  if (!data || !Array.isArray(data.departments)) return null;
+  return data.departments.map(mapDepartment);
+}
+
+export async function fetchDepartmentTemplates(): Promise<DepartmentTemplate[] | null> {
+  const data = await getJson<any>('/api/departments/templates');
+  if (!data || !Array.isArray(data.templates)) return null;
+  return data.templates.map((t: any) => ({
+    name: t.name || '',
+    description: t.description || '',
+    managerAgent: t.manager_agent || '',
+    workerAgents: Array.isArray(t.worker_agents) ? t.worker_agents.map(String) : [],
+    reviewerAgents: Array.isArray(t.reviewer_agents) ? t.reviewer_agents.map(String) : [],
+    auditorAgents: Array.isArray(t.auditor_agents) ? t.auditor_agents.map(String) : [],
+    permissionLevel: t.permission_level || 'read_only',
+  }));
+}
+
+export async function seedDepartmentTemplates(): Promise<{ seededCount: number; skippedExisting: number } | null> {
+  const data = await postJson<any>('/api/departments/templates/seed', {});
+  if (!data) return null;
+  return { seededCount: Number(data.seeded_count ?? 0), skippedExisting: Number(data.skipped_existing ?? 0) };
+}
+
+export async function createDepartment(
+  name: string,
+  description: string,
+  managerAgent: string,
+  permissionLevel: string
+): Promise<Department | null> {
+  const data = await postJson<any>('/api/departments', {
+    name,
+    description,
+    manager_agent: managerAgent || undefined,
+    permission_level: permissionLevel,
+  });
+  if (!data) return null;
+  return mapDepartment(data);
+}
+
+export async function fetchDepartmentsOverview(): Promise<DepartmentsOverview | null> {
+  const data = await getJson<any>('/api/departments/overview');
+  if (!data) return null;
+  return {
+    totalDepartments: Number(data.total_departments ?? 0),
+    activeDepartments: Number(data.active_departments ?? 0),
+    departmentRuns: Number(data.department_runs ?? 0),
+    collaborationCount: Number(data.collaboration_count ?? 0),
+    recentRuns: Array.isArray(data.recent_runs) ? data.recent_runs.map(mapDepartmentRun) : [],
+  };
+}
+
+function mapDepartmentRun(r: any): DepartmentRun {
+  return {
+    departmentRunId: r.department_run_id || '',
+    departmentId: r.department_id || '',
+    departmentName: r.department_name || '',
+    task: r.task || '',
+    requiresApproval: Boolean(r.requires_approval),
+    riskLevel: r.risk_level || 'low',
+    status: r.status || 'planned',
+    blockReason: r.block_reason ?? null,
+    createdAt: r.created_at || '',
+  };
+}
+
+export async function fetchDepartmentScorecard(departmentId: string): Promise<DepartmentScorecard | null> {
+  const data = await getJson<any>(`/api/departments/${encodeURIComponent(departmentId)}/scorecard`);
+  if (!data) return null;
+  const budget = data.budget;
+  return {
+    department: mapDepartment(data.department || {}),
+    goals: Array.isArray(data.goals)
+      ? data.goals.map((g: any) => ({
+          goalId: g.goal_id || '',
+          title: g.title || g.goal_title || '',
+          description: g.description || g.goal_summary || '',
+          status: g.status || 'active',
+          progressPercent: Number(g.progress_percent ?? 0),
+        }))
+      : [],
+    budget: budget
+      ? {
+          monthlyLimit: Number(budget.monthly_limit ?? 0),
+          currentMonthCost: Number(budget.current_month_cost ?? 0),
+          totalEstimatedCost: Number(budget.total_estimated_cost ?? 0),
+          budgetStatus: budget.budget_status || 'no_budget',
+          warning: budget.warning ?? null,
+        }
+      : null,
+    measurableOutcomes: {
+      totalRuns: Number(data.measurable_outcomes?.total_runs ?? 0),
+      planned: Number(data.measurable_outcomes?.planned ?? 0),
+      blocked: Number(data.measurable_outcomes?.blocked ?? 0),
+    },
+  };
+}
+
+export async function createDepartmentGoal(departmentId: string, title: string, description: string): Promise<DepartmentGoal | null> {
+  const data = await postJson<any>(`/api/departments/${encodeURIComponent(departmentId)}/goals`, { title, description });
+  if (!data) return null;
+  return {
+    goalId: data.goal_id || '',
+    title: data.title || data.goal_title || title,
+    description: data.description || data.goal_summary || description,
+    status: data.status || 'active',
+    progressPercent: Number(data.progress_percent ?? 0),
+  };
+}
+
+export async function setDepartmentBudget(departmentId: string, monthlyLimit: number): Promise<boolean> {
+  const data = await postJson<any>(`/api/departments/${encodeURIComponent(departmentId)}/budget`, { monthly_limit: monthlyLimit });
+  return data !== null;
+}
+
+export async function planDepartmentRun(departmentId: string, task: string): Promise<DepartmentRun | null> {
+  const data = await postJson<any>(`/api/departments/${encodeURIComponent(departmentId)}/runs`, { task });
+  if (!data) return null;
+  return mapDepartmentRun(data);
+}

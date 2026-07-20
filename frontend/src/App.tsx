@@ -28,6 +28,7 @@ import { ChiefOfStaffPage } from './pages/ChiefOfStaffPage';
 import { InstructionsPage } from './pages/InstructionsPage';
 import { MarketplaceHubPage } from './pages/MarketplaceHubPage';
 import { CompliancePage } from './pages/CompliancePage';
+import { DepartmentsPage } from './pages/DepartmentsPage';
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -60,6 +61,7 @@ const MainContent: React.FC = () => {
           {activePage === 'chief-of-staff' && <ChiefOfStaffPage />}
           {activePage === 'marketplace-hub' && <MarketplaceHubPage />}
           {activePage === 'compliance' && <CompliancePage />}
+          {activePage === 'departments' && <DepartmentsPage />}
         </main>
       </div>
 
