@@ -20,20 +20,56 @@ import {
   Lock,
   Eye,
   Zap,
-  ChevronDown
+  ChevronDown,
+  GitPullRequestArrow,
+  Gauge,
+  Target,
+  Store,
+  Scale,
+  Palette
 } from 'lucide-react';
 
-const sidebarGuide: { id: PageId; icon: React.ElementType; label: string; desc: string }[] = [
-  { id: 'home', icon: LayoutDashboard, label: 'Home Dashboard', desc: 'Your command center — quick actions, live stats, and what needs your attention right now.' },
-  { id: 'chat', icon: MessageSquare, label: 'Simple Mode Chat', desc: 'Just type what you want and the AI routes it to the right specialist agent. This is where most work happens.' },
-  { id: 'dev-console', icon: Terminal, label: 'Dev Mode Console', desc: 'The "under the hood" view — see exactly which agents ran, what they decided, and why.' },
-  { id: 'mission-control', icon: Compass, label: 'Mission Control', desc: 'For bigger, multi-step goals. Break a big ask into tracked phases and tasks instead of one chat message.' },
-  { id: 'agents', icon: Users, label: 'Agents', desc: 'See every specialist agent, what it is trusted to do, and how it is performing.' },
-  { id: 'approvals', icon: ShieldCheck, label: 'Approvals', desc: 'Anything risky (editing files, running commands) waits here for a human yes/no before it happens.' },
-  { id: 'project-brain', icon: Brain, label: 'Project Brain', desc: 'The AI\'s long-term memory for this project — search past decisions, facts, and context.' },
-  { id: 'tools', icon: Wrench, label: 'Tools / MCP Hub', desc: 'Connected tools and integrations the agents are allowed to use, and under what conditions.' },
-  { id: 'governance', icon: Shield, label: 'Governance', desc: 'The safety rulebook — what is blocked, what needs approval, and the audit trail of every decision.' },
-  { id: 'settings', icon: Settings, label: 'Settings', desc: 'Model routing, safety defaults, and appearance preferences for your workspace.' },
+interface GuideItem { id: PageId; icon: React.ElementType; label: string; desc: string; }
+interface GuideGroup { label: string; items: GuideItem[]; }
+
+const sidebarGuideGroups: GuideGroup[] = [
+  {
+    label: 'Always visible',
+    items: [
+      { id: 'home', icon: LayoutDashboard, label: 'Home Dashboard', desc: 'Your command center — quick actions and what needs your attention right now.' },
+      { id: 'instructions', icon: BookOpen, label: 'Instructions', desc: 'This page — onboarding and a guide to how everything fits together.' },
+      { id: 'chat', icon: MessageSquare, label: 'Simple Mode Chat', desc: 'Type what you want; the AI routes it to the right specialist agent.' },
+      { id: 'approvals', icon: ShieldCheck, label: 'Approvals', desc: 'Anything risky waits here for a human yes or no before it happens.' },
+    ]
+  },
+  {
+    label: 'Work',
+    items: [
+      { id: 'mission-control', icon: Compass, label: 'Mission Control', desc: 'Break a big goal into tracked phases and tasks.' },
+      { id: 'agents', icon: Users, label: 'Agents', desc: 'Every specialist agent, what it can do, and how it is performing.' },
+      { id: 'project-brain', icon: Brain, label: 'Project Brain', desc: 'Long-term memory — search past decisions, facts, and context.' },
+      { id: 'tools', icon: Wrench, label: 'Tools / MCP Hub', desc: 'Connected tools and integrations agents are allowed to use.' },
+      { id: 'command-center', icon: Gauge, label: 'Command Center', desc: 'A unified index of every system built so far, with live status.' },
+      { id: 'chief-of-staff', icon: Target, label: 'Chief of Staff', desc: 'Daily priorities, planning, and next-action recommendations.' },
+      { id: 'marketplace-hub', icon: Store, label: 'Marketplace Hub', desc: 'Reusable agent templates and workflow packs.' },
+    ]
+  },
+  {
+    label: 'Safety',
+    items: [
+      { id: 'governance', icon: Shield, label: 'Governance', desc: 'The rulebook — what is blocked, what needs approval, and the audit trail.' },
+      { id: 'compliance', icon: Scale, label: 'Compliance', desc: 'Policy checks and regulatory-style oversight for agent actions.' },
+    ]
+  },
+  {
+    label: 'System',
+    items: [
+      { id: 'dev-console', icon: Terminal, label: 'Dev Mode Console', desc: 'The under-the-hood view — exactly which agents ran and why.' },
+      { id: 'code-changes', icon: GitPullRequestArrow, label: 'Code Changes', desc: 'Track proposed and applied code edits across the project.' },
+      { id: 'settings', icon: Settings, label: 'Settings', desc: 'Model routing, safety defaults, and appearance preferences.' },
+      { id: 'design-system', icon: Palette, label: 'Design System', desc: 'The color, type, and component reference for this UI.' },
+    ]
+  }
 ];
 
 const faqs = [
@@ -186,29 +222,36 @@ export const InstructionsPage: React.FC = () => {
         <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
           <Compass className="w-4 h-4 text-cyan-400" /> What's in the Sidebar
         </h2>
-        <GlassCard padding="none">
-          <div className="divide-y divide-white/[0.06]">
-            {sidebarGuide.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActivePage(item.id)}
-                  className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.03] transition-colors group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-cyan-500/30">
-                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-cyan-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-semibold text-white mb-0.5">{item.label}</h4>
-                    <p className="text-[11px] text-gray-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-cyan-400 shrink-0 mt-1 transition-colors" />
-                </button>
-              );
-            })}
-          </div>
-        </GlassCard>
+        <div className="space-y-4">
+          {sidebarGuideGroups.map((group) => (
+            <div key={group.label}>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2 px-1">{group.label}</div>
+              <GlassCard padding="none">
+                <div className="divide-y divide-white/[0.06]">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActivePage(item.id)}
+                        className="w-full flex items-start gap-3 p-3.5 text-left hover:bg-white/[0.03] transition-colors group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-cyan-500/30">
+                          <Icon className="w-3.5 h-3.5 text-gray-400 group-hover:text-cyan-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-semibold text-white mb-0.5">{item.label}</h4>
+                          <p className="text-[11px] text-gray-400 leading-snug">{item.desc}</p>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-cyan-400 shrink-0 mt-1 transition-colors" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </GlassCard>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* FAQ */}
