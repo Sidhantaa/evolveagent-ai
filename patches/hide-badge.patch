@@ -1,0 +1,13 @@
+diff --git a/frontend/src/components/layout/TopBar.tsx b/frontend/src/components/layout/TopBar.tsx
+index 39e24b8..b8f91de 100644
+--- a/frontend/src/components/layout/TopBar.tsx
++++ b/frontend/src/components/layout/TopBar.tsx
+@@ -47,7 +47,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
+         <div className="min-w-0">
+           <div className="flex items-center gap-2">
+             <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">{currentInfo.title}</h2>
+-            {pendingApprovalsCount > 0 && activePage !== 'approvals' && (
++            {pendingApprovalsCount > 0 && !['approvals', 'home', 'instructions', 'chat'].includes(activePage) && (
+               <button
+                 onClick={() => setActivePage('approvals')}
+                 className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
