@@ -1,0 +1,52 @@
+diff --git a/frontend/src/components/layout/TopBar.tsx b/frontend/src/components/layout/TopBar.tsx
+index 0f87b77..39e24b8 100644
+--- a/frontend/src/components/layout/TopBar.tsx
++++ b/frontend/src/components/layout/TopBar.tsx
+@@ -7,9 +7,6 @@ import {
+   Sparkles, 
+   ShieldAlert, 
+   Bell, 
+-  MessageSquare, 
+-  Terminal, 
+-  Compass, 
+   ShieldCheck,
+   CheckCircle2
+ } from 'lucide-react';
+@@ -80,37 +77,6 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
+           </kbd>
+         </button>
+ 
+-        {/* Quick Mode Switchers (Desktop) */}
+-        <div className="hidden xl:flex items-center p-1 rounded-xl bg-white/[0.03] border border-white/10">
+-          <button
+-            onClick={() => { setActivePage('chat'); showToast('Switched to Simple Chat Mode', 'info'); }}
+-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+-              activePage === 'chat' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+-            }`}
+-          >
+-            <MessageSquare className="w-3.5 h-3.5" />
+-            <span>Chat</span>
+-          </button>
+-          <button
+-            onClick={() => { setActivePage('dev-console'); showToast('Switched to Developer Console', 'info'); }}
+-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+-              activePage === 'dev-console' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+-            }`}
+-          >
+-            <Terminal className="w-3.5 h-3.5" />
+-            <span>Dev Console</span>
+-          </button>
+-          <button
+-            onClick={() => { setActivePage('mission-control'); showToast('Switched to Mission Control', 'info'); }}
+-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+-              activePage === 'mission-control' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+-            }`}
+-          >
+-            <Compass className="w-3.5 h-3.5" />
+-            <span>Mission</span>
+-          </button>
+-        </div>
+-
+         {/* Live/Mock data indicator — reflects real backend connection */}
+         <button
+           onClick={() => { refreshLive(); showToast(liveConnected ? 'Refreshed live data from backend' : 'Backend offline — showing sample data', liveConnected ? 'success' : 'warning'); }}
